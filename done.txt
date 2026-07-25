@@ -1,0 +1,294 @@
+Module Employee
+✅ Login + JWT
+✅ GET danh sách (search, filter, sort, pagination)
+✅ GET chi tiết
+✅ POST
+✅ PUT
+✅ DELETE (soft delete)
+✅ Reset password
+✅ Generate employeeCode
+✅ Validation (Zod)
+✅ Mapper
+Module Role
+✅ GET danh sách
+✅ GET chi tiết
+✅ POST
+✅ PUT
+✅ DELETE (soft delete)
+✅ Validation
+✅ Mapper
+
+-----------
+
+1. Khởi tạo Backend
+✅ Next.js App Router
+✅ MongoDB + Mongoose
+✅ Kết nối DB (connectDB)
+✅ Biến môi trường .env.local
+2. Authentication
+✅ JWT Login
+✅ getCurrentUser()
+✅ Middleware kiểm tra Bearer Token
+✅ Phân quyền theo Permission
+
+Ví dụ:
+
+employee.view
+employee.create
+employee.update
+employee.delete
+
+role.view
+role.create
+role.update
+role.delete
+3. Seed Database
+
+Đã tạo và chạy thành công:
+
+Countries
+Areas
+Departments
+Teams
+Permissions
+Roles
+Employees
+Counters
+
+Đã có
+
+npm run seed
+4. Counter
+
+Đã xây dựng
+
+Counter Collection
+
+Sinh mã tự động
+
+EMP000001
+EMP000002
+EMP000003
+...
+5. Employee CRUD
+GET List
+
+Đã hoàn thành
+
+✅ Pagination
+✅ Search keyword
+employeeCode
+username
+fullName
+email
+✅ Filter Role
+✅ Filter Team
+✅ Filter Active
+✅ Sort
+createdAt
+employeeCode
+fullName
+✅ Populate Role
+✅ Populate Team
+✅ Mapper
+GET Detail
+GET /employees/:id
+✅ Populate
+✅ Mapper
+✅ 404
+✅ Validate ObjectId
+POST
+
+Đã hoàn thành
+
+✅ Validate Zod
+✅ Check quyền
+✅ Check Username trùng
+✅ Check Email trùng
+✅ Check Role tồn tại
+✅ Check Team tồn tại
+✅ Hash Password
+✅ Generate EmployeeCode
+✅ Insert MongoDB
+✅ Mapper
+PUT
+
+Đã hoàn thành
+
+✅ Validate
+✅ Check tồn tại
+✅ Check Username duplicate
+_id: { $ne: id }
+✅ Check Email duplicate
+✅ Update Role
+✅ Update Team
+✅ Update Active
+✅ Mapper
+DELETE
+
+Đã chuyển sang
+
+Soft Delete
+
+isActive = false
+
+Có
+
+✅ Validate ObjectId
+✅ Check tồn tại
+✅ Soft Delete
+Reset Password
+PATCH
+
+/employees/:id/reset-password
+
+Đã hoàn thành
+
+✅ Validate
+✅ Hash Password
+✅ Save
+6. Employee Validation
+
+Đã có
+
+createEmployeeSchema
+updateEmployeeSchema
+loginSchema
+7. Employee Mapper
+
+Đã có
+
+mapEmployeeList()
+
+mapEmployeeDetail()
+8. Role CRUD
+GET List
+
+Đã có
+
+Mapper
+Pagination
+Search
+GET Detail
+
+Đã có
+
+GET /roles/:id
+POST
+
+Đã có
+
+Validate
+Check Permission
+Check Code Duplicate
+Check Name Duplicate
+Insert MongoDB
+Mapper
+PUT
+
+Đã có
+
+Validate
+Check tồn tại
+Check Code Duplicate
+_id != current id
+Check Name Duplicate
+Update
+Mapper
+DELETE
+
+Đã chuyển thành
+
+Soft Delete
+
+isActive = false
+9. Role Validation
+
+Đã có
+
+createRoleSchema
+
+updateRoleSchema
+10. Mapper
+
+Đã có
+
+Employee
+
+Role
+11. Utility
+
+Đã có
+
+bcrypt
+
+hashPassword()
+generateEmployeeCode()
+response.ts
+
+success()
+
+error()
+12. Database
+
+Đã hoàn thành các collection
+
+Employees
+Roles
+Permissions
+Teams
+Departments
+Areas
+Countries
+Counters
+13. Những kiến thức đã thực hành
+
+Bạn đã làm và hiểu:
+
+✅ JWT Authentication
+✅ Permission-based Authorization
+✅ MongoDB Populate
+✅ Soft Delete
+✅ Pagination
+✅ Search
+✅ Filter
+✅ Sort
+✅ Mapper Pattern
+✅ Zod Validation
+✅ Password Hashing
+✅ Counter Auto Increment
+✅ REST API CRUD
+✅ App Router API (Next.js 16)
+Tiến độ tổng thể
+Backend
+
+███████████████████░░░░░░░░░░░░░░░ 55%
+
+✅ Authentication
+✅ Employee CRUD
+✅ Role CRUD
+⬜ Team CRUD
+⬜ Department CRUD
+⬜ Country CRUD
+⬜ Area CRUD
+⬜ Dashboard APIs
+
+Frontend
+
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0%
+
+⬜ Login
+⬜ Employee
+⬜ Role
+⬜ Team
+⬜ Dashboard
+⬜ Upload Avatar
+⬜ Export Excel
+⬜ Permission UI
+
+hoàn thành:
+
+✅ Authentication (JWT)
+✅ Employee CRUD + Reset Password
+✅ Role CRUD
+✅ Department CRUD

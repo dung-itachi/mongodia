@@ -3,7 +3,6 @@ import mongoose, { Schema, Model } from "mongoose";
 export interface IDepartment {
   code: string;
   name: string;
-  areaCode: string;
   isActive: boolean;
 }
 

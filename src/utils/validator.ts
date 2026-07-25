@@ -84,3 +84,161 @@ export const updateEmployeeSchema = z.object({
 
   isActive: z.boolean(),
 });
+export const resetPasswordSchema = z.object({
+  newPassword: z
+    .string()
+    .trim()
+    .min(6, "Mật khẩu tối thiểu 6 ký tự")
+    .max(100, "Mật khẩu tối đa 100 ký tự"),
+});
+
+export type ResetPasswordForm = z.infer<
+  typeof resetPasswordSchema
+>;
+export const createRoleSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã vai trò tối thiểu 2 ký tự")
+    .max(30, "Mã vai trò tối đa 30 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên vai trò tối thiểu 2 ký tự")
+    .max(100, "Tên vai trò tối đa 100 ký tự"),
+
+  description: z.string().trim().optional(),
+});
+
+export type CreateRoleForm = z.infer<typeof createRoleSchema>;
+
+export const updateRoleSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã vai trò tối thiểu 2 ký tự")
+    .max(30, "Mã vai trò tối đa 30 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên vai trò tối thiểu 2 ký tự")
+    .max(100, "Tên vai trò tối đa 100 ký tự"),
+
+  description: z.string().trim().optional(),
+
+  isActive: z.boolean(),
+});
+
+export type UpdateRoleForm = z.infer<typeof updateRoleSchema>;
+
+export const createDepartmentSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã phòng ban tối thiểu 2 ký tự")
+    .max(30),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên phòng ban tối thiểu 2 ký tự")
+    .max(100),
+});
+
+export const updateDepartmentSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2)
+    .max(30),
+
+  name: z
+    .string()
+    .trim()
+    .min(2)
+    .max(100),
+
+  isActive: z.boolean(),
+});
+
+export const createAreaSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã khu vực phải có ít nhất 2 ký tự")
+    .max(30, "Mã khu vực tối đa 30 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên khu vực phải có ít nhất 2 ký tự")
+    .max(100, "Tên khu vực tối đa 100 ký tự"),
+
+  address: z.string().optional(),
+
+  countryCode: z
+    .string()
+    .trim()
+    .min(2, "Mã quốc gia không hợp lệ")
+    .max(5, "Mã quốc gia không hợp lệ"),
+});
+
+export const updateAreaSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã khu vực phải có ít nhất 2 ký tự")
+    .max(30, "Mã khu vực tối đa 30 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên khu vực phải có ít nhất 2 ký tự")
+    .max(100, "Tên khu vực tối đa 100 ký tự"),
+
+  address: z.string().optional(),
+
+  countryCode: z
+    .string()
+    .trim()
+    .min(2, "Mã quốc gia không hợp lệ")
+    .max(5, "Mã quốc gia không hợp lệ"),
+
+  isActive: z.boolean(),
+});
+
+export const createTeamSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã nhóm tối thiểu 2 ký tự")
+    .max(30, "Mã nhóm tối đa 30 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên nhóm tối thiểu 2 ký tự")
+    .max(100, "Tên nhóm tối đa 100 ký tự"),
+
+  departmentCode: z
+    .string()
+    .trim()
+    .min(1, "Phòng ban là bắt buộc"),
+
+  areaCode: z
+    .string()
+    .trim()
+    .min(1, "Khu vực là bắt buộc"),
+
+  leaderCode: z.string().nullable().optional(),
+
+  managerCode: z.string().nullable().optional(),
+});
+
+export const updateTeamSchema = createTeamSchema.extend({
+  isActive: z.boolean({
+    message: "Trạng thái hoạt động không hợp lệ",
+  }),
+});

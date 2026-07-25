@@ -23,6 +23,24 @@ export const PERMISSIONS = [
     name: "Delete Employee",
   },
 
+  // Department
+{
+  code: "department.view",
+  name: "View Department",
+},
+{
+  code: "department.create",
+  name: "Create Department",
+},
+{
+  code: "department.update",
+  name: "Update Department",
+},
+{
+  code: "department.delete",
+  name: "Delete Department",
+},
+
   // Team
   {
     code: "team.view",
@@ -58,6 +76,25 @@ export const PERMISSIONS = [
     code: "role.delete",
     name: "Delete Role",
   },
+
+
+  // Area
+{
+  code: "area.view",
+  name: "View Area",
+},
+{
+  code: "area.create",
+  name: "Create Area",
+},
+{
+  code: "area.update",
+  name: "Update Area",
+},
+{
+  code: "area.delete",
+  name: "Delete Area",
+},
 
   // Product
   {
