@@ -16,11 +16,37 @@ export function mapEmployeeList(employee: any) {
   }
   
   export function mapEmployeeDetail(employee: any) {
-    const { roleId, teamId, __v, password, ...rest } = employee;
-  
     return {
-      ...rest,
-      role: roleId,
-      team: teamId,
+      _id: employee._id,
+  
+      employeeCode: employee.employeeCode,
+  
+      username: employee.username,
+  
+      fullName: employee.fullName,
+  
+      email: employee.email,
+  
+      phone: employee.phone,
+  
+      avatar: employee.avatar,
+  
+      bankName: employee.bankName,
+  
+      bankAccountNumber: employee.bankAccountNumber,
+  
+      bankAccountHolder: employee.bankAccountHolder,
+  
+      lastLogin: employee.lastLogin,
+  
+      isActive: employee.isActive,
+  
+      createdAt: employee.createdAt,
+  
+      updatedAt: employee.updatedAt,
+  
+      role: employee.roleId,
+  
+      team: employee.teamId,
     };
   }

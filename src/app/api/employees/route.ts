@@ -1,6 +1,5 @@
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
-import { mapEmployeeList } from "@/mappers/employee.mapper";
 
 import Employee from "@/models/Employee";
 import Role from "@/models/Role";
@@ -10,6 +9,10 @@ import { createEmployeeSchema } from "@/utils/validator";
 import { error as errorResponse, success } from "@/utils/response";
 import { hashPassword } from "@/utils/bcrypt";
 import { generateEmployeeCode } from "@/lib/generateEmployeeCode";
+import {
+    mapEmployeeList,
+    mapEmployeeDetail,
+  } from "@/mappers/employee.mapper";
 const SORT_OPTIONS: Record<string, Record<string, 1 | -1>> = {
     createdAt_desc: {
         createdAt: -1,
@@ -256,7 +259,10 @@ export async function POST(request: Request) {
           })
           .select("-password")
           .lean();
-          return success(createdEmployee, "Tạo nhân viên thành công");
+          return success(
+            mapEmployeeDetail(createdEmployee),
+            "Tạo nhân viên thành công"
+          );
     } catch (error) {
         console.error("Create Employee Error:", error);
 

@@ -28,9 +28,8 @@ export const createEmployeeSchema = z.object({
     .min(2, "Họ tên không hợp lệ"),
 
   email: z
-    .string()
-    .trim()
-    .email("Email không hợp lệ"),
+    .email("Email không hợp lệ")
+    .trim(),
 
   phone: z.string().optional(),
 
@@ -48,4 +47,40 @@ export const createEmployeeSchema = z.object({
   bankAccountNumber: z.string().optional(),
 
   bankAccountHolder: z.string().optional(),
+});
+export const updateEmployeeSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, "Tên đăng nhập tối thiểu 3 ký tự")
+    .max(50, "Tên đăng nhập tối đa 50 ký tự"),
+
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Họ tên không hợp lệ")
+    .max(100, "Họ tên tối đa 100 ký tự"),
+
+    email: z
+    .email("Email không hợp lệ")
+    .trim(),
+
+  phone: z.string().optional(),
+
+  avatar: z.string().optional(),
+
+  roleCode: z
+    .string()
+    .trim()
+    .min(1, "Vai trò là bắt buộc"),
+
+  teamCode: z.string().nullable().optional(),
+
+  bankName: z.string().optional(),
+
+  bankAccountNumber: z.string().optional(),
+
+  bankAccountHolder: z.string().optional(),
+
+  isActive: z.boolean(),
 });
