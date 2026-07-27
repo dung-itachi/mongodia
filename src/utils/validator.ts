@@ -314,3 +314,24 @@ export const updateCategorySchema =
       message: "Trạng thái không hợp lệ",
     }),
   });
+
+  export const createVariantOptionSchema = z.object({
+    code: z
+      .string()
+      .min(2, "Mã thuộc tính phải có ít nhất 2 ký tự")
+      .max(50, "Mã thuộc tính không được quá 50 ký tự"),
+  
+    name: z
+      .string()
+      .min(2, "Tên thuộc tính phải có ít nhất 2 ký tự")
+      .max(100, "Tên thuộc tính không được quá 100 ký tự"),
+  
+    sortOrder: z.number().optional().default(0),
+  });
+  
+  export const updateVariantOptionSchema =
+    createVariantOptionSchema.extend({
+      isActive: z.boolean({
+        message: "Trạng thái không hợp lệ",
+      }),
+    });

@@ -25,7 +25,9 @@ export const ROLES = [
       "product.create",
       "product.update",
 
-      
+      "variant-option.view",
+      "variant-option.create",
+      "variant-option.update",
 
       "order.view",
       "order.create",
@@ -48,7 +50,8 @@ export const ROLES = [
 
       "product.view",
 
-
+      "variant-option.view",
+      
       "order.view",
       "order.create",
       "order.update",

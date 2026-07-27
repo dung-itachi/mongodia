@@ -132,6 +132,24 @@ export const PERMISSIONS = [
   name: "Delete Category",
 },
 
+// Variant Option
+{
+  code: "variant-option.view",
+  name: "View Variant Option",
+},
+{
+  code: "variant-option.create",
+  name: "Create Variant Option",
+},
+{
+  code: "variant-option.update",
+  name: "Update Variant Option",
+},
+{
+  code: "variant-option.delete",
+  name: "Delete Variant Option",
+},
+
   // Order
   {
     code: "order.view",

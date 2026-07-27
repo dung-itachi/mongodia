@@ -292,3 +292,28 @@ hoàn thành:
 ✅ Employee CRUD + Reset Password
 ✅ Role CRUD
 ✅ Department CRUD
+
+Bây giờ dự án của bạn đã bắt đầu có nhiều module:
+
+Department
+Area
+Team
+Category
+Product
+VariantOption
+(sắp tới VariantValue, Warehouse, Inventory...)
+
+Mình khuyên từ module VariantOption trở đi, mỗi khi tạo module
+ mới hãy làm theo thứ tự cố định:
+
+Model
+Mapper
+Validator
+Permissions
+Roles
+Seed
+API CRUD
+Test
+
+Làm như vậy sẽ tránh tình trạng quên thêm permission như vừa rồi
+ và mọi module đều có cùng quy trình triển khai.
