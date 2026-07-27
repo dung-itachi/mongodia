@@ -1,15 +1,14 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 
-import Customer from "@/models/Customer";
+import Warehouse from "@/models/Warehouse";
 import Area from "@/models/Area";
-import Team from "@/models/Team";
 import Employee from "@/models/Employee";
-import mongoose from "mongoose";
 
 import {
-  mapCustomer,
-} from "@/mappers/customer.mapper";
+  mapWarehouse,
+} from "@/mappers/warehouse.mapper";
 
 import {
   success,
@@ -17,7 +16,7 @@ import {
 } from "@/utils/response";
 
 import {
-  updateCustomerSchema,
+  updateWarehouseSchema,
 } from "@/utils/validator";
 
 export async function GET(
@@ -29,11 +28,11 @@ export async function GET(
 
     if (
       !currentUser.permissions.includes(
-        "customer.view"
+        "warehouse.view"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền xem khách hàng",
+        "Bạn không có quyền xem kho",
         403
       );
     }
@@ -49,29 +48,28 @@ export async function GET(
       );
     }
 
-    const customer = await Customer.findById(id)
+    const warehouse = await Warehouse.findById(id)
       .populate("areaId", "_id code name")
-      .populate("teamId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("managerId", "_id employeeCode fullName")
       .lean();
 
-    if (!customer) {
+    if (!warehouse) {
       return errorResponse(
-        "Khách hàng không tồn tại",
+        "Kho không tồn tại",
         404
       );
     }
 
-    return success(mapCustomer(customer));
+    return success(mapWarehouse(warehouse));
 
   } catch (error) {
     console.error(
-      "Customer Detail Error:",
+      "Warehouse Detail Error:",
       error
     );
 
     return errorResponse(
-      "Không thể lấy khách hàng",
+      "Không thể lấy kho",
       500
     );
   }
@@ -86,11 +84,11 @@ export async function PUT(
 
     if (
       !currentUser.permissions.includes(
-        "customer.update"
+        "warehouse.update"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền cập nhật khách hàng",
+        "Bạn không có quyền cập nhật kho",
         403
       );
     }
@@ -106,12 +104,12 @@ export async function PUT(
       );
     }
 
-    const existedCustomer =
-      await Customer.findById(id);
+    const existedWarehouse =
+      await Warehouse.findById(id);
 
-    if (!existedCustomer) {
+    if (!existedWarehouse) {
       return errorResponse(
-        "Khách hàng không tồn tại",
+        "Kho không tồn tại",
         404
       );
     }
@@ -128,7 +126,7 @@ export async function PUT(
     }
 
     const parsedBody =
-      updateCustomerSchema.safeParse(body);
+      updateWarehouseSchema.safeParse(body);
 
     if (!parsedBody.success) {
       return errorResponse(
@@ -140,26 +138,21 @@ export async function PUT(
 
     const data = parsedBody.data;
 
-    const existedCode = await Customer.findOne({
+    const existedCode = await Warehouse.findOne({
       code: data.code.toUpperCase(),
       _id: { $ne: id },
     });
 
     if (existedCode) {
       return errorResponse(
-        "Mã khách hàng đã tồn tại",
+        "Mã kho đã tồn tại",
         400
       );
     }
 
-    const existedPhone = await Customer.findOne({
-      phone: data.phone,
-      _id: { $ne: id },
-    });
-
-    if (existedPhone) {
+    if (!mongoose.Types.ObjectId.isValid(data.areaId)) {
       return errorResponse(
-        "Số điện thoại đã tồn tại",
+        "ID khu vực không hợp lệ",
         400
       );
     }
@@ -171,73 +164,63 @@ export async function PUT(
     if (!existedArea) {
       return errorResponse(
         "Khu vực không tồn tại",
-        400
+        404
       );
     }
 
-    const existedTeam = await Team.exists({
-      _id: data.teamId,
-    });
+    if (data.managerId != null) {
+      if (!mongoose.Types.ObjectId.isValid(data.managerId)) {
+        return errorResponse(
+          "ID người quản lý không hợp lệ",
+          400
+        );
+      }
 
-    if (!existedTeam) {
-      return errorResponse(
-        "Nhóm không tồn tại",
-        400
-      );
+      const existedManager = await Employee.exists({
+        _id: data.managerId,
+      });
+
+      if (!existedManager) {
+        return errorResponse(
+          "Người quản lý không tồn tại",
+          404
+        );
+      }
     }
 
-    const existedMarketingEmployee = await Employee.exists({
-      _id: data.marketingEmployeeId,
-    });
-
-    if (!existedMarketingEmployee) {
-      return errorResponse(
-        "Nhân viên marketing không tồn tại",
-        400
-      );
-    }
-
-    await Customer.updateOne(
+    await Warehouse.updateOne(
       { _id: id },
       {
         $set: {
           code: data.code.toUpperCase(),
           name: data.name,
-          phone: data.phone,
-          email: data.email ?? "",
-          gender: data.gender,
-          birthday: data.birthday
-            ? new Date(data.birthday)
-            : null,
-          address: data.address ?? "",
           areaId: data.areaId,
-          teamId: data.teamId,
-          marketingEmployeeId: data.marketingEmployeeId,
+          address: data.address ?? "",
+          managerId: data.managerId ?? null,
           note: data.note ?? "",
           isActive: data.isActive,
         },
       }
     );
 
-    const updatedCustomer = await Customer.findById(id)
+    const updatedWarehouse = await Warehouse.findById(id)
       .populate("areaId", "_id code name")
-      .populate("teamId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("managerId", "_id employeeCode fullName")
       .lean();
 
     return success(
-      mapCustomer(updatedCustomer!),
-      "Cập nhật khách hàng thành công"
+      mapWarehouse(updatedWarehouse!),
+      "Cập nhật kho thành công"
     );
 
   } catch (error) {
     console.error(
-      "Update Customer Error:",
+      "Update Warehouse Error:",
       error
     );
 
     return errorResponse(
-      "Không thể cập nhật khách hàng",
+      "Không thể cập nhật kho",
       500
     );
   }
@@ -252,11 +235,11 @@ export async function DELETE(
 
     if (
       !currentUser.permissions.includes(
-        "customer.delete"
+        "warehouse.delete"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền xóa khách hàng",
+        "Bạn không có quyền xóa kho",
         403
       );
     }
@@ -272,30 +255,30 @@ export async function DELETE(
       );
     }
 
-    const customer = await Customer.findById(id);
+    const warehouse = await Warehouse.findById(id);
 
-    if (!customer) {
+    if (!warehouse) {
       return errorResponse(
-        "Khách hàng không tồn tại",
+        "Kho không tồn tại",
         404
       );
     }
 
-    await Customer.deleteOne({ _id: id });
+    await Warehouse.deleteOne({ _id: id });
 
     return success(
       null,
-      "Xóa khách hàng thành công"
+      "Xóa kho thành công"
     );
 
   } catch (error) {
     console.error(
-      "Delete Customer Error:",
+      "Delete Warehouse Error:",
       error
     );
 
     return errorResponse(
-      "Không thể xóa khách hàng",
+      "Không thể xóa kho",
       500
     );
   }

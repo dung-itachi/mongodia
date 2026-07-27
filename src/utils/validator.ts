@@ -412,6 +412,110 @@ export const updateProductVariantSchema =
     }),
   });
 
+export const createSupplierSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã nhà cung cấp phải có ít nhất 2 ký tự")
+    .max(50, "Mã nhà cung cấp tối đa 50 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên nhà cung cấp phải có ít nhất 2 ký tự")
+    .max(100, "Tên nhà cung cấp tối đa 100 ký tự"),
+
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{8,20}$/, "Số điện thoại không hợp lệ"),
+
+  email: z
+    .string()
+    .trim()
+    .email("Email không hợp lệ")
+    .optional()
+    .or(z.literal("")),
+
+  contactPerson: z.string().default(""),
+
+  address: z.string().default(""),
+
+  areaId: z
+    .string({
+      message: "Khu vực không hợp lệ",
+    })
+    .min(1, "Khu vực là bắt buộc"),
+
+  note: z.string().default(""),
+});
+
+export const updateSupplierSchema =
+  createSupplierSchema.extend({
+    isActive: z.boolean({
+      message: "Trạng thái không hợp lệ",
+    }),
+  });
+
+export const createWarehouseSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã kho phải có ít nhất 2 ký tự")
+    .max(50, "Mã kho tối đa 50 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên kho phải có ít nhất 2 ký tự")
+    .max(100, "Tên kho tối đa 100 ký tự"),
+
+  areaId: z
+    .string({
+      message: "Khu vực không hợp lệ",
+    })
+    .min(1, "Khu vực là bắt buộc"),
+
+  address: z.string().default(""),
+
+  managerId: z.string().nullable().optional(),
+
+  note: z.string().default(""),
+});
+
+export const updateWarehouseSchema =
+  createWarehouseSchema.extend({
+    isActive: z.boolean({
+      message: "Trạng thái không hợp lệ",
+    }),
+  });
+
+export const createInventoryAdjustmentSchema =
+  z.object({
+    inventoryId: z
+      .string({
+        message: "ID tồn kho không hợp lệ",
+      })
+      .min(1, "ID tồn kho là bắt buộc"),
+
+    type: z.enum(["IN", "OUT", "ADJUST"], {
+      message: "Loại điều chỉnh không hợp lệ",
+    }),
+
+    quantity: z
+      .number({
+        message: "Số lượng không hợp lệ",
+      })
+      .min(1, "Số lượng tối thiểu là 1"),
+
+    reason: z
+      .string()
+      .trim()
+      .min(1, "Lý do là bắt buộc"),
+
+    note: z.string().default(""),
+  });
+
 export const createCustomerSchema = z.object({
   code: z
     .string()
@@ -458,11 +562,11 @@ export const createCustomerSchema = z.object({
     })
     .min(1, "Nhóm là bắt buộc"),
 
-  employeeId: z
+  marketingEmployeeId: z
     .string({
-      message: "Nhân viên không hợp lệ",
+      message: "Nhân viên marketing không hợp lệ",
     })
-    .min(1, "Nhân viên phụ trách là bắt buộc"),
+    .min(1, "Nhân viên marketing phụ trách là bắt buộc"),
 
   note: z.string().default(""),
 });

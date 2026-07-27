@@ -1,6 +1,6 @@
 import mongoose, { Model, Schema, Types } from "mongoose";
 
-export interface ICustomer {
+export interface ISupplier {
   code: string;
 
   name: string;
@@ -9,24 +9,18 @@ export interface ICustomer {
 
   email?: string;
 
-  gender: "MALE" | "FEMALE" | "OTHER";
-
-  birthday?: Date | null;
+  contactPerson?: string;
 
   address?: string;
 
   areaId: Types.ObjectId;
-
-  teamId: Types.ObjectId;
-
-  marketingEmployeeId: Types.ObjectId;
 
   note?: string;
 
   isActive: boolean;
 }
 
-const CustomerSchema = new Schema<ICustomer>(
+const SupplierSchema = new Schema<ISupplier>(
   {
     code: {
       type: String,
@@ -55,37 +49,21 @@ const CustomerSchema = new Schema<ICustomer>(
       default: "",
     },
 
-    gender: {
+    contactPerson: {
       type: String,
-      enum: ["MALE", "FEMALE", "OTHER"],
-      default: "OTHER",
-    },
-
-    birthday: {
-      type: Date,
-      default: null,
+      default: "",
+      trim: true,
     },
 
     address: {
       type: String,
       default: "",
+      trim: true,
     },
 
     areaId: {
       type: Schema.Types.ObjectId,
       ref: "Area",
-      required: true,
-    },
-
-    teamId: {
-      type: Schema.Types.ObjectId,
-      ref: "Team",
-      required: true,
-    },
-
-    marketingEmployeeId: {
-      type: Schema.Types.ObjectId,
-      ref: "Employee",
       required: true,
     },
 
@@ -104,14 +82,12 @@ const CustomerSchema = new Schema<ICustomer>(
   }
 );
 
-CustomerSchema.index({ code: 1 }, { unique: true });
-CustomerSchema.index({ phone: 1 }, { unique: true });
-CustomerSchema.index({ teamId: 1 });
-CustomerSchema.index({ marketingEmployeeId: 1 });
-CustomerSchema.index({ areaId: 1 });
+SupplierSchema.index({ code: 1 }, { unique: true });
+SupplierSchema.index({ phone: 1 }, { unique: true });
+SupplierSchema.index({ areaId: 1 });
 
-const Customer: Model<ICustomer> =
-  mongoose.models.Customer ||
-  mongoose.model<ICustomer>("Customer", CustomerSchema);
+const Supplier: Model<ISupplier> =
+  mongoose.models.Supplier ||
+  mongoose.model<ISupplier>("Supplier", SupplierSchema);
 
-export default Customer;
+export default Supplier;

@@ -20,7 +20,7 @@ export function mapCustomer(customer: any) {
 
     teamId: customer.teamId,
 
-    employeeId: customer.employeeId,
+    marketingEmployeeId: customer.marketingEmployeeId,
 
     note: customer.note,
 

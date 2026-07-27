@@ -204,6 +204,58 @@ export const PERMISSIONS = [
   name: "Delete Customer",
 },
 
+// Supplier
+{
+  code: "supplier.view",
+  name: "View Supplier",
+},
+{
+  code: "supplier.create",
+  name: "Create Supplier",
+},
+{
+  code: "supplier.update",
+  name: "Update Supplier",
+},
+{
+  code: "supplier.delete",
+  name: "Delete Supplier",
+},
+
+// Warehouse
+{
+  code: "warehouse.view",
+  name: "View Warehouse",
+},
+{
+  code: "warehouse.create",
+  name: "Create Warehouse",
+},
+{
+  code: "warehouse.update",
+  name: "Update Warehouse",
+},
+{
+  code: "warehouse.delete",
+  name: "Delete Warehouse",
+},
+
+// Inventory
+{
+  code: "inventory.view",
+  name: "View Inventory",
+},
+
+// Inventory Adjustment
+{
+  code: "inventory-adjustment.view",
+  name: "View Inventory Adjustment",
+},
+{
+  code: "inventory-adjustment.create",
+  name: "Create Inventory Adjustment",
+},
+
   // Order
   {
     code: "order.view",

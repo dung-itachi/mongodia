@@ -1,15 +1,13 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 
-import Customer from "@/models/Customer";
+import Supplier from "@/models/Supplier";
 import Area from "@/models/Area";
-import Team from "@/models/Team";
-import Employee from "@/models/Employee";
-import mongoose from "mongoose";
 
 import {
-  mapCustomer,
-} from "@/mappers/customer.mapper";
+  mapSupplier,
+} from "@/mappers/supplier.mapper";
 
 import {
   success,
@@ -17,7 +15,7 @@ import {
 } from "@/utils/response";
 
 import {
-  updateCustomerSchema,
+  updateSupplierSchema,
 } from "@/utils/validator";
 
 export async function GET(
@@ -29,11 +27,11 @@ export async function GET(
 
     if (
       !currentUser.permissions.includes(
-        "customer.view"
+        "supplier.view"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền xem khách hàng",
+        "Bạn không có quyền xem nhà cung cấp",
         403
       );
     }
@@ -49,29 +47,27 @@ export async function GET(
       );
     }
 
-    const customer = await Customer.findById(id)
+    const supplier = await Supplier.findById(id)
       .populate("areaId", "_id code name")
-      .populate("teamId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode fullName")
       .lean();
 
-    if (!customer) {
+    if (!supplier) {
       return errorResponse(
-        "Khách hàng không tồn tại",
+        "Nhà cung cấp không tồn tại",
         404
       );
     }
 
-    return success(mapCustomer(customer));
+    return success(mapSupplier(supplier));
 
   } catch (error) {
     console.error(
-      "Customer Detail Error:",
+      "Supplier Detail Error:",
       error
     );
 
     return errorResponse(
-      "Không thể lấy khách hàng",
+      "Không thể lấy nhà cung cấp",
       500
     );
   }
@@ -86,11 +82,11 @@ export async function PUT(
 
     if (
       !currentUser.permissions.includes(
-        "customer.update"
+        "supplier.update"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền cập nhật khách hàng",
+        "Bạn không có quyền cập nhật nhà cung cấp",
         403
       );
     }
@@ -106,12 +102,12 @@ export async function PUT(
       );
     }
 
-    const existedCustomer =
-      await Customer.findById(id);
+    const existedSupplier =
+      await Supplier.findById(id);
 
-    if (!existedCustomer) {
+    if (!existedSupplier) {
       return errorResponse(
-        "Khách hàng không tồn tại",
+        "Nhà cung cấp không tồn tại",
         404
       );
     }
@@ -128,7 +124,7 @@ export async function PUT(
     }
 
     const parsedBody =
-      updateCustomerSchema.safeParse(body);
+      updateSupplierSchema.safeParse(body);
 
     if (!parsedBody.success) {
       return errorResponse(
@@ -140,19 +136,19 @@ export async function PUT(
 
     const data = parsedBody.data;
 
-    const existedCode = await Customer.findOne({
+    const existedCode = await Supplier.findOne({
       code: data.code.toUpperCase(),
       _id: { $ne: id },
     });
 
     if (existedCode) {
       return errorResponse(
-        "Mã khách hàng đã tồn tại",
+        "Mã nhà cung cấp đã tồn tại",
         400
       );
     }
 
-    const existedPhone = await Customer.findOne({
+    const existedPhone = await Supplier.findOne({
       phone: data.phone,
       _id: { $ne: id },
     });
@@ -160,6 +156,13 @@ export async function PUT(
     if (existedPhone) {
       return errorResponse(
         "Số điện thoại đã tồn tại",
+        400
+      );
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(data.areaId)) {
+      return errorResponse(
+        "ID khu vực không hợp lệ",
         400
       );
     }
@@ -175,29 +178,7 @@ export async function PUT(
       );
     }
 
-    const existedTeam = await Team.exists({
-      _id: data.teamId,
-    });
-
-    if (!existedTeam) {
-      return errorResponse(
-        "Nhóm không tồn tại",
-        400
-      );
-    }
-
-    const existedMarketingEmployee = await Employee.exists({
-      _id: data.marketingEmployeeId,
-    });
-
-    if (!existedMarketingEmployee) {
-      return errorResponse(
-        "Nhân viên marketing không tồn tại",
-        400
-      );
-    }
-
-    await Customer.updateOne(
+    await Supplier.updateOne(
       { _id: id },
       {
         $set: {
@@ -205,39 +186,32 @@ export async function PUT(
           name: data.name,
           phone: data.phone,
           email: data.email ?? "",
-          gender: data.gender,
-          birthday: data.birthday
-            ? new Date(data.birthday)
-            : null,
+          contactPerson: data.contactPerson ?? "",
           address: data.address ?? "",
           areaId: data.areaId,
-          teamId: data.teamId,
-          marketingEmployeeId: data.marketingEmployeeId,
           note: data.note ?? "",
           isActive: data.isActive,
         },
       }
     );
 
-    const updatedCustomer = await Customer.findById(id)
+    const updatedSupplier = await Supplier.findById(id)
       .populate("areaId", "_id code name")
-      .populate("teamId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode fullName")
       .lean();
 
     return success(
-      mapCustomer(updatedCustomer!),
-      "Cập nhật khách hàng thành công"
+      mapSupplier(updatedSupplier!),
+      "Cập nhật nhà cung cấp thành công"
     );
 
   } catch (error) {
     console.error(
-      "Update Customer Error:",
+      "Update Supplier Error:",
       error
     );
 
     return errorResponse(
-      "Không thể cập nhật khách hàng",
+      "Không thể cập nhật nhà cung cấp",
       500
     );
   }
@@ -252,11 +226,11 @@ export async function DELETE(
 
     if (
       !currentUser.permissions.includes(
-        "customer.delete"
+        "supplier.delete"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền xóa khách hàng",
+        "Bạn không có quyền xóa nhà cung cấp",
         403
       );
     }
@@ -272,30 +246,30 @@ export async function DELETE(
       );
     }
 
-    const customer = await Customer.findById(id);
+    const supplier = await Supplier.findById(id);
 
-    if (!customer) {
+    if (!supplier) {
       return errorResponse(
-        "Khách hàng không tồn tại",
+        "Nhà cung cấp không tồn tại",
         404
       );
     }
 
-    await Customer.deleteOne({ _id: id });
+    await Supplier.deleteOne({ _id: id });
 
     return success(
       null,
-      "Xóa khách hàng thành công"
+      "Xóa nhà cung cấp thành công"
     );
 
   } catch (error) {
     console.error(
-      "Delete Customer Error:",
+      "Delete Supplier Error:",
       error
     );
 
     return errorResponse(
-      "Không thể xóa khách hàng",
+      "Không thể xóa nhà cung cấp",
       500
     );
   }

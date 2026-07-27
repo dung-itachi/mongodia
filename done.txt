@@ -317,3 +317,45 @@ Test
 
 Làm như vậy sẽ tránh tình trạng quên thêm permission như vừa rồi
  và mọi module đều có cùng quy trình triển khai.
+
+ -------
+ Inventory Adjustment
+
+Nó có nhiệm vụ:
+
+Kiểm kê
+
+↓
+
+Điều chỉnh tồn
+
+↓
+
+Update Inventory
+
+↓
+
+Ghi Inventory Transaction
+---
+Những gì đã hoàn thành
+Master Data
+✅ Area
+✅ Department
+✅ Team
+✅ Role
+✅ Permission
+✅ Employee
+✅ Category
+✅ Product
+✅ VariantOption
+✅ VariantValue
+✅ ProductVariant
+✅ Customer
+✅ Supplier
+✅ Warehouse
+Warehouse
+✅ Inventory (Read Model)
+✅ InventoryAdjustment (Business Action)
+
+Đây là nền tảng rất tốt.
+---------

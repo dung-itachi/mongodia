@@ -1,15 +1,15 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 
-import Customer from "@/models/Customer";
+import Warehouse from "@/models/Warehouse";
 import Area from "@/models/Area";
-import Team from "@/models/Team";
 import Employee from "@/models/Employee";
 
 import {
-  mapCustomer,
-  mapCustomerList,
-} from "@/mappers/customer.mapper";
+  mapWarehouse,
+  mapWarehouseList,
+} from "@/mappers/warehouse.mapper";
 
 import {
   success,
@@ -17,7 +17,7 @@ import {
 } from "@/utils/response";
 
 import {
-  createCustomerSchema,
+  createWarehouseSchema,
 } from "@/utils/validator";
 
 export async function GET(request: Request) {
@@ -26,11 +26,11 @@ export async function GET(request: Request) {
 
     if (
       !currentUser.permissions.includes(
-        "customer.view"
+        "warehouse.view"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền xem khách hàng",
+        "Bạn không có quyền xem kho",
         403
       );
     }
@@ -42,9 +42,8 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") ?? "1");
     const limit = parseInt(searchParams.get("limit") ?? "20");
     const search = searchParams.get("search") ?? "";
-    const teamId = searchParams.get("teamId") ?? "";
-    const marketingEmployeeId = searchParams.get("marketingEmployeeId") ?? "";
     const areaId = searchParams.get("areaId") ?? "";
+    const managerId = searchParams.get("managerId") ?? "";
     const isActive = searchParams.get("isActive");
 
     const filter: Record<string, unknown> = {};
@@ -53,20 +52,15 @@ export async function GET(request: Request) {
       filter.$or = [
         { code: { $regex: search, $options: "i" } },
         { name: { $regex: search, $options: "i" } },
-        { phone: { $regex: search, $options: "i" } },
       ];
-    }
-
-    if (teamId) {
-      filter.teamId = teamId;
-    }
-
-    if (marketingEmployeeId) {
-      filter.marketingEmployeeId = marketingEmployeeId;
     }
 
     if (areaId) {
       filter.areaId = areaId;
+    }
+
+    if (managerId) {
+      filter.managerId = managerId;
     }
 
     if (isActive !== null && isActive !== "") {
@@ -76,29 +70,28 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
 
     const [items, total] = await Promise.all([
-      Customer.find(filter)
-        .populate("teamId", "_id code name")
-        .populate("marketingEmployeeId", "_id employeeCode fullName")
+      Warehouse.find(filter)
         .populate("areaId", "_id code name")
+        .populate("managerId", "_id employeeCode fullName")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Customer.countDocuments(filter),
+      Warehouse.countDocuments(filter),
     ]);
 
     return success({
-      items: items.map(mapCustomerList),
+      items: items.map(mapWarehouseList),
       total,
       page,
       limit,
       totalPages: Math.max(1, Math.ceil(total / limit)),
     });
   } catch (error) {
-    console.error("Customer List Error:", error);
+    console.error("Warehouse List Error:", error);
 
     return errorResponse(
-      "Không thể lấy danh sách khách hàng",
+      "Không thể lấy danh sách kho",
       500
     );
   }
@@ -110,11 +103,11 @@ export async function POST(request: Request) {
 
     if (
       !currentUser.permissions.includes(
-        "customer.create"
+        "warehouse.create"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền tạo khách hàng",
+        "Bạn không có quyền tạo kho",
         403
       );
     }
@@ -133,7 +126,7 @@ export async function POST(request: Request) {
     }
 
     const parsedBody =
-      createCustomerSchema.safeParse(body);
+      createWarehouseSchema.safeParse(body);
 
     if (!parsedBody.success) {
       return errorResponse(
@@ -145,24 +138,20 @@ export async function POST(request: Request) {
 
     const data = parsedBody.data;
 
-    const existedCode = await Customer.exists({
+    const existedCode = await Warehouse.exists({
       code: data.code.toUpperCase(),
     });
 
     if (existedCode) {
       return errorResponse(
-        "Mã khách hàng đã tồn tại",
+        "Mã kho đã tồn tại",
         400
       );
     }
 
-    const existedPhone = await Customer.exists({
-      phone: data.phone,
-    });
-
-    if (existedPhone) {
+    if (!mongoose.Types.ObjectId.isValid(data.areaId)) {
       return errorResponse(
-        "Số điện thoại đã tồn tại",
+        "ID khu vực không hợp lệ",
         400
       );
     }
@@ -174,65 +163,55 @@ export async function POST(request: Request) {
     if (!existedArea) {
       return errorResponse(
         "Khu vực không tồn tại",
-        400
+        404
       );
     }
 
-    const existedTeam = await Team.exists({
-      _id: data.teamId,
-    });
+    if (data.managerId != null) {
+      if (!mongoose.Types.ObjectId.isValid(data.managerId)) {
+        return errorResponse(
+          "ID người quản lý không hợp lệ",
+          400
+        );
+      }
 
-    if (!existedTeam) {
-      return errorResponse(
-        "Nhóm không tồn tại",
-        400
-      );
+      const existedManager = await Employee.exists({
+        _id: data.managerId,
+      });
+
+      if (!existedManager) {
+        return errorResponse(
+          "Người quản lý không tồn tại",
+          404
+        );
+      }
     }
 
-    const existedMarketingEmployee = await Employee.exists({
-      _id: data.marketingEmployeeId,
-    });
-
-    if (!existedMarketingEmployee) {
-      return errorResponse(
-        "Nhân viên marketing không tồn tại",
-        400
-      );
-    }
-
-    const customer = await Customer.create({
+    const warehouse = await Warehouse.create({
       code: data.code.toUpperCase(),
       name: data.name,
-      phone: data.phone,
-      email: data.email ?? "",
-      gender: data.gender,
-      birthday: data.birthday
-        ? new Date(data.birthday)
-        : null,
-      address: data.address ?? "",
       areaId: data.areaId,
-      teamId: data.teamId,
-      marketingEmployeeId: data.marketingEmployeeId,
+      address: data.address ?? "",
+      managerId: data.managerId ?? null,
       note: data.note ?? "",
     });
 
-    const populatedCustomer = await Customer.findById(
-      customer._id
+    const populatedWarehouse = await Warehouse.findById(
+      warehouse._id
     )
-      .populate("teamId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("areaId", "_id code name")
+      .populate("managerId", "_id employeeCode fullName")
       .lean();
 
     return success(
-      mapCustomer(populatedCustomer!),
-      "Tạo khách hàng thành công"
+      mapWarehouse(populatedWarehouse!),
+      "Tạo kho thành công"
     );
   } catch (error) {
-    console.error("Create Customer Error:", error);
+    console.error("Create Warehouse Error:", error);
 
     return errorResponse(
-      "Không thể tạo khách hàng",
+      "Không thể tạo kho",
       500
     );
   }

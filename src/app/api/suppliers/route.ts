@@ -1,15 +1,14 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 
-import Customer from "@/models/Customer";
+import Supplier from "@/models/Supplier";
 import Area from "@/models/Area";
-import Team from "@/models/Team";
-import Employee from "@/models/Employee";
 
 import {
-  mapCustomer,
-  mapCustomerList,
-} from "@/mappers/customer.mapper";
+  mapSupplier,
+  mapSupplierList,
+} from "@/mappers/supplier.mapper";
 
 import {
   success,
@@ -17,7 +16,7 @@ import {
 } from "@/utils/response";
 
 import {
-  createCustomerSchema,
+  createSupplierSchema,
 } from "@/utils/validator";
 
 export async function GET(request: Request) {
@@ -26,11 +25,11 @@ export async function GET(request: Request) {
 
     if (
       !currentUser.permissions.includes(
-        "customer.view"
+        "supplier.view"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền xem khách hàng",
+        "Bạn không có quyền xem nhà cung cấp",
         403
       );
     }
@@ -42,8 +41,6 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") ?? "1");
     const limit = parseInt(searchParams.get("limit") ?? "20");
     const search = searchParams.get("search") ?? "";
-    const teamId = searchParams.get("teamId") ?? "";
-    const marketingEmployeeId = searchParams.get("marketingEmployeeId") ?? "";
     const areaId = searchParams.get("areaId") ?? "";
     const isActive = searchParams.get("isActive");
 
@@ -57,14 +54,6 @@ export async function GET(request: Request) {
       ];
     }
 
-    if (teamId) {
-      filter.teamId = teamId;
-    }
-
-    if (marketingEmployeeId) {
-      filter.marketingEmployeeId = marketingEmployeeId;
-    }
-
     if (areaId) {
       filter.areaId = areaId;
     }
@@ -76,29 +65,27 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
 
     const [items, total] = await Promise.all([
-      Customer.find(filter)
-        .populate("teamId", "_id code name")
-        .populate("marketingEmployeeId", "_id employeeCode fullName")
+      Supplier.find(filter)
         .populate("areaId", "_id code name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      Customer.countDocuments(filter),
+      Supplier.countDocuments(filter),
     ]);
 
     return success({
-      items: items.map(mapCustomerList),
+      items: items.map(mapSupplierList),
       total,
       page,
       limit,
       totalPages: Math.max(1, Math.ceil(total / limit)),
     });
   } catch (error) {
-    console.error("Customer List Error:", error);
+    console.error("Supplier List Error:", error);
 
     return errorResponse(
-      "Không thể lấy danh sách khách hàng",
+      "Không thể lấy danh sách nhà cung cấp",
       500
     );
   }
@@ -110,11 +97,11 @@ export async function POST(request: Request) {
 
     if (
       !currentUser.permissions.includes(
-        "customer.create"
+        "supplier.create"
       )
     ) {
       return errorResponse(
-        "Bạn không có quyền tạo khách hàng",
+        "Bạn không có quyền tạo nhà cung cấp",
         403
       );
     }
@@ -133,7 +120,7 @@ export async function POST(request: Request) {
     }
 
     const parsedBody =
-      createCustomerSchema.safeParse(body);
+      createSupplierSchema.safeParse(body);
 
     if (!parsedBody.success) {
       return errorResponse(
@@ -145,24 +132,31 @@ export async function POST(request: Request) {
 
     const data = parsedBody.data;
 
-    const existedCode = await Customer.exists({
+    const existedCode = await Supplier.exists({
       code: data.code.toUpperCase(),
     });
 
     if (existedCode) {
       return errorResponse(
-        "Mã khách hàng đã tồn tại",
+        "Mã nhà cung cấp đã tồn tại",
         400
       );
     }
 
-    const existedPhone = await Customer.exists({
+    const existedPhone = await Supplier.exists({
       phone: data.phone,
     });
 
     if (existedPhone) {
       return errorResponse(
         "Số điện thoại đã tồn tại",
+        400
+      );
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(data.areaId)) {
+      return errorResponse(
+        "ID khu vực không hợp lệ",
         400
       );
     }
@@ -178,61 +172,32 @@ export async function POST(request: Request) {
       );
     }
 
-    const existedTeam = await Team.exists({
-      _id: data.teamId,
-    });
-
-    if (!existedTeam) {
-      return errorResponse(
-        "Nhóm không tồn tại",
-        400
-      );
-    }
-
-    const existedMarketingEmployee = await Employee.exists({
-      _id: data.marketingEmployeeId,
-    });
-
-    if (!existedMarketingEmployee) {
-      return errorResponse(
-        "Nhân viên marketing không tồn tại",
-        400
-      );
-    }
-
-    const customer = await Customer.create({
+    const supplier = await Supplier.create({
       code: data.code.toUpperCase(),
       name: data.name,
       phone: data.phone,
       email: data.email ?? "",
-      gender: data.gender,
-      birthday: data.birthday
-        ? new Date(data.birthday)
-        : null,
+      contactPerson: data.contactPerson ?? "",
       address: data.address ?? "",
       areaId: data.areaId,
-      teamId: data.teamId,
-      marketingEmployeeId: data.marketingEmployeeId,
       note: data.note ?? "",
     });
 
-    const populatedCustomer = await Customer.findById(
-      customer._id
+    const populatedSupplier = await Supplier.findById(
+      supplier._id
     )
-      .populate("teamId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("areaId", "_id code name")
       .lean();
 
     return success(
-      mapCustomer(populatedCustomer!),
-      "Tạo khách hàng thành công"
+      mapSupplier(populatedSupplier!),
+      "Tạo nhà cung cấp thành công"
     );
   } catch (error) {
-    console.error("Create Customer Error:", error);
+    console.error("Create Supplier Error:", error);
 
     return errorResponse(
-      "Không thể tạo khách hàng",
+      "Không thể tạo nhà cung cấp",
       500
     );
   }

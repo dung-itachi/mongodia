@@ -41,6 +41,16 @@ export const ROLES = [
       "customer.create",
       "customer.update",
 
+      "supplier.view",
+      "supplier.create",
+      "supplier.update",
+
+      "warehouse.view",
+      "warehouse.create",
+      "warehouse.update",
+
+      "inventory.view",
+
       "order.view",
       "order.create",
       "order.update",
@@ -69,6 +79,14 @@ export const ROLES = [
 
       "customer.view",
 
+      "supplier.view",
+
+      "warehouse.view",
+
+      "inventory.view",
+      "inventory-adjustment.view",
+      "inventory-adjustment.create",
+
       "order.view",
       "order.create",
       "order.update",
@@ -84,6 +102,10 @@ export const ROLES = [
       "dashboard.view",
 
       "product.view",
+
+      "inventory.view",
+      "inventory-adjustment.view",
+      "inventory-adjustment.create",
 
       "order.view",
       "order.create",
