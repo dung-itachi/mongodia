@@ -150,6 +150,60 @@ export const PERMISSIONS = [
   name: "Delete Variant Option",
 },
 
+// Variant Value
+{
+  code: "variant-value.view",
+  name: "View Variant Value",
+},
+{
+  code: "variant-value.create",
+  name: "Create Variant Value",
+},
+{
+  code: "variant-value.update",
+  name: "Update Variant Value",
+},
+{
+  code: "variant-value.delete",
+  name: "Delete Variant Value",
+},
+
+// Product Variant
+{
+  code: "product-variant.view",
+  name: "View Product Variant",
+},
+{
+  code: "product-variant.create",
+  name: "Create Product Variant",
+},
+{
+  code: "product-variant.update",
+  name: "Update Product Variant",
+},
+{
+  code: "product-variant.delete",
+  name: "Delete Product Variant",
+},
+
+// Customer
+{
+  code: "customer.view",
+  name: "View Customer",
+},
+{
+  code: "customer.create",
+  name: "Create Customer",
+},
+{
+  code: "customer.update",
+  name: "Update Customer",
+},
+{
+  code: "customer.delete",
+  name: "Delete Customer",
+},
+
   // Order
   {
     code: "order.view",

@@ -7,6 +7,11 @@ import { seedPermissions } from "./seeds/permissions.seed";
 import { seedRoles } from "./seeds/roles.seed";
 import { seedEmployees } from "./seeds/employees.seed";
 import { seedCounters } from "./seeds/counters.seed";
+import { seedCategories } from "./seeds/categories.seed";
+import { seedProducts } from "./seeds/products.seed";
+import { seedVariantOptions } from "./seeds/variant-options.seed";
+import { seedVariantValues } from "./seeds/variant-values.seed";
+import { seedProductVariants } from "./seeds/product-variants.seed";
 async function seed() {
   try {
     await connectDB();
@@ -21,6 +26,11 @@ async function seed() {
     await seedRoles();
     await seedEmployees();
     await seedCounters();
+    await seedCategories();
+    await seedProducts();
+    await seedVariantOptions();
+    await seedVariantValues();
+    await seedProductVariants();
     console.log("[DONE] Seed completed");
 
     process.exit(0);

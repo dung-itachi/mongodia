@@ -330,8 +330,146 @@ export const updateCategorySchema =
   });
   
   export const updateVariantOptionSchema =
-    createVariantOptionSchema.extend({
-      isActive: z.boolean({
-        message: "Trạng thái không hợp lệ",
-      }),
-    });
+  createVariantOptionSchema.extend({
+    isActive: z.boolean({
+      message: "Trạng thái không hợp lệ",
+    }),
+  });
+
+export const createVariantValueSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã giá trị phải có ít nhất 2 ký tự")
+    .max(50, "Mã giá trị không được quá 50 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên giá trị phải có ít nhất 2 ký tự")
+    .max(100, "Tên giá trị không được quá 100 ký tự"),
+
+  variantOptionId: z
+    .string({
+      message: "Thuộc tính biến thể không hợp lệ",
+    })
+    .min(1, "Thuộc tính biến thể không hợp lệ"),
+
+  sortOrder: z.number().default(0),
+});
+
+export const updateVariantValueSchema =
+  createVariantValueSchema.extend({
+    isActive: z.boolean({
+      message: "Trạng thái không hợp lệ",
+    }),
+  });
+
+export const createProductVariantSchema = z.object({
+  productId: z
+    .string({
+      message: "Sản phẩm không hợp lệ",
+    })
+    .min(1, "Sản phẩm không hợp lệ"),
+
+  sku: z
+    .string()
+    .trim()
+    .min(2, "SKU phải có ít nhất 2 ký tự")
+    .max(100, "SKU tối đa 100 ký tự"),
+
+  barcode: z
+    .string()
+    .trim()
+    .default(""),
+
+  image: z
+    .string()
+    .trim()
+    .default(""),
+
+  variantValues: z
+    .array(z.string())
+    .min(1, "Phải chọn ít nhất một giá trị biến thể"),
+
+  price: z
+    .number({
+      message: "Giá phải là số",
+    })
+    .min(0, "Giá không được âm"),
+
+  cost: z.number().default(0),
+
+  weight: z.number().default(0),
+
+  sortOrder: z.number().default(0),
+});
+
+export const updateProductVariantSchema =
+  createProductVariantSchema.extend({
+    isActive: z.boolean({
+      message: "Trạng thái không hợp lệ",
+    }),
+  });
+
+export const createCustomerSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã khách hàng phải có ít nhất 2 ký tự")
+    .max(50, "Mã khách hàng tối đa 50 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên khách hàng phải có ít nhất 2 ký tự")
+    .max(100, "Tên khách hàng tối đa 100 ký tự"),
+
+  phone: z
+    .string()
+    .trim()
+    .min(8, "Số điện thoại phải có ít nhất 8 ký tự")
+    .max(20, "Số điện thoại tối đa 20 ký tự"),
+
+  email: z
+    .string()
+    .trim()
+    .email("Email không hợp lệ")
+    .optional()
+    .or(z.literal("")),
+
+  gender: z.enum(["MALE", "FEMALE", "OTHER"], {
+    message: "Giới tính không hợp lệ",
+  }),
+
+  birthday: z.string().optional(),
+
+  address: z.string().default(""),
+
+  areaId: z
+    .string({
+      message: "Khu vực không hợp lệ",
+    })
+    .min(1, "Khu vực là bắt buộc"),
+
+  teamId: z
+    .string({
+      message: "Nhóm không hợp lệ",
+    })
+    .min(1, "Nhóm là bắt buộc"),
+
+  employeeId: z
+    .string({
+      message: "Nhân viên không hợp lệ",
+    })
+    .min(1, "Nhân viên phụ trách là bắt buộc"),
+
+  note: z.string().default(""),
+});
+
+export const updateCustomerSchema =
+  createCustomerSchema.extend({
+    isActive: z.boolean({
+      message: "Trạng thái không hợp lệ",
+    }),
+  });

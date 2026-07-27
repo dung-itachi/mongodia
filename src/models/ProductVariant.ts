@@ -1,125 +1,93 @@
 import mongoose, { Model, Schema, Types } from "mongoose";
 
-export interface IVariantAttribute {
-  name: string;
-
-  value: string;
-}
-
 export interface IProductVariant {
   productId: Types.ObjectId;
-
-  name: string;
 
   sku: string;
 
   barcode?: string;
 
-  attributes: IVariantAttribute[];
+  image?: string;
+
+  variantValues: Types.ObjectId[];
 
   price: number;
 
-  cost: number;
+  cost?: number;
 
-  weight: number;
+  weight?: number;
 
-  image?: string;
-
-  isDefault: boolean;
+  sortOrder?: number;
 
   isActive: boolean;
 }
 
-const VariantAttributeSchema =
-  new Schema<IVariantAttribute>(
-    {
-      name: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      value: {
-        type: String,
-        required: true,
-        trim: true,
-      },
+const ProductVariantSchema = new Schema<IProductVariant>(
+  {
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
     },
-    {
-      _id: false,
-    }
-  );
 
-const ProductVariantSchema =
-  new Schema<IProductVariant>(
-    {
-      productId: {
-        type: Schema.Types.ObjectId,
-        ref: "Product",
-        required: true,
-      },
-
-      name: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      sku: {
-        type: String,
-        required: true,
-        unique: true,
-        uppercase: true,
-        trim: true,
-      },
-
-      barcode: {
-        type: String,
-        default: "",
-      },
-
-      attributes: {
-        type: [VariantAttributeSchema],
-        default: [],
-      },
-
-      price: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
-
-      cost: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
-
-      weight: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
-
-      image: {
-        type: String,
-        default: "",
-      },
-
-      isDefault: {
-        type: Boolean,
-        default: false,
-      },
-
-      isActive: {
-        type: Boolean,
-        default: true,
-      },
+    sku: {
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
+      trim: true,
     },
-    {
-      timestamps: true,
-    }
-  );
+
+    barcode: {
+      type: String,
+      default: "",
+    },
+
+    image: {
+      type: String,
+      default: "",
+    },
+
+    variantValues: {
+      type: [Schema.Types.ObjectId],
+      ref: "VariantValue",
+      required: true,
+      default: [],
+    },
+
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    cost: {
+      type: Number,
+      default: 0,
+    },
+
+    weight: {
+      type: Number,
+      default: 0,
+    },
+
+    sortOrder: {
+      type: Number,
+      default: 0,
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+ProductVariantSchema.index({ productId: 1 });
+ProductVariantSchema.index({ variantValues: 1 });
 
 const ProductVariant: Model<IProductVariant> =
   mongoose.models.ProductVariant ||
