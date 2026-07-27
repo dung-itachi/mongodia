@@ -242,3 +242,75 @@ export const updateTeamSchema = createTeamSchema.extend({
     message: "Trạng thái hoạt động không hợp lệ",
   }),
 });
+
+export const createCategorySchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã danh mục phải có ít nhất 2 ký tự")
+    .max(20, "Mã danh mục tối đa 20 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên danh mục phải có ít nhất 2 ký tự")
+    .max(100, "Tên danh mục tối đa 100 ký tự"),
+
+  parentCode: z
+    .string()
+    .trim()
+    .nullable()
+    .optional(),
+
+  description: z
+    .string()
+    .trim()
+    .max(500, "Mô tả tối đa 500 ký tự")
+    .optional(),
+
+  sortOrder: z
+    .number({
+      error: "Thứ tự phải là số",
+    })
+    .default(0),
+});
+
+export const updateCategorySchema =
+  createCategorySchema.extend({
+    isActive: z.boolean({
+      error: "Trạng thái không hợp lệ",
+    }),
+  });
+
+  export const createProductSchema = z.object({
+    code: z
+      .string()
+      .min(2, "Mã sản phẩm phải có ít nhất 2 ký tự")
+      .max(50, "Mã sản phẩm không được quá 50 ký tự"),
+  
+    name: z
+      .string()
+      .min(2, "Tên sản phẩm phải có ít nhất 2 ký tự")
+      .max(200, "Tên sản phẩm không được quá 200 ký tự"),
+  
+    categoryCode: z
+      .string()
+      .min(2, "Mã danh mục không hợp lệ"),
+  
+    image: z
+      .string()
+      .optional()
+      .default(""),
+  
+    description: z
+      .string()
+      .optional()
+      .default(""),
+  });
+
+  export const updateProductSchema =
+  createProductSchema.extend({
+    isActive: z.boolean({
+      message: "Trạng thái không hợp lệ",
+    }),
+  });

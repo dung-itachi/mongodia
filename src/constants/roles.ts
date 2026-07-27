@@ -17,9 +17,15 @@ export const ROLES = [
 
       "team.view",
 
+      "category.view",
+      "category.create",
+      "category.update",
+
       "product.view",
       "product.create",
       "product.update",
+
+      
 
       "order.view",
       "order.create",
@@ -38,8 +44,10 @@ export const ROLES = [
       "employee.view",
 
       "team.view",
+      "category.view",
 
       "product.view",
+
 
       "order.view",
       "order.create",

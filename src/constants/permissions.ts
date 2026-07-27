@@ -114,6 +114,24 @@ export const PERMISSIONS = [
     name: "Delete Product",
   },
 
+  // Category
+{
+  code: "category.view",
+  name: "View Category",
+},
+{
+  code: "category.create",
+  name: "Create Category",
+},
+{
+  code: "category.update",
+  name: "Update Category",
+},
+{
+  code: "category.delete",
+  name: "Delete Category",
+},
+
   // Order
   {
     code: "order.view",
