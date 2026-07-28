@@ -55,6 +55,14 @@ export const ROLES = [
       "order.create",
       "order.update",
 
+      "facebook-page.view",
+      "facebook-page.create",
+      "facebook-page.update",
+
+      "facebook-page-assignment.view",
+      "facebook-page-assignment.create",
+      "facebook-page-assignment.update",
+
       "report.view",
     ],
   },
@@ -90,6 +98,10 @@ export const ROLES = [
       "order.view",
       "order.create",
       "order.update",
+
+      "facebook-page.view",
+
+      "facebook-page-assignment.view",
 
       "report.view",
     ],

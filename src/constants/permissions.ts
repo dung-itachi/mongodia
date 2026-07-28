@@ -274,7 +274,43 @@ export const PERMISSIONS = [
     name: "Delete Order",
   },
 
-  // Report
+// Facebook Page
+{
+  code: "facebook-page.view",
+  name: "View Facebook Page",
+},
+{
+  code: "facebook-page.create",
+  name: "Create Facebook Page",
+},
+{
+  code: "facebook-page.update",
+  name: "Update Facebook Page",
+},
+{
+  code: "facebook-page.delete",
+  name: "Delete Facebook Page",
+},
+
+// Facebook Page Assignment
+{
+  code: "facebook-page-assignment.view",
+  name: "View Facebook Page Assignment",
+},
+{
+  code: "facebook-page-assignment.create",
+  name: "Create Facebook Page Assignment",
+},
+{
+  code: "facebook-page-assignment.update",
+  name: "Update Facebook Page Assignment",
+},
+{
+  code: "facebook-page-assignment.delete",
+  name: "Delete Facebook Page Assignment",
+},
+
+// Report
   {
     code: "report.view",
     name: "View Report",

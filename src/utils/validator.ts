@@ -577,3 +577,129 @@ export const updateCustomerSchema =
       message: "Trạng thái không hợp lệ",
     }),
   });
+
+export const createFacebookPageSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã page phải có ít nhất 2 ký tự")
+    .max(30, "Mã page tối đa 30 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên page phải có ít nhất 2 ký tự")
+    .max(100, "Tên page tối đa 100 ký tự"),
+
+  pageUrl: z
+    .string()
+    .trim()
+    .default(""),
+
+  facebookPageId: z
+    .string()
+    .trim()
+    .default(""),
+
+  description: z
+    .string()
+    .trim()
+    .default(""),
+});
+
+export const updateFacebookPageSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2, "Mã page phải có ít nhất 2 ký tự")
+    .max(30, "Mã page tối đa 30 ký tự"),
+
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên page phải có ít nhất 2 ký tự")
+    .max(100, "Tên page tối đa 100 ký tự"),
+
+  pageUrl: z
+    .string()
+    .trim()
+    .default(""),
+
+  facebookPageId: z
+    .string()
+    .trim()
+    .default(""),
+
+  description: z
+    .string()
+    .trim()
+    .default(""),
+
+  isActive: z.boolean({
+    message: "Trạng thái không hợp lệ",
+  }),
+});
+
+export const createFacebookPageAssignmentSchema = z.object({
+  facebookPageId: z
+    .string({
+      message: "Facebook Page không hợp lệ",
+    })
+    .min(1, "Facebook Page là bắt buộc"),
+
+  marketingEmployeeId: z
+    .string({
+      message: "Nhân viên marketing không hợp lệ",
+    })
+    .min(1, "Nhân viên marketing là bắt buộc"),
+
+  startDate: z
+    .string({
+      message: "Ngày bắt đầu không hợp lệ",
+    })
+    .min(1, "Ngày bắt đầu là bắt buộc"),
+
+  endDate: z
+    .string()
+    .nullable()
+    .optional(),
+
+  note: z
+    .string()
+    .trim()
+    .default(""),
+});
+
+export const updateFacebookPageAssignmentSchema = z.object({
+  facebookPageId: z
+    .string({
+      message: "Facebook Page không hợp lệ",
+    })
+    .min(1, "Facebook Page là bắt buộc"),
+
+  marketingEmployeeId: z
+    .string({
+      message: "Nhân viên marketing không hợp lệ",
+    })
+    .min(1, "Nhân viên marketing là bắt buộc"),
+
+  startDate: z
+    .string({
+      message: "Ngày bắt đầu không hợp lệ",
+    })
+    .min(1, "Ngày bắt đầu là bắt buộc"),
+
+  endDate: z
+    .string()
+    .nullable()
+    .optional(),
+
+  note: z
+    .string()
+    .trim()
+    .default(""),
+
+  isActive: z.boolean({
+    message: "Trạng thái không hợp lệ",
+  }),
+});
