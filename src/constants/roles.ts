@@ -123,4 +123,31 @@ export const ROLES = [
       "order.create",
     ],
   },
+
+  {
+    code: "MKT",
+    name: "Marketing",
+    permissions: [
+      "dashboard.view",
+
+      "facebook-page.view",
+      "facebook-page.create",
+      "facebook-page.update",
+
+      "facebook-page-assignment.view",
+      "facebook-page-assignment.create",
+      "facebook-page-assignment.update",
+
+      "customer.view",
+      "customer.create",
+      "customer.update",
+
+      "product.view",
+
+      "order.view",
+      "order.create",
+
+      "report.view",
+    ],
+  },
 ];

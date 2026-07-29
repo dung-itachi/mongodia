@@ -359,3 +359,21 @@ Warehouse
 
 Đây là nền tảng rất tốt.
 ---------
+Order sẽ có rất nhiều nghiệp vụ:
+
+đổi Sale
+đổi Page
+đổi Kho
+hủy đơn
+hoàn đơn
+giữ tồn
+xuất kho
+thanh toán
+COD
+chuyển khoản
+nhiều sản phẩm
+nhiều trạng thái
+lịch sử trạng thái
+
+Nếu vừa nghĩ vừa code sẽ rất dễ phải sửa model nhiều lần.
+------------

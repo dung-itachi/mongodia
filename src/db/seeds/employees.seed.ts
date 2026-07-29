@@ -34,7 +34,7 @@ export async function seedEmployees() {
 
     await Employee.updateOne(
       {
-        username: employee.username,
+        employeeCode: employee.employeeCode,
       },
       {
         $set: {

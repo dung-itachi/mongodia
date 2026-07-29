@@ -217,7 +217,7 @@ export async function POST(request: Request) {
     }
 
     // Rule 5: Nếu tạo Assignment mới với endDate = null
-    // thì tự động update Assignment hiện tại (endDate = null) thành startDate mới - 1 ngày
+    // thì kiểm tra Assignment hiện tại (endDate = null)
     if (endDate === null) {
       const currentAssignment = await FacebookPageAssignment.findOne({
         facebookPageId: data.facebookPageId,
@@ -226,12 +226,21 @@ export async function POST(request: Request) {
       });
 
       if (currentAssignment) {
-        const newStartDate = new Date(data.startDate);
-        newStartDate.setDate(newStartDate.getDate() - 1);
+        // Nếu startDate mới <= startDate hiện tại thì không cho tạo
+        if (startDate <= currentAssignment.startDate) {
+          return errorResponse(
+            "Ngày bắt đầu phải lớn hơn ngày bắt đầu của Assignment hiện tại",
+            409
+          );
+        }
+
+        // Nếu startDate mới > startDate hiện tại thì auto-close assignment hiện tại
+        const newEndDate = new Date(data.startDate);
+        newEndDate.setDate(newEndDate.getDate() - 1);
 
         await FacebookPageAssignment.updateOne(
           { _id: currentAssignment._id },
-          { $set: { endDate: newStartDate } }
+          { $set: { endDate: newEndDate } }
         );
       }
     }

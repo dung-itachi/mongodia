@@ -640,66 +640,146 @@ export const updateFacebookPageSchema = z.object({
   }),
 });
 
-export const createFacebookPageAssignmentSchema = z.object({
-  facebookPageId: z
-    .string({
-      message: "Facebook Page không hợp lệ",
-    })
-    .min(1, "Facebook Page là bắt buộc"),
+export const createFacebookPageAssignmentSchema = z
+  .object({
+    facebookPageId: z
+      .string({
+        message: "Facebook Page không hợp lệ",
+      })
+      .min(1, "Facebook Page là bắt buộc"),
 
-  marketingEmployeeId: z
-    .string({
-      message: "Nhân viên marketing không hợp lệ",
-    })
-    .min(1, "Nhân viên marketing là bắt buộc"),
+    marketingEmployeeId: z
+      .string({
+        message: "Nhân viên marketing không hợp lệ",
+      })
+      .min(1, "Nhân viên marketing là bắt buộc"),
 
-  startDate: z
-    .string({
+    startDate: z
+      .string({
+        message: "Ngày bắt đầu không hợp lệ",
+      })
+      .min(1, "Ngày bắt đầu là bắt buộc"),
+
+    endDate: z
+      .string({
+        message: "Ngày kết thúc không hợp lệ",
+      })
+      .nullable()
+      .optional(),
+
+    note: z
+      .string()
+      .trim()
+      .default(""),
+  })
+  .refine(
+    (data) => {
+      const start = new Date(data.startDate);
+      return !isNaN(start.getTime());
+    },
+    {
       message: "Ngày bắt đầu không hợp lệ",
-    })
-    .min(1, "Ngày bắt đầu là bắt buộc"),
+      path: ["startDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.endDate === null || data.endDate === undefined || data.endDate === "") {
+        return true;
+      }
+      const end = new Date(data.endDate);
+      return !isNaN(end.getTime());
+    },
+    {
+      message: "Ngày kết thúc không hợp lệ",
+      path: ["endDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.endDate === null || data.endDate === undefined || data.endDate === "") {
+        return true;
+      }
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
+      return end >= start;
+    },
+    {
+      message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu",
+      path: ["endDate"],
+    }
+  );
 
-  endDate: z
-    .string()
-    .nullable()
-    .optional(),
+export const updateFacebookPageAssignmentSchema = z
+  .object({
+    facebookPageId: z
+      .string({
+        message: "Facebook Page không hợp lệ",
+      })
+      .min(1, "Facebook Page là bắt buộc"),
 
-  note: z
-    .string()
-    .trim()
-    .default(""),
-});
+    marketingEmployeeId: z
+      .string({
+        message: "Nhân viên marketing không hợp lệ",
+      })
+      .min(1, "Nhân viên marketing là bắt buộc"),
 
-export const updateFacebookPageAssignmentSchema = z.object({
-  facebookPageId: z
-    .string({
-      message: "Facebook Page không hợp lệ",
-    })
-    .min(1, "Facebook Page là bắt buộc"),
+    startDate: z
+      .string({
+        message: "Ngày bắt đầu không hợp lệ",
+      })
+      .min(1, "Ngày bắt đầu là bắt buộc"),
 
-  marketingEmployeeId: z
-    .string({
-      message: "Nhân viên marketing không hợp lệ",
-    })
-    .min(1, "Nhân viên marketing là bắt buộc"),
+    endDate: z
+      .string({
+        message: "Ngày kết thúc không hợp lệ",
+      })
+      .nullable()
+      .optional(),
 
-  startDate: z
-    .string({
+    note: z
+      .string()
+      .trim()
+      .default(""),
+
+    isActive: z.boolean({
+      message: "Trạng thái không hợp lệ",
+    }),
+  })
+  .refine(
+    (data) => {
+      const start = new Date(data.startDate);
+      return !isNaN(start.getTime());
+    },
+    {
       message: "Ngày bắt đầu không hợp lệ",
-    })
-    .min(1, "Ngày bắt đầu là bắt buộc"),
-
-  endDate: z
-    .string()
-    .nullable()
-    .optional(),
-
-  note: z
-    .string()
-    .trim()
-    .default(""),
-
-  isActive: z.boolean({
-    message: "Trạng thái không hợp lệ",
-  }),
-});
+      path: ["startDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.endDate === null || data.endDate === undefined || data.endDate === "") {
+        return true;
+      }
+      const end = new Date(data.endDate);
+      return !isNaN(end.getTime());
+    },
+    {
+      message: "Ngày kết thúc không hợp lệ",
+      path: ["endDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.endDate === null || data.endDate === undefined || data.endDate === "") {
+        return true;
+      }
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
+      return end >= start;
+    },
+    {
+      message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu",
+      path: ["endDate"],
+    }
+  );

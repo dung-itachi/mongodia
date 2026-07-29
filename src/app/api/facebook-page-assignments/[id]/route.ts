@@ -221,6 +221,36 @@ export async function PUT(
       );
     }
 
+    // Rule 5: Nếu update thành endDate = null
+    // thì kiểm tra Assignment hiện tại khác (endDate = null)
+    if (endDate === null) {
+      const currentAssignment = await FacebookPageAssignment.findOne({
+        facebookPageId: data.facebookPageId,
+        endDate: null,
+        isActive: true,
+        _id: { $ne: id },
+      });
+
+      if (currentAssignment) {
+        // Nếu startDate mới <= startDate hiện tại thì không cho update
+        if (startDate <= currentAssignment.startDate) {
+          return errorResponse(
+            "Ngày bắt đầu phải lớn hơn ngày bắt đầu của Assignment hiện tại",
+            409
+          );
+        }
+
+        // Nếu startDate mới > startDate hiện tại thì auto-close assignment hiện tại
+        const newEndDate = new Date(data.startDate);
+        newEndDate.setDate(newEndDate.getDate() - 1);
+
+        await FacebookPageAssignment.updateOne(
+          { _id: currentAssignment._id },
+          { $set: { endDate: newEndDate } }
+        );
+      }
+    }
+
     await FacebookPageAssignment.updateOne(
       { _id: id },
       {
