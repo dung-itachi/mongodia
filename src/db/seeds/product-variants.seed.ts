@@ -48,6 +48,33 @@ const PRODUCT_VARIANTS = [
     cost: 40000000,
     weight: 1580,
   },
+  {
+    productCode: "KEMABC",
+    sku: "KEM-HOP-1",
+    barcode: "1234567890010",
+    variantValueCodes: ["1HOP"],
+    price: 50000,
+    cost: 30000,
+    weight: 50,
+  },
+  {
+    productCode: "KEMABC",
+    sku: "KEM-HOP-3",
+    barcode: "1234567890011",
+    variantValueCodes: ["3HOP"],
+    price: 140000,
+    cost: 85000,
+    weight: 150,
+  },
+  {
+    productCode: "KEMABC",
+    sku: "KEM-QUA",
+    barcode: "1234567890012",
+    variantValueCodes: ["QUA"],
+    price: 10000,
+    cost: 5000,
+    weight: 10,
+  },
 ];
 
 export async function seedProductVariants() {

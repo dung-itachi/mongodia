@@ -17,6 +17,11 @@ const PRODUCTS = [
     name: "MacBook Pro",
     categoryCode: "LAPTOP",
   },
+  {
+    code: "KEMABC",
+    name: "Kem ABC",
+    categoryCode: "KEM",
+  },
 ];
 
 export async function seedProducts() {

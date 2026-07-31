@@ -12,6 +12,10 @@ const VARIANT_VALUES = [
 
   { code: "8GB", name: "8GB", variantOptionCode: "RAM", sortOrder: 1 },
   { code: "16GB", name: "16GB", variantOptionCode: "RAM", sortOrder: 2 },
+
+  { code: "1HOP", name: "1 Hộp", variantOptionCode: "PACKAGE", sortOrder: 1 },
+  { code: "3HOP", name: "3 Hộp", variantOptionCode: "PACKAGE", sortOrder: 2 },
+  { code: "QUA", name: "Quà tặng", variantOptionCode: "PACKAGE", sortOrder: 3 },
 ];
 
 export async function seedVariantValues() {

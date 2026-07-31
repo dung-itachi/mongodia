@@ -26,6 +26,11 @@ const CATEGORIES = [
     name: "Khác",
     sortOrder: 5,
   },
+  {
+    code: "KEM",
+    name: "Kem",
+    sortOrder: 6,
+  },
 ];
 
 export async function seedCategories() {

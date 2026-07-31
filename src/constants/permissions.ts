@@ -310,6 +310,24 @@ export const PERMISSIONS = [
   name: "Delete Facebook Page Assignment",
 },
 
+// Combo
+{
+  code: "combo.view",
+  name: "View Combo",
+},
+{
+  code: "combo.create",
+  name: "Create Combo",
+},
+{
+  code: "combo.update",
+  name: "Update Combo",
+},
+{
+  code: "combo.delete",
+  name: "Delete Combo",
+},
+
 // Report
   {
     code: "report.view",

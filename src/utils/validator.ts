@@ -710,6 +710,153 @@ export const createFacebookPageAssignmentSchema = z
     }
   );
 
+// Combo schemas
+const comboItemSchema = z.object({
+  productVariantId: z
+    .string({
+      message: "ProductVariant không hợp lệ",
+    })
+    .min(1, "ProductVariant là bắt buộc"),
+
+  quantity: z
+    .number({
+      message: "Số lượng không hợp lệ",
+    })
+    .int("Số lượng phải là số nguyên")
+    .min(1, "Số lượng phải lớn hơn 0"),
+
+  isGift: z.boolean().default(false),
+});
+
+export const createComboSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .min(1, "Mã combo là bắt buộc")
+      .max(50, "Mã combo tối đa 50 ký tự"),
+
+    name: z
+      .string()
+      .trim()
+      .min(1, "Tên combo là bắt buộc")
+      .max(200, "Tên combo tối đa 200 ký tự"),
+
+    productCode: z
+      .string()
+      .trim()
+      .nonempty("Sản phẩm là bắt buộc"),
+
+    categoryCode: z
+      .string()
+      .trim()
+      .nonempty("Danh mục là bắt buộc"),
+
+    comboItems: z
+      .array(comboItemSchema)
+      .min(1, "Combo phải có ít nhất 1 sản phẩm"),
+
+    sellingPrice: z
+      .number({
+        message: "Giá bán không hợp lệ",
+      })
+      .min(0, "Giá bán phải lớn hơn hoặc bằng 0"),
+
+    packageSize: z
+      .number({
+        message: "Số lượng combo không hợp lệ",
+      })
+      .int("Số lượng combo phải là số nguyên")
+      .min(1, "Số lượng combo phải lớn hơn 0"),
+
+    displayOrder: z
+      .number()
+      .int("Thứ tự hiển thị phải là số nguyên")
+      .min(0, "Thứ tự hiển thị không được âm")
+      .optional()
+      .default(0),
+
+    image: z.string().optional(),
+
+    description: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      const variantIds = data.comboItems.map((item) => item.productVariantId);
+      const uniqueIds = new Set(variantIds);
+      return uniqueIds.size === variantIds.length;
+    },
+    {
+      message: "ProductVariant bị trùng trong combo",
+      path: ["comboItems"],
+    }
+  );
+
+export const updateComboSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .min(1, "Mã combo là bắt buộc")
+      .max(50, "Mã combo tối đa 50 ký tự"),
+
+    name: z
+      .string()
+      .trim()
+      .min(1, "Tên combo là bắt buộc")
+      .max(200, "Tên combo tối đa 200 ký tự"),
+
+    productCode: z
+      .string()
+      .trim()
+      .nonempty("Sản phẩm là bắt buộc"),
+
+    categoryCode: z
+      .string()
+      .trim()
+      .nonempty("Danh mục là bắt buộc"),
+
+    comboItems: z
+      .array(comboItemSchema)
+      .min(1, "Combo phải có ít nhất 1 sản phẩm"),
+
+    sellingPrice: z
+      .number({
+        message: "Giá bán không hợp lệ",
+      })
+      .min(0, "Giá bán phải lớn hơn hoặc bằng 0"),
+
+    packageSize: z
+      .number({
+        message: "Số lượng combo không hợp lệ",
+      })
+      .int("Số lượng combo phải là số nguyên")
+      .min(1, "Số lượng combo phải lớn hơn 0"),
+
+    displayOrder: z
+      .number()
+      .int("Thứ tự hiển thị phải là số nguyên")
+      .min(0, "Thứ tự hiển thị không được âm")
+      .optional()
+      .default(0),
+
+    image: z.string().optional(),
+
+    description: z.string().optional(),
+
+    isActive: z.boolean(),
+  })
+  .refine(
+    (data) => {
+      const variantIds = data.comboItems.map((item) => item.productVariantId);
+      const uniqueIds = new Set(variantIds);
+      return uniqueIds.size === variantIds.length;
+    },
+    {
+      message: "ProductVariant bị trùng trong combo",
+      path: ["comboItems"],
+    }
+  );
 export const updateFacebookPageAssignmentSchema = z
   .object({
     facebookPageId: z

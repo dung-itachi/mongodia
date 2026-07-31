@@ -16,6 +16,11 @@ const VARIANT_OPTIONS = [
     name: "RAM",
     sortOrder: 3,
   },
+  {
+    code: "PACKAGE",
+    name: "Gói",
+    sortOrder: 4,
+  },
 ];
 
 export async function seedVariantOptions() {

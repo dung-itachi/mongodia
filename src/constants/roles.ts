@@ -63,6 +63,10 @@ export const ROLES = [
       "facebook-page-assignment.create",
       "facebook-page-assignment.update",
 
+      "combo.view",
+      "combo.create",
+      "combo.update",
+
       "report.view",
     ],
   },
@@ -80,7 +84,7 @@ export const ROLES = [
 
       "product.view",
 
-"variant-option.view",
+      "variant-option.view",
 
       "variant-value.view",
       "product-variant.view",
@@ -103,6 +107,8 @@ export const ROLES = [
 
       "facebook-page-assignment.view",
 
+      "combo.view",
+
       "report.view",
     ],
   },
@@ -121,6 +127,8 @@ export const ROLES = [
 
       "order.view",
       "order.create",
+
+      "combo.view",
     ],
   },
 
@@ -143,6 +151,10 @@ export const ROLES = [
       "customer.update",
 
       "product.view",
+
+      "combo.view",
+      "combo.create",
+      "combo.update",
 
       "order.view",
       "order.create",

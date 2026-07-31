@@ -48,8 +48,6 @@ const FacebookPageSchema = new Schema<IFacebookPage>(
   }
 );
 
-FacebookPageSchema.index({ code: 1 }, { unique: true });
-
 const FacebookPage: Model<IFacebookPage> =
   mongoose.models.FacebookPage ||
   mongoose.model<IFacebookPage>("FacebookPage", FacebookPageSchema);
