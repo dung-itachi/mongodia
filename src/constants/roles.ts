@@ -67,6 +67,10 @@ export const ROLES = [
       "combo.create",
       "combo.update",
 
+      "lead.view",
+      "lead.create",
+      "lead.update",
+
       "report.view",
     ],
   },
@@ -128,12 +132,15 @@ export const ROLES = [
       "order.view",
       "order.create",
 
-      "combo.view",
+"combo.view",
     ],
-  },
 
-  {
-    code: "MKT",
+    "lead.view",
+  ],
+},
+
+{
+  code: "MKT",
     name: "Marketing",
     permissions: [
       "dashboard.view",
@@ -155,6 +162,11 @@ export const ROLES = [
       "combo.view",
       "combo.create",
       "combo.update",
+
+      "lead.view",
+      "lead.create",
+      "lead.update",
+      "lead.assign",
 
       "order.view",
       "order.create",

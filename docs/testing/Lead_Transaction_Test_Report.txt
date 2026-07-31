@@ -1,0 +1,260 @@
+==================================================
+MODULE: Lead Transaction
+
+Ngày kiểm thử: 2026-07-31
+Người thực hiện: Cursor Agent
+
+Kết quả cuối cùng: PASS
+
+==================================================
+
+1. Module
+
+Module: Lead
+Endpoint: /api/leads (POST, PUT, DELETE)
+Collections: leads, leadhistories, counters
+
+==================================================
+
+2. Tổng số test
+
+Tổng số test: 26
+- Test Suite 1 (Basic Transaction): 8 tests
+- Test Suite 2 (Error-based Rollback): 5 tests
+- Test Suite 3 (Comprehensive - Real Errors): 13 tests
+
+==================================================
+
+3. PASS / FAIL
+
+| Status | Count |
+|--------|-------|
+| PASS   | 26    |
+| FAIL   | 0     |
+
+==================================================
+
+4. Danh sách test đã chạy
+
+==================================================
+TEST SUITE 1: BASIC TRANSACTION (8 tests)
+==================================================
+
+POST LEAD TRANSACTION TESTS:
+[PASS] POST Lead - Transaction Success
+[PASS] POST Lead - Transaction Rollback
+
+PUT LEAD TRANSACTION TESTS:
+[PASS] PUT Lead - Transaction Success
+[PASS] PUT Lead - Transaction Rollback
+
+DELETE LEAD TRANSACTION TESTS:
+[PASS] DELETE Lead - Transaction Success
+[PASS] DELETE Lead - Transaction Rollback
+
+MONGODB VERIFICATION TESTS:
+[PASS] MongoDB Verification
+[PASS] Transaction Support
+
+==================================================
+TEST SUITE 2: ERROR-BASED ROLLBACK (5 tests)
+==================================================
+
+[PASS] POST Lead - Rollback (Invalid LeadHistory Data)
+[PASS] POST Lead - Rollback (Duplicate leadCode)
+[PASS] PUT Lead - Rollback (Invalid LeadHistory Data)
+[PASS] DELETE Lead - Rollback (Invalid LeadHistory Data)
+[PASS] MongoDB Verification after Error Rollbacks
+
+==================================================
+TEST SUITE 3: COMPREHENSIVE - REAL ERRORS (13 tests)
+==================================================
+
+POST TRANSACTION TESTS (6 tests):
+[PASS] POST Lead - Commit Success
+[PASS] POST Lead - Rollback by Validation Error
+[PASS] POST Lead - Rollback by Duplicate Key
+[PASS] POST Lead - Rollback by Required Field
+[PASS] POST Lead - Rollback by Invalid Enum
+[PASS] POST Lead - Rollback by Cast Error
+
+PUT TRANSACTION TESTS (3 tests):
+[PASS] PUT Lead - Commit Success
+[PASS] PUT Lead - Rollback by Validation Error
+[PASS] PUT Lead - Rollback by Invalid Enum
+
+DELETE TRANSACTION TESTS (3 tests):
+[PASS] DELETE Lead - Commit Success
+[PASS] DELETE Lead - Rollback by Required Field
+[PASS] DELETE Lead - Rollback by Cast Error
+
+MONGODB VERIFICATION (1 test):
+[PASS] MongoDB Verification
+
+==================================================
+
+5. Chi tiết từng lỗi dùng để kích hoạt rollback
+
+5.1. POST Lead - Rollback by Validation Error
+   - Lỗi: LeadHistory.leadId không phải ObjectId hợp lệ
+   - Error message: "LeadHistory validation failed: leadId: Cast to ObjectId failed for value 'not-a-valid-object-id'"
+   - Trigger: Sau khi đã tạo Lead và tăng Counter
+   - Kết quả: Lead không tồn tại, Counter không tăng, LeadHistory không tạo
+
+5.2. POST Lead - Rollback by Duplicate Key
+   - Lỗi: E11000 duplicate key error (unique constraint violation)
+   - Trigger: Tạo Lead thứ 2 với cùng leadCode
+   - Kết quả: Tất cả Lead trong transaction bị rollback
+
+5.3. POST Lead - Rollback by Required Field
+   - Lỗi: LeadHistory.leadId is required (required field bị thiếu)
+   - Error message: "LeadHistory validation failed: leadId: Path `leadId` is required."
+   - Kết quả: Lead không tồn tại, Counter không tăng
+
+5.4. POST Lead - Rollback by Invalid Enum
+   - Lỗi: sourceType không có trong enum
+   - Error message: "Lead validation failed: sourceType: `INVALID_SOURCE_TYPE` is not a valid enum value"
+   - Kết quả: Lead không tồn tại
+
+5.5. POST Lead - Rollback by Cast Error
+   - Lỗi: LeadHistory.employeeId không phải ObjectId hợp lệ
+   - Error message: "LeadHistory validation failed: employeeId: Cast to ObjectId failed"
+   - Kết quả: Lead không tồn tại, Counter không tăng
+
+5.6. PUT Lead - Rollback by Validation Error
+   - Lỗi: LeadHistory.leadId không phải ObjectId hợp lệ
+   - Trigger: Sau khi update Lead
+   - Kết quả: Lead trở về dữ liệu ban đầu, không có LeadHistory mới
+
+5.7. PUT Lead - Rollback by Invalid Enum
+   - Lỗi: action không có trong enum
+   - Error message: "LeadHistory validation failed: action: `INVALID_ENUM_ACTION` is not a valid enum value"
+   - Kết quả: Lead trở về dữ liệu ban đầu
+
+5.8. DELETE Lead - Rollback by Required Field
+   - Lỗi: LeadHistory.leadId is required
+   - Trigger: Sau khi set isActive = false
+   - Kết quả: Lead.isActive = true, không có LeadHistory mới
+
+5.9. DELETE Lead - Rollback by Cast Error
+   - Lỗi: LeadHistory.employeeId không phải ObjectId hợp lệ
+   - Trigger: Sau khi set isActive = false
+   - Kết quả: Lead.isActive = true, không có LeadHistory mới
+
+==================================================
+
+6. Kết quả xác minh MongoDB
+
+6.1. Collections đã xác minh:
+   - leads: Tồn tại, có unique leadCode index
+   - leadhistories: Tồn tại, có leadId index
+   - counters: Tồn tại, structure đúng
+
+6.2. Sau Commit (success tests):
+   - Lead: Document được tạo với leadCode, customerName, status, isActive=true
+   - LeadHistory: Document được tạo với employeeId, action, leadId
+   - Counter: Value được tăng đúng 1
+
+6.3. Sau Rollback (error tests):
+   - Lead: Không tồn tại (POST) hoặc giữ nguyên (PUT/DELETE)
+   - LeadHistory: Không có document mới
+   - Counter: Giữ nguyên giá trị ban đầu
+
+6.4. Data Integrity:
+   - PUT Lead sau rollback: latestRemark = "Original remark", customerName không đổi
+   - DELETE Lead sau rollback: isActive = true
+   - Không có orphaned data, không có data corruption
+
+==================================================
+
+7. File đã sửa (nếu có)
+
+Không có file nào được sửa trong quá trình test này.
+
+Code đã có sẵn (xác minh):
+- src/app/api/leads/route.ts (POST với Transaction)
+- src/app/api/leads/[id]/route.ts (PUT, DELETE với Transaction)
+
+Test scripts:
+- src/app/api/test-lead-transaction-direct.ts (Basic Transaction)
+- src/app/api/test-lead-transaction-error.ts (Error-based Rollback)
+- src/app/api/test-lead-transaction-comprehensive.ts (Comprehensive - Real Errors)
+
+==================================================
+
+8. Regression Test
+
+Đã chạy lại toàn bộ Transaction test sau khi hoàn thành comprehensive test:
+
+[PASS] Test Suite 1 - Basic Transaction: 8/8 tests PASS
+[PASS] Test Suite 2 - Error-based Rollback: 5/5 tests PASS
+[PASS] Test Suite 3 - Comprehensive - Real Errors: 13/13 tests PASS
+
+Tổng cộng: 26/26 tests PASS
+
+Không có regression nào được phát hiện.
+
+==================================================
+
+9. Transaction Coverage
+
+[PASS] Commit Success
+       - POST Lead commit thành công
+       - PUT Lead commit thành công
+       - DELETE Lead commit thành công
+
+[PASS] Rollback by Validation Error
+       - POST Lead: invalid leadId
+       - PUT Lead: invalid leadId
+       - DELETE Lead: invalid employeeId
+
+[PASS] Rollback by Duplicate Key
+       - POST Lead: duplicate leadCode
+
+[PASS] Rollback by Required Field
+       - POST Lead: missing leadId
+       - DELETE Lead: missing leadId
+
+[PASS] Rollback by Invalid Enum
+       - POST Lead: invalid sourceType
+       - PUT Lead: invalid action
+
+[PASS] Rollback by Cast Error
+       - POST Lead: invalid employeeId
+       - DELETE Lead: invalid employeeId
+
+[PASS] MongoDB Verification
+       - Collections tồn tại
+       - Indexes đúng
+       - Data integrity verified
+       - Không có orphaned data
+
+[PASS] Regression Test
+       - 26/26 tests pass
+
+==================================================
+
+10. Kết luận cuối cùng
+
+PASS
+
+Tổng số test: 26
+Đã pass: 26
+Đã fail: 0
+
+Transaction hoạt động đúng cho Lead Module:
+- POST Lead: Counter + Lead + LeadHistory trong 1 transaction
+- PUT Lead: Update Lead + LeadHistory trong 1 transaction
+- DELETE Lead: Soft Delete + LeadHistory trong 1 transaction
+
+Commit và Rollback (real errors) đều hoạt động chính xác:
+- Commit: dữ liệu persist trong MongoDB
+- Rollback tự động được kích hoạt bởi: Validation Error, Duplicate Key, Required Field, Invalid Enum, Cast Error
+
+Tất cả các yêu cầu đều đáp ứng:
+✓ Tất cả Commit thành công
+✓ Tất cả Rollback được xác minh bằng lỗi thực tế (không dùng manual abort)
+✓ MongoDB được kiểm tra trực tiếp
+✓ Toàn bộ Regression Test PASS
+
+==================================================

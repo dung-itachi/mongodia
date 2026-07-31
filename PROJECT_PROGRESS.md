@@ -122,7 +122,7 @@
 | Facebook Page | 95% |
 | Customer | 90% |
 | Order | 60% |
-| Lead | 20% |
+| Lead | 30% |
 | Dashboard | 5% |
 | Report | 15% |
 | Notification | 0% |
@@ -409,3 +409,209 @@ NEW → ASSIGNED → CALLING → CONFIRMED → PACKING → SHIPPING → DELIVERE
 Reviewed by ChatGPT
 
 Status: Ready for Lead Module
+
+---
+
+## MODULE: Lead
+
+### Status
+
+In Progress
+
+### Models
+
+- Lead
+  - leadCode (auto-increment)
+  - customerName, customerNewName
+  - facebookLink, phone, phone2
+  - address, province, district, ward
+  - sourceType (LANDING_PAGE, FACEBOOK_COMMENT, FACEBOOK_INBOX, TIKTOK, ZALO, OTHER)
+  - facebookPageId, facebookPageAssignmentId
+  - marketingEmployeeId, saleEmployeeId (nullable)
+  - categoryId, productId, comboId
+  - quantity, unitPriceMNT, unitPriceVND, exchangeRate, estimatedWeight
+  - status (NEW, ASSIGNED, CALLING, NO_ANSWER, POTENTIAL, REJECTED, ORDER_CREATED, CANCELLED)
+  - note, isDuplicate, isActive
+
+- LeadHistory
+  - leadId, employeeId
+  - action (CREATED, ASSIGNED_SALE, STATUS_CHANGED, UPDATED_*, ORDER_CREATED, CANCELLED...)
+  - oldValue, newValue, note
+
+### Constants
+
+- LeadStatus Enum (8 status)
+- SourceType const array
+- LeadAction const array
+
+### Mapper
+
+- mapLead()
+- mapLeadList()
+- mapLeadHistory()
+- mapLeadHistoryList()
+
+### Validation
+
+- createLeadSchema
+  - customerName: required, max 200
+  - phone: Vietnamese format regex (0[0-9]{9,10})
+  - facebookLink: valid URL
+  - sourceType: enum
+  - quantity >= 1
+  - prices >= 0
+
+- updateLeadSchema
+  - Same as create but all fields optional except partial required
+  - Nullable for reference fields
+
+### Permissions
+
+- lead.view
+- lead.create
+- lead.update
+- lead.delete
+- lead.assign
+
+### Roles có quyền Lead
+
+- ADMIN, MANAGER, MKT: Create, Update, Assign
+- LEADER: View
+- EMPLOYEE: View
+
+### Phase 1 Scope (Đã xong)
+
+✅ Model: Lead, LeadHistory
+✅ Enum: LeadStatus (8 status: NEW, ASSIGNED, PROCESSING, NO_ANSWER, POTENTIAL, ORDER_CREATED, REJECTED, CANCELLED)
+✅ Enum: LeadAction (11 actions: CREATED, UPDATED, ASSIGNED, UNASSIGNED, STATUS_CHANGED, ORDER_CREATED, ORDER_CANCELLED, SALE_CHANGED, MARKETING_CHANGED, NOTE_UPDATED, DELETED)
+✅ Mapper: mapLead, mapLeadList, mapLeadHistory, mapLeadHistoryList
+✅ Validation: createLeadSchema, updateLeadSchema
+✅ Permissions: lead.view, lead.create, lead.update, lead.delete, lead.assign
+
+### Lead Model Updates
+
+1. Thêm customerId (nullable, ref Customer) - khách hoàn toàn mới = null, khách quay lại = có giá trị
+2. Thêm assignmentType (AUTO, MANUAL, nullable) - thống kê cách chia Sale
+3. Thêm assignedAt (Date, nullable) - thời điểm Lead được giao cho Sale
+4. Thêm latestRemark (String, nullable) - luôn lưu ghi chú mới nhất để hiển thị nhanh trong danh sách. Lịch sử ghi chú được lưu trong LeadHistory với action NOTE_UPDATED
+5. LeadStatus: Bỏ CALLING, thêm PROCESSING - CALLING chỉ là hành động, không phải trạng thái
+6. LeadHistory.action: Dùng Enum LeadAction thay vì String
+
+### Phase 2: CRUD API (Đã xong)
+
+✅ API CRUD đầy đủ:
+- GET /api/leads (list với pagination, filter, search)
+- GET /api/leads/:id (detail với populate đầy đủ)
+- POST /api/leads (validate, generate code, tạo LeadHistory)
+- PUT /api/leads/:id (validate, business rules, tạo LeadHistory)
+- DELETE /api/leads/:id (soft delete, tạo LeadHistory)
+
+✅ GET List Filters:
+- page, limit, keyword
+- status, marketingEmployeeId, saleEmployeeId
+- facebookPageId, sourceType, isDuplicate, isActive
+- createdFrom, createdTo
+- Sort: createdAt DESC
+
+✅ GET Detail Populate:
+- customer, facebookPage, facebookPageAssignment.employee
+- marketingEmployee, saleEmployee
+- category, product, combo
+
+✅ POST Business Rules:
+- Validate: Product, Combo, Marketing Employee, Sale Employee, Customer (nếu có)
+- **Business Rule 7**: leadCode dùng Counter Collection (đảm bảo không trùng khi nhiều người tạo cùng lúc)
+- Status default: NEW
+- assignedAt: null
+- assignmentType: undefined (không set, sẽ do Auto Assign set AUTO)
+- latestRemark: ""
+- isDuplicate: false
+- isActive: true
+- Tạo LeadHistory(action: CREATED, employeeId)
+
+✅ Search:
+- **Business Rule 6**: keyword tìm theo: leadCode, customerName, customerNewName, phone, phone2, facebookLink (regex không phân biệt hoa thường)
+
+✅ PUT Business Rules:
+- Validate: Product, Combo, Marketing Employee, Sale Employee
+- **Business Rule 1**: Không cho sửa Lead đã tạo Order (status = ORDER_CREATED) các field ảnh hưởng doanh thu (productId, comboId, quantity, unitPriceMNT, unitPriceVND, exchangeRate, marketingEmployeeId) → HTTP 409
+- **Business Rule 2**: assignedAt chỉ set khi Sale từ null → có giá trị. Đổi Sale sau này không cập nhật assignedAt
+- **Business Rule 3**: assignmentType luôn là MANUAL trong CRUD (Auto Assign sẽ tự set AUTO)
+- **Business Rule 4**: Tất cả LeadHistory phải có employeeId
+- Nếu latestRemark thay đổi: Tạo LeadHistory(NOTE_UPDATED, oldValue, newValue)
+- Nếu status thay đổi: Tạo LeadHistory(STATUS_CHANGED, oldValue, newValue)
+- Nếu saleEmployeeId thay đổi: Tạo LeadHistory(SALE_CHANGED, oldValue, newValue)
+- Nếu marketingEmployeeId thay đổi: Tạo LeadHistory(MARKETING_CHANGED, oldValue, newValue)
+
+✅ DELETE Business Rules:
+- **Business Rule 5**: Không cho Delete Lead đã tạo Order (status = ORDER_CREATED) → HTTP 409
+- Soft Delete: isActive = false
+- Tạo LeadHistory(action: DELETED)
+
+✅ Permissions:
+- lead.view, lead.create, lead.update, lead.delete
+
+✅ Response Format:
+- Sử dụng mapper: mapLead(), mapLeadList()
+- Response: { success, message, data }
+
+✅ Transaction:
+- **POST Lead**: Tạo Lead + Update Counter + Tạo LeadHistory trong 1 transaction
+- **PUT Lead**: Update Lead + Tạo LeadHistory trong 1 transaction
+- **DELETE Lead**: Soft Delete + Tạo LeadHistory trong 1 transaction
+- Nếu bất kỳ bước nào lỗi → Rollback toàn bộ transaction
+
+✅ Transaction Testing (Đã xong):
+- **2026-07-31**: Kiểm thử POST, PUT, DELETE Transaction
+- Tất cả 26 test cases đều PASS (8 basic + 5 error-based + 13 comprehensive)
+- Commit và Rollback (real errors) hoạt động đúng
+- Rollback triggered by: Validation Error, Duplicate Key, Required Field, Invalid Enum, Cast Error
+- MongoDB Verification: Collections, indexes, data integrity verified
+- Regression Test: 26/26 PASS
+- Chi tiết: docs/testing/Lead_Transaction_Test_Report.txt
+
+### Phase 3 (Đang làm)
+
+✅ Lead Import
+- **Phase 3.1 - Paste + Preview (Completed - 2026-07-31)**
+- Component: LeadImportPreview
+- Chức năng: Paste dữ liệu (Ctrl+V) → Parse TAB/newline → Mapping object (customerName, phone, combo, price, sourceType, date) → Hiển thị Table Preview
+- Statistics: Hiển thị tổng số dòng đã parse
+- Có nút Clear để xóa toàn bộ dữ liệu
+- KHÔNG lưu Database, KHÔNG validate, KHÔNG duplicate, KHÔNG import
+- File: src/app/components/LeadImportPreview.tsx
+- **Lead Import Header Mapping Added**
+- **Lead Import Flexible Header Mapping (2026-07-31)**
+  - HEADER_MAP với nhiều alias cho mỗi field (tên/Tên KH/Khách Hàng/Name...)
+  - Normalize: lowercase + trim + collapse spaces
+  - Cột bắt buộc: Tên (customerName), SĐT (phone) - thiếu → không parse, hiển thị Alert lỗi
+  - Cột dư: bỏ qua, không báo lỗi
+- **Lead Import Architecture Refactor (2026-07-31)**
+  - Header Mapping extracted → `src/constants/importHeaders.ts`
+    - `LEAD_IMPORT_HEADER_MAP`
+    - `LEAD_IMPORT_REQUIRED_FIELDS`
+    - `LeadImportField` type
+  - Parser extracted → `src/utils/import/leadParser.ts`
+    - Public API: `parseLead(text) → LeadParseResult`
+    - Internal helpers: `normalizeHeader`, `buildHeaderIndex`, `hasHeaderRow`, `parseRow`
+  - Component `LeadImportPreview` chỉ UI: nhận paste → gọi `parseLead()` → render preview/stats/error
+  - Ready for Customer / Product / Warehouse Import
+- **Lead Import Validation (Phase 3.2) (2026-07-31)**
+  - Row validation pipeline: Parse → Mapping → Validation → Result
+  - Tái sử dụng `VIETNAMESE_PHONE_REGEX` từ `src/utils/validator.ts`
+  - Mỗi row có `status: VALID | INVALID` và `errors: string[]`
+  - Validate required: customerName, phone
+  - Validate phone: regex Vietnamese (0xxxxxxxxx / 0xxxxxxxxxx)
+  - Validate price: >= 0 (nếu có)
+  - Validate date: parseable (nếu có)
+  - Phase 3.3 sẽ handle: Combo / Product / Page / Marketing / Sale / Customer existence
+  - Statistics: Tổng dòng / Hợp lệ / Không hợp lệ
+  - Preview table thêm cột: Trạng thái ✔❌ + Lý do lỗi (errors)
+- **Lead Import Parser + Preview Completed**
+
+⏳ LeadHistory API
+⏳ Seed Data
+⏳ Import Lead (Phase 3.2)
+⏳ Auto Assign Sale
+⏳ Duplicate Detection
+⏳ Dashboard

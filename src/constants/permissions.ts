@@ -328,6 +328,28 @@ export const PERMISSIONS = [
   name: "Delete Combo",
 },
 
+// Lead
+{
+  code: "lead.view",
+  name: "View Lead",
+},
+{
+  code: "lead.create",
+  name: "Create Lead",
+},
+{
+  code: "lead.update",
+  name: "Update Lead",
+},
+{
+  code: "lead.delete",
+  name: "Delete Lead",
+},
+{
+  code: "lead.assign",
+  name: "Assign Lead",
+},
+
 // Report
   {
     code: "report.view",
