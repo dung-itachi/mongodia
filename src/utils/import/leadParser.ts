@@ -76,6 +76,30 @@ export interface LeadValidationIssue {
 
 export type LeadValidationStatus = "VALID" | "INVALID";
 
+/**
+ * Phase 3.4 - Duplicate Detection.
+ *
+ * `duplicateType` describes which existing record the new lead collides
+ * with. Resolution priority (first match wins):
+ *
+ *   PHONE     → same phone found in Customer OR Lead
+ *   FACEBOOK  → same Facebook link found in Lead (Customer has no
+ *               facebookLink field in current schema)
+ *   CUSTOMER  → existing Customer match (name + area, future phase)
+ *   LEAD      → existing Lead match (soft heuristic, future phase)
+ *   NONE      → no duplicate detected
+ */
+export type LeadDuplicateType = "PHONE" | "FACEBOOK" | "CUSTOMER" | "LEAD" | "NONE";
+
+/** Display labels for `LeadDuplicateType`. */
+export const LEAD_DUPLICATE_LABELS: Record<LeadDuplicateType, string> = {
+  PHONE: "Trùng SĐT",
+  FACEBOOK: "Trùng Facebook",
+  CUSTOMER: "Khách quay lại",
+  LEAD: "Lead cũ",
+  NONE: "-",
+};
+
 export interface ParsedLead {
   rowNumber: number;
   customerName: string;
@@ -87,6 +111,24 @@ export interface ParsedLead {
   raw: string[];
   status: LeadValidationStatus;
   errors: LeadValidationIssue[];
+
+  // Phase 3.4 - duplicate detection (informational only)
+  isDuplicate: boolean;
+  duplicateType: LeadDuplicateType;
+
+  /**
+   * If an existing Customer was matched (by phone), this carries its id
+   * so the import phase can skip the lookup and link the new Lead
+   * directly to the existing Customer.
+   */
+  customerId?: string;
+
+  /**
+   * Code / id of the colliding record (Customer or Lead). Used by the UI
+   * to render "Khách quay lại (KH000123)" / "Lead cũ (LE000456)".
+   */
+  matchedCode?: string;
+  matchedId?: string;
 }
 
 export interface LeadParseResult {
@@ -164,6 +206,9 @@ export function hasHeaderRow(firstLineFields: string[]): boolean {
  * Rules:
  *   - columns beyond columnIndex.length are ignored (extra columns → skipped)
  *   - unknown columns (value `null` in columnIndex) are ignored silently
+ *
+ * Phase 3.4 - duplicate detection fields default to `NONE` / `false`
+ * and are populated by `validateDuplicateRow` when a context is given.
  */
 export function parseRow(
   rawFields: string[],
@@ -179,6 +224,8 @@ export function parseRow(
     sourceType: "",
     date: "",
     raw: rawFields,
+    isDuplicate: false,
+    duplicateType: "NONE",
   };
 
   rawFields.forEach((value, fieldIdx) => {
@@ -280,9 +327,113 @@ export function validateBusinessRow(
   _context: LeadImportContext | undefined
 ): LeadValidationIssue[] {
   // Reserved for Phase 3.3 (Product / Combo / Page / Customer / Employee
-  // existence + Duplicate detection + Auto-assign). Keeping the parser
-  // API stable now means later phases just add issues here.
+  // existence). Keeping the parser API stable now means later phases
+  // just add issues here.
   return [];
+}
+
+// ==================================================
+// Phase 3.4 - Duplicate Detection
+// ==================================================
+
+/**
+ * Detect duplicate against the in-memory context.
+ *
+ * Priority (first match wins — keeps `duplicateType` deterministic):
+ *
+ *   1. PHONE → Customer matched by phone       (Khách quay lại)
+ *   2. PHONE → Lead matched by phone            (Lead cũ - trùng SĐT)
+ *   3. FACEBOOK → Customer matched by fb link  (reserved - Customer has no fbLink yet)
+ *   4. FACEBOOK → Lead matched by fb link       (Trùng Facebook)
+ *
+ * The function reads ONLY from cached maps. It NEVER queries the DB.
+ *
+ * Returns metadata to be attached to the row:
+ *   - isDuplicate, duplicateType
+ *   - customerId (when Customer matched)
+ *   - matchedId, matchedCode (Customer.code or Lead.leadCode)
+ */
+export function validateDuplicateRow(
+  row: Omit<ParsedLead, "status" | "errors">,
+  context: LeadImportContext | undefined
+): Pick<
+  ParsedLead,
+  "isDuplicate" | "duplicateType" | "customerId" | "matchedId" | "matchedCode"
+> {
+  const noDup: Pick<
+    ParsedLead,
+    "isDuplicate" | "duplicateType" | "customerId" | "matchedId" | "matchedCode"
+  > = {
+    isDuplicate: false,
+    duplicateType: "NONE",
+  };
+
+  if (!context) return noDup;
+
+  const phone = (row.phone ?? "").trim();
+  const facebookLink = ""; // reserved — pasted data has no facebookLink column yet
+
+  // ---- Level 1: Phone → Customer (Khách quay lại) -----------------------
+  if (phone) {
+    const customerByPhone = context.customersByPhone.get(phone);
+    if (customerByPhone) {
+      return {
+        isDuplicate: true,
+        duplicateType: "PHONE",
+        customerId: customerByPhone.id,
+        matchedId: customerByPhone.id,
+        matchedCode: customerByPhone.code,
+      };
+    }
+  }
+
+  // ---- Level 1b: Phone → Lead (Lead cũ - trùng SĐT) --------------------
+  if (phone) {
+    const leadByPhone = context.leadsByPhone.get(phone);
+    if (leadByPhone) {
+      return {
+        isDuplicate: true,
+        duplicateType: "PHONE",
+        customerId: leadByPhone.customerId,
+        matchedId: leadByPhone.id,
+        matchedCode: leadByPhone.leadCode,
+      };
+    }
+  }
+
+  // ---- Level 2: Facebook Link → Customer (reserved) --------------------
+  if (facebookLink) {
+    const customerByFb = context.customersByFacebookLink.get(facebookLink);
+    if (customerByFb) {
+      return {
+        isDuplicate: true,
+        duplicateType: "FACEBOOK",
+        customerId: customerByFb.id,
+        matchedId: customerByFb.id,
+        matchedCode: customerByFb.code,
+      };
+    }
+  }
+
+  // ---- Level 2b: Facebook Link → Lead (Trùng Facebook) ----------------
+  if (facebookLink) {
+    const leadByFb = context.leadsByFacebookLink.get(facebookLink);
+    if (leadByFb) {
+      return {
+        isDuplicate: true,
+        duplicateType: "FACEBOOK",
+        customerId: leadByFb.customerId,
+        matchedId: leadByFb.id,
+        matchedCode: leadByFb.leadCode,
+      };
+    }
+  }
+
+  // ---- Level 3 & 4: Customer cũ / Lead cũ (soft heuristics) -----------
+  // Reserved for later phases (name+area, soft phone suffix, etc.).
+  // Currently no-op — they would feed the `CUSTOMER` / `LEAD` enum values.
+
+  return noDup;
 }
 
 // ==================================================
@@ -360,6 +511,11 @@ export function validateRow(
     issues.push(...validateBusinessRow(row, context));
   }
 
+  // Phase 3.4 - duplicate detection (informational only).
+  // Computed below from the final ParsedLead so the caller can use the
+  // resolved `isDuplicate` / `customerId` / `matchedCode` flags.
+  // We don't surface duplicate as an issue (never ERROR / WARNING).
+
   const hasError = issues.some(i => i.severity === "ERROR");
 
   return {
@@ -370,13 +526,26 @@ export function validateRow(
 
 /**
  * Run validation on a fully-parsed row and attach status + issues.
+ *
+ * Phase 3.4 - also attaches duplicate metadata by reading the cached
+ * `LeadImportContext` (no DB access).
  */
 export function validateAndFinalize(
   row: Omit<ParsedLead, "status" | "errors">,
   context?: LeadImportContext
 ): ParsedLead {
   const { status, errors } = validateRow(row, context);
-  return { ...row, status, errors };
+  const dupMeta = validateDuplicateRow(row, context);
+  return {
+    ...row,
+    status,
+    errors,
+    isDuplicate: dupMeta.isDuplicate,
+    duplicateType: dupMeta.duplicateType,
+    customerId: dupMeta.customerId,
+    matchedId: dupMeta.matchedId,
+    matchedCode: dupMeta.matchedCode,
+  };
 }
 
 // ==================================================

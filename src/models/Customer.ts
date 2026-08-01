@@ -104,8 +104,6 @@ const CustomerSchema = new Schema<ICustomer>(
   }
 );
 
-CustomerSchema.index({ code: 1 }, { unique: true });
-CustomerSchema.index({ phone: 1 }, { unique: true });
 CustomerSchema.index({ teamId: 1 });
 CustomerSchema.index({ marketingEmployeeId: 1 });
 CustomerSchema.index({ areaId: 1 });

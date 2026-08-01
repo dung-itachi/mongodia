@@ -1,0 +1,27 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> mongolia@0.1.0 dev
+> next dev
+
+ΓÜá Port 3000 is in use by process 8188, using available port 3001 instead.
+Γû▓ Next.js 16.2.11 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.100.101:3001
+- Environments: .env.local
+Γ£ô Ready in 295ms
+Γ¿» Another next dev server is already running.
+
+- Local:        http://localhost:3000
+- PID:          8188
+- Dir:          D:\mongodia
+- Log:          .next\dev\logs\next-development.log
+
+Run taskkill /PID 8188 /F to stop it.
+[?25h

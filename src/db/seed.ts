@@ -14,6 +14,7 @@ import { seedVariantValues } from "./seeds/variant-values.seed";
 import { seedProductVariants } from "./seeds/product-variants.seed";
 import { seedFacebookPages } from "./seeds/facebook-pages.seed";
 import { seedCombos } from "./seeds/combos.seed";
+import { seedLeads } from "./seeds/leads.seed";
 
 async function seed() {
   try {
@@ -36,6 +37,7 @@ async function seed() {
     await seedProductVariants();
     await seedFacebookPages();
     await seedCombos();
+    await seedLeads();
     console.log("[DONE] Seed completed");
 
     process.exit(0);

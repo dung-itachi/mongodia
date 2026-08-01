@@ -630,11 +630,256 @@ In Progress
       `FACEBOOK_PAGE_NOT_FOUND`, `CUSTOMER_NOT_FOUND`, `EMPLOYEE_NOT_FOUND`
   - Flow: LeadImportPreview → load context (1 batch / domain) → parseLead(text, context)
   - Ready for: Duplicate Detection, Auto Create Customer, Auto Assign Sale, DB Import
+- **Lead Duplicate Detection (2026-08-01)**
+  - Phase 3.4: phát hiện trùng lặp KHÔNG chặn Import (INFO only)
+  - Service mở rộng context:
+    - `customersByPhone` (đã có) + `customersByFacebookLink` (reserved)
+    - `leadsByPhone` + `leadsByFacebookLink` (Phase 3.4 batch queries)
+  - Parser thêm `validateDuplicateRow(row, context)`:
+    - Level 1: Phone → Customer → `duplicateType: PHONE` (Khách quay lại)
+    - Level 1b: Phone → Lead → `duplicateType: PHONE` (Lead cũ - trùng SĐT)
+    - Level 2: Facebook → Lead → `duplicateType: FACEBOOK` (Trùng Facebook)
+    - Level 3/4: CUSTOMER / LEAD enum reserved
+  - `ParsedLead` thêm fields: `isDuplicate`, `duplicateType`,
+    `customerId` (link vào KH để Phase Import không phải tìm lại),
+    `matchedCode` / `matchedId`
+  - Severity: chỉ là INFO, KHÔNG ERROR / KHÔNG WARNING
+  - Statistics: Tổng / Hợp lệ / Cảnh báo / Không hợp lệ / Khách mới /
+    Khách quay lại + breakdown Trùng SĐT (Customer/Lead) / Trùng Facebook
+  - Preview columns: Duplicate / Loại trùng / Khách hàng trùng (Customer.code)
+  - KHÔNG làm: Merge Customer / Merge Lead / Auto Update Customer /
+    Auto Assign Sale / Import DB
+- **Lead Import Simulation (Phase 3.5) (2026-08-01)**
+  - Tạo `src/services/import/leadImportSimulation.service.ts`
+    - `simulateLeadImport(rows, context?) → LeadImportSimulation`
+    - PURE FUNCTION: không ghi DB, không mở transaction, không tạo Customer, không tạo Lead
+    - Nhận `ParsedLead[]` từ parser (cùng shape đang hiển thị ở bảng)
+    - Trả về summary đầy đủ:
+      * `totalRows`, `validRows`, `invalidRows`, `warningRows`
+      * `leadsToCreate`, `customersToCreate`, `newCustomers`, `returningCustomers`
+      * `duplicatePhone`, `duplicateFacebook`, `duplicateCustomer`
+      * `errorCount`, `warningCount`
+      * `readyToImport` (= `errorCount === 0 && leadsToCreate > 0`) - single source of truth cho Import button
+      * `estimatedExecution: { leadCount, label }` - UX hint ("15 Lead → ~0.2s", "500 Lead → ~5s")
+      * `skippedRowNumbers` (rowNumber của các dòng INVALID)
+      * `issueSummary` (Record<code, count>)
+    - Helper `describeIssueCode(code)` cho label tiếng Việt
+  - Component `LeadImportPreview`:
+    - Thêm Summary Card "Mô phỏng Import" phía trên bảng (nền xanh lá, tag Phase 3.5)
+    - Header card có 2 tag mới:
+      * `readyToImport` → "Sẵn sàng Import" (success) / "Chưa sẵn sàng" (default)
+      * `estimatedExecution` → "⏱ 15 Lead → ~0.2s" (tooltip giải thích chỉ UX)
+    - 11 ô Statistic: Tổng / Lead sẽ tạo / Customer sẽ tạo / Khách mới /
+      Khách quay lại / Trùng SĐT / Trùng Facebook / Trùng Customer /
+      Warning / Error / Dòng sẽ bỏ qua
+    - Alert liệt kê rowNumber các dòng sẽ bị skip
+    - Tóm tắt lỗi theo `LeadValidationCode` (sort theo count giảm dần)
+    - `simulation` được memo bằng `useMemo` theo `[parsedRows, importContext]`
+    - KHÔNG thêm nút Import / KHÔNG gọi API / KHÔNG tạo Customer / KHÔNG tạo Lead
+    - Khi Phase 3.6 thêm nút Import: `disabled={!simulation.readyToImport}`
+- **Lead Import DB (Phase 3.6) (2026-08-01)**
+  - Tạo `src/services/import/leadImport.service.ts`
+    - `importLeads(rows, context, opts)` - atomic DB import
+    - **Guard bắt buộc**: phải gọi `simulateLeadImport` trước; `simulation.readyToImport === true` mới cho chạy
+      (throw `LeadImportNotReadyError` nếu chưa sẵn sàng, có `skipSimulationGuard` cho internal caller)
+    - Toàn bộ batch chạy trong **1 transaction** (`mongoose.startSession()` + `withTransaction`)
+      - Bất kỳ dòng nào throw → rollback toàn bộ Customer / Lead / LeadHistory
+    - Sequence per row:
+      1. `customerId` (matched by parser) → reuse Customer, `reusedCustomer++`
+         Ngược lại → `nextCustomerCode()` (Counter "CUSTOMER", `KH000001`...) → `Customer.create()` → `createdCustomer++`
+      2. `nextLeadCode()` (Counter "LEAD", `LE000001`...) → `Lead.create()` với `status: NEW`, `sourceType: OTHER` (nếu rỗng), `unitPriceVND` parse từ `price`, `comboId` lookup từ context, `isDuplicate` propagate
+      3. `LeadHistory.create(action: CREATED, newValue: NEW, note: "Tạo Lead từ Import")`
+    - Defaults load một lần (Promise.all):
+      - Area `PVD`, Team `SALE`, Employee `EMP_MKT001` (required fields cho Customer)
+    - `parseNumericPrice` mirror lại parser (VN thousand separator)
+    - `normalizeSourceType` rỗng / không hợp lệ → `OTHER` (enum-safe)
+    - `resolveComboId` lookup từ `context.combosByCode` (case-insensitive)
+    - Return:
+      ```ts
+      { createdLead, createdCustomer, reusedCustomer, elapsedTime }
+      ```
+    - **KHÔNG làm**: Auto Assign Sale / Commission / Order / Update existing Customer
+  - Import Pipeline tổng thể (Phase 3.1 → 3.6):
+    `paste → parseLead → validateDuplicateRow → simulateLeadImport → importLeads`
+- **Lead Import DB - Refactor (Phase 3.6) (2026-08-01)**
+  - Tách trách nhiệm rõ ràng, KHÔNG còn hardcode trong `leadImport.service.ts`:
+  - **Không hardcode Area/Team/Marketing Employee**:
+    - Tạo `src/services/import/leadImportDefaults.service.ts`
+      - `loadLeadImportDefaults()` đọc 3 key từ collection `Setting`:
+        * `IMPORT_DEFAULT_AREA_CODE`
+        * `IMPORT_DEFAULT_TEAM_CODE`
+        * `IMPORT_DEFAULT_MARKETING_EMPLOYEE_CODE`
+      - Cache 60s, có `clearLeadImportDefaultsCache()`
+      - Throw error rõ ràng khi thiếu key hoặc thiếu ref trong DB
+  - **Không tự sửa sourceType**:
+    - Parser cho gì thì `leadImport.service.ts` persist y nguyên
+    - Chỉ fallback `OTHER` khi string rỗng (để thỏa schema `required`), không rewrite enum
+  - **Không re-lookup Combo tại thời điểm Import**:
+    - Bỏ `Combo.findOne(...)` trong service
+    - `resolveComboIdFromContext(row.combo, context)` chỉ đọc `context.combosByCode` (đã được parser resolve)
+    - Combo thiếu trong context → `comboId: undefined` (không throw)
+  - **Customer qua CustomerService**:
+    - Tạo `src/services/customer/customer.service.ts`
+      - `createCustomer(input, opts?)` - allocate CustomerCode qua Counter "CUSTOMER"
+      - Nhận `opts.session` để tham gia transaction của caller
+      - CustomerCounter thuộc sở hữu hoàn toàn của CustomerService
+    - `leadImport.service.ts` không còn đụng tới `Counter` cho Customer, không tự sinh code
+  - **API layer thuần transport**:
+    - Tạo `src/app/api/leads/import/route.ts` (POST)
+      - Chỉ: auth (`getCurrentUser`) → authorize (`lead.create`) → parse body → load context → gọi `importLeads()` → trả kết quả
+      - Bắt `LeadImportNotReadyError` → trả 409 kèm `errorCount` + `leadsToCreate` để UI biết lý do
+      - KHÔNG chứa logic nghiệp vụ (Counter / Transaction / Defaults đều nằm trong service)
+- **Order Module - Phase 1.1: Model Foundation (2026-08-01)**
+  - Mở rộng `src/models/Order.ts` (đã tồn tại):
+    - Thêm sub-type `IOrderPayment` + field `payments[]` (method/amount/currency/paidAt/transactionId)
+    - Thêm sub-type `IOrderShipping` + field `shipping{}` (receiverName/Phone/address/province/district/ward/trackingNumber/carrier/estimatedDelivery/actualDelivery/shippingFee)
+    - Thêm `estimatedWeight`, `actualWeight`
+    - Thêm `warehouseId` (ref: Warehouse)
+    - Thêm `revenueLocked` (Boolean, default: false)
+    - Thêm `revenueOwnerOrderId` (ref: Order) - đơn đang chiếm slot revenue
+    - Đổi `revenueLockReason` type từ `string` → `RevenueLockReason` enum (type-safe)
+    - Thêm compound indexes: `(customerId, productId|comboId, revenueLocked, createdAt)` cho Revenue Lock
+    - Thêm indexes: `(warehouseId, isActive)`, `(leadId)`
+  - Tạo `src/models/OrderHistory.ts`
+    - Schema: orderId / employeeId / action / oldValue / newValue / note / createdAt
+    - Indexes: `(orderId, createdAt DESC)`, `(employeeId)`
+  - Mở rộng `src/constants/orderStatus.ts` (đã tồn tại):
+    - Thêm `OrderAction` enum (CREATED/UPDATED/STATUS_CHANGED/PAYMENT_ADDED/PAYMENT_REMOVED/SHIPPING_UPDATED/DELIVERED/CANCELLED/REJECTED/REVENUE_LOCKED/REVENUE_UNLOCKED/REVENUE_RECALCULATED/NOTE_UPDATED/DELETED)
+    - Thêm `ORDER_ACTION_LABELS` map
+  - Tạo `src/mappers/order.mapper.ts`
+    - `OrderResponse`, `OrderListItem`, `OrderPaymentResponse`, `OrderShippingResponse`
+    - `OrderHistoryResponse` + `Employee` populated
+    - `mapOrder()`, `mapOrderList()`, `mapOrderHistory()`, `mapOrderHistoryList()`
+  - Thêm `createOrderSchema` + `updateOrderSchema` vào `src/utils/validator.ts`
+    - Nested `orderPaymentSchema` (method/amount/currency/paidAt/transactionId)
+    - Nested `orderShippingSchema` (receiverName/Phone/address/province/district/ward/trackingNumber/carrier/estimatedDelivery/actualDelivery/shippingFee)
+    - Full validation: OBJECT_ID regex, min/max, currency enum
+  - KHÔNG làm: CRUD / API / Revenue Engine / Stock
+- **Order Module - Phase 1.2: Classification + TotalPaid (2026-08-01)**
+  - Thêm 3 enum vào `src/constants/orderStatus.ts`:
+    - `OrderType` (NORMAL / COMBO / GIFT / EXCHANGE / REPLACEMENT)
+      - NORMAL/COMBO: tính revenue, chiếm slot.
+      - GIFT/EXCHANGE/REPLACEMENT: KHÔNG tính revenue, KHÔNG chiếm slot.
+    - `OrderSource` (FACEBOOK / IMPORT / PHONE / WEBSITE / MANUAL)
+      - Nguồn SALE chốt đơn, KHÁC `Lead.sourceType` (nguồn khách).
+    - `NON_REVENUE_ORDER_TYPES` Set: { GIFT, EXCHANGE, REPLACEMENT }.
+  - Thêm 3 fields vào `src/models/Order.ts`:
+    - `orderType` (OrderType, default NORMAL, indexed)
+    - `orderSource` (OrderSource, default MANUAL, indexed)
+    - `totalPaid` (Number, min: 0) — cache sum(payments[].amount), update atomic khi add/remove payment.
+    - Compound index: `(orderType, status, createdAt DESC)` + `(orderSource, createdAt DESC)` cho Dashboard.
+  - Cập nhật `src/mappers/order.mapper.ts`:
+    - Thêm `orderType` / `orderTypeLabel` / `orderSource` / `orderSourceLabel` / `totalPaid` vào `OrderResponse` + `mapOrder()`.
+  - Cập nhật `src/utils/validator.ts`:
+    - `createOrderSchema` + `updateOrderSchema` thêm `orderType` / `orderSource` / `totalPaid` (optional, backward-compat).
+  - Cập nhật `src/services/order/orderRevenue.service.ts`:
+    - `OrderLockInput` thêm field `orderType`.
+    - `isSameProductFamily()`: nếu 1 trong 2 đơn là NON_REVENUE → return false (không cùng family, không lock).
+    - `evaluateAndLock()` case (a-0): nếu subject là GIFT/EXCHANGE/REPLACEMENT → eligible=false, *_Final=0, reason=NONE (đánh dấu "không tính vì bản chất").
+    - KHÔNG cần đoán `comboId != null` nữa - dùng `orderType` trực tiếp.
+- **Order Module - Phase 2: CRUD API (2026-08-01)**
+  - Tạo `src/app/api/orders/route.ts`
+    - `GET /api/orders` — pagination + search + filter + sort
+      - Search: `orderCode` / `customerName` / `phone` (lookup Customer rồi match `customerId`)
+      - Filter: `status` / `warehouseId` / `orderType` / `orderSource` / `revenueLocked` / `createdAt range`
+      - Sort: `createdAt DESC`
+      - Permission: `order.view`
+    - `POST /api/orders` — tạo đơn
+      - Validate reference tồn tại: Customer / Lead / Product / Combo / Warehouse / Employee (parallel `Promise.all`)
+      - Validate `orderType` + `orderSource` (qua Zod enum)
+      - Default revenue: `revenueLocked=false`, `revenueOwnerOrderId=null`, `marketingRevenue*`=0, `saleRevenue*`=0, `totalPaid=0` (NO revenue engine call)
+      - KHÔNG auto assign / KHÔNG commission / KHÔNG stock / KHÔNG shipment
+      - Generate `orderCode` qua `Counter` (`OD + YYMMDD + seq`)
+      - Tạo `OrderHistory` với `action=CREATED`, `newValue=status`, `employeeId=currentUser.employee._id`
+      - Wrap trong transaction (`startSession` + `commitTransaction`)
+      - Permission: `order.create`
+  - Tạo `src/app/api/orders/[id]/route.ts`
+    - `GET /api/orders/:id`
+      - Populate: Customer / Lead / Product / Combo / Warehouse / Marketing Employee / Sale Employee
+      - Trả về `histories[]` (populated Employee) từ `OrderHistory`
+      - Permission: `order.view`
+    - `PUT /api/orders/:id`
+      - Status lock guard: COMPLETED / CANCELLED / REJECTED / FAILED → 409
+      - Validate reference existence khi thay đổi
+      - Change tracking → tạo OrderHistory entries:
+        * `customerId`: action=UPDATED, old/new=id, note="Đổi khách hàng"
+        * `productId`: action=UPDATED, note="Đổi sản phẩm"
+        * `comboId`: action=UPDATED, note="Đổi combo"
+        * `warehouseId`: action=SHIPPING_UPDATED, note="Đổi kho"
+        * `status`: action=STATUS_CHANGED, old/new=label
+        * `payments[]`: action=PAYMENT_ADDED, old/new=totalPaid sum
+        * `shipping{}`: action=SHIPPING_UPDATED, note="Cập nhật vận chuyển"
+      - Auto recompute `totalPaid = sum(payments[].amount)`
+      - Wrap trong transaction
+      - Permission: `order.update`
+    - `DELETE /api/orders/:id`
+      - Soft delete (`isActive = false`)
+      - Block khi status = COMPLETED (409)
+      - Tạo `OrderHistory` với `action=DELETED`
+      - Wrap trong transaction
+      - Permission: `order.delete`
+  - KHÔNG làm: Revenue Engine / Warehouse Stock / Shipment / Commission / Dashboard
+- **Order Module - Phase 2.1: Helper + fieldName (2026-08-01)**
+  - Tạo `src/helpers/orderChange.ts`:
+    - `isPaymentChanged(oldPayments, newPayments) → { changed, oldTotal, newTotal }`
+      - Normalise (Date → ISO, strip undefined/null), so sánh canonical JSON.
+      - Sum amount ngay trong helper để route không phải tính lại.
+    - `isShippingChanged(oldShipping, newShipping) → { changed }`
+      - Hỗ trợ cả "xóa shipping" (newShipping = null).
+    - Dùng được cho Phase 2 hiện tại + Phase tiếp theo (Payment/Shipping service).
+  - Mở rộng `src/models/OrderHistory.ts`:
+    - Thêm field `fieldName?: string` (indexed) — UI Timeline dùng để hiển thị "Đã đổi <fieldName>".
+  - Mở rộng `src/mappers/order.mapper.ts`:
+    - `OrderHistoryResponse` thêm `fieldName?` + `mapOrderHistory()` include field.
+  - Refactor `src/app/api/orders/[id]/route.ts` PUT:
+    - `pushHistory()` đổi signature từ positional args → object `{ fieldName, oldValue, newValue, note }`.
+    - Mọi history entry gắn `fieldName` cụ thể (customerId / customerName / productId / comboId / warehouseId / status / payments / shipping).
+    - Thay `JSON.stringify` payments/shipping so sánh bằng helper `isPaymentChanged()` / `isShippingChanged()`.
+  - GET `histories[]` sort `createdAt DESC` — UI không cần sort lại.
+- **Order Revenue Lock Engine (2026-08-01)**
+  - Tạo `src/constants/orderStatus.ts`
+    - `OrderStatus` (PENDING / CONFIRMED / PREPAID / SHIPPING / COMPLETED / CANCELLED / REJECTED / FAILED)
+    - `REVENUE_UNLOCK_STATUSES` (CANCELLED / REJECTED / FAILED)
+    - `RevenueLockReason` (NONE / WAITING_PREVIOUS_ORDER / CUSTOMER_ALREADY_BUYING / PREPAID_PRIORITY / ORDER_CANCELLED)
+  - Tạo `src/models/Order.ts`
+    - Revenue fields: `marketingRevenueRaw`, `marketingRevenueFinal`,
+      `saleRevenueRaw`, `saleRevenueFinal`, `revenueEligible`,
+      `revenueLockReason`, `revenueCalculatedAt`
+    - Indexes: `(customerId, productId|comboId, status, createdAt)`
+      để recalculate 1 query
+  - Tạo `src/services/order/orderRevenue.service.ts`
+    - `evaluateAndLock(order, customerOrders)` - pure evaluator
+    - `recalculateForCustomer(customerId)` - 1 query + 1 bulkWrite
+    - `recalculateForOrder(orderId)` - tiện cho update 1 đơn
+    - `transitionStatusAndRecalculate(orderId, nextStatus)` - API layer hook
+    - Sẵn sàng cho Order Update / Cancel / Completed / Refund
+  - Rule đã cài:
+    - Trùng Product/Combo: đơn đầu = eligible, đơn sau = locked (WAITING_PREVIOUS_ORDER)
+    - Unlock: đơn trước sang CANCELLED/REJECTED/FAILED → mở cho đơn sau
+    - Prepaid Priority: đơn sau trả trước → chiếm slot, đơn trước PREPAID_PRIORITY
+    - Khác Product/Combo → không khóa
+    - Đơn unlock-status → ORDER_CANCELLED
+  - KHÔNG làm: API / Dashboard / KPI / Commission
+- **Lead Seed Completed (2026-08-01)**
+  - `src/db/seeds/leads.seed.ts` - 16 Lead bao phủ đủ 8 trạng thái:
+    NEW / ASSIGNED / PROCESSING / NO_ANSWER / POTENTIAL /
+    ORDER_CREATED / REJECTED / CANCELLED
+  - Mỗi Lead kèm LeadHistory (CREATED → ASSIGNED → STATUS_CHANGED → NOTE_UPDATED)
+  - Đa dạng tình huống:
+    * Lead mới (1)
+    * Trùng SĐT (Lead #9 trùng #3, #13 trùng #12)
+    * Trùng Facebook (Lead #10 trùng #3)
+    * Đã có Customer (Lead #3, #5, #6, #12, #15)
+    * Chưa có Customer (Lead #1, #2, #4, #7, #8, #9, #11, #13, #14, #16)
+    * Đã có Sale (Lead #2, #3, #4, #5, #6, #7, #8, #10, #12, #13, #14, #16)
+    * Chưa có Sale (Lead #1, #9, #11, #15)
+  - `LeadCode` lấy từ Counter `LEAD` (atomic `$inc`, padded 6 số)
+  - `CUSTOMER` counter cũng được thêm vào `constants/counters.ts`
+  - File `seed.ts` đã đăng ký `await seedLeads()`
+  - Pre-create 5 Customer (KH000001..KH000005) để link cho "Lead đã có Customer"
 - **Lead Import Parser + Preview Completed**
 
 ⏳ LeadHistory API
 ⏳ Seed Data
-⏳ Import Lead (Phase 3.2)
 ⏳ Auto Assign Sale
-⏳ Duplicate Detection
 ⏳ Dashboard

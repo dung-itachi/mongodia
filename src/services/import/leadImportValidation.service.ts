@@ -42,6 +42,7 @@ import Combo from "@/models/Combo";
 import FacebookPage from "@/models/FacebookPage";
 import Customer from "@/models/Customer";
 import Employee from "@/models/Employee";
+import { Lead } from "@/models/Lead";
 
 // ==================================================
 // Types
@@ -89,6 +90,34 @@ export interface EmployeeRef {
 }
 
 /**
+ * Minimal Customer projection used for duplicate detection.
+ * `facebookLink` is intentionally absent — Customer model has no such field;
+ * fallback to Lead map for Facebook-level duplicate detection.
+ */
+export interface CustomerRef {
+  id: string;
+  code: string;
+  name: string;
+  phone: string;
+  isActive: boolean;
+}
+
+/**
+ * Minimal Lead projection used for duplicate detection.
+ * Only what the parser needs to flag a duplicate row.
+ */
+export interface LeadRef {
+  id: string;
+  leadCode: string;
+  customerId?: string;
+  customerName: string;
+  phone?: string;
+  facebookLink?: string;
+  status: string;
+  createdAt?: Date;
+}
+
+/**
  * Aggregate context consumed by the parser.
  * Parser only reads from these maps; it never queries the DB.
  */
@@ -98,6 +127,12 @@ export interface LeadImportContext {
   facebookPagesByCode: Map<string, FacebookPageRef>;
   customersByPhone: Map<string, CustomerRef>;
   employeesByCode: Map<string, EmployeeRef>;
+
+  // Phase 3.4 - Duplicate Detection
+  customersByFacebookLink: Map<string, CustomerRef>; // empty unless Customer model grows facebookLink
+  leadsByPhone: Map<string, LeadRef>;
+  leadsByFacebookLink: Map<string, LeadRef>;
+
   /** When the snapshot was loaded. Used to refresh cache lazily. */
   loadedAt: number;
 }
@@ -243,6 +278,92 @@ async function loadEmployees(): Promise<Map<string, EmployeeRef>> {
   return map;
 }
 
+/**
+ * Phase 3.4 - Customer.facebookLink map.
+ *
+ * NOTE: The current Customer model has no `facebookLink` field, so this
+ * loader returns an empty map. Once Customer grows that field, the
+ * `.select(...)` and Map key below become the canonical source.
+ */
+async function loadCustomersByFacebookLink(): Promise<Map<string, CustomerRef>> {
+  return new Map();
+}
+
+/**
+ * Phase 3.4 - Lead by phone.
+ * Used as Level-1 fallback when phone doesn't match any Customer.
+ */
+async function loadLeadsByPhone(): Promise<Map<string, LeadRef>> {
+  const docs = await Lead.find({ isActive: true, phone: { $exists: true, $ne: "" } })
+    .select("_id leadCode customerId customerName phone facebookLink status createdAt")
+    .lean()
+    .exec();
+
+  const map = new Map<string, LeadRef>();
+  for (const d of docs as Array<{
+    _id: { toString: () => string };
+    leadCode: string;
+    customerId?: { toString: () => string };
+    customerName: string;
+    phone?: string;
+    facebookLink?: string;
+    status: string;
+    createdAt?: Date;
+  }>) {
+    if (!d.phone) continue;
+    map.set(d.phone.trim(), {
+      id: d._id.toString(),
+      leadCode: d.leadCode,
+      customerId: d.customerId ? d.customerId.toString() : undefined,
+      customerName: d.customerName,
+      phone: d.phone,
+      facebookLink: d.facebookLink,
+      status: d.status,
+      createdAt: d.createdAt,
+    });
+  }
+  return map;
+}
+
+/**
+ * Phase 3.4 - Lead by Facebook link.
+ * Used as Level-2 detection when Facebook link doesn't match any Customer.
+ */
+async function loadLeadsByFacebookLink(): Promise<Map<string, LeadRef>> {
+  const docs = await Lead.find({
+    isActive: true,
+    facebookLink: { $exists: true, $ne: "" },
+  })
+    .select("_id leadCode customerId customerName phone facebookLink status createdAt")
+    .lean()
+    .exec();
+
+  const map = new Map<string, LeadRef>();
+  for (const d of docs as Array<{
+    _id: { toString: () => string };
+    leadCode: string;
+    customerId?: { toString: () => string };
+    customerName: string;
+    phone?: string;
+    facebookLink?: string;
+    status: string;
+    createdAt?: Date;
+  }>) {
+    if (!d.facebookLink) continue;
+    map.set(d.facebookLink.trim(), {
+      id: d._id.toString(),
+      leadCode: d.leadCode,
+      customerId: d.customerId ? d.customerId.toString() : undefined,
+      customerName: d.customerName,
+      phone: d.phone,
+      facebookLink: d.facebookLink,
+      status: d.status,
+      createdAt: d.createdAt,
+    });
+  }
+  return map;
+}
+
 // ==================================================
 // Public API
 // ==================================================
@@ -267,14 +388,25 @@ export async function loadLeadImportContext(
   }
 
   cacheInflight = (async () => {
-    const [products, combos, facebookPages, customers, employees] =
-      await Promise.all([
-        loadProducts(),
-        loadCombos(),
-        loadFacebookPages(),
-        loadCustomers(),
-        loadEmployees(),
-      ]);
+    const [
+      products,
+      combos,
+      facebookPages,
+      customers,
+      employees,
+      customersByFacebookLink,
+      leadsByPhone,
+      leadsByFacebookLink,
+    ] = await Promise.all([
+      loadProducts(),
+      loadCombos(),
+      loadFacebookPages(),
+      loadCustomers(),
+      loadEmployees(),
+      loadCustomersByFacebookLink(),
+      loadLeadsByPhone(),
+      loadLeadsByFacebookLink(),
+    ]);
 
     const ctx: LeadImportContext = {
       productsByCode: products,
@@ -282,6 +414,9 @@ export async function loadLeadImportContext(
       facebookPagesByCode: facebookPages,
       customersByPhone: customers,
       employeesByCode: employees,
+      customersByFacebookLink,
+      leadsByPhone,
+      leadsByFacebookLink,
       loadedAt: Date.now(),
     };
 
@@ -315,6 +450,9 @@ export function emptyLeadImportContext(): LeadImportContext {
     facebookPagesByCode: new Map(),
     customersByPhone: new Map(),
     employeesByCode: new Map(),
+    customersByFacebookLink: new Map(),
+    leadsByPhone: new Map(),
+    leadsByFacebookLink: new Map(),
     loadedAt: Date.now(),
   };
 }

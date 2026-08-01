@@ -29,14 +29,21 @@ import type { ColumnsType } from "antd/es/table";
 import {
   parseLead,
   ParsedLead,
-  LeadImportField,
   LeadValidationIssue,
+  LEAD_DUPLICATE_LABELS,
 } from "@/utils/import/leadParser";
+
+import type { LeadImportField } from "@/constants/importHeaders";
 
 import {
   loadLeadImportContext,
   LeadImportContext,
 } from "@/services/import/leadImportValidation.service";
+
+import {
+  simulateLeadImport,
+  LeadImportSimulation,
+} from "@/services/import/leadImportSimulation.service";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -141,6 +148,46 @@ export default function LeadImportPreview() {
           r.errors.some(i => i.severity === "WARNING")
       ).length,
     [parsedRows]
+  );
+
+  // Phase 3.4 - duplicate statistics
+  const newCustomers = useMemo(
+    () => parsedRows.filter(r => !r.isDuplicate && r.status === "VALID").length,
+    [parsedRows]
+  );
+  const returningCustomers = useMemo(
+    () =>
+      parsedRows.filter(
+        r =>
+          r.isDuplicate &&
+          r.duplicateType === "PHONE" &&
+          r.customerId
+      ).length,
+    [parsedRows]
+  );
+  const duplicateLeads = useMemo(
+    () =>
+      parsedRows.filter(
+        r => r.isDuplicate && !r.customerId && r.duplicateType === "PHONE"
+      ).length,
+    [parsedRows]
+  );
+  const duplicateFacebook = useMemo(
+    () =>
+      parsedRows.filter(r => r.isDuplicate && r.duplicateType === "FACEBOOK")
+        .length,
+    [parsedRows]
+  );
+  const totalDuplicates = useMemo(
+    () => parsedRows.filter(r => r.isDuplicate).length,
+    [parsedRows]
+  );
+
+  // Phase 3.5 - Read-only simulation of the import pipeline.
+  // Pure derivation from `parsedRows` + `importContext`; never writes to DB.
+  const simulation: LeadImportSimulation = useMemo(
+    () => simulateLeadImport(parsedRows, importContext ?? undefined),
+    [parsedRows, importContext]
   );
 
   const hasData = totalRows > 0;
@@ -316,6 +363,82 @@ export default function LeadImportPreview() {
         );
       },
     },
+    // ==================================================
+    // Phase 3.4 - Duplicate Detection columns (INFO only)
+    // ==================================================
+    {
+      title: "Duplicate",
+      key: "duplicate",
+      width: 130,
+      align: "center",
+      render: (_: unknown, record: ParsedLead) => {
+        if (!record.isDuplicate) {
+          return (
+            <Tag color="default" style={{ margin: 0 }}>
+              Khách mới
+            </Tag>
+          );
+        }
+        return (
+          <Tooltip
+            title={
+              <span>
+                Phát hiện trùng lặp - vẫn cho phép Import (INFO)
+              </span>
+            }
+          >
+            <Tag icon={<ExclamationCircleOutlined />} color="processing" style={{ margin: 0 }}>
+              🔁 Trùng
+            </Tag>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: "Loại trùng",
+      key: "duplicateType",
+      width: 160,
+      render: (_: unknown, record: ParsedLead) => {
+        if (!record.isDuplicate) {
+          return <Text type="secondary">-</Text>;
+        }
+        const colorMap: Record<string, string> = {
+          PHONE: "orange",
+          FACEBOOK: "purple",
+          CUSTOMER: "blue",
+          LEAD: "magenta",
+          NONE: "default",
+        };
+        return (
+          <Tag color={colorMap[record.duplicateType] || "default"} style={{ margin: 0 }}>
+            {LEAD_DUPLICATE_LABELS[record.duplicateType]}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Khách hàng trùng",
+      key: "matchedCustomer",
+      width: 200,
+      render: (_: unknown, record: ParsedLead) => {
+        if (!record.isDuplicate) return <Text type="secondary">-</Text>;
+        if (record.matchedCode) {
+          return (
+            <Space size={4}>
+              <Tag color="cyan" style={{ margin: 0 }}>
+                {record.matchedCode}
+              </Tag>
+              {record.customerId && (
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  (link vào KH)
+                </Text>
+              )}
+            </Space>
+          );
+        }
+        return <Text type="secondary">-</Text>;
+      },
+    },
     {
       title: "Tên",
       dataIndex: "customerName",
@@ -402,7 +525,11 @@ export default function LeadImportPreview() {
               Paste dữ liệu từ Google Sheet hoặc Landing Page.
               Header được map linh hoạt theo nhiều alias. <br />
               <Text strong style={{ color: "#fa8c16" }}>
-                Chưa lưu Database. Chưa check trùng. Chưa import.
+                Chưa lưu Database. Chưa tạo Customer. Chưa tạo Lead. Chưa import.
+              </Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Phase 3.4: Duplicate Detection (Phone / Facebook) - chỉ phát hiện và hiển thị, vẫn cho phép Import.
               </Text>
             </Text>
           </div>
@@ -469,6 +596,21 @@ export default function LeadImportPreview() {
                   WARNING
                 </Tag>
                 <Text type="secondary">cho phép import (cảnh báo)</Text>
+                <Tag color="processing" style={{ marginLeft: 8 }}>
+                  INFO
+                </Tag>
+                <Text type="secondary">Duplicate - vẫn cho Import</Text>
+              </div>
+              <div style={{ marginTop: 4 }}>
+                <Text strong style={{ color: "#722ed1" }}>
+                  Phase 3.4 - Duplicate Detection:
+                </Text>{" "}
+                <Tag color="orange">Phone → Customer</Tag>
+                <Tag color="magenta">Phone → Lead</Tag>
+                <Tag color="purple">Facebook → Lead</Tag>
+                <Text type="secondary">
+                  (1 batch query / domain, đọc từ cache Map)
+                </Text>
               </div>
             </Space>
           </details>
@@ -533,10 +675,10 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
           {hasData && !hasHeaderError && (
             <Card size="small" style={{ background: "#fafafa" }}>
               <Row gutter={16}>
-                <Col span={6}>
+                <Col span={4}>
                   <Statistic title="Tổng số dòng" value={totalRows} />
                 </Col>
-                <Col span={6}>
+                <Col span={4}>
                   <Statistic
                     title="Hợp lệ"
                     value={validRows}
@@ -544,7 +686,7 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
                     prefix={<CheckCircleOutlined />}
                   />
                 </Col>
-                <Col span={6}>
+                <Col span={4}>
                   <Statistic
                     title="Cảnh báo"
                     value={warningRows}
@@ -554,7 +696,7 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
                     prefix={<ExclamationCircleOutlined />}
                   />
                 </Col>
-                <Col span={6}>
+                <Col span={4}>
                   <Statistic
                     title="Không hợp lệ"
                     value={invalidRows}
@@ -564,7 +706,36 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
                     prefix={<CloseCircleOutlined />}
                   />
                 </Col>
+                <Col span={4}>
+                  <Statistic
+                    title="Khách mới"
+                    value={newCustomers}
+                    valueStyle={{ color: "#1890ff" }}
+                    prefix={<CheckCircleOutlined />}
+                  />
+                </Col>
+                <Col span={4}>
+                  <Statistic
+                    title="Khách quay lại"
+                    value={returningCustomers}
+                    valueStyle={{
+                      color: returningCustomers > 0 ? "#722ed1" : undefined,
+                    }}
+                    prefix={<ExclamationCircleOutlined />}
+                  />
+                </Col>
               </Row>
+              {totalDuplicates > 0 && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #d9d9d9" }}>
+                  <Space size="middle" wrap>
+                    <Text type="secondary">Thống kê trùng lặp (INFO - vẫn cho Import):</Text>
+                    <Tag color="orange">🔁 Trùng SĐT - Khách quay lại: {returningCustomers}</Tag>
+                    <Tag color="magenta">📋 Trùng SĐT - Lead cũ: {duplicateLeads}</Tag>
+                    <Tag color="purple">🔗 Trùng Facebook: {duplicateFacebook}</Tag>
+                    <Tag color="cyan">Tổng trùng: {totalDuplicates}</Tag>
+                  </Space>
+                </div>
+              )}
             </Card>
           )}
 
@@ -611,11 +782,18 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
               {hasData && invalidRows > 0 && (
                 <Tag color="red">❌ {invalidRows} không hợp lệ</Tag>
               )}
+              {hasData && newCustomers > 0 && (
+                <Tag color="blue">👤 {newCustomers} khách mới</Tag>
+              )}
+              {hasData && totalDuplicates > 0 && (
+                <Tag color="purple">🔁 {totalDuplicates} trùng lặp (INFO)</Tag>
+              )}
             </Space>
             <Space size="small">
               {hasData ? (
                 <>
-                  <Tag color="orange">Chưa check trùng</Tag>
+                  <Tag color="orange">Chưa tạo Customer</Tag>
+                  <Tag color="orange">Chưa tạo Lead</Tag>
                   <Tag color="orange">Chưa import</Tag>
                 </>
               ) : (
@@ -623,6 +801,196 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
               )}
             </Space>
           </div>
+
+          {/* Phase 3.5 - Simulation Summary (read-only, no DB writes) */}
+          {hasData && !hasHeaderError && (
+            <Card
+              size="small"
+              data-testid="lead-import-simulation"
+              style={{
+                background: "#f6ffed",
+                border: "1px solid #b7eb8f",
+              }}
+              title={
+                <Space>
+                  <Text strong style={{ color: "#389e0d" }}>
+                    Mô phỏng Import
+                  </Text>
+                  <Tag color="green">Phase 3.5</Tag>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Chỉ mô phỏng - không ghi Database
+                  </Text>
+                  <Tag
+                    color={simulation.readyToImport ? "success" : "default"}
+                    icon={
+                      simulation.readyToImport ? (
+                        <CheckCircleOutlined />
+                      ) : (
+                        <CloseCircleOutlined />
+                      )
+                    }
+                    data-testid="lead-import-ready-tag"
+                  >
+                    {simulation.readyToImport
+                      ? "Sẵn sàng Import"
+                      : "Chưa sẵn sàng"}
+                  </Tag>
+                  {simulation.leadsToCreate > 0 && (
+                    <Tooltip
+                      title={`Ước tính thời gian xử lý ${simulation.leadsToCreate} Lead (chỉ mang tính UX, không chính xác)`}
+                    >
+                      <Tag
+                        color="blue"
+                        data-testid="lead-import-estimate-tag"
+                      >
+                        ⏱ {simulation.leadsToCreate} Lead →{" "}
+                        {simulation.estimatedExecution.label}
+                      </Tag>
+                    </Tooltip>
+                  )}
+                </Space>
+              }
+            >
+              <Row gutter={[16, 12]}>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Tổng số dòng"
+                    value={simulation.totalRows}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Lead sẽ tạo"
+                    value={simulation.leadsToCreate}
+                    valueStyle={{ color: "#389e0d" }}
+                    prefix={<CheckCircleOutlined />}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Customer sẽ tạo"
+                    value={simulation.customersToCreate}
+                    valueStyle={{ color: "#1890ff" }}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Khách mới"
+                    value={simulation.newCustomers}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Khách quay lại"
+                    value={simulation.returningCustomers}
+                    valueStyle={{
+                      color:
+                        simulation.returningCustomers > 0
+                          ? "#722ed1"
+                          : undefined,
+                    }}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Trùng SĐT"
+                    value={simulation.duplicatePhone}
+                    valueStyle={{
+                      color:
+                        simulation.duplicatePhone > 0
+                          ? "#fa8c16"
+                          : undefined,
+                    }}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Trùng Facebook"
+                    value={simulation.duplicateFacebook}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Trùng Customer"
+                    value={simulation.duplicateCustomer}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Warning"
+                    value={simulation.warningCount}
+                    valueStyle={{
+                      color:
+                        simulation.warningCount > 0
+                          ? "#fa8c16"
+                          : undefined,
+                    }}
+                    prefix={<WarningOutlined />}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Error"
+                    value={simulation.errorCount}
+                    valueStyle={{
+                      color:
+                        simulation.errorCount > 0 ? "#cf1322" : undefined,
+                    }}
+                    prefix={<CloseCircleOutlined />}
+                  />
+                </Col>
+                <Col xs={12} sm={8} md={6} lg={4}>
+                  <Statistic
+                    title="Dòng sẽ bỏ qua"
+                    value={simulation.invalidRows}
+                    valueStyle={{
+                      color:
+                        simulation.invalidRows > 0
+                          ? "#cf1322"
+                          : undefined,
+                    }}
+                  />
+                </Col>
+              </Row>
+
+              {simulation.skippedRowNumbers.length > 0 && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  style={{ marginTop: 12 }}
+                  message={
+                    <Text>
+                      Sẽ bỏ qua {simulation.invalidRows} dòng:{" "}
+                      <Text code>
+                        {simulation.skippedRowNumbers.join(", ")}
+                      </Text>
+                    </Text>
+                  }
+                />
+              )}
+
+              {Object.keys(simulation.issueSummary).length > 0 && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    paddingTop: 12,
+                    borderTop: "1px dashed #d9d9d9",
+                  }}
+                >
+                  <Space size={[4, 4]} wrap>
+                    <Text type="secondary">Tóm tắt lỗi:</Text>
+                    {Object.entries(simulation.issueSummary)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([code, count]) => (
+                        <Tag key={code} color="default">
+                          {code}: <strong>{count}</strong>
+                        </Tag>
+                      ))}
+                  </Space>
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Preview Table */}
           <div>
@@ -644,7 +1012,7 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
                 rowKey="rowNumber"
                 size="small"
                 bordered
-                scroll={{ x: 1200 }}
+                scroll={{ x: 1700 }}
                 pagination={{
                   pageSize: 20,
                   showSizeChanger: true,

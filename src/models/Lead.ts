@@ -114,7 +114,6 @@ const LeadSchema = new Schema<ILead>(
   }
 );
 
-LeadSchema.index({ leadCode: 1 }, { unique: true });
 LeadSchema.index({ phone: 1 });
 LeadSchema.index({ facebookLink: 1 });
 LeadSchema.index({ customerId: 1 });

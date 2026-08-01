@@ -708,15 +708,38 @@ export const createFacebookPageAssignmentSchema = z
       message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu",
       path: ["endDate"],
     }
-  )
-);
+  );
 
 // Lead schemas
 const VIETNAMESE_PHONE_REGEX = /^(0[0-9]{9,10})$/;
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+const facebookLinkSchema = z
+  .string()
+  .trim()
+  .url("Link Facebook không hợp lệ")
+  .refine((value) => {
+    try {
+      const hostname = new URL(value).hostname.toLowerCase();
+      return hostname === "facebook.com" || hostname.endsWith(".facebook.com");
+    } catch {
+      return false;
+    }
+  }, "Link phải thuộc tên miền Facebook");
+
+const assignedAtSchema = z
+  .union([z.iso.datetime(), z.date()])
+  .refine(
+    (value) => typeof value === "string" || !Number.isNaN(value.getTime()),
+    "Ngày phân công không hợp lệ"
+  )
+  .nullable()
+  .optional();
 
 export const createLeadSchema = z.object({
   customerId: z
     .string()
+    .regex(OBJECT_ID_REGEX, "Khách hàng không hợp lệ")
     .optional()
     .nullable(),
 
@@ -732,10 +755,7 @@ export const createLeadSchema = z.object({
     .max(200, "Tên mới tối đa 200 ký tự")
     .optional(),
 
-  facebookLink: z
-    .string()
-    .trim()
-    .url("Link Facebook không hợp lệ")
+  facebookLink: facebookLinkSchema
     .optional()
     .or(z.literal("")),
 
@@ -807,6 +827,8 @@ export const createLeadSchema = z.object({
 
   assignmentType: z.enum(["AUTO", "MANUAL"]).optional(),
 
+  assignedAt: assignedAtSchema,
+
   categoryId: z
     .string()
     .optional(),
@@ -874,6 +896,7 @@ export const createLeadSchema = z.object({
 export const updateLeadSchema = z.object({
   customerId: z
     .string()
+    .regex(OBJECT_ID_REGEX, "Khách hàng không hợp lệ")
     .optional()
     .nullable(),
 
@@ -891,10 +914,7 @@ export const updateLeadSchema = z.object({
     .optional()
     .nullable(),
 
-  facebookLink: z
-    .string()
-    .trim()
-    .url("Link Facebook không hợp lệ")
+  facebookLink: facebookLinkSchema
     .optional()
     .or(z.literal("")),
 
@@ -968,6 +988,8 @@ export const updateLeadSchema = z.object({
   assignmentType: z.enum(["AUTO", "MANUAL"])
     .optional()
     .nullable(),
+
+  assignedAt: assignedAtSchema,
 
   categoryId: z
     .string()
@@ -1190,6 +1212,244 @@ export const updateComboSchema = z
       path: ["comboItems"],
     }
   );
+
+// ================================================================
+// Order schemas
+// ================================================================
+
+const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "MOMO", "ZALO_PAY", "VNPAY", "OTHER"] as const;
+const CURRENCIES = ["VND", "MNT", "USD"] as const;
+const ORDER_STATUSES = [
+  "PENDING", "CONFIRMED", "PREPAID",
+  "SHIPPING", "COMPLETED", "CANCELLED",
+  "REJECTED", "FAILED",
+] as const;
+const ORDER_TYPES = [
+  "NORMAL", "COMBO", "GIFT", "EXCHANGE", "REPLACEMENT",
+] as const;
+const ORDER_SOURCES = [
+  "FACEBOOK", "IMPORT", "PHONE", "WEBSITE", "MANUAL",
+] as const;
+
+const orderPaymentSchema = z.object({
+  method: z.enum(PAYMENT_METHODS, {
+    message: "Phương thức thanh toán không hợp lệ",
+  }),
+  amount: z
+    .number({ message: "Số tiền không hợp lệ" })
+    .min(0, "Số tiền không được âm"),
+  currency: z.enum(CURRENCIES).default("VND"),
+  paidAt: z.string().datetime().optional().nullable(),
+  transactionId: z.string().default(""),
+  note: z.string().default(""),
+});
+
+const orderShippingSchema = z.object({
+  receiverName: z
+    .string()
+    .trim()
+    .min(1, "Tên người nhận là bắt buộc")
+    .max(200),
+  receiverPhone: z
+    .string()
+    .trim()
+    .min(1, "SĐT người nhận là bắt buộc")
+    .max(20),
+  address: z
+    .string()
+    .trim()
+    .min(1, "Địa chỉ giao hàng là bắt buộc")
+    .max(500),
+  province: z.string().max(100).optional(),
+  district: z.string().max(100).optional(),
+  ward: z.string().max(100).optional(),
+  trackingNumber: z.string().max(100).optional(),
+  carrier: z.string().max(100).optional(),
+  estimatedDelivery: z.string().datetime().optional().nullable(),
+  actualDelivery: z.string().datetime().optional().nullable(),
+  shippingFee: z.number().min(0).default(0),
+  shippingFeeCurrency: z.enum(CURRENCIES).default("VND"),
+});
+
+const OBJECT_ID_REGEX_ORDER = /^[a-f\d]{24}$/i;
+
+export const createOrderSchema = z.object({
+  customerId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "Customer không hợp lệ")
+    .min(1, "Customer là bắt buộc"),
+
+  customerName: z
+    .string()
+    .trim()
+    .min(1, "Tên khách hàng là bắt buộc")
+    .max(200),
+
+  customerPhone: z.string().max(20).optional(),
+
+  leadId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "Lead không hợp lệ")
+    .optional()
+    .nullable(),
+
+  productId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "Product không hợp lệ")
+    .optional()
+    .nullable(),
+
+  comboId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "Combo không hợp lệ")
+    .optional()
+    .nullable(),
+
+  quantity: z
+    .number({ message: "Số lượng không hợp lệ" })
+    .int("Số lượng phải là số nguyên")
+    .min(1, "Số lượng tối thiểu là 1"),
+
+  unitPrice: z
+    .number({ message: "Đơn giá không hợp lệ" })
+    .min(0, "Đơn giá không được âm"),
+
+  totalAmount: z
+    .number({ message: "Tổng tiền không hợp lệ" })
+    .min(0, "Tổng tiền không được âm"),
+
+  currency: z.enum(CURRENCIES).default("VND"),
+
+  estimatedWeight: z
+    .number({ message: "Trọng lượng ước tính không hợp lệ" })
+    .min(0)
+    .optional()
+    .nullable(),
+
+  actualWeight: z
+    .number({ message: "Trọng lượng thực tế không hợp lệ" })
+    .min(0)
+    .optional()
+    .nullable(),
+
+  warehouseId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "Warehouse không hợp lệ")
+    .optional()
+    .nullable(),
+
+  marketingEmployeeId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "Nhân viên marketing không hợp lệ")
+    .optional()
+    .nullable(),
+
+  saleEmployeeId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "Nhân viên sale không hợp lệ")
+    .optional()
+    .nullable(),
+
+  status: z.enum(ORDER_STATUSES).default("PENDING"),
+
+  isPrepaid: z.boolean().default(false),
+
+  orderType: z
+    .enum(ORDER_TYPES, { message: "Loại đơn không hợp lệ" })
+    .default("NORMAL"),
+
+  orderSource: z
+    .enum(ORDER_SOURCES, { message: "Nguồn đơn không hợp lệ" })
+    .default("MANUAL"),
+
+  payments: z.array(orderPaymentSchema).default([]),
+
+  totalPaid: z
+    .number({ message: "Tổng thanh toán không hợp lệ" })
+    .min(0, "Tổng thanh toán không được âm")
+    .default(0),
+
+  shipping: orderShippingSchema.optional(),
+
+  note: z.string().max(1000).optional(),
+});
+
+export const updateOrderSchema = z.object({
+  customerId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "Customer không hợp lệ")
+    .optional(),
+  customerName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .optional(),
+  customerPhone: z.string().max(20).optional(),
+  leadId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER)
+    .optional()
+    .nullable(),
+  productId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER)
+    .optional()
+    .nullable(),
+  comboId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER)
+    .optional()
+    .nullable(),
+  quantity: z
+    .number()
+    .int()
+    .min(1)
+    .optional(),
+  unitPrice: z
+    .number()
+    .min(0)
+    .optional(),
+  totalAmount: z
+    .number()
+    .min(0)
+    .optional(),
+  currency: z.enum(CURRENCIES).optional(),
+  estimatedWeight: z.number().min(0).optional().nullable(),
+  actualWeight: z.number().min(0).optional().nullable(),
+  warehouseId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER)
+    .optional()
+    .nullable(),
+  marketingEmployeeId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER)
+    .optional()
+    .nullable(),
+  saleEmployeeId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER)
+    .optional()
+    .nullable(),
+  status: z.enum(ORDER_STATUSES).optional(),
+  isPrepaid: z.boolean().optional(),
+  orderType: z.enum(ORDER_TYPES).optional(),
+  orderSource: z.enum(ORDER_SOURCES).optional(),
+  payments: z.array(orderPaymentSchema).optional(),
+  totalPaid: z.number().min(0).optional(),
+  shipping: orderShippingSchema.optional().nullable(),
+  note: z.string().max(1000).optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+export type CreateOrderForm = z.infer<typeof createOrderSchema>;
+export type UpdateOrderForm = z.infer<typeof updateOrderSchema>;
+
+// ================================================================
+// Facebook Page Assignment schemas (original order preserved)
+// ================================================================
+
 export const updateFacebookPageAssignmentSchema = z
   .object({
     facebookPageId: z
@@ -1262,309 +1522,5 @@ export const updateFacebookPageAssignmentSchema = z
       message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu",
       path: ["endDate"],
     }
-  )
-);
+  );
 
-// Lead schemas
-const VIETNAMESE_PHONE_REGEX = /^(0[0-9]{9,10})$/;
-
-export const createLeadSchema = z.object({
-  customerName: z
-    .string()
-    .trim()
-    .min(1, "Tên khách hàng là bắt buộc")
-    .max(200, "Tên khách hàng tối đa 200 ký tự"),
-
-  customerNewName: z
-    .string()
-    .trim()
-    .max(200, "Tên mới tối đa 200 ký tự")
-    .optional(),
-
-  facebookLink: z
-    .string()
-    .trim()
-    .url("Link Facebook không hợp lệ")
-    .optional()
-    .or(z.literal("")),
-
-  phone: z
-    .string()
-    .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại không hợp lệ")
-    .optional()
-    .or(z.literal("")),
-
-  phone2: z
-    .string()
-    .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại 2 không hợp lệ")
-    .optional()
-    .or(z.literal("")),
-
-  address: z
-    .string()
-    .trim()
-    .max(500, "Địa chỉ tối đa 500 ký tự")
-    .optional(),
-
-  province: z
-    .string()
-    .trim()
-    .max(100, "Tỉnh/Thành phố tối đa 100 ký tự")
-    .optional(),
-
-  district: z
-    .string()
-    .trim()
-    .max(100, "Quận/Huyện tối đa 100 ký tự")
-    .optional(),
-
-  ward: z
-    .string()
-    .trim()
-    .max(100, "Phường/Xã tối đa 100 ký tự")
-    .optional(),
-
-  sourceType: z.enum([
-    "LANDING_PAGE",
-    "FACEBOOK_COMMENT",
-    "FACEBOOK_INBOX",
-    "TIKTOK",
-    "ZALO",
-    "OTHER",
-  ], {
-    message: "Nguồn không hợp lệ",
-  }),
-
-  facebookPageId: z
-    .string()
-    .min(1, "Facebook Page là bắt buộc")
-    .optional(),
-
-  facebookPageAssignmentId: z
-    .string()
-    .optional(),
-
-  marketingEmployeeId: z
-    .string()
-    .optional(),
-
-  saleEmployeeId: z
-    .string()
-    .nullable()
-    .optional(),
-
-  categoryId: z
-    .string()
-    .optional(),
-
-  productId: z
-    .string()
-    .optional(),
-
-  comboId: z
-    .string()
-    .optional(),
-
-  quantity: z
-    .number()
-    .int("Số lượng phải là số nguyên")
-    .min(1, "Số lượng tối thiểu là 1")
-    .optional(),
-
-  unitPriceMNT: z
-    .number()
-    .min(0, "Giá MNT không được âm")
-    .optional(),
-
-  unitPriceVND: z
-    .number()
-    .min(0, "Giá VND không được âm")
-    .optional(),
-
-  exchangeRate: z
-    .number()
-    .min(0, "Tỷ giá không được âm")
-    .optional(),
-
-  estimatedWeight: z
-    .number()
-    .min(0, "Trọng lượng ước tính không được âm")
-    .optional(),
-
-  status: z.enum([
-    "NEW",
-    "ASSIGNED",
-    "CALLING",
-    "NO_ANSWER",
-    "POTENTIAL",
-    "REJECTED",
-    "ORDER_CREATED",
-    "CANCELLED",
-  ]).optional().default("NEW"),
-
-  note: z
-    .string()
-    .trim()
-    .max(1000, "Ghi chú tối đa 1000 ký tự")
-    .optional(),
-
-  isDuplicate: z.boolean().optional().default(false),
-});
-
-export const updateLeadSchema = z.object({
-  customerName: z
-    .string()
-    .trim()
-    .min(1, "Tên khách hàng là bắt buộc")
-    .max(200, "Tên khách hàng tối đa 200 ký tự")
-    .optional(),
-
-  customerNewName: z
-    .string()
-    .trim()
-    .max(200, "Tên mới tối đa 200 ký tự")
-    .optional()
-    .nullable(),
-
-  facebookLink: z
-    .string()
-    .trim()
-    .url("Link Facebook không hợp lệ")
-    .optional()
-    .or(z.literal("")),
-
-  phone: z
-    .string()
-    .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại không hợp lệ")
-    .optional()
-    .or(z.literal("")),
-
-  phone2: z
-    .string()
-    .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại 2 không hợp lệ")
-    .optional()
-    .or(z.literal("")),
-
-  address: z
-    .string()
-    .trim()
-    .max(500, "Địa chỉ tối đa 500 ký tự")
-    .optional(),
-
-  province: z
-    .string()
-    .trim()
-    .max(100, "Tỉnh/Thành phố tối đa 100 ký tự")
-    .optional(),
-
-  district: z
-    .string()
-    .trim()
-    .max(100, "Quận/Huyện tối đa 100 ký tự")
-    .optional(),
-
-  ward: z
-    .string()
-    .trim()
-    .max(100, "Phường/Xã tối đa 100 ký tự")
-    .optional(),
-
-  sourceType: z.enum([
-    "LANDING_PAGE",
-    "FACEBOOK_COMMENT",
-    "FACEBOOK_INBOX",
-    "TIKTOK",
-    "ZALO",
-    "OTHER",
-  ]).optional(),
-
-  facebookPageId: z
-    .string()
-    .optional()
-    .nullable(),
-
-  facebookPageAssignmentId: z
-    .string()
-    .optional()
-    .nullable(),
-
-  marketingEmployeeId: z
-    .string()
-    .optional()
-    .nullable(),
-
-  saleEmployeeId: z
-    .string()
-    .nullable()
-    .optional(),
-
-  categoryId: z
-    .string()
-    .optional()
-    .nullable(),
-
-  productId: z
-    .string()
-    .optional()
-    .nullable(),
-
-  comboId: z
-    .string()
-    .optional()
-    .nullable(),
-
-  quantity: z
-    .number()
-    .int("Số lượng phải là số nguyên")
-    .min(1, "Số lượng tối thiểu là 1")
-    .optional(),
-
-  unitPriceMNT: z
-    .number()
-    .min(0, "Giá MNT không được âm")
-    .optional(),
-
-  unitPriceVND: z
-    .number()
-    .min(0, "Giá VND không được âm")
-    .optional(),
-
-  exchangeRate: z
-    .number()
-    .min(0, "Tỷ giá không được âm")
-    .optional(),
-
-  estimatedWeight: z
-    .number()
-    .min(0, "Trọng lượng ước tính không được âm")
-    .optional(),
-
-  status: z.enum([
-    "NEW",
-    "ASSIGNED",
-    "CALLING",
-    "NO_ANSWER",
-    "POTENTIAL",
-    "REJECTED",
-    "ORDER_CREATED",
-    "CANCELLED",
-  ]).optional(),
-
-  note: z
-    .string()
-    .trim()
-    .max(1000, "Ghi chú tối đa 1000 ký tự")
-    .optional()
-    .nullable(),
-
-  isDuplicate: z.boolean().optional(),
-
-  isActive: z.boolean().optional(),
-});
-
-export type CreateLeadForm = z.infer<typeof createLeadSchema>;
-export type UpdateLeadForm = z.infer<typeof updateLeadSchema>;

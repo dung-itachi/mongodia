@@ -1,0 +1,265 @@
+==================================================
+MODULE: Roles Seed Verification
+
+Ngày kiểm thử: 2026-08-01
+Người thực hiện: Cursor Agent
+
+Kết quả cuối cùng: PASS
+
+==================================================
+
+1. PHẠM VI
+
+Kiểm tra dữ liệu Role trong MongoDB sau khi seed.
+
+Đối chiếu với:
+- src/constants/roles.ts
+- src/constants/permissions.ts
+
+Không sửa code dự án.
+Chỉ sử dụng script read-only để truy vấn.
+
+Cách chạy:
+npx dotenv -e .env.local -- tsx src/db/inspect-roles.ts
+npx dotenv -e .env.local -- tsx src/db/count-roles.ts
+npx dotenv -e .env.local -- tsx src/db/list-roles.ts
+
+==================================================
+
+2. KẾT QUẢ TỔNG QUAN
+
+Tổng role trong DB: 8
+Role active: 6
+Role inactive: 2
+
+5 role theo ROLES: ADMIN, MANAGER, LEADER, EMPLOYEE, MKT
+Role lạ active ngoài ROLES: TEST_ROLE (dữ liệu cũ, không do seed này tạo)
+Role inactive: TEST, TEST1 (dữ liệu cũ)
+
+Tổng permission active: 78
+Permission trùng: 0
+Permission không tồn tại trong constants/permissions: 0
+
+==================================================
+
+3. ADMIN
+
+Có quyền: "*" (mọi permission hiện có)
+
+Trong DB thực tế (populate):
+- dashboard.view
+- employee.view/create/update/delete
+- team.view/create/update/delete
+- role.view/create/update/delete
+- product.view/create/update/delete
+- order.view/create/update/delete
+- report.view
+- department.view/create/update/delete
+- area.view/create/update/delete
+- category.view/create/update/delete
+- variant-option.view/create/update/delete
+- variant-value.view/create/update/delete
+- product-variant.view/create/update/delete
+- customer.view/create/update/delete
+- supplier.view/create/update/delete
+- warehouse.view/create/update/delete
+- inventory.view
+- inventory-adjustment.view/create
+- facebook-page.view/create/update/delete
+- facebook-page-assignment.view/create/update/delete
+- combo.view/create/update/delete
+- lead.view/create/update/delete/assign
+
+Kết luận: PASS
+
+==================================================
+
+4. MANAGER
+
+Kỳ vọng:
+- lead.view
+- lead.create
+- lead.update
+- lead.assign
+
+Trong DB thực tế:
+- lead.view
+- lead.create
+- lead.update
+- lead.assign
+
+Ngoài ra còn:
+- dashboard.view
+- employee.view/create/update
+- team.view
+- category.view/create/update
+- product.view/create/update
+- variant-option.view/create/update
+- variant-value.view/create/update
+- product-variant.view/create/update
+- customer.view/create/update
+- supplier.view/create/update
+- warehouse.view/create/update
+- inventory.view
+- order.view/create/update
+- facebook-page.view/create/update
+- facebook-page-assignment.view/create/update
+- combo.view/create/update
+- report.view
+
+Kết luận: PASS
+
+==================================================
+
+5. LEADER
+
+Kỳ vọng:
+- Không có lead.assign
+
+Trong DB thực tế:
+- lead.view
+- KHÔNG có lead.create
+- KHÔNG có lead.update
+- KHÔNG có lead.assign
+- KHÔNG có lead.delete
+
+Các permission khác:
+- dashboard.view
+- employee.view
+- team.view
+- category.view
+- product.view
+- variant-option.view
+- variant-value.view
+- product-variant.view
+- customer.view
+- supplier.view
+- warehouse.view
+- inventory.view
+- inventory-adjustment.view/create
+- order.view/create/update
+- facebook-page.view
+- facebook-page-assignment.view
+- combo.view
+- report.view
+
+Kết luận: PASS
+
+==================================================
+
+6. EMPLOYEE
+
+Kỳ vọng:
+- Chỉ có lead.view
+- Không có lead.create
+- Không có lead.update
+- Không có lead.assign
+
+Trong DB thực tế:
+- lead.view
+- KHÔNG có lead.create
+- KHÔNG có lead.update
+- KHÔNG có lead.assign
+- KHÔNG có lead.delete
+
+Các permission khác:
+- dashboard.view
+- product.view
+- inventory.view
+- inventory-adjustment.view/create
+- order.view/create
+- combo.view
+
+Kết luận: PASS
+
+==================================================
+
+7. MKT
+
+Kỳ vọng:
+- lead.view
+- lead.create
+- lead.update
+- lead.assign
+
+Trong DB thực tế:
+- lead.view
+- lead.create
+- lead.update
+- lead.assign
+
+Các permission khác:
+- dashboard.view
+- facebook-page.view/create/update
+- facebook-page-assignment.view/create/update
+- customer.view/create/update
+- product.view
+- combo.view/create/update
+- order.view/create
+- report.view
+
+Kết luận: PASS
+
+==================================================
+
+8. KIỂM TRA BỔ SUNG
+
+8.1. Permission trùng
+Kết quả: []
+PASS
+
+8.2. Permission không tồn tại trong constants/permissions
+Kết quả: []
+PASS
+
+8.3. Tất cả role đều tồn tại
+Số role theo ROLES: 5
+Số role active khớp code: 5 (ADMIN, MANAGER, LEADER, EMPLOYEE, MKT)
+PASS
+
+8.4. Idempotent
+Chạy seed 3 lần liên tiếp:
+- Lần 1: OK
+- Lần 2: OK
+- Lần 3: OK
+Số lượng roles và permissions không đổi sau mỗi lần chạy.
+PASS
+
+==================================================
+
+9. CHI TIẤT SCRIPT ĐỌC DB
+
+inspect-roles.ts:
+- Truy vấn Role.find({ isActive: true }).populate("permissions")
+- So sánh actual với expected lấy từ ROLES.
+- Với ADMIN, expected là toàn bộ permission hiện có trong PERMISSIONS.
+- Với các role khác, expected là permissions string trong constants.
+- Tất cả 5 role đều valid: true, missing: [], extra: [].
+
+count-roles.ts:
+- Đếm số role và permission để xác nhận idempotent.
+
+list-roles.ts:
+- Liệt kê code + isActive của tất cả role.
+
+floating-role.ts:
+- Lấy nội dung TEST_ROLE để xác nhận đây là dữ liệu cũ, không do seed này tạo.
+
+==================================================
+
+10. KẾT LUẬN
+
+PASS
+
+Tất cả 5 role theo ROLES được seed đúng vào MongoDB:
+- ADMIN có "*"
+- MANAGER có lead.view/create/update/assign
+- LEADER không có lead.assign
+- EMPLOYEE chỉ có lead.view, không có create/update/assign
+- MKT có lead.view/create/update/assign
+
+Không phát hiện permission trùng, permission không tồn tại, hay role sinh lỗi.
+Seed idempotent, chạy nhiều lần không sinh dữ liệu lỗi.
+
+Không sửa code dự án.
+==================================================

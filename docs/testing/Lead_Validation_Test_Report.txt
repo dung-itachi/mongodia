@@ -1,0 +1,337 @@
+==================================================
+MODULE: Lead Validation
+
+Ngày kiểm thử: 2026-08-01
+Người thực hiện: Cursor Agent
+
+Kết quả cuối cùng: PASS
+
+==================================================
+
+1. PHẠM VI KIỂM THỬ
+
+Chỉ kiểm thử Validation của module Lead qua:
+- createLeadSchema
+- updateLeadSchema
+
+Không kiểm thử:
+- CRUD
+- Transaction
+- Import
+- Permission
+- API integration
+- MongoDB
+
+Cách chạy:
+npx tsx src/app/api/test-lead-validation.ts
+
+Test script:
+src/app/api/test-lead-validation.ts
+
+==================================================
+
+2. TỔNG SỐ TEST
+
+Tổng số test: 107
+PASS: 107
+FAIL: 0
+
+Kết quả lần chạy ban đầu trước khi sửa validator:
+- PASS: 99
+- FAIL: 8
+
+Kết quả sau khi sửa và chạy regression:
+- PASS: 107
+- FAIL: 0
+
+==================================================
+
+3. DANH SÁCH TEST
+
+3.1. Baseline
+
+[PASS] Create - payload hợp lệ tối thiểu
+[PASS] Update - payload hợp lệ rỗng
+
+3.2. Phone - Create
+
+[PASS] phone hợp lệ 10 chữ số
+[PASS] phone hợp lệ 11 chữ số
+[PASS] phone sai ký tự
+[PASS] phone sai prefix
+[PASS] phone thiếu số
+[PASS] phone quá ngắn
+[PASS] phone quá dài
+[PASS] phone rỗng vì trường optional
+[PASS] phone sai kiểu dữ liệu
+[PASS] phone2 biên hợp lệ
+[PASS] phone2 quá dài
+
+3.3. Phone - Update
+
+[PASS] phone hợp lệ 10 chữ số
+[PASS] phone hợp lệ 11 chữ số
+[PASS] phone sai ký tự
+[PASS] phone sai prefix
+[PASS] phone thiếu số
+[PASS] phone quá ngắn
+[PASS] phone quá dài
+[PASS] phone rỗng vì trường optional
+[PASS] phone sai kiểu dữ liệu
+[PASS] phone2 biên hợp lệ
+[PASS] phone2 quá dài
+
+3.4. Facebook URL - Create
+
+[PASS] Facebook URL hợp lệ
+[PASS] Facebook mobile URL hợp lệ
+[PASS] URL không hợp lệ
+[PASS] URL hợp lệ nhưng không thuộc Facebook
+[PASS] Chuỗi rỗng vì trường optional
+[PASS] Sai kiểu dữ liệu
+
+3.5. Facebook URL - Update
+
+[PASS] Facebook URL hợp lệ
+[PASS] Facebook mobile URL hợp lệ
+[PASS] URL không hợp lệ
+[PASS] URL hợp lệ nhưng không thuộc Facebook
+[PASS] Chuỗi rỗng vì trường optional
+[PASS] Sai kiểu dữ liệu
+
+3.6. Date / assignedAt - Create
+
+[PASS] ISO datetime hợp lệ
+[PASS] Sai định dạng
+[PASS] Null vì trường optional/nullable
+[PASS] Invalid Date object
+
+3.7. Date / assignedAt - Update
+
+[PASS] ISO datetime hợp lệ
+[PASS] Sai định dạng
+[PASS] Null vì trường optional/nullable
+[PASS] Invalid Date object
+
+3.8. latestRemark - Create
+
+[PASS] Chuỗi rỗng
+[PASS] Biên đúng 2000 ký tự
+[PASS] Quá giới hạn 2001 ký tự
+[PASS] Sai kiểu dữ liệu
+[PASS] Null bị từ chối trên create
+
+3.9. latestRemark - Update
+
+[PASS] Chuỗi rỗng
+[PASS] Biên đúng 2000 ký tự
+[PASS] Quá giới hạn 2001 ký tự
+[PASS] Sai kiểu dữ liệu
+[PASS] Null được chấp nhận trên update
+
+3.10. assignmentType - Create
+
+[PASS] AUTO
+[PASS] MANUAL
+[PASS] Giá trị enum không hợp lệ
+[PASS] Sai kiểu dữ liệu
+[PASS] Thiếu vì trường optional
+[PASS] Null bị từ chối trên create
+
+3.11. assignmentType - Update
+
+[PASS] AUTO
+[PASS] MANUAL
+[PASS] Giá trị enum không hợp lệ
+[PASS] Sai kiểu dữ liệu
+[PASS] Thiếu vì trường optional
+[PASS] Null được chấp nhận trên update
+
+3.12. Customer
+
+[PASS] Create customerName thiếu
+[PASS] Create customerName rỗng
+[PASS] Create customerName chỉ có whitespace
+[PASS] Create customerName biên 1 ký tự
+[PASS] Create customerName biên 200 ký tự
+[PASS] Create customerName quá 200 ký tự
+[PASS] Create customerName sai kiểu
+[PASS] Update customerName rỗng
+[PASS] Update customerName biên 200 ký tự
+[PASS] Update customerName quá 200 ký tự
+[PASS] Update customerName sai kiểu
+[PASS] Create customerId ObjectId hợp lệ
+[PASS] Create customerId malformed
+[PASS] Create customerId sai kiểu
+[PASS] Update customerId ObjectId hợp lệ
+[PASS] Update customerId malformed
+[PASS] Update customerId sai kiểu
+
+3.13. Status
+
+[PASS] Create enum NEW
+[PASS] Create enum ASSIGNED
+[PASS] Create enum PROCESSING
+[PASS] Create enum NO_ANSWER
+[PASS] Create enum POTENTIAL
+[PASS] Create enum REJECTED
+[PASS] Create enum ORDER_CREATED
+[PASS] Create enum CANCELLED
+[PASS] Update enum NEW
+[PASS] Update enum ASSIGNED
+[PASS] Update enum PROCESSING
+[PASS] Update enum NO_ANSWER
+[PASS] Update enum POTENTIAL
+[PASS] Update enum REJECTED
+[PASS] Update enum ORDER_CREATED
+[PASS] Update enum CANCELLED
+[PASS] Create enum không hợp lệ
+[PASS] Update enum không hợp lệ
+[PASS] Create null
+[PASS] Update null
+[PASS] Create sai kiểu
+[PASS] Update sai kiểu
+[PASS] Create thiếu, nhận default NEW
+[PASS] Update thiếu vì trường optional
+
+==================================================
+
+4. BOUNDARY VALUE
+
+Phone:
+- 9 chữ số: bị từ chối
+- 10 chữ số bắt đầu bằng 0: được chấp nhận
+- 11 chữ số bắt đầu bằng 0: được chấp nhận
+- 12 chữ số: bị từ chối
+
+customerName:
+- 0 ký tự hoặc chỉ whitespace: bị từ chối
+- 1 ký tự: được chấp nhận
+- 200 ký tự: được chấp nhận
+- 201 ký tự: bị từ chối
+
+latestRemark:
+- 0 ký tự: được chấp nhận
+- 2000 ký tự: được chấp nhận
+- 2001 ký tự: bị từ chối
+
+==================================================
+
+5. LỖI PHÁT HIỆN
+
+5.1. Facebook URL chấp nhận domain không phải Facebook
+
+Hiện tượng:
+- https://example.com/profile được chấp nhận vì validator chỉ kiểm tra URL syntax.
+
+Ảnh hưởng:
+- Dữ liệu facebookLink có thể chứa URL của domain bất kỳ.
+
+Sửa:
+- Thêm kiểm tra hostname phải là facebook.com hoặc subdomain của facebook.com.
+
+5.2. assignedAt không được validate
+
+Hiện tượng:
+- Chuỗi sai định dạng và Invalid Date bị bỏ qua do Zod object mặc định loại unknown key.
+
+Ảnh hưởng:
+- Date input không được kiểm tra ở validation layer.
+
+Sửa:
+- Thêm assignedAt schema nhận ISO datetime hoặc Date hợp lệ; cho phép null/undefined.
+
+5.3. customerId malformed được chấp nhận
+
+Hiện tượng:
+- Chuỗi "invalid-id" được Zod chấp nhận dù không phải ObjectId.
+
+Ảnh hưởng:
+- Dữ liệu sai chỉ có thể lỗi ở tầng Mongoose/API thay vì validation layer.
+
+Sửa:
+- Thêm regex ObjectId 24 ký tự hexadecimal cho customerId ở create/update.
+
+5.4. Lỗi cú pháp có sẵn trong validator.ts
+
+Hiện tượng:
+- Test không thể import validator.ts do có hai dấu đóng ngoặc dư ở cuối các chuỗi refine của Facebook Page Assignment schema.
+
+Ảnh hưởng:
+- TypeScript/esbuild báo Unexpected ")" và validation module không thể được thực thi.
+
+Sửa:
+- Loại bỏ hai dấu đóng ngoặc dư trong cùng file validator.
+
+==================================================
+
+6. FILE ĐÃ SỬA
+
+Validator/schema liên quan:
+- src/utils/validator.ts
+
+Test validation:
+- src/app/api/test-lead-validation.ts
+
+Báo cáo:
+- docs/testing/Lead_Validation_Test_Report.txt
+
+Không sửa:
+- CRUD route
+- Transaction code/test
+- Import code/test
+- Permission/authentication
+- Module khác
+
+==================================================
+
+7. REGRESSION
+
+Đã chạy lại toàn bộ Lead Validation suite sau khi sửa.
+
+Lệnh:
+npx tsx src/app/api/test-lead-validation.ts
+
+Kết quả:
+- Tổng: 107
+- PASS: 107
+- FAIL: 0
+- Exit code: 0
+
+Lint file liên quan:
+npx eslint src/utils/validator.ts src/app/api/test-lead-validation.ts
+
+Kết quả:
+- PASS
+- Không có lint error/warning
+
+TypeScript project check:
+npx tsc --noEmit --pretty false
+
+Kết quả:
+- Không thể hoàn tất do lỗi cú pháp có sẵn ngoài phạm vi tại src/constants/roles.ts, các dòng 138-177.
+- Không sửa vì yêu cầu chỉ cho phép sửa validator/schema Lead và không refactor module khác.
+- ReadLints trên hai file đã sửa: không có lỗi.
+
+Không phát hiện regression trong phạm vi Lead Validation.
+
+==================================================
+
+8. KẾT LUẬN
+
+PASS
+
+Tất cả 107/107 test Validation của module Lead đã PASS sau khi sửa validator.
+
+Đã xác minh:
+- Phone format và boundary
+- Facebook URL syntax và Facebook domain
+- assignedAt date format, null và Invalid Date
+- latestRemark empty/max boundary/null/type
+- assignmentType enum/null/type
+- Customer required fields/type/ObjectId format
+- Status enum/null/default/type
+
+Không thực hiện CRUD, Transaction, Import hoặc Permission test.
+
+==================================================
