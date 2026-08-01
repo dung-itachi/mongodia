@@ -1,0 +1,103 @@
+/* globals.css — Phase A.1 CSS Refactor
+   - Tailwind directives
+   - Reset
+   - Font
+   - CSS Variables (theme)
+   - import custom.css
+*/
+
+@import "tailwindcss";
+
+@import "./custom.css";
+
+/* ---------- Reset ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  display: flex;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c5cedd;
+  border-radius: 8px;
+}
+
+/* ---------- Theme / CSS Variables ---------- */
+:root {
+  --sb: #13203a;
+  --sb2: #0d1828;
+  --sb-hover: #1c2e4a;
+  --sb-active: #1d63ed;
+  --sb-line: #1e2e47;
+  --sb-txt: #9baec8;
+  --sb-dim: #4e6080;
+
+  --accent: #1d63ed;
+  --accent-s: #e8f0ff;
+  --accent-p: #1450c0;
+
+  --bg: #f0f3f8;
+  --card: #fff;
+  --line: #e3e8f0;
+  --line2: #edf1f7;
+
+  --ink: #16203a;
+  --ink2: #445068;
+  --muted: #8b95a9;
+
+  --green: #14a06b;
+  --green-s: #e2f6ef;
+
+  --amber: #d98a00;
+  --amber-s: #fff3db;
+
+  --red: #e0524d;
+  --red-s: #fdeceb;
+
+  --purple: #7c3aed;
+  --purple-s: #f0eaff;
+
+  --orange: #ea580c;
+  --orange-s: #fff4ed;
+
+  --cyan: #0891b2;
+  --cyan-s: #ecfeff;
+
+  --teal: #0d9488;
+  --teal-s: #f0fdfa;
+
+  --r: 10px;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}

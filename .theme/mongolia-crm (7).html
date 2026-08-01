@@ -1,0 +1,551 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Mongolia CRM v6</title>
+<style>
+:root{--sb:#13203a;--sb2:#0d1828;--sb-hover:#1c2e4a;--sb-active:#1d63ed;--sb-line:#1e2e47;--sb-txt:#9baec8;--sb-dim:#4e6080;--accent:#1d63ed;--accent-s:#e8f0ff;--accent-p:#1450c0;--bg:#f0f3f8;--card:#fff;--line:#e3e8f0;--line2:#edf1f7;--ink:#16203a;--ink2:#445068;--muted:#8b95a9;--green:#14a06b;--green-s:#e2f6ef;--amber:#d98a00;--amber-s:#fff3db;--red:#e0524d;--red-s:#fdeceb;--purple:#7c3aed;--purple-s:#f0eaff;--orange:#ea580c;--orange-s:#fff4ed;--cyan:#0891b2;--cyan-s:#ecfeff;--teal:#0d9488;--teal-s:#f0fdfa;--r:10px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}body{background:var(--bg);color:var(--ink);display:flex;overflow:hidden;-webkit-font-smoothing:antialiased}button{font-family:inherit;cursor:pointer;border:none;background:none}input,textarea,select{font-family:inherit}::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#c5cedd;border-radius:8px}
+.sb{width:228px;flex-shrink:0;background:linear-gradient(180deg,var(--sb),var(--sb2));color:var(--sb-txt);display:flex;flex-direction:column;height:100vh;border-right:1px solid #090e1a;transition:width .25s;overflow:hidden;position:relative;z-index:100}
+.brand{display:flex;align-items:center;gap:9px;padding:13px 10px 10px;min-height:52px}.brand .ico{width:32px;height:32px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,#3b7fff,#1d63ed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px;box-shadow:0 2px 8px rgba(29,99,237,.3)}.brand-txt{overflow:hidden;white-space:nowrap;transition:opacity .2s,max-width .25s;max-width:140px;flex:1}.brand .nm{font-size:12px;font-weight:700;color:#fff}.brand .sub{font-size:8.5px;color:var(--sb-dim);margin-top:1px}
+.sb-tg{width:28px;height:28px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);color:var(--sb-txt);cursor:pointer;transition:.15s;border:none;margin-left:auto}.sb-tg:hover{background:rgba(255,255,255,.14);color:#fff}.sb-tg svg{width:14px;height:14px;stroke-width:2;transition:transform .25s}.sb-tg .ic-c{display:block}.sb-tg .ic-o{display:none}
+.ls{display:flex;gap:2px;padding:3px 8px;margin:1px 8px 3px}.lb{flex:1;padding:4px 0;border-radius:5px;font-size:9px;font-weight:700;text-align:center;background:#1c2e4a;color:var(--sb-txt);transition:.12s;letter-spacing:.4px;white-space:nowrap}.lb:hover{background:#263d5e;color:#fff}.lb.on{background:var(--accent);color:#fff}
+.rs{display:flex;gap:2px;padding:3px 8px;margin:0 8px 4px;background:rgba(255,255,255,.04);border-radius:5px}.rb{flex:1;padding:4px 0;border-radius:4px;font-size:8px;font-weight:700;text-align:center;background:transparent;color:var(--sb-dim);transition:.12s;cursor:pointer;border:none;white-space:nowrap}.rb:hover{color:var(--sb-txt)}.rb.on{background:var(--accent);color:#fff}
+.nav{flex:1;overflow-y:auto;padding:2px 7px 8px}
+.ng{margin-bottom:1px}.ngs{margin-bottom:1px}
+.nh{display:flex;align-items:center;gap:6px;width:100%;padding:7px 8px;border-radius:7px;color:var(--sb-txt);font-size:10.5px;font-weight:600;cursor:pointer;transition:.12s;border:none;background:none;text-align:left;white-space:nowrap;overflow:hidden}.nh:hover{background:var(--sb-hover);color:#fff}.nh svg:first-child{width:13px;height:13px;stroke-width:2;flex-shrink:0}.nh .nl{flex:1;overflow:hidden;text-overflow:ellipsis}
+.na{width:12px;height:12px;stroke-width:2;flex-shrink:0;color:var(--sb-dim);transition:transform .2s;margin-left:auto}.ng.open .na{transform:rotate(180deg)}
+.nb{overflow:hidden;max-height:0;transition:max-height .25s;padding-left:4px}.ng.open .nb{max-height:350px}
+.ni{display:flex;align-items:center;gap:6px;width:100%;padding:6px 7px 6px 11px;border-radius:6px;color:var(--sb-txt);font-size:10px;font-weight:500;text-align:left;transition:.12s;white-space:nowrap;overflow:hidden;border-left:2px solid transparent;margin-left:3px}.ni:hover{background:var(--sb-hover);color:#fff}.ni.on{background:var(--sb-active);color:#fff;border-left-color:var(--accent)}.ni svg{width:12px;height:12px;stroke-width:2;flex-shrink:0;min-width:12px}.ni span:not(.pill){overflow:hidden;text-overflow:ellipsis;max-width:130px}.ni .pill{margin-left:auto;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:12px;min-width:15px;text-align:center;flex-shrink:0}.ni.on .pill{background:rgba(255,255,255,.2);color:#fff}.ni:not(.on) .pill{background:#1c3060;color:#7db4ff}
+.ngs .ni{margin-left:0;border-left:none;padding:7px 8px;font-size:10.5px;font-weight:600}
+.sbf{border-top:1px solid var(--sb-line);padding:5px 8px}.ver{font-size:8px;color:var(--sb-dim);padding:2px 4px}
+.sb.col{width:50px}.sb.col .brand{padding:12px 9px;justify-content:center}.sb.col .brand-txt{opacity:0;max-width:0}.sb.col .sb-tg{margin-left:0}.sb.col .sb-tg .ic-c{display:none}.sb.col .sb-tg .ic-o{display:block}.sb.col .ls,.sb.col .rs{opacity:0;max-height:0;margin:0;padding:0;overflow:hidden}.sb.col .nh .nl,.sb.col .na{opacity:0;max-width:0;overflow:hidden}.sb.col .nh{justify-content:center;padding:7px}.sb.col .nb .ni{padding:6px 0;margin-left:0;border-left:none;justify-content:center}.sb.col .nb .ni span{display:none}.sb.col .ngs .ni{padding:7px;justify-content:center}.sb.col .ngs .ni span{display:none}.sb.col .sbf{opacity:0;height:0;padding:0;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;min-width:0}
+.topbar{background:var(--card);border-bottom:1px solid var(--line);padding:0 12px;height:46px;flex-shrink:0;display:flex;align-items:center;gap:7px}
+.mob-open{display:none;width:34px;height:34px;border-radius:6px;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);flex-shrink:0;cursor:pointer}.mob-open svg{width:15px;height:15px;stroke-width:2;color:var(--ink)}
+.pt{font-size:12px;font-weight:700;white-space:nowrap}.pt small{display:block;font-size:8.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.vb{padding:2px 8px;border-radius:5px;font-size:9.5px;font-weight:700}.vb-b{background:var(--accent-s);color:var(--accent)}.vb-g{background:var(--green-s);color:var(--green)}.vb-a{background:var(--amber-s);color:var(--amber)}.vb-p{background:var(--purple-s);color:var(--purple)}.vb-t{background:var(--teal-s);color:var(--teal)}.vb-o{background:var(--orange-s);color:var(--orange)}
+.srch{flex:1;max-width:220px;position:relative}.srch svg{position:absolute;left:7px;top:50%;transform:translateY(-50%);width:11px;height:11px;color:var(--muted);stroke-width:2}.srch input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 7px 5px 24px;font-size:10.5px;outline:none;color:var(--ink)}.srch input:focus{border-color:var(--accent);background:#fff}
+.tbr{margin-left:auto;display:flex;align-items:center;gap:5px}.cnt{display:flex;align-items:center;gap:3px;background:var(--accent-s);color:var(--accent);font-size:9.5px;font-weight:700;padding:3px 7px;border-radius:5px}
+.content{flex:1;overflow:auto;padding:9px 12px 55px;display:flex;flex-direction:column;gap:7px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}.card-h{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}.card-h h2{font-size:11.5px;font-weight:700}.card-h small{font-size:9px;color:var(--muted)}.card-body{padding:8px 10px}
+.btn{display:inline-flex;align-items:center;gap:3px;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:600;transition:.12s;white-space:nowrap;cursor:pointer;border:none}.btn svg{width:10px;height:10px;stroke-width:2}.btn-pri{background:var(--accent);color:#fff}.btn-pri:hover{background:var(--accent-p)}.btn-sec{background:var(--accent-s);color:var(--accent)}.btn-sec:hover{background:var(--accent);color:#fff}.btn-green{background:var(--green-s);color:var(--green)}.btn-green:hover{background:var(--green);color:#fff}.btn-red{background:var(--red-s);color:var(--red)}.btn-red:hover{background:var(--red);color:#fff}.btn-purple{background:var(--purple-s);color:var(--purple)}.btn-purple:hover{background:var(--purple);color:#fff}.btn-ghost{background:var(--line2);color:var(--ink2)}.btn-ghost:hover{background:var(--line)}.btn-sm{padding:4px 7px;font-size:9.5px}.btn-row{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}.btn-lg{padding:8px 16px;font-size:12px;font-weight:700;border-radius:7px}
+.sr{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-bottom:7px}.sc0{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px}.sc0 .sn{font-size:17px;font-weight:800}.sc0 .sl{font-size:9px;color:var(--muted);font-weight:600;margin-top:1px}.sb1 .sn{color:var(--accent)}.sg .sn{color:var(--green)}.sa .sn{color:var(--amber)}.srd .sn{color:var(--red)}.sp2 .sn{color:var(--purple)}.st2 .sn{color:var(--teal)}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:580px}thead th{background:#f8fafd;text-align:left;font-size:8px;font-weight:700;letter-spacing:.3px;color:var(--ink2);text-transform:uppercase;padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:1}tbody td{padding:5px 7px;font-size:10px;border-bottom:1px solid var(--line2);vertical-align:middle}tbody tr:hover td{background:#f7fafd}
+.chip{display:inline-flex;align-items:center;gap:2px;padding:2px 5px;border-radius:12px;font-size:8.5px;font-weight:700;white-space:nowrap}.dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+.c-new{background:var(--accent-s);color:var(--accent)}.c-knm{background:var(--amber-s);color:var(--amber)}.c-cls{background:var(--green-s);color:var(--green)}.c-pot{background:var(--cyan-s);color:var(--cyan)}.c-non{background:var(--red-s);color:var(--red)}.c-cmt{background:var(--line2);color:var(--ink2)}.c-ladi{background:var(--teal-s);color:var(--teal)}.c-ok{background:var(--green-s);color:var(--green)}.c-ret{background:var(--orange-s);color:var(--orange)}.c-rec{background:var(--purple-s);color:var(--purple)}
+.ss{display:flex;gap:2px;flex-wrap:wrap}.s2{padding:3px 7px;border-radius:5px;font-size:9px;font-weight:600;border:1.5px solid var(--line);background:var(--bg);color:var(--ink2);transition:.12s;cursor:pointer}.s2:hover{border-color:var(--accent)}.s2.on{border-color:var(--accent);background:var(--accent);color:#fff}.s2.sk.on{background:var(--amber);border-color:var(--amber)}.s2.sc3.on{background:var(--green);border-color:var(--green)}.s2.sp4.on{background:var(--cyan);border-color:var(--cyan)}.s2.sn3.on{background:var(--red);border-color:var(--red)}
+.kb{display:inline-flex;align-items:center;gap:2px;background:var(--amber-s);color:var(--amber);font-size:8.5px;font-weight:700;padding:2px 5px;border-radius:12px;cursor:pointer}.kb:hover{background:var(--amber);color:#fff}
+.kp{position:fixed;z-index:500;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:9px;min-width:170px;max-width:240px;display:none}.kp.show{display:block}.kp h4{font-size:10.5px;font-weight:700;margin-bottom:4px}
+.ki{display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid var(--line2);font-size:9.5px}.ki:last-child{border-bottom:none}.ki .kn{font-weight:700;color:var(--amber);min-width:28px}.ki .kd{color:var(--muted)}
+.prod-sel{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px}.pc{padding:5px 10px;border-radius:6px;font-size:10.5px;font-weight:600;border:2px solid var(--line);background:var(--card);color:var(--ink2);transition:.12s;cursor:pointer;display:flex;align-items:center;gap:4px}.pc:hover{border-color:var(--accent)}.pc.on{border-color:var(--accent);background:var(--accent);color:#fff}.pc .pcd{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cl{display:flex;flex-direction:column;gap:2px;margin:4px 0}.cr{display:flex;align-items:center;gap:5px;padding:3px 7px;background:var(--bg);border-radius:5px;font-size:10px}.cr .crd{flex:1}.cr .crp{font-weight:700;color:var(--green)}.cr .crq{font-weight:700;color:var(--accent)}
+.paste-tabs{display:flex;gap:3px;margin-bottom:6px}.paste-tab{flex:1;padding:9px;border-radius:7px;font-size:11px;font-weight:700;text-align:center;cursor:pointer;border:2px solid var(--line);background:var(--card);color:var(--ink2);display:flex;flex-direction:column;align-items:center;gap:3px}.paste-tab:hover{border-color:var(--accent)}.paste-tab.on.ct{border-color:var(--amber);background:var(--amber-s);color:var(--amber)}.paste-tab.on.lt{border-color:var(--teal);background:var(--teal-s);color:var(--teal)}
+.pz textarea{width:100%;background:var(--bg);border:2px dashed var(--line);border-radius:7px;padding:9px;font-size:10.5px;font-family:ui-monospace,monospace;resize:none;outline:none;color:var(--ink);height:90px;line-height:1.8}.pz textarea:focus{border-color:var(--accent);border-style:solid;background:#fff}
+.ph{font-size:9px;color:var(--muted);margin-top:3px}.ph code{background:var(--line2);padding:1px 3px;border-radius:3px;font-size:8.5px;font-weight:600;color:var(--ink2)}
+.pw{background:var(--bg);border:1.5px solid var(--line);border-radius:7px;overflow:hidden;margin-bottom:6px}.pwh{display:flex;align-items:center;gap:5px;padding:6px 9px;background:#f8fafd;border-bottom:1px solid var(--line);flex-wrap:wrap}.pwh h3{font-size:10.5px;font-weight:700}.pvb{padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700}.pv-ok{background:var(--green-s);color:var(--green)}.pv-ct{background:var(--amber-s);color:var(--amber)}.pv-ld{background:var(--teal-s);color:var(--teal)}.pwb{max-height:200px;overflow:auto}
+.rx{width:18px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;border:none;background:none}.rx:hover{background:var(--red-s);color:var(--red)}.rx svg{width:8px;height:8px;stroke-width:2.5}
+@keyframes sp2{0%,100%{box-shadow:0 0 0 0 rgba(29,99,237,.1)}50%{box-shadow:0 0 0 4px rgba(29,99,237,.05)}}
+.pb{display:flex;align-items:center;gap:7px;padding:8px 10px;background:linear-gradient(135deg,#1a2a4a,#13203a);border-radius:7px;margin-bottom:6px;flex-wrap:wrap;animation:sp2 2s infinite}.pb .pbn{background:var(--accent);color:#fff;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:800}.pb .pbt{color:#9baec8;font-size:10.5px;font-weight:600;flex:1}.pbs{padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700}
+.ccb{display:flex;align-items:center;gap:3px;cursor:pointer;font-size:9.5px;font-weight:600;color:var(--ink2)}.ccb input{accent-color:var(--green);width:12px;height:12px}.ccb.done{color:var(--green)}
+.note-i{width:60px;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:3px 5px;font-size:9.5px;outline:none;color:var(--ink)}.note-i:focus{border-color:var(--accent);background:#fff}
+.db-bar{display:flex;align-items:center;gap:5px;margin-bottom:3px}.db-lb{font-size:9.5px;font-weight:600;color:var(--ink2);min-width:65px;white-space:nowrap}.db-tr{flex:1;height:16px;background:var(--line2);border-radius:4px;overflow:hidden}.db-fl{height:100%;border-radius:4px;transition:width .5s;display:flex;align-items:center;justify-content:flex-end;padding:0 4px;font-size:8.5px;font-weight:700;color:#fff;min-width:18px}.db-vl{font-size:9.5px;font-weight:700;min-width:24px;text-align:right}
+.wg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px}.wi{background:var(--bg);border:1.5px solid var(--line);border-radius:7px;padding:9px}.wi h4{font-size:10.5px;font-weight:700;margin-bottom:2px}.wi .wq{font-size:16px;font-weight:800;color:var(--accent);margin-bottom:2px}.wi .wd{font-size:9px;color:var(--muted);display:flex;flex-direction:column;gap:1px}
+.ads-row{display:flex;gap:5px;align-items:center;margin-bottom:6px;flex-wrap:wrap}.ads-row label{font-size:9.5px;font-weight:700;color:var(--muted)}.ads-row input{background:var(--bg);border:1.5px solid var(--line);border-radius:5px;padding:5px 7px;font-size:11px;outline:none;width:110px}.ads-row input:focus{border-color:var(--accent)}.ads-m{background:var(--purple-s);color:var(--purple);padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700}
+.nick-sel{display:flex;gap:3px;align-items:center;margin-bottom:6px;flex-wrap:wrap}.nk{padding:4px 9px;border-radius:5px;font-size:10px;font-weight:600;border:1.5px solid var(--line);background:var(--card);color:var(--ink2);cursor:pointer}.nk:hover{border-color:var(--accent)}.nk.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* Account role badges */
+.role-badge{display:inline-flex;padding:2px 6px;border-radius:4px;font-size:8.5px;font-weight:700;white-space:nowrap}
+.role-admin{background:var(--red-s);color:var(--red)}.role-vadmin{background:var(--purple-s);color:var(--purple)}.role-mkt{background:var(--accent-s);color:var(--accent)}.role-sale{background:var(--green-s);color:var(--green)}.role-kho{background:var(--amber-s);color:var(--amber)}
+.empty{padding:22px 12px;text-align:center}.empty p{color:var(--muted);font-size:10.5px}
+.toast{position:fixed;bottom:16px;right:14px;background:#16203a;color:#fff;padding:7px 12px;border-radius:7px;font-size:10.5px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.2);opacity:0;pointer-events:none;transform:translateY(4px);transition:.2s;z-index:300}.toast.show{opacity:1;transform:translateY(0)}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;display:none;align-items:center;justify-content:center}.mo.show{display:flex}
+.modal{background:var(--card);border-radius:11px;padding:15px;min-width:330px;max-width:460px;box-shadow:0 8px 28px rgba(0,0,0,.2);max-height:84vh;overflow-y:auto}.modal h3{font-size:12.5px;font-weight:700;margin-bottom:8px}
+.fg{margin-bottom:6px}.fg label{font-size:8.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:2px}.fg input,.fg select{width:100%;background:var(--bg);border:1.5px solid var(--line);border-radius:5px;padding:5px 7px;font-size:10.5px;outline:none;color:var(--ink)}.fg input:focus,.fg select:focus{border-color:var(--accent);background:#fff}
+.ma{display:flex;gap:5px;justify-content:flex-end;margin-top:9px}
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;opacity:0;pointer-events:none;transition:opacity .25s}.backdrop.show{opacity:1;pointer-events:auto}
+@media(max-width:768px){.sb{position:fixed;left:0;top:0;z-index:100;width:255px!important;transform:translateX(-100%);transition:transform .28s}.sb.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,.3)}.sb.col{width:255px!important}.sb.col .brand-txt{opacity:1;max-width:140px}.sb.col .brand{justify-content:flex-start}.sb.col .sb-tg{margin-left:auto}.sb.col .sb-tg .ic-c{display:block}.sb.col .sb-tg .ic-o{display:none}.sb.col .ls,.sb.col .rs{opacity:1;max-height:40px;margin:2px 8px 3px;padding:3px 8px}.sb.col .nh .nl,.sb.col .na{opacity:1;max-width:130px}.sb.col .nh{justify-content:flex-start}.sb.col .nb .ni{padding:7px 7px 7px 11px;margin-left:3px;justify-content:flex-start}.sb.col .nb .ni span{display:inline}.sb.col .ngs .ni{justify-content:flex-start}.sb.col .ngs .ni span{display:inline}.sb.col .sbf{opacity:1;height:auto;padding:5px 8px}.mob-open{display:flex}.topbar{padding:0 8px;height:42px}.pt{font-size:11px}.vb{display:none}.srch{max-width:none;flex:1}.content{padding:7px 7px 55px;gap:5px}.sr{grid-template-columns:repeat(2,1fr);gap:4px}.sc0{padding:8px}.sc0 .sn{font-size:15px}.btn{padding:6px 10px;font-size:10px;min-height:34px}.btn-sm{min-height:30px}.modal{min-width:auto;width:100%;max-width:100%;border-radius:12px 12px 0 0;max-height:76vh}.mo.show{align-items:flex-end}.fg input,.fg select{padding:8px;font-size:11.5px;min-height:36px}.ma .btn{flex:1;justify-content:center;min-height:36px}.toast{bottom:10px;left:7px;right:7px;text-align:center}}
+</style></head><body>
+<div class="backdrop" id="bk" onclick="closeSB()"></div>
+<aside class="sb" id="sb">
+<div class="brand"><div class="ico">MN</div><div class="brand-txt"><div class="nm">MONGOLIA CRM</div><div class="sub" id="brandSub">Quản lý đơn hàng</div></div><button class="sb-tg" onclick="toggleSB()"><svg class="ic-c" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg><svg class="ic-o" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button></div>
+<div class="ls"><button class="lb on" onclick="SL('vi')">VN</button><button class="lb" onclick="SL('en')">EN</button><button class="lb" onclick="SL('mn')">MN</button></div>
+<div class="rs"><button class="rb on" onclick="setRole('admin',this)">Admin</button><button class="rb" onclick="setRole('mkt',this)">MKT</button><button class="rb" onclick="setRole('sale',this)">Sale</button><button class="rb" onclick="setRole('kho',this)">Kho</button></div>
+<nav class="nav" id="navBar">
+<div class="ngs" data-role="admin"><button class="ni on" onclick="go('dash',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span data-t="dash">Tổng quan</span></button></div>
+<div class="ng open" data-role="admin mkt" id="ng-m"><button class="nh" onclick="toggleNG('ng-m')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg><span class="nl" data-t="mkt">MKT</span><svg class="na" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9l6 6 6-6"/></svg></button><div class="nb">
+<button class="ni" onclick="go('mkt-dash',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span data-t="mktDash">Tổng quan MKT</span></button>
+<button class="ni" onclick="go('mkt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg><span data-t="mktInput">Nhập số</span><span class="pill" id="p-mkt">0</span></button>
+<button class="ni" onclick="go('mkt-orders',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/></svg><span data-t="mktOrd">QL đơn hàng</span></button>
+</div></div>
+<div class="ng open" data-role="admin sale" id="ng-s"><button class="nh" onclick="toggleNG('ng-s')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07"/></svg><span class="nl" data-t="sale">Sale</span><svg class="na" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9l6 6 6-6"/></svg></button><div class="nb">
+<button class="ni" onclick="go('leads',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span data-t="leads">Số cần gọi</span><span class="pill" id="p-lead">0</span></button>
+<button class="ni" onclick="go('closed',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6 9 17l-5-5"/></svg><span data-t="closed">Chốt đơn</span><span class="pill" id="p-closed">0</span></button>
+</div></div>
+<div class="ng open" data-role="admin sale kho" id="ng-o"><button class="nh" onclick="toggleNG('ng-o')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/></svg><span class="nl" data-t="grpOrd">Đơn hàng</span><svg class="na" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9l6 6 6-6"/></svg></button><div class="nb">
+<button class="ni" onclick="go('ship',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg><span data-t="ship">Đang giao</span><span class="pill" id="p-ship">0</span></button>
+<button class="ni" onclick="go('ok',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/></svg><span data-t="ok">Giao TC</span><span class="pill" id="p-ok">0</span></button>
+<button class="ni" onclick="go('ret',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 14 4 9l5-5"/></svg><span data-t="ret">Hoàn hàng</span><span class="pill" id="p-ret">0</span></button>
+<button class="ni" onclick="go('rec',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/></svg><span data-t="rec">Đối soát</span><span class="pill" id="p-rec">0</span></button>
+</div></div>
+<div class="ng open" data-role="admin mkt" id="ng-p"><button class="nh" onclick="toggleNG('ng-p')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg><span class="nl" data-t="grpProd">Sản phẩm</span><svg class="na" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9l6 6 6-6"/></svg></button><div class="nb">
+<button class="ni" onclick="go('products',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg><span data-t="prod">QL sản phẩm</span></button>
+</div></div>
+<div class="ng open" data-role="admin" id="ng-acc"><button class="nh" onclick="toggleNG('ng-acc')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nl" data-t="grpAcc">Tài khoản</span><svg class="na" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9l6 6 6-6"/></svg></button><div class="nb">
+<button class="ni" onclick="go('accounts',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg><span data-t="acc">QL tài khoản</span></button>
+</div></div>
+<div class="ng open" data-role="admin kho" id="ng-w"><button class="nh" onclick="toggleNG('ng-w')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg><span class="nl" data-t="grpWh">Kho</span><svg class="na" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9l6 6 6-6"/></svg></button><div class="nb">
+<button class="ni" onclick="go('wh',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 8v13H3V8"/></svg><span data-t="wh">Quản lý kho</span></button>
+</div></div>
+</nav>
+<div class="sbf"><div class="ver">v6.0 · Mongolia CRM</div></div>
+</aside>
+<div class="main"><header class="topbar"><button class="mob-open" onclick="openSB()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button><div class="pt"><span id="tT"></span><small id="tS"></small></div><div id="tB" class="vb vb-b"></div><div class="srch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input id="sq" type="text" oninput="doSearch(this.value)"></div><div class="tbr"><div class="cnt"><span id="cntLbl"></span> <b id="tc">0</b></div></div></header><main class="content" id="mc"></main></div>
+<div class="kp" id="kpop"></div><div class="mo" id="mo"><div class="modal" id="moc"></div></div><div class="toast" id="toast"></div>
+<script>
+// ===== I18N =====
+const I={
+vi:{brand:'Quản lý đơn hàng',dash:'Tổng quan',mktDash:'Tổng quan MKT',mktInput:'Nhập số',mktOrd:'QL đơn hàng',leads:'Số cần gọi',closed:'Chốt đơn',grpOrd:'Đơn hàng',ship:'Đang giao',ok:'Giao TC',ret:'Hoàn hàng',rec:'Đối soát',grpProd:'Sản phẩm',prod:'QL sản phẩm',grpAcc:'Tài khoản',acc:'QL tài khoản',grpWh:'Kho',wh:'Quản lý kho',
+sl:'SL',total:'Tổng',new2:'Mới',knm:'KNM',pot:'T.năng',noNd:'K.cần',cls:'Chốt',cmt:'Comment',ladi:'Ladi',name:'Tên',phone:'SĐT',addr:'Địa chỉ',combo:'Combo',price:'Giá',qty:'SL',date:'Ngày',status:'TT',note:'Ghi chú',act:'Thao tác',src:'Loại',prodL:'SP',
+pushed:'Đã đẩy',staging:'Chờ đẩy',noProd:'⚠ Chọn SP trước',selProd:'① Chọn sản phẩm',paste:'② Dán số',parse:'Phân loại',clear:'Xóa',pushSale:'③ Đẩy sang Sale',result:'Kết quả',noCombo:'Chưa có combo — liên hệ Admin',
+adsCost:'Chi phí Ads',cpa:'CPA',roas:'ROAS',bestProd:'SP bán chạy',called:'Đã gọi',notCalled:'Chưa gọi',closeRate:'Tỉ lệ chốt',revenue:'Doanh thu',collected:'Thu tiền',
+confCall:'Đã gọi XN',needConf:'XN trước giao',cancel2:'Huỷ',shipBtn:'Đi hàng',okBtn:'Giao TC',retBtn:'Hoàn',recon:'Đối soát',reconAll:'ĐS tất cả',pipeline:'Quy trình',
+addAcc:'Thêm tài khoản',empName:'Tên nhân viên',role:'Vai trò',team:'Team',company:'Công ty',admin:'Admin',vAdmin:'Phó Admin',mkt:'MKT',sale:'Sale',kho:'Kho',save:'Lưu',cancel:'Huỷ',edit:'Sửa',del:'Xoá',
+createProd:'Tạo SP',editProd:'Sửa SP',prodName:'Tên SP',color:'Màu',impQty:'SL nhập',whQty:'SL đáp kho',impDate:'Ngày nhập',whDate:'Ngày đáp kho',addCombo:'Thêm combo',comboDesc:'Mô tả',comboPrice:'Giá',comboQty:'SL SP',closedOrders:'Đơn chốt',
+stock:'Tồn kho',import2:'Nhập',receive:'Nhận',retStock:'Hoàn kho',addWh:'Thêm SP kho',
+all:'Tất cả',noData:'Không có dữ liệu',search:'Tìm tên, SĐT…',
+cmtHint:'Tên + SĐT',ladiHint:'Ngày · Tên · SĐT · Đ/c · Combo',
+orders:'Đơn hàng của',
+},
+en:{brand:'Order Management',dash:'Dashboard',mktDash:'MKT Dashboard',mktInput:'Input Leads',mktOrd:'Order Tracking',leads:'Leads',closed:'Closed Deals',grpOrd:'Orders',ship:'Shipping',ok:'Delivered',ret:'Returns',rec:'Reconcile',grpProd:'Products',prod:'Products',grpAcc:'Accounts',acc:'Accounts',grpWh:'Warehouse',wh:'Warehouse',
+sl:'Qty',total:'Total',new2:'New',knm:'No Answer',pot:'Potential',noNd:'No Need',cls:'Closed',cmt:'Comment',ladi:'Landing',name:'Name',phone:'Phone',addr:'Address',combo:'Combo',price:'Price',qty:'Qty',date:'Date',status:'Status',note:'Note',act:'Actions',src:'Type',prodL:'Product',
+pushed:'Pushed',staging:'Staging',noProd:'⚠ Select product first',selProd:'① Select product',paste:'② Paste leads',parse:'Parse',clear:'Clear',pushSale:'③ Push to Sales',result:'Result',noCombo:'No combo — contact Admin',
+adsCost:'Ads Cost',cpa:'CPA',roas:'ROAS',bestProd:'Best Seller',called:'Called',notCalled:'Not Called',closeRate:'Close Rate',revenue:'Revenue',collected:'Collected',
+confCall:'Call confirmed',needConf:'Confirm before ship',cancel2:'Cancel',shipBtn:'Ship',okBtn:'Delivered',retBtn:'Return',recon:'Reconcile',reconAll:'Reconcile All',pipeline:'Pipeline',
+addAcc:'Add Account',empName:'Employee Name',role:'Role',team:'Team',company:'Company',admin:'Admin',vAdmin:'Vice Admin',mkt:'MKT',sale:'Sale',kho:'Warehouse',save:'Save',cancel:'Cancel',edit:'Edit',del:'Delete',
+createProd:'Create Product',editProd:'Edit Product',prodName:'Product Name',color:'Color',impQty:'Import Qty',whQty:'Warehouse Qty',impDate:'Import Date',whDate:'Warehouse Date',addCombo:'Add Combo',comboDesc:'Description',comboPrice:'Price',comboQty:'Qty',closedOrders:'Closed Orders',
+stock:'Stock',import2:'Import',receive:'Receive',retStock:'Returns',addWh:'Add Product',
+all:'All',noData:'No data',search:'Search name, phone…',
+cmtHint:'Name + Phone',ladiHint:'Date · Name · Phone · Addr · Combo',
+orders:'Orders of',
+},
+mn:{brand:'Захиалгын удирдлага',dash:'Хяналтын самбар',mktDash:'MKT самбар',mktInput:'Дугаар оруулах',mktOrd:'Захиалга хянах',leads:'Залгах дугаар',closed:'Баталсан',grpOrd:'Захиалга',ship:'Хүргэж буй',ok:'Хүргэсэн',ret:'Буцаасан',rec:'Тооцоо',grpProd:'Бүтээгдэхүүн',prod:'Бүтээгдэхүүн',grpAcc:'Хэрэглэгч',acc:'Хэрэглэгч',grpWh:'Агуулах',wh:'Агуулах',
+sl:'Тоо',total:'Нийт',new2:'Шинэ',knm:'Хариулаагүй',pot:'Боломжтой',noNd:'Хэрэггүй',cls:'Баталсан',cmt:'Сэтгэгдэл',ladi:'Лэндинг',name:'Нэр',phone:'Утас',addr:'Хаяг',combo:'Комбо',price:'Үнэ',qty:'Тоо',date:'Огноо',status:'Төлөв',note:'Тэмдэглэл',act:'Үйлдэл',src:'Төрөл',prodL:'Бараа',
+pushed:'Илгээсэн',staging:'Хүлээгдэж буй',noProd:'⚠ Бүтээгдэхүүн сонгоно уу',selProd:'① Бүтээгдэхүүн сонгох',paste:'② Мэдээлэл буулгах',parse:'Ангилах',clear:'Цэвэрлэх',pushSale:'③ Борлуулалт руу',result:'Үр дүн',noCombo:'Комбо алга — Admin-д хандана уу',
+adsCost:'Зар зардал',cpa:'CPA',roas:'ROAS',bestProd:'Хамгийн их',called:'Залгасан',notCalled:'Залгаагүй',closeRate:'Баталгааны хувь',revenue:'Орлого',collected:'Цуглуулсан',
+confCall:'Баталгаажуулсан',needConf:'Илгээхийн өмнө баталгаажуулах',cancel2:'Цуцлах',shipBtn:'Илгээх',okBtn:'Хүргэсэн',retBtn:'Буцаах',recon:'Тооцоо',reconAll:'Бүгдийг тооцох',pipeline:'Шатлал',
+addAcc:'Хэрэглэгч нэмэх',empName:'Ажилтны нэр',role:'Үүрэг',team:'Баг',company:'Компани',admin:'Админ',vAdmin:'Дэд Админ',mkt:'МКТ',sale:'Борлуулалт',kho:'Агуулах',save:'Хадгалах',cancel:'Цуцлах',edit:'Засах',del:'Устгах',
+createProd:'Бүтээгдэхүүн үүсгэх',editProd:'Засах',prodName:'Нэр',color:'Өнгө',impQty:'Оруулсан тоо',whQty:'Агуулахын тоо',impDate:'Оруулсан огноо',whDate:'Хүлээн авсан огноо',addCombo:'Комбо нэмэх',comboDesc:'Тайлбар',comboPrice:'Үнэ',comboQty:'Тоо',closedOrders:'Баталсан',
+stock:'Үлдэгдэл',import2:'Оруулах',receive:'Хүлээн авах',retStock:'Буцаалт',addWh:'Нэмэх',
+all:'Бүгд',noData:'Мэдээлэл алга',search:'Нэр, утас хайх…',
+cmtHint:'Нэр + Утас',ladiHint:'Огноо · Нэр · Утас · Хаяг · Комбо',
+orders:'Захиалга:',
+}};
+let lang='vi';
+function t(k){return I[lang]?.[k]||I.vi[k]||k}
+function SL(l){lang=l;document.querySelectorAll('.lb').forEach(b=>b.classList.toggle('on',b.textContent.trim()==={vi:'VN',en:'EN',mn:'MN'}[l]));updateAll()}
+function updateAll(){updateNav();R(cv)}
+function updateNav(){
+  document.getElementById('brandSub').textContent=t('brand');
+  // Role buttons
+  const rb=document.querySelectorAll('.rb');
+  if(rb[0])rb[0].textContent=t('admin');
+  if(rb[1])rb[1].textContent=t('mkt');
+  if(rb[2])rb[2].textContent=t('sale');
+  if(rb[3])rb[3].textContent=t('kho');
+  // Nav items - use data attributes to avoid pill overwrite
+  document.querySelectorAll('[data-t]').forEach(el=>el.textContent=t(el.getAttribute('data-t')));
+  document.getElementById('cntLbl').textContent=t('sl')+':';
+  document.getElementById('sq').placeholder=t('search');
+}
+// SIDEBAR
+function isMob(){return window.innerWidth<=768}
+function toggleSB(){const sb=document.getElementById('sb');if(isMob()){sb.classList.contains('open')?closeSB():openSB()}else sb.classList.toggle('col')}
+function openSB(){document.getElementById('sb').classList.add('open');document.getElementById('bk').classList.add('show')}
+function closeSB(){document.getElementById('sb').classList.remove('open');document.getElementById('bk').classList.remove('show')}
+function toggleNG(id){document.getElementById(id).classList.toggle('open')}
+let curRole='admin';
+function setRole(role,el){curRole=role;document.querySelectorAll('.rb').forEach(b=>b.classList.remove('on'));if(el)el.classList.add('on');document.querySelectorAll('.ng,.ngs').forEach(g=>{const r=(g.getAttribute('data-role')||'').split(' ');g.style.display=r.includes(role)?'':'none'});const f=document.querySelector('.ng:not([style*="none"]) .ni,.ngs:not([style*="none"]) .ni');if(f)f.click()}
+function go(v,el){cv=v;leadFilt='all';document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));if(el)el.classList.add('on');sq='';document.getElementById('sq').value='';if(isMob())closeSB();R(v)}
+// DATA
+let nid=1,nsid=1,ncbid=10;let D=[],stg=[],cv='dash',sq='',leadFilt='all';
+const CL=['#3b82f6','#14a06b','#d98a00','#e0524d','#7c3aed','#ea580c','#0891b2','#ec4899','#6366f1','#84cc16'];
+// ACCOUNTS
+let accs=[
+  {id:1,nm:'Болд',role:'mkt',team:'Team A',company:'MN Corp',adsCost:500000},
+  {id:2,nm:'Сарнай',role:'mkt',team:'Team A',company:'MN Corp',adsCost:320000},
+  {id:3,nm:'Ганзориг',role:'sale',team:'Team B',company:'MN Corp',adsCost:0},
+  {id:4,nm:'Бат',role:'kho',team:'Team C',company:'MN Corp',adsCost:0},
+  {id:5,nm:'Admin',role:'admin',team:'',company:'MN Corp',adsCost:0},
+];
+let nAccId=6,selAcc=1;
+function accsByRole(r){return accs.filter(a=>a.role===r)}
+// PRODUCTS
+let cats=[
+  {id:1,nm:'Eyelash mascara',cl:'#7c3aed',cb:[{id:1,d:'✅ 63,000₮ - 1+3 free',p:63000,q:4},{id:2,d:'✅ 45,000₮ - 1pc',p:45000,q:1}],impQty:200,whQty:200,impDate:'01/07/2025',whDate:'10/07/2025'},
+  {id:2,nm:'Kem đánh răng',cl:'#14a06b',cb:[{id:3,d:'✅ 89,000₮ - 3 tuýp',p:89000,q:3},{id:4,d:'✅ 35,000₮ - 1 tuýp',p:35000,q:1}],impQty:100,whQty:80,impDate:'05/07/2025',whDate:'12/07/2025'},
+  {id:3,nm:'Mỹ phẩm',cl:'#ec4899',cb:[{id:5,d:'✅ 120,000₮ - Set 5',p:120000,q:5}],impQty:50,whQty:45,impDate:'08/07/2025',whDate:''},
+  {id:4,nm:'Gia dụng',cl:'#ea580c',cb:[],impQty:0,whQty:0,impDate:'',whDate:''}
+];
+let ncid=5,selCat=null,pasteType='comment';
+let WH=[{id:1,nm:'Eyelash mascara',stk:150,imp:200,shipping:0,returning:0,delivered:0,returned:0},{id:2,nm:'Kem đánh răng',stk:80,imp:100,shipping:0,returning:0,delivered:0,returned:0}];
+let nwid=3;
+// WH helpers — find WH product by order product name
+function whByName(nm){return WH.find(w=>w.nm===nm)}
+function whShip(order){const w=whByName(order.prod);if(w){w.stk-=(order.qt||1);w.shipping+=(order.qt||1)}}
+function whDeliver(order){const w=whByName(order.prod);if(w){w.shipping-=(order.qt||1);w.delivered+=(order.qt||1)}}
+function whReturn(order){const w=whByName(order.prod);if(w){w.shipping-=(order.qt||1);w.returning+=(order.qt||1)}}
+function whConfirmReturn(order){const w=whByName(order.prod);if(w){w.returning-=(order.qt||1);w.stk+=(order.qt||1);w.returned+=(order.qt||1)}}
+// DEMO
+(function(){
+  const nms=['Бат','Болд','Сарнай','Оюунаа','Ганзориг','Энхжин','Тэмүүлэн','Мөнхбат','Алтанцэцэг','Баярмаа','Ундрах','Дэлгэрмаа'];
+  const ads2=['УБ Хан-Уул','Дархан','Эрдэнэт','Ховд','Өвөрхангай','УБ Чингэлтэй','Дорнод','Баянхонгор','УБ Баянгол'];
+  const sts=['new','new','new','knm','knm','closed','closed','potential','noneed','new','new','closed'];
+  const oss=['none','none','none','none','none','pending','pending','none','none','none','none','shipped'];
+  for(let i=0;i<12;i++){const cat=cats[i%3];const cb=cat.cb[i%cat.cb.length]||{d:'',p:0,q:0};
+    D.push({id:nid++,src:i<4?'comment':'ladi',prod:cat.nm,cc:cat.cl,cid:cat.id,accId:i<6?1:2,
+      dt:`2025-07-${String(10+i).padStart(2,'0')} ${9+i}:${String(i*7%60).padStart(2,'0')}`,
+      nm:nms[i],ph:`99${String(100000+i*11111).slice(0,6)}`,ad:ads2[i%ads2.length],
+      cb:cb.d,pr:cb.p,qt:cb.q,st:sts[i],os:oss[i],kh:[],nt:'',conf:false,shipDt:'',okDt:'',retDt:'',recDt:''});
+    if(sts[i]==='knm')D[D.length-1].kh=[{d:'10/07/2025',t:'09:30'},{d:'12/07/2025',t:'14:22'}]}
+})();
+function nw(){const d=new Date();return d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}
+function td(){return new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})}
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200)}
+function showM(h){document.getElementById('moc').innerHTML=h;document.getElementById('mo').classList.add('show')}
+function closeM(){document.getElementById('mo').classList.remove('show')}
+document.getElementById('mo').addEventListener('click',e=>{if(e.target===document.getElementById('mo'))closeM()});
+function doSearch(q){sq=q.trim().toLowerCase();R(cv)}
+// EXCHANGE RATE: 1 MNT = X VND (admin sets this)
+let exRate=7.5; // default: 1₮ = 7.5₫
+function cur(){return lang==='vi'?'₫':'₮'} // currency symbol
+function cv2(mnt){return lang==='vi'?Math.round(mnt*exRate):mnt} // convert if VN
+function fmt(v){return cv2(v).toLocaleString()+cur()} // format money with conversion
+function fmtRaw(v){return v.toLocaleString()+'₮'} // always in MNT (for inputs)
+// Dual price: always show MNT + VND side by side
+function dualP(pr){if(!pr)return'-';return`<span style="color:var(--amber);font-weight:700">${pr.toLocaleString()}₮</span> <span style="color:var(--green);font-size:9px">${Math.round(pr*exRate).toLocaleString()}₫</span>`}
+function fL(l){if(!sq)return l;return l.filter(x=>(x.nm+x.ph+(x.ad||'')+(x.prod||'')+(x.cb||'')).toLowerCase().includes(sq))}
+function fD(k){if(k==='lead')return D.filter(l=>l.st==='new'||l.st==='knm'||l.st==='potential');if(k==='closed')return D.filter(l=>l.st==='closed'&&l.os==='pending');if(k==='ship')return D.filter(l=>l.os==='shipped');if(k==='ok')return D.filter(l=>l.os==='delivered');if(k==='ret')return D.filter(l=>l.os==='returned');return D}
+// RENDER
+function R(v){
+  const mc=document.getElementById('mc');
+  const pg={dash:{t:t('dash'),b:'Admin',c:'vb-b'},'mkt-dash':{t:t('mktDash'),b:'MKT',c:'vb-p'},mkt:{t:t('mktInput'),b:'MKT',c:'vb-b'},'mkt-orders':{t:t('mktOrd'),b:'MKT',c:'vb-g'},leads:{t:t('leads'),b:'Sale',c:'vb-a'},closed:{t:t('closed'),b:'Sale',c:'vb-g'},ship:{t:t('ship'),b:t('grpOrd'),c:'vb-a'},ok:{t:t('ok'),b:t('grpOrd'),c:'vb-g'},ret:{t:t('ret'),b:t('grpOrd'),c:'vb-o'},rec:{t:t('rec'),b:t('grpOrd'),c:'vb-p'},products:{t:t('prod'),b:'Admin',c:'vb-t'},accounts:{t:t('acc'),b:'Admin',c:'vb-p'},wh:{t:t('wh'),b:t('kho'),c:'vb-t'}};
+  const p=pg[v]||pg.dash;document.getElementById('tT').textContent=p.t;document.getElementById('tS').textContent=td();
+  const b=document.getElementById('tB');b.className='vb '+p.c;b.textContent=p.b;
+  const fn={dash:rDash,'mkt-dash':rMD,mkt:rMkt,'mkt-orders':rMO,leads:rLeads,closed:rClosed,ship:rShip,ok:rOk,ret:rRet,rec:rRec,products:rProd,accounts:rAcc,wh:rWh};
+  mc.innerHTML=(fn[v]||rDash)();uP();document.getElementById('tc').textContent=D.length;
+}
+function uP(){const e=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};e('p-mkt',stg.length?`⬆${stg.length}`:D.length);e('p-lead',fD('lead').length);e('p-closed',fD('closed').length);e('p-ship',fD('ship').length);e('p-ok',fD('ok').length);e('p-ret',fD('ret').length);e('p-rec',D.filter(l=>l.os==='reconciled').length)}
+// ROLE LABELS
+const RL={admin:'Admin',vadmin:'Phó Admin',mkt:'MKT',sale:'Sale',kho:'Kho'};
+function roleLabel(r){return{admin:t('admin'),vadmin:t('vAdmin'),mkt:t('mkt'),sale:t('sale'),kho:t('kho')}[r]||r}
+function roleCls(r){return{admin:'role-admin',vadmin:'role-vadmin',mkt:'role-mkt',sale:'role-sale',kho:'role-kho'}[r]||'role-mkt'}
+// ===== ACCOUNTS =====
+function rAcc(){return`
+<!-- EXCHANGE RATE — only visible on accounts page (admin only) -->
+<div class="card" style="border-left:3px solid var(--amber);margin-bottom:8px"><div class="card-h"><h2>💱 Tỉ giá MNT → VND</h2><small>Admin quản lý tỉ giá quy đổi</small></div><div class="card-body"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<span style="font-size:12px;font-weight:700;color:var(--ink2)">1 ₮ =</span>
+<input type="number" step="0.1" value="${exRate}" onchange="exRate=parseFloat(this.value)||1;toast('✓ Tỉ giá: 1₮ = '+exRate+'₫')" style="background:var(--bg);border:1.5px solid var(--line);border-radius:6px;padding:7px 10px;font-size:16px;font-weight:700;outline:none;width:110px;color:var(--accent);text-align:center">
+<span style="font-size:12px;font-weight:700;color:var(--ink2)">₫ (VND)</span>
+<div style="margin-left:16px;font-size:10.5px;color:var(--muted);line-height:1.5">Ví dụ: 63,000₮ = <b style="color:var(--green)">${(63000*exRate).toLocaleString()}₫</b><br>Tất cả bảng đơn hàng sẽ hiện 2 cột giá: ₮ gốc + ₫ quy đổi</div>
+</div></div></div>
+<div class="card"><div class="card-h"><h2>👥 ${t('acc')}</h2><small>${accs.length}</small><div class="btn-row"><button class="btn btn-pri btn-sm" onclick="showAddAcc()">+ ${t('addAcc')}</button></div></div>
+<div class="tw"><table><thead><tr><th>#</th><th>${t('empName')}</th><th>${t('role')}</th><th>${t('team')}</th><th>${t('company')}</th><th>${t('act')}</th></tr></thead>
+<tbody>${accs.map((a,i)=>`<tr><td style="font-size:9px;color:var(--muted);font-weight:700">${i+1}</td>
+<td style="font-weight:600">${a.nm}</td>
+<td><span class="role-badge ${roleCls(a.role)}">${roleLabel(a.role)}</span></td>
+<td style="font-size:9.5px">${a.team||'—'}</td>
+<td style="font-size:9.5px">${a.company||'—'}</td>
+<td><div style="display:flex;gap:3px"><button class="btn btn-sec btn-sm" onclick="editAcc(${a.id})">✏</button><button class="btn btn-red btn-sm" onclick="accs=accs.filter(x=>x.id!==${a.id});toast('✓');R('accounts')">✕</button></div></td>
+</tr>`).join('')}</tbody></table></div></div>`}
+function showAddAcc(){showM(`<h3>${t('addAcc')}</h3>
+<div class="fg"><label>${t('empName')}</label><input type="text" id="an"></div>
+<div class="fg"><label>${t('role')}</label><select id="ar"><option value="mkt">${t('mkt')}</option><option value="sale">${t('sale')}</option><option value="kho">${t('kho')}</option><option value="admin">${t('admin')}</option><option value="vadmin">${t('vAdmin')}</option></select></div>
+<div class="fg"><label>${t('team')}</label><input type="text" id="at" placeholder="Team A"></div>
+<div class="fg"><label>${t('company')}</label><input type="text" id="ac" placeholder="MN Corp"></div>
+<div class="ma"><button class="btn btn-ghost" onclick="closeM()">${t('cancel')}</button><button class="btn btn-pri" onclick="addAcc()">${t('save')}</button></div>`)}
+function addAcc(){const n=document.getElementById('an').value.trim(),r=document.getElementById('ar').value,tm=document.getElementById('at').value.trim(),co=document.getElementById('ac').value.trim();if(!n)return;accs.push({id:nAccId++,nm:n,role:r,team:tm,company:co,adsCost:0});closeM();toast('✓ '+n);R('accounts')}
+function editAcc(id){const a=accs.find(x=>x.id===id);if(!a)return;
+showM(`<h3>${t('edit')} — ${a.nm}</h3>
+<div class="fg"><label>${t('empName')}</label><input type="text" id="en2" value="${a.nm}"></div>
+<div class="fg"><label>${t('role')}</label><select id="er2"><option value="mkt" ${a.role==='mkt'?'selected':''}>${t('mkt')}</option><option value="sale" ${a.role==='sale'?'selected':''}>${t('sale')}</option><option value="kho" ${a.role==='kho'?'selected':''}>${t('kho')}</option><option value="admin" ${a.role==='admin'?'selected':''}>${t('admin')}</option><option value="vadmin" ${a.role==='vadmin'?'selected':''}>${t('vAdmin')}</option></select></div>
+<div class="fg"><label>${t('team')}</label><input type="text" id="et2" value="${a.team}"></div>
+<div class="fg"><label>${t('company')}</label><input type="text" id="ec2" value="${a.company}"></div>
+<div class="ma"><button class="btn btn-ghost" onclick="closeM()">${t('cancel')}</button><button class="btn btn-pri" onclick="saveAcc(${id})">${t('save')}</button></div>`)}
+function saveAcc(id){const a=accs.find(x=>x.id===id);if(!a)return;a.nm=document.getElementById('en2').value.trim()||a.nm;a.role=document.getElementById('er2').value;a.team=document.getElementById('et2').value.trim();a.company=document.getElementById('ec2').value.trim();closeM();toast('✓');R('accounts')}
+// ===== DASHBOARD =====
+function rDash(){const tot=D.length,nw2=D.filter(l=>l.st==='new').length,kn=D.filter(l=>l.st==='knm').length,cls=D.filter(l=>l.st==='closed').length,shp=D.filter(l=>l.os==='shipped').length,dlv=D.filter(l=>l.os==='delivered').length,ret=D.filter(l=>l.os==='returned').length,rev=D.filter(l=>l.os==='delivered').reduce((s,l)=>s+(l.pr||0)*(l.qt||1),0);const mx=Math.max(nw2,kn,cls,shp,dlv,ret,1);const bar=(l,v,c)=>`<div class="db-bar"><span class="db-lb">${l}</span><div class="db-tr"><div class="db-fl" style="width:${Math.max(v/mx*100,5)}%;background:${c}">${v}</div></div><span class="db-vl">${v}</span></div>`;
+return`<div class="sr"><div class="sc0 sb1"><div class="sn">${tot}</div><div class="sl">${t('total')} Leads</div></div><div class="sc0 sg"><div class="sn">${cls}</div><div class="sl">${t('cls')}</div></div><div class="sc0 sa"><div class="sn">${shp}</div><div class="sl">${t('ship')}</div></div><div class="sc0 sg"><div class="sn">${dlv}</div><div class="sl">${t('ok')}</div></div><div class="sc0 srd"><div class="sn">${ret}</div><div class="sl">${t('ret')}</div></div><div class="sc0 sp2"><div class="sn">${fmt(rev)}</div><div class="sl">${t('revenue')}</div></div></div>
+<div class="card"><div class="card-h"><h2>📊 ${t('pipeline')}</h2></div><div class="card-body">${bar(t('new2'),nw2,'var(--accent)')}${bar(t('knm'),kn,'var(--amber)')}${bar(t('cls'),cls,'var(--green)')}${bar(t('ship'),shp,'var(--amber)')}${bar(t('ok'),dlv,'var(--green)')}${bar(t('ret'),ret,'var(--orange)')}</div></div>`}
+// ===== MKT DASH =====
+// Daily ads report data per account
+let adsReports={};
+// Init demo data
+(function initAdsDemo(){
+  const days=['25/07/2025','26/07/2025','27/07/2025','28/07/2025','29/07/2025'];
+  adsReports[1]=days.map((d,i)=>({date:d,spent:(80+i*15)*1000,morning:(100+i*10)*1000,afternoon:i>1?(50+i*5)*1000:0,urgent:i===4?30000:0,revenue:(200+i*40)*1000}));
+  adsReports[2]=days.map((d,i)=>({date:d,spent:(60+i*10)*1000,morning:(70+i*8)*1000,afternoon:i>2?20000:0,urgent:0,revenue:(150+i*30)*1000}));
+})();
+function getAdsForAcc(accId){return adsReports[accId]||[]}
+function addAdsRow(accId){
+  if(!adsReports[accId])adsReports[accId]=[];
+  adsReports[accId].unshift({date:td(),spent:0,morning:0,afternoon:0,urgent:0,revenue:0});
+  R('mkt-dash');
+}
+function delAdsRow(accId,idx){
+  if(adsReports[accId])adsReports[accId].splice(idx,1);
+  R('mkt-dash');
+}
+function updAdsField(accId,idx,field,val){
+  if(adsReports[accId]&&adsReports[accId][idx])adsReports[accId][idx][field]=parseInt(val)||0;
+  // Delay re-render to not lose focus
+  clearTimeout(updAdsField._t);updAdsField._t=setTimeout(()=>R('mkt-dash'),800);
+}
+function accSel(role,cur,cb){const list=accsByRole(role);return`<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;flex-wrap:wrap;padding:6px 10px;background:var(--card);border:1px solid var(--line);border-radius:8px">
+<span style="font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap">👤 ${t('empName')}:</span>
+${list.map(a=>`<button class="nk ${cur===a.id?'on':''}" onclick="${cb}(${a.id})" style="display:flex;align-items:center;gap:4px">
+<span style="width:16px;height:16px;border-radius:50%;background:${cur===a.id?'#fff':'var(--accent)'};color:${cur===a.id?'var(--accent)':'#fff'};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;flex-shrink:0">${a.nm.charAt(0)}</span>${a.nm}</button>`).join('')}
+</div>`}
+function selMktD(id){selAcc=id;R('mkt-dash')}
+function rMD(){const mk=accs.find(a=>a.id===selAcc);const my=D.filter(l=>l.accId===selAcc);const tot=my.length,cld=my.filter(l=>l.st!=='new').length,ncl=my.filter(l=>l.st==='new').length,cls=my.filter(l=>l.st==='closed').length,rate=tot?(cls/tot*100).toFixed(1):0,dlv=my.filter(l=>l.os==='delivered').length;
+const adsRows=getAdsForAcc(selAcc);
+const totalSpent=adsRows.reduce((s,r)=>s+r.spent,0);
+const totalMorning=adsRows.reduce((s,r)=>s+r.morning,0);
+const totalAfternoon=adsRows.reduce((s,r)=>s+r.afternoon,0);
+const totalUrgent=adsRows.reduce((s,r)=>s+r.urgent,0);
+const totalXin=totalMorning+totalAfternoon+totalUrgent;
+const totalRev=adsRows.reduce((s,r)=>s+r.revenue,0);
+const surplus=totalXin-totalSpent;
+const pctAds=totalRev>0?(totalXin/totalRev*100).toFixed(1):0;
+const revFromOrders=my.filter(l=>l.os==='delivered').reduce((s,l)=>s+(l.pr||0)*(l.qt||1),0);
+const cpa=cls?(totalXin/cls).toFixed(0):0;
+const pm={};my.forEach(l=>{if(l.prod)pm[l.prod]=(pm[l.prod]||0)+1});const bp=Object.entries(pm).sort((a,b)=>b[1]-a[1]);
+return`${accSel('mkt',selAcc,'selMktD')}
+<div class="sr"><div class="sc0 sb1"><div class="sn">${tot}</div><div class="sl">${t('total')} ${t('pushed')}</div></div><div class="sc0 sg"><div class="sn">${cld}</div><div class="sl">${t('called')}</div></div><div class="sc0 sa"><div class="sn">${ncl}</div><div class="sl">${t('notCalled')}</div></div><div class="sc0 sg"><div class="sn">${rate}%</div><div class="sl">${t('closeRate')}</div></div><div class="sc0 sp2"><div class="sn">${fmt(revFromOrders)}</div><div class="sl">${t('revenue')}</div></div><div class="sc0 st2"><div class="sn">${dlv}</div><div class="sl">${t('ok')}</div></div></div>
+<!-- Summary banner -->
+<div style="background:#fce4ec;border:1px solid #f48fb1;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:10.5px;font-weight:600;color:#c62828;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+<span>DS: <b>${fmt(totalRev)}</b></span><span style="color:#d0a0a8">|</span>
+<span>Ads xin: <b>${fmt(totalXin)}</b></span><span style="color:#d0a0a8">|</span>
+<span>Đã tiêu: <b>${fmt(totalSpent)}</b></span><span style="color:#d0a0a8">|</span>
+<span style="color:${surplus>=0?'var(--green)':'var(--red)'}">Dư: <b>${fmt(surplus)}</b></span><span style="color:#d0a0a8">|</span>
+<span>%Ads(xin/DS): <b style="background:#ef9a9a;padding:1px 6px;border-radius:4px;color:#b71c1c">${pctAds}%</b></span><span style="color:#d0a0a8">|</span>
+<span>${t('cpa')}: <b>${fmt(Number(cpa))}</b></span>
+</div>
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:7px;margin-bottom:8px">
+<div class="card"><div class="card-h"><h2>💰 ${t('adsCost')}</h2><small>${t('total')}: ${fmt(totalSpent)}</small></div><div class="card-body" style="font-size:10px;display:flex;gap:8px;flex-wrap:wrap">
+<div><span style="color:var(--muted)">Xin sáng:</span> <b style="color:var(--accent)">${fmt(totalMorning)}</b></div>
+<div><span style="color:var(--muted)">Xin chiều:</span> <b style="color:var(--purple)">${fmt(totalAfternoon)}</b></div>
+<div><span style="color:var(--muted)">Xin gấp:</span> <b style="color:var(--red)">${fmt(totalUrgent)}</b></div>
+<div><span style="color:var(--muted)">${t('roas')}:</span> <b style="color:var(--green)">${totalXin>0?(totalRev/totalXin).toFixed(1):'—'}x</b></div>
+</div></div>
+<div class="card"><div class="card-h"><h2>🏆 ${t('bestProd')}</h2></div><div class="card-body">${bp.length?bp.map(([p,c])=>`<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;font-size:10px"><span style="flex:1">${p}</span><b>${c}</b></div>`).join(''):`<p style="color:var(--muted);font-size:10px">${t('noData')}</p>`}</div></div></div>
+<!-- DAILY REVENUE from actual orders -->
+${(()=>{
+const dayMap={};
+my.forEach(l=>{const d=l.dt?l.dt.split(' ')[0]:'?';if(!dayMap[d])dayMap[d]={leads:0,called:0,closed:0,shipped:0,delivered:0,rev:0};dayMap[d].leads++;if(l.st!=='new')dayMap[d].called++;if(l.st==='closed')dayMap[d].closed++;if(l.os==='shipped')dayMap[d].shipped++;if(l.os==='delivered'){dayMap[d].delivered++;dayMap[d].rev+=(l.pr||0)*(l.qt||1)}});
+const days=Object.entries(dayMap).sort((a,b)=>b[0].localeCompare(a[0]));
+const maxRev=Math.max(...days.map(([,v])=>v.rev),1);
+const totalDayRev=days.reduce((s,[,v])=>s+v.rev,0);
+const totalDayLeads=days.reduce((s,[,v])=>s+v.leads,0);
+const totalDayClosed=days.reduce((s,[,v])=>s+v.closed,0);
+const totalDayDelivered=days.reduce((s,[,v])=>s+v.delivered,0);
+return`<div class="card" style="margin-bottom:8px"><div class="card-h"><h2>📈 Doanh số theo ngày</h2><small>${days.length} ngày · ${totalDayLeads} số · ${totalDayClosed} chốt · ${totalDayDelivered} TC</small></div>
+<div class="tw"><table><thead><tr>
+<th style="text-align:left">Ngày</th><th>Số đẩy</th><th>Đã gọi</th><th>Chốt</th><th>Giao</th><th>TC</th><th>DS ₮</th><th>DS ₫</th><th style="min-width:120px">Biểu đồ</th>
+</tr></thead><tbody>${days.map(([d,v])=>{
+const pct=maxRev>0?(v.rev/maxRev*100):0;
+const barColor=v.rev>0?'var(--green)':'var(--line)';
+return`<tr>
+<td style="text-align:left;font-weight:600;font-size:10px;white-space:nowrap">${d}</td>
+<td style="text-align:center;font-weight:700;color:var(--accent)">${v.leads}</td>
+<td style="text-align:center">${v.called}</td>
+<td style="text-align:center;font-weight:700;color:var(--green)">${v.closed}</td>
+<td style="text-align:center">${v.shipped}</td>
+<td style="text-align:center;font-weight:700;color:var(--teal)">${v.delivered}</td>
+<td style="text-align:center;font-weight:700;color:var(--amber)">${v.rev?v.rev.toLocaleString()+'₮':'-'}</td>
+<td style="text-align:center;font-weight:700;color:var(--green)">${v.rev?Math.round(v.rev*exRate).toLocaleString()+'₫':'-'}</td>
+<td><div style="background:var(--line2);border-radius:3px;height:14px;overflow:hidden"><div style="width:${Math.max(pct,2)}%;height:100%;background:${barColor};border-radius:3px;transition:width .3s"></div></div></td>
+</tr>`}).join('')}
+${days.length?`<tr style="background:#f8fafd;font-weight:700;font-size:10px">
+<td style="text-align:left">${t('total')}</td>
+<td style="text-align:center;color:var(--accent)">${totalDayLeads}</td>
+<td style="text-align:center">${days.reduce((s,[,v])=>s+v.called,0)}</td>
+<td style="text-align:center;color:var(--green)">${totalDayClosed}</td>
+<td style="text-align:center">${days.reduce((s,[,v])=>s+v.shipped,0)}</td>
+<td style="text-align:center;color:var(--teal)">${totalDayDelivered}</td>
+<td style="text-align:center;color:var(--amber)">${totalDayRev.toLocaleString()}₮</td>
+<td style="text-align:center;color:var(--green)">${Math.round(totalDayRev*exRate).toLocaleString()}₫</td>
+<td></td></tr>`:''}</tbody></table></div></div>`})()}
+<!-- DAILY ADS TABLE -->
+<div class="card"><div class="card-h"><h2>📊 Báo cáo Ads theo ngày</h2><div class="btn-row"><button class="btn btn-pri btn-sm" onclick="addAdsRow(${selAcc})">+ Thêm ngày</button></div></div>
+<div class="tw"><table><thead><tr>
+<th style="text-align:left;min-width:75px">${t('date')}</th>
+<th style="min-width:90px">Tổng tiêu</th>
+<th style="min-width:90px;background:#e8f0ff">Xin sáng</th>
+<th style="min-width:90px;background:#f0eaff">Xin chiều</th>
+<th style="min-width:75px;background:#fdeceb">Xin gấp</th>
+<th style="min-width:70px">Tiền dư</th>
+<th style="min-width:85px">DS</th>
+<th>%Ads(xin/DS)</th>
+<th></th>
+</tr></thead>
+<tbody>${adsRows.map((r,i)=>{
+const xin=r.morning+r.afternoon+r.urgent;
+const du=xin-r.spent;
+const pctS=r.revenue>0?(xin/r.revenue*100).toFixed(1):'—';
+const pctCls2=v=>{const n=parseFloat(v);if(isNaN(n))return'background:var(--line2);color:var(--muted)';return n>50?'background:var(--red-s);color:var(--red)':n>30?'background:var(--amber-s);color:var(--amber)':'background:var(--green-s);color:var(--green)'};
+return`<tr>
+<td style="text-align:left;font-weight:600;font-size:10px">${r.date}</td>
+<td><input class="note-i" style="width:80px;text-align:center;font-weight:700" value="${r.spent}" onchange="updAdsField(${selAcc},${i},'spent',this.value)"></td>
+<td style="background:#f8faff"><input class="note-i" style="width:80px;text-align:center;font-weight:600;color:var(--accent)" value="${r.morning}" onchange="updAdsField(${selAcc},${i},'morning',this.value)"></td>
+<td style="background:#faf8ff"><input class="note-i" style="width:80px;text-align:center;font-weight:600;color:var(--purple)" value="${r.afternoon}" onchange="updAdsField(${selAcc},${i},'afternoon',this.value)"></td>
+<td style="background:#fef8f8"><input class="note-i" style="width:70px;text-align:center;font-weight:600;color:var(--red)" value="${r.urgent}" onchange="updAdsField(${selAcc},${i},'urgent',this.value)"></td>
+<td style="font-weight:700;color:${du>=0?'var(--green)':'var(--red)'}; font-size:10px">${fmt(du)}</td>
+<td><input class="note-i" style="width:80px;text-align:center;font-weight:600;color:var(--green)" value="${r.revenue}" onchange="updAdsField(${selAcc},${i},'revenue',this.value)"></td>
+<td><span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:9.5px;font-weight:700;${pctCls2(pctS)}">${pctS}%</span></td>
+<td><button class="rx" onclick="delAdsRow(${selAcc},${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6 6 18M6 6l12 12"/></svg></button></td>
+</tr>`}).join('')}
+${adsRows.length?`<tr style="background:#f8fafd;font-weight:700;font-size:10px">
+<td style="text-align:left">${t('total')}</td>
+<td>${fmt(totalSpent)}</td><td style="color:var(--accent)">${fmt(totalMorning)}</td><td style="color:var(--purple)">${fmt(totalAfternoon)}</td><td style="color:var(--red)">${fmt(totalUrgent)}</td>
+<td style="color:${surplus>=0?'var(--green)':'var(--red)'}"> ${fmt(surplus)}</td><td style="color:var(--green)">${fmt(totalRev)}</td>
+<td><span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700;background:#ef9a9a;color:#b71c1c">${pctAds}%</span></td>
+<td></td></tr>`:''}</tbody></table></div></div>`}
+// ===== MKT INPUT =====
+function selMktI(id){selAcc=id;R('mkt')}
+function rMkt(){const cat=cats.find(c=>c.id===selCat);const sc=stg.filter(s=>s.src==='comment').length,sl=stg.filter(s=>s.src==='ladi').length;
+return`${accSel('mkt',selAcc,'selMktI')}
+<div class="sr"><div class="sc0 sb1"><div class="sn">${D.filter(l=>l.accId===selAcc).length}</div><div class="sl">${t('pushed')}</div></div><div class="sc0 sp2"><div class="sn">${stg.length}</div><div class="sl">${t('staging')} ⬆</div></div></div>
+<div class="card"><div class="card-h"><h2>${t('selProd')}</h2><small>${cats.length} ${t('prodL')}</small></div><div class="card-body"><div class="prod-sel">${cats.map(c=>`<button class="pc ${selCat===c.id?'on':''}" onclick="selCat=${c.id};R('mkt')"><span class="pcd" style="background:${c.cl}"></span>${c.nm}</button>`).join('')}</div>
+${cat?`<div class="cl">${cat.cb.length?cat.cb.map(cb=>`<div class="cr"><span class="crd">${cb.d}</span><span class="crp">${cb.p.toLocaleString()}₮</span><span class="crq">×${cb.q}</span></div>`).join(''):`<span style="font-size:9.5px;color:var(--muted)">${t('noCombo')}</span>`}</div>`:''}</div></div>
+<div class="card"><div class="card-h"><h2>${t('paste')}</h2></div><div class="card-body">
+${!selCat?`<div style="background:var(--amber-s);color:var(--amber);padding:6px 9px;border-radius:5px;font-size:10.5px;font-weight:600;margin-bottom:6px">${t('noProd')}</div>`:''}
+<div class="paste-tabs"><button class="paste-tab ct ${pasteType==='comment'?'on':''}" onclick="pasteType='comment';R('mkt')"><span style="font-size:16px">📝</span>${t('cmt')}<br><span style="font-size:8px;font-weight:400;opacity:.7">${t('cmtHint')}</span></button><button class="paste-tab lt ${pasteType==='ladi'?'on':''}" onclick="pasteType='ladi';R('mkt')"><span style="font-size:16px">🌐</span>${t('ladi')}<br><span style="font-size:8px;font-weight:400;opacity:.7">${t('ladiHint')}</span></button></div>
+<div class="pz"><textarea id="bi" ${!selCat?'disabled':''}></textarea></div>
+<div class="ph"><code>Tab</code> ${pasteType==='comment'?t('cmtHint'):t('ladiHint')}</div>
+<div style="display:flex;gap:4px;margin-top:6px"><button class="btn btn-pri" onclick="doParse()" ${!selCat?'disabled':''}>${t('parse')}</button><button class="btn btn-ghost" onclick="document.getElementById('bi').value=''">${t('clear')}</button></div></div></div>
+${stg.length?`<div class="pb"><span class="pbn">${stg.length}</span><span class="pbt">${t('staging')}</span><div style="display:flex;gap:3px">${sc?`<span class="pbs" style="background:rgba(255,255,255,.07);color:#9baec8">📝${sc}</span>`:''}${sl?`<span class="pbs" style="background:rgba(13,148,136,.1);color:#5eead4">🌐${sl}</span>`:''}</div><button class="btn btn-ghost" style="background:rgba(255,255,255,.06);color:#9baec8;margin-left:auto" onclick="stg=[];R('mkt')">✕</button><button class="btn btn-lg" style="background:#14a06b;color:#fff" onclick="pushSale()">${t('pushSale')} (${stg.length})</button></div>
+<div class="pw"><div class="pwh"><h3>${t('result')}</h3><span class="pvb pv-ok">✓${stg.length}</span></div><div class="pwb"><table><thead><tr><th></th><th>#</th><th>${t('src')}</th><th>${t('prodL')}</th><th>${t('name')}</th><th>${t('phone')}</th><th>${t('combo')}</th><th>${t('price')}</th><th>${t('qty')}</th></tr></thead><tbody>${stg.map((s,i)=>`<tr><td><button class="rx" onclick="stg.splice(${i},1);R('mkt')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6 6 18M6 6l12 12"/></svg></button></td><td style="font-size:8.5px;color:var(--muted)">${i+1}</td><td><span class="chip ${s.src==='comment'?'c-cmt':'c-ladi'}"><span class="dot"></span>${s.src==='comment'?t('cmt'):t('ladi')}</span></td><td style="font-size:9px">${s.prod}</td><td style="font-weight:600">${s.nm||'—'}</td><td style="font-size:9.5px">${s.ph}</td><td style="font-size:9px">${s.cb||'—'}</td><td style="font-weight:700;color:var(--green)">${s.pr?fmt(s.pr):'—'}</td><td style="font-weight:700;color:var(--accent)">${s.qt||'—'}</td></tr>`).join('')}</tbody></table></div></div>`:''}`}
+function extP(t2){const m=t2.replace(/,/g,'').match(/(\d[\d\s]*\d)₮|(\d{4,})/);if(m)return parseInt((m[1]||m[2]).replace(/\s/g,''));return 0}
+function matchCb(txt,cbs){if(!txt||!cbs.length)return null;const cl=s=>s.replace(/\s+/g,' ').trim().toLowerCase();const ct=cl(txt);for(const cb of cbs){if(cl(cb.d)===ct)return cb;const pi=extP(txt);if(pi&&pi===cb.p)return cb;if(ct.includes(cl(cb.d))||cl(cb.d).includes(ct))return cb}return null}
+function doParse(){const raw=document.getElementById('bi').value.trim();if(!raw){toast('⚠');return}const cat=cats.find(c=>c.id===selCat);if(!cat)return;const lines=raw.split('\n').filter(l=>l.trim());let cnt=0;lines.forEach(line=>{const p=line.split('\t').map(s=>s.trim());if(pasteType==='comment'){let nm=p[0]||'',ph=p[1]||p[0]||'';if(p.length===1&&/\d/.test(p[0])){nm='';ph=p[0]}stg.push({src:'comment',prod:cat.nm,cc:cat.cl,cid:cat.id,dt:nw(),nm,ph,ad:'',cb:'',pr:0,qt:0})}else{const dt=p[0]||'',nm=p[1]||'',ph=p[2]||'',ad=p[3]||'',cbr=p[4]||'';const m=matchCb(cbr,cat.cb);stg.push({src:'ladi',prod:cat.nm,cc:cat.cl,cid:cat.id,dt,nm,ph,ad,cb:m?m.d:cbr,pr:m?m.p:extP(cbr),qt:m?m.q:0})}cnt++});document.getElementById('bi').value='';toast(`✓ ${cnt} ${pasteType==='comment'?t('cmt'):t('ladi')}`);R('mkt')}
+function pushSale(){if(!stg.length)return;const n=stg.length;stg.forEach(s=>{D.push({id:nid++,src:s.src,prod:s.prod,cc:s.cc,cid:s.cid,accId:selAcc,dt:s.dt,nm:s.nm,ph:s.ph,ad:s.ad,cb:s.cb,pr:s.pr,qt:s.qt,st:'new',os:'none',kh:[],nt:'',conf:false,shipDt:'',okDt:'',retDt:'',recDt:''})});stg=[];toast(`🚀 ${n}`);R('mkt')}
+// MKT ORDERS
+function selMktO(id){selAcc=id;R('mkt-orders')}
+function rMO(){const my=D.filter(l=>l.accId===selAcc);const cls=my.filter(l=>l.st==='closed'),shp=my.filter(l=>l.os==='shipped'),dlv=my.filter(l=>l.os==='delivered');
+const dlvRev=dlv.reduce((s,l)=>s+(l.pr||0)*(l.qt||1),0);
+return`${accSel('mkt',selAcc,'selMktO')}
+<div class="sr"><div class="sc0 sg"><div class="sn">${cls.length}</div><div class="sl">${t('cls')}</div></div><div class="sc0 sa"><div class="sn">${shp.length}</div><div class="sl">${t('ship')}</div></div><div class="sc0 sg"><div class="sn">${dlv.length}</div><div class="sl">${t('ok')}</div></div><div class="sc0 sp2"><div class="sn">${fmt(dlvRev)}</div><div class="sl">${t('collected')}</div></div></div>
+<div class="card"><div class="card-h"><h2>${t('orders')} ${accs.find(a=>a.id===selAcc)?.nm||''}</h2><small>${my.length}</small></div><div class="tw"><table><thead><tr><th>#</th><th>${t('src')}</th><th>${t('prodL')}</th><th>${t('date')}</th><th>${t('name')}</th><th>${t('phone')}</th><th>${t('combo')}</th><th>Giá ₮</th><th>Giá ₫</th><th>${t('status')}</th></tr></thead><tbody>${fL(my).map((l,i)=>`<tr><td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td><td><span class="chip ${l.src==='comment'?'c-cmt':'c-ladi'}"><span class="dot"></span>${l.src==='comment'?t('cmt'):t('ladi')}</span></td><td style="font-size:9px">${l.prod}</td><td style="font-size:9px">${l.dt}</td><td style="font-weight:600">${l.nm}</td><td style="font-size:9.5px">${l.ph}</td><td style="font-size:9px">${l.cb||'-'}</td><td style="font-weight:700;color:var(--amber)">${l.pr?l.pr.toLocaleString()+'₮':'-'}</td><td style="font-weight:700;color:var(--green)">${l.pr?Math.round(l.pr*exRate).toLocaleString()+'₫':'-'}</td><td>${osC(l)}</td></tr>`).join('')}</tbody></table></div></div>`}
+function osC(l){const m={none:'c-new',pending:'c-cls',shipped:'c-pot',delivered:'c-ok',returned:'c-ret',reconciled:'c-rec',cancelled:'c-non'};const lb2={none:t('new2'),pending:t('cls'),shipped:t('ship'),delivered:t('ok'),returned:t('ret'),reconciled:t('rec'),cancelled:t('cancel2')};return`<span class="chip ${m[l.os]||'c-new'}"><span class="dot"></span>${lb2[l.os]||l.os}</span>`}
+// LEADS
+function stC(l){const m={new:{c:'c-new',l:t('new2')},knm:{c:'c-knm',l:t('knm')},closed:{c:'c-cls',l:t('cls')},potential:{c:'c-pot',l:t('pot')},noneed:{c:'c-non',l:t('noNd')}};const s=m[l.st]||m.new;return`<span class="chip ${s.c}"><span class="dot"></span>${s.l}</span>`}
+function setSt(id,st){const l=D.find(x=>x.id===id);if(!l)return;if(st==='knm'){l.st='knm';l.kh.push({d:td(),t:new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})});toast(`📞 ${t('knm')} ${l.kh.length}`)}else if(st==='closed'){l.st='closed';l.os='pending';toast(`✓ ${t('cls')}`)}else{l.st=st;toast('✓')}R(cv)}
+function showKnm(ev,id){ev.stopPropagation();const l=D.find(x=>x.id===id);if(!l)return;const p=document.getElementById('kpop');p.innerHTML=`<h4>📞 ${l.nm}</h4>${l.kh.map((h,i)=>`<div class="ki"><span class="kn">L${i+1}</span><span class="kd">${h.d} ${h.t}</span></div>`).join('')}`;p.style.left=Math.min(ev.clientX,window.innerWidth-220)+'px';p.style.top=Math.min(ev.clientY+8,window.innerHeight-140)+'px';p.classList.add('show');setTimeout(()=>{const cl2=e=>{if(!p.contains(e.target)){p.classList.remove('show');document.removeEventListener('click',cl2)}};document.addEventListener('click',cl2)},50)}
+function rLeads(){let list=fL(fD('lead'));if(leadFilt!=='all')list=list.filter(l=>l.st===leadFilt);
+return`<div class="sr"><div class="sc0 sb1"><div class="sn">${fD('lead').length}</div><div class="sl">${t('total')}</div></div><div class="sc0"><div class="sn">${fD('lead').filter(l=>l.st==='new').length}</div><div class="sl">${t('new2')}</div></div><div class="sc0 sa"><div class="sn">${fD('lead').filter(l=>l.st==='knm').length}</div><div class="sl">${t('knm')}</div></div><div class="sc0 st2"><div class="sn">${fD('lead').filter(l=>l.st==='potential').length}</div><div class="sl">${t('pot')}</div></div></div>
+<div style="display:flex;gap:2px;margin-bottom:6px;flex-wrap:wrap"><button class="btn btn-sm ${leadFilt==='all'?'btn-pri':'btn-ghost'}" onclick="leadFilt='all';R('leads')">${t('all')}</button><button class="btn btn-sm ${leadFilt==='new'?'btn-pri':'btn-ghost'}" onclick="leadFilt='new';R('leads')">${t('new2')}</button><button class="btn btn-sm ${leadFilt==='knm'?'btn-pri':'btn-ghost'}" onclick="leadFilt='knm';R('leads')">${t('knm')}</button><button class="btn btn-sm ${leadFilt==='potential'?'btn-pri':'btn-ghost'}" onclick="leadFilt='potential';R('leads')">${t('pot')}</button></div>
+<div class="card"><div class="card-h"><h2>${t('leads')}</h2><small>${list.length}</small></div><div class="tw"><table><thead><tr><th>#</th><th>${t('src')}</th><th>${t('prodL')}</th><th>${t('name')}</th><th>${t('phone')}</th><th>${t('addr')}</th><th>${t('combo')}</th><th>₮</th><th>₫</th><th>${t('status')}</th><th>${t('knm')}</th><th>${t('note')}</th><th>${t('act')}</th></tr></thead><tbody>${list.map((l,i)=>`<tr><td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td><td><span class="chip ${l.src==='comment'?'c-cmt':'c-ladi'}"><span class="dot"></span>${l.src==='comment'?t('cmt'):t('ladi')}</span></td><td style="font-size:9px">${l.prod||'-'}</td><td style="font-weight:600">${l.nm||'-'}</td><td style="font-size:9.5px">${l.ph}</td><td style="font-size:9px">${l.ad||'-'}</td><td style="font-size:9px">${l.cb||'-'}</td><td style="font-weight:700;color:var(--amber)">${l.pr?l.pr.toLocaleString()+'₮':'-'}</td><td style="font-weight:700;color:var(--green)">${l.pr?Math.round(l.pr*exRate).toLocaleString()+'₫':'-'}</td><td>${stC(l)}</td><td>${l.kh.length?`<span class="kb" onclick="showKnm(event,${l.id})">${l.kh.length}x</span>`:'-'}</td><td><input class="note-i" value="${(l.nt||'').replace(/"/g,'&quot;')}" onchange="D.find(x=>x.id===${l.id}).nt=this.value" onclick="event.stopPropagation()"></td><td><div class="ss"><button class="s2 sk ${l.st==='knm'?'on':''}" onclick="setSt(${l.id},'knm')">${t('knm')}</button><button class="s2 sc3 ${l.st==='closed'?'on':''}" onclick="setSt(${l.id},'closed')">${t('cls')}</button><button class="s2 sp4 ${l.st==='potential'?'on':''}" onclick="setSt(${l.id},'potential')">${t('pot')}</button><button class="s2 sn3 ${l.st==='noneed'?'on':''}" onclick="setSt(${l.id},'noneed')">${t('noNd')}</button><button class="s2" style="color:var(--accent)" onclick="editOrder(${l.id})">✏</button></div></td></tr>`).join('')}</tbody></table></div></div>`}
+// CLOSED/SHIP/OK/RET/REC
+function doShip(id){const x=D.find(a=>a.id===id);if(!x)return;x.os='shipped';x.shipDt=nw();whShip(x);toast('📦 Đi hàng');R(cv)}
+function doDeliver(id){const x=D.find(a=>a.id===id);if(!x)return;x.os='delivered';x.okDt=nw();whDeliver(x);toast('✓ Giao TC');R(cv)}
+function doReturn(id){const x=D.find(a=>a.id===id);if(!x)return;x.os='returned';x.retDt=nw();whReturn(x);toast('↩ Hoàn');R(cv)}
+function doConfirmWh(id){const x=D.find(a=>a.id===id);if(!x)return;x.whReturned=true;whConfirmReturn(x);toast('✓ Đã hoàn tại kho');R(cv)}
+function rClosed(){const list=fL(fD('closed'));return`<div class="card" style="border-left:3px solid var(--green)"><div class="card-h"><h2>✅ ${t('closed')} — ${t('needConf')}</h2><small>${list.length}</small></div><div class="tw">${!list.length?`<div class="empty"><p>${t('noData')}</p></div>`:`<table><thead><tr><th>#</th><th>${t('prodL')}</th><th>${t('name')}</th><th>${t('phone')}</th><th>${t('addr')}</th><th>${t('combo')}</th><th>₮</th><th>₫</th><th>${t('confCall')}</th><th>${t('act')}</th></tr></thead><tbody>${list.map((l,i)=>`<tr><td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td><td style="font-size:9px">${l.prod||'-'}</td><td style="font-weight:600">${l.nm}</td><td style="font-size:9.5px">${l.ph}</td><td style="font-size:9px">${l.ad||'-'}</td><td style="font-size:9px">${l.cb||'-'}</td><td style="font-weight:700;color:var(--amber)">${l.pr?l.pr.toLocaleString()+'₮':'-'}</td><td style="font-weight:700;color:var(--green)">${l.pr?Math.round(l.pr*exRate).toLocaleString()+'₫':'-'}</td><td><label class="ccb ${l.conf?'done':''}"><input type="checkbox" ${l.conf?'checked':''} onchange="D.find(x=>x.id===${l.id}).conf=this.checked;R('closed')">${l.conf?'✓':'?'}</label></td><td><div style="display:flex;gap:2px"><button class="btn btn-red btn-sm" onclick="D.find(x=>x.id===${l.id}).os='cancelled';toast('✕');R('closed')">${t('cancel2')}</button><button class="btn btn-green btn-sm" ${!l.conf?'disabled style="opacity:.4"':''} onclick="doShip(${l.id})">${t('shipBtn')}</button></div></td></tr>`).join('')}</tbody></table>`}</div></div>`}
+function rShip(){const list=fL(fD('ship'));return`<div class="card" style="border-left:3px solid var(--amber)"><div class="card-h"><h2>🚚 ${t('ship')}</h2><small>${list.length}</small></div><div class="tw">${!list.length?`<div class="empty"><p>${t('noData')}</p></div>`:`<table><thead><tr><th>#</th><th>${t('prodL')}</th><th>${t('name')}</th><th>${t('phone')}</th><th>${t('addr')}</th><th>${t('combo')}</th><th>${t('qty')}</th><th>₮</th><th>₫</th><th>${t('act')}</th></tr></thead><tbody>${list.map((l,i)=>`<tr><td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td><td style="font-size:9px">${l.prod}</td><td style="font-weight:600">${l.nm}</td><td style="font-size:9.5px">${l.ph}</td><td style="font-size:9px">${l.ad||'-'}</td><td style="font-size:9px">${l.cb||'-'}</td><td style="font-weight:700;color:var(--accent)">${l.qt||1}</td><td style="font-weight:700;color:var(--amber)">${l.pr?l.pr.toLocaleString()+'₮':'-'}</td><td style="font-weight:700;color:var(--green)">${l.pr?Math.round(l.pr*exRate).toLocaleString()+'₫':'-'}</td><td><div style="display:flex;gap:2px"><button class="btn btn-green btn-sm" onclick="doDeliver(${l.id})">✓ ${t('okBtn')}</button><button class="btn btn-red btn-sm" onclick="doReturn(${l.id})">↩ ${t('retBtn')}</button></div></td></tr>`).join('')}</tbody></table>`}</div></div>`}
+function rOk(){const list=fL(fD('ok'));return`<div class="card" style="border-left:3px solid var(--green)"><div class="card-h"><h2>✅ ${t('ok')}</h2><small>${list.length}</small></div><div class="tw">${!list.length?`<div class="empty"><p>${t('noData')}</p></div>`:`<table><thead><tr><th>#</th><th>${t('prodL')}</th><th>${t('name')}</th><th>${t('phone')}</th><th>${t('combo')}</th><th>${t('qty')}</th><th>₮</th><th>₫</th><th>${t('date')}</th></tr></thead><tbody>${list.map((l,i)=>`<tr><td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td><td style="font-size:9px">${l.prod}</td><td style="font-weight:600">${l.nm}</td><td style="font-size:9.5px">${l.ph}</td><td style="font-size:9px">${l.cb||'-'}</td><td style="font-weight:700">${l.qt||1}</td><td style="font-weight:700;color:var(--amber)">${l.pr?l.pr.toLocaleString()+'₮':'-'}</td><td style="font-weight:700;color:var(--green)">${l.pr?Math.round(l.pr*exRate).toLocaleString()+'₫':'-'}</td><td style="font-size:9px">${l.okDt||'-'}</td></tr>`).join('')}</tbody></table>`}</div></div>`}
+function rRet(){const list=fL(fD('ret'));
+return`<div class="sr"><div class="sc0 srd"><div class="sn">${list.length}</div><div class="sl">${t('ret')}</div></div><div class="sc0 sa"><div class="sn">${list.filter(l=>!l.whReturned).length}</div><div class="sl">Đang hoàn về</div></div><div class="sc0 sg"><div class="sn">${list.filter(l=>l.whReturned).length}</div><div class="sl">Đã hoàn tại kho</div></div></div>
+<div class="card" style="border-left:3px solid var(--orange)"><div class="card-h"><h2>↩ ${t('ret')}</h2><small>${list.length}</small></div><div class="tw">${!list.length?`<div class="empty"><p>${t('noData')}</p></div>`:`<table><thead><tr><th>#</th><th>${t('prodL')}</th><th>${t('name')}</th><th>${t('phone')}</th><th>${t('combo')}</th><th>${t('qty')}</th><th>${t('date')}</th><th>Trạng thái kho</th><th>${t('act')}</th></tr></thead><tbody>${list.map((l,i)=>`<tr><td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td><td style="font-size:9px">${l.prod}</td><td style="font-weight:600">${l.nm}</td><td style="font-size:9.5px">${l.ph}</td><td style="font-size:9px">${l.cb||'-'}</td><td style="font-weight:700">${l.qt||1}</td><td style="font-size:9px">${l.retDt||'-'}</td>
+<td>${l.whReturned?`<span class="chip c-ok"><span class="dot"></span>Đã nhận kho</span>`:`<span class="chip c-ret"><span class="dot"></span>Đang hoàn về</span>`}</td>
+<td>${l.whReturned?'✓':`<button class="btn btn-green btn-sm" onclick="doConfirmWh(${l.id})">📦 Đã hoàn tại kho</button>`}</td></tr>`).join('')}</tbody></table>`}</div></div>`}
+function rRec(){const dv=fL(D.filter(l=>l.os==='delivered')),rt=fL(D.filter(l=>l.os==='returned')),rc=fL(D.filter(l=>l.os==='reconciled'));const tp=l=>l.reduce((s,x)=>s+(x.pr||0)*(x.qt||1),0);
+return`<div class="sr"><div class="sc0 sg"><div class="sn">${dv.length}</div><div class="sl">${t('ok')}</div></div><div class="sc0 srd"><div class="sn">${rt.length}</div><div class="sl">${t('ret')}</div></div><div class="sc0 sp2"><div class="sn">${rc.length}</div><div class="sl">${t('rec')}</div></div><div class="sc0 sb1"><div class="sn">${tp(dv).toLocaleString()}₮</div><div class="sl">${t('revenue')}</div></div></div>
+<div class="card" style="border-left:3px solid var(--green)"><div class="card-h"><h2>✅→${t('rec')}</h2><small>${dv.length}</small>${dv.length?`<div class="btn-row"><button class="btn btn-purple btn-sm" onclick="D.filter(l=>l.os==='delivered').forEach(l=>{l.os='reconciled';l.recDt=nw()});toast('☑');R('rec')">☑ ${t('reconAll')}</button></div>`:''}</div><div class="tw">${!dv.length?`<div class="empty"><p>—</p></div>`:`<table><thead><tr><th>#</th><th>${t('name')}</th><th>${t('prodL')}</th><th>${t('price')}</th><th></th></tr></thead><tbody>${dv.map((l,i)=>`<tr><td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td><td style="font-weight:600">${l.nm}</td><td style="font-size:9px">${l.prod}</td><td style="font-weight:700;color:var(--green)">${l.pr?l.pr.toLocaleString()+'₮':'-'}</td><td style="font-weight:700;color:var(--green)">${l.pr?Math.round(l.pr*exRate).toLocaleString()+'₫':'-'}</td><td><button class="btn btn-purple btn-sm" onclick="D.find(a=>a.id===${l.id}).os='reconciled';D.find(a=>a.id===${l.id}).recDt=nw();toast('☑');R('rec')">☑</button></td></tr>`).join('')}</tbody></table>`}</div></div>
+<div class="card" style="border-left:3px solid var(--orange)"><div class="card-h"><h2>↩→${t('rec')}</h2><small>${rt.length}</small>${rt.length?`<div class="btn-row"><button class="btn btn-purple btn-sm" onclick="D.filter(l=>l.os==='returned').forEach(l=>{l.os='reconciled';l.recDt=nw()});toast('☑');R('rec')">☑ ${t('reconAll')}</button></div>`:''}</div><div class="tw">${!rt.length?`<div class="empty"><p>—</p></div>`:`<table><thead><tr><th>#</th><th>${t('name')}</th><th>${t('prodL')}</th><th></th></tr></thead><tbody>${rt.map((l,i)=>`<tr><td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td><td style="font-weight:600">${l.nm}</td><td style="font-size:9px">${l.prod}</td><td><button class="btn btn-purple btn-sm" onclick="D.find(a=>a.id===${l.id}).os='reconciled';D.find(a=>a.id===${l.id}).recDt=nw();toast('☑');R('rec')">☑</button></td></tr>`).join('')}</tbody></table>`}</div></div>`}
+// PRODUCTS — Admin sees inventory, MKT sees only name+combo
+function rProd(){const isAdmin=curRole==='admin'||curRole==='vadmin';
+return`<div class="card"><div class="card-h"><h2>📦 ${t('prod')}</h2><div class="btn-row"><button class="btn btn-pri btn-sm" onclick="showNewCat()">+ ${t('createProd')}</button></div></div>
+<div class="tw"><table><thead><tr><th>#</th><th>${t('prodName')}</th><th>${t('combo')}</th><th>Combos</th>${isAdmin?`<th>${t('impQty')}</th><th>${t('whQty')}</th><th>${t('impDate')}</th><th>${t('whDate')}</th>`:''}<th>${t('closedOrders')}</th><th>${t('act')}</th></tr></thead>
+<tbody>${cats.map((c,i)=>{const cls2=D.filter(l=>l.cid===c.id&&l.st==='closed').length;return`<tr>
+<td style="font-size:8.5px;color:var(--muted);font-weight:700">${i+1}</td>
+<td style="font-weight:600"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${c.cl};margin-right:3px"></span>${c.nm}</td>
+<td style="font-size:9px">${c.cb.length}</td>
+<td style="font-size:8.5px;max-width:180px">${c.cb.map(cb=>`<div style="margin-bottom:1px">${cb.d} <b style="color:var(--green)">${cb.p.toLocaleString()}₮</b> ×${cb.q}</div>`).join('')||'—'}</td>
+${isAdmin?`<td style="font-weight:700;color:var(--accent)">${c.impQty||0}</td><td style="font-weight:700;color:var(--green)">${c.whQty||0}</td><td style="font-size:9px">${c.impDate||'—'}</td><td style="font-size:9px">${c.whDate||'—'}</td>`:''}<td style="font-weight:700;color:var(--purple)">${cls2}</td>
+<td><button class="btn btn-sec btn-sm" onclick="editCat(${c.id})">✏ ${t('edit')}</button></td>
+</tr>`}).join('')}</tbody></table></div></div>`}
+// CREATE — MKT: name+color+combo / Admin: + inventory
+function showNewCat(){const isAdmin=curRole==='admin'||curRole==='vadmin';
+const co=CL.map((c,i)=>`<label style="display:inline-flex;align-items:center;gap:2px;cursor:pointer;margin-right:3px"><input type="radio" name="cc" value="${c}" ${i===0?'checked':''}><span style="width:12px;height:12px;border-radius:50%;background:${c};display:inline-block"></span></label>`).join('');
+showM(`<h3>${t('createProd')}</h3>
+<div class="fg"><label>${t('prodName')}</label><input type="text" id="cn"></div>
+<div class="fg"><label>${t('color')}</label><div style="display:flex;flex-wrap:wrap;gap:2px;padding:2px 0">${co}</div></div>
+<hr style="border:none;border-top:1px solid var(--line);margin:8px 0">
+<div style="font-size:11px;font-weight:700;margin-bottom:6px">📦 Combo 1</div>
+<div class="fg"><label>${t('comboDesc')}</label><input type="text" id="cb1d" placeholder="✅ 63,000₮ - 1+3 free"></div>
+<div style="display:flex;gap:6px"><div class="fg" style="flex:1"><label>${t('comboPrice')} ₮</label><input type="number" id="cb1p" value="0"></div><div class="fg" style="flex:1"><label>${t('comboQty')}</label><input type="number" id="cb1q" value="1" min="1"></div></div>
+<div id="extraCombos"></div>
+<button class="btn btn-ghost btn-sm" style="margin-bottom:8px" onclick="addComboField()">+ Thêm combo</button>
+${isAdmin?`<hr style="border:none;border-top:1px solid var(--line);margin:8px 0">
+<div style="font-size:11px;font-weight:700;margin-bottom:6px;color:var(--amber)">🔒 Admin — Quản lý kho</div>
+<div style="display:flex;gap:6px"><div class="fg" style="flex:1"><label>${t('impQty')}</label><input type="number" id="ciq" value="0"></div><div class="fg" style="flex:1"><label>${t('impDate')}</label><input type="text" id="cid" placeholder="dd/mm/yyyy"></div></div>
+<div style="display:flex;gap:6px"><div class="fg" style="flex:1"><label>${t('whQty')}</label><input type="number" id="cwq" value="0"></div><div class="fg" style="flex:1"><label>${t('whDate')}</label><input type="text" id="cwd" placeholder="dd/mm/yyyy"></div></div>`:''}
+<div class="ma"><button class="btn btn-ghost" onclick="closeM()">${t('cancel')}</button><button class="btn btn-pri" onclick="addCat()">${t('save')}</button></div>`)}
+let extraCbCount=0;
+function addComboField(){extraCbCount++;const div=document.getElementById('extraCombos');if(!div)return;
+div.insertAdjacentHTML('beforeend',`<div style="font-size:11px;font-weight:700;margin:6px 0 4px">📦 Combo ${extraCbCount+1}</div>
+<div class="fg"><label>${t('comboDesc')}</label><input type="text" id="cb${extraCbCount+1}d" placeholder="✅ ..."></div>
+<div style="display:flex;gap:6px"><div class="fg" style="flex:1"><label>${t('comboPrice')} ₮</label><input type="number" id="cb${extraCbCount+1}p" value="0"></div><div class="fg" style="flex:1"><label>${t('comboQty')}</label><input type="number" id="cb${extraCbCount+1}q" value="1" min="1"></div></div>`)}
+function addCat(){const n=document.getElementById('cn').value.trim(),c=document.querySelector('input[name=cc]:checked')?.value||CL[0];if(!n)return;
+const isAdmin=curRole==='admin'||curRole==='vadmin';
+const combos=[];
+// Collect all combo fields
+for(let i=1;i<=extraCbCount+1;i++){const d=document.getElementById('cb'+i+'d')?.value?.trim();const p=parseInt(document.getElementById('cb'+i+'p')?.value)||0;const q=parseInt(document.getElementById('cb'+i+'q')?.value)||1;if(d)combos.push({id:ncbid++,d,p,q})}
+cats.push({id:ncid++,nm:n,cl:c,cb:combos,
+  impQty:isAdmin?parseInt(document.getElementById('ciq')?.value)||0:0,
+  whQty:isAdmin?parseInt(document.getElementById('cwq')?.value)||0:0,
+  impDate:isAdmin?document.getElementById('cid')?.value||'':'',
+  whDate:isAdmin?document.getElementById('cwd')?.value||'':''});
+extraCbCount=0;closeM();toast('✓ '+n);R(cv)}
+// EDIT — role-aware
+function editCat(id){const c=cats.find(x=>x.id===id);if(!c)return;const isAdmin=curRole==='admin'||curRole==='vadmin';
+showM(`<h3>${t('editProd')} — ${c.nm}</h3>
+<div class="fg"><label>${t('prodName')}</label><input type="text" id="en" value="${c.nm}"></div>
+${isAdmin?`<hr style="border:none;border-top:1px solid var(--line);margin:6px 0">
+<div style="font-size:10.5px;font-weight:700;color:var(--amber);margin-bottom:4px">🔒 Admin — Kho</div>
+<div style="display:flex;gap:6px"><div class="fg" style="flex:1"><label>${t('impQty')}</label><input type="number" id="eiq" value="${c.impQty||0}"></div><div class="fg" style="flex:1"><label>${t('impDate')}</label><input type="text" id="eid" value="${c.impDate||''}"></div></div>
+<div style="display:flex;gap:6px"><div class="fg" style="flex:1"><label>${t('whQty')}</label><input type="number" id="ewq" value="${c.whQty||0}"></div><div class="fg" style="flex:1"><label>${t('whDate')}</label><input type="text" id="ewd" value="${c.whDate||''}"></div></div>`:''}
+<hr style="border:none;border-top:1px solid var(--line);margin:6px 0">
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px"><b style="font-size:10.5px">${t('combo')}</b><button class="btn btn-sec btn-sm" onclick="closeM();showAddCb(${id})">+ ${t('addCombo')}</button></div>
+<div class="cl">${c.cb.map(cb=>`<div class="cr"><span class="crd">${cb.d}</span><span class="crp">${cb.p.toLocaleString()}₮</span><span class="crq">×${cb.q}</span><button class="rx" onclick="cats.find(x=>x.id===${id}).cb=cats.find(x=>x.id===${id}).cb.filter(x=>x.id!==${cb.id});closeM();editCat(${id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`).join('')||`<span style="font-size:9.5px;color:var(--muted)">—</span>`}</div>
+<div class="ma"><button class="btn btn-ghost" onclick="closeM()">${t('cancel')}</button><button class="btn btn-pri" onclick="saveCat(${id})">${t('save')}</button></div>`)}
+function saveCat(id){const c=cats.find(x=>x.id===id);if(!c)return;c.nm=document.getElementById('en').value.trim()||c.nm;
+const isAdmin=curRole==='admin'||curRole==='vadmin';
+if(isAdmin){c.impQty=parseInt(document.getElementById('eiq')?.value)||0;c.impDate=document.getElementById('eid')?.value||'';c.whQty=parseInt(document.getElementById('ewq')?.value)||0;c.whDate=document.getElementById('ewd')?.value||''}
+closeM();toast('✓');R(cv)}
+function showAddCb(cid){showM(`<h3>${t('addCombo')}</h3><div class="fg"><label>${t('comboDesc')}</label><input type="text" id="cbd" placeholder="✅ 63,000₮ - ..."></div><div style="display:flex;gap:6px"><div class="fg" style="flex:1"><label>${t('comboPrice')} ₮</label><input type="number" id="cbp" value="0"></div><div class="fg" style="flex:1"><label>${t('comboQty')}</label><input type="number" id="cbq" value="1" min="1"></div></div><div class="ma"><button class="btn btn-ghost" onclick="closeM()">${t('cancel')}</button><button class="btn btn-pri" onclick="const c=cats.find(x=>x.id===${cid});if(c){c.cb.push({id:ncbid++,d:document.getElementById('cbd').value.trim(),p:parseInt(document.getElementById('cbp').value)||0,q:parseInt(document.getElementById('cbq').value)||1})}closeM();toast('✓');R(cv)">${t('save')}</button></div>`)}
+// SALE EDIT — sale can edit price & qty on leads
+function editOrder(id){const l=D.find(x=>x.id===id);if(!l)return;
+showM(`<h3>✏ Sửa đơn — ${l.nm}</h3>
+<div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">${l.prod} · ${l.cb||'—'}</div>
+<div style="display:flex;gap:6px"><div class="fg" style="flex:1"><label>${t('price')} ₮</label><input type="number" id="ep" value="${l.pr||0}"></div><div class="fg" style="flex:1"><label>${t('qty')}</label><input type="number" id="eq" value="${l.qt||0}" min="1"></div></div>
+<div style="font-size:9.5px;color:var(--muted);margin-top:4px">Sale có thể sửa giá/SL khi khách mua combo khác hoặc được giảm giá</div>
+<div class="ma"><button class="btn btn-ghost" onclick="closeM()">${t('cancel')}</button><button class="btn btn-pri" onclick="const x=D.find(a=>a.id===${id});if(x){x.pr=parseInt(document.getElementById('ep').value)||0;x.qt=parseInt(document.getElementById('eq').value)||0}closeM();toast('✓');R(cv)">${t('save')}</button></div>`)}
+// WAREHOUSE
+function rWh(){
+const totStk=WH.reduce((s,p)=>s+p.stk,0),totShip=WH.reduce((s,p)=>s+p.shipping,0),totRet=WH.reduce((s,p)=>s+p.returning,0),totDlv=WH.reduce((s,p)=>s+p.delivered,0),totReturned=WH.reduce((s,p)=>s+p.returned,0);
+return`<div class="sr"><div class="sc0 st2"><div class="sn">${WH.length}</div><div class="sl">${t('prodL')}</div></div><div class="sc0 sb1"><div class="sn">${totStk}</div><div class="sl">Tồn kho</div></div><div class="sc0 sa"><div class="sn">${totShip}</div><div class="sl">Đang giao</div></div><div class="sc0 srd"><div class="sn">${totRet}</div><div class="sl">Đang hoàn về</div></div><div class="sc0 sg"><div class="sn">${totDlv}</div><div class="sl">Đã giao TC</div></div><div class="sc0 sp2"><div class="sn">${totReturned}</div><div class="sl">Đã hoàn kho</div></div></div>
+<div class="card"><div class="card-h"><h2>📦 ${t('wh')}</h2><div class="btn-row"><button class="btn btn-pri btn-sm" onclick="showAW()">+ ${t('addWh')}</button></div></div><div class="card-body">${!WH.length?`<div class="empty"><p>${t('noData')}</p></div>`:`<div class="wg">${WH.map(p=>`<div class="wi">
+<h4>${p.nm}</h4>
+<div class="wq">${p.stk}</div>
+<div class="wd">
+<span style="color:var(--accent)">📦 Tồn kho: <b>${p.stk}</b></span>
+<span style="color:var(--amber)">🚚 Đang giao: <b>${p.shipping}</b></span>
+<span style="color:var(--orange)">↩ Đang hoàn về: <b>${p.returning}</b></span>
+<span style="color:var(--green)">✅ Đã giao TC: <b>${p.delivered}</b></span>
+<span style="color:var(--purple)">📥 Đã hoàn kho: <b>${p.returned}</b></span>
+<span style="color:var(--muted)">Tổng nhập: <b>${p.imp}</b></span>
+</div>
+<div style="display:flex;gap:2px;margin-top:5px"><button class="btn btn-green btn-sm" onclick="showIm(${p.id})">${t('import2')}</button></div>
+</div>`).join('')}</div>`}</div></div>`}
+function showAW(){showM(`<h3>${t('addWh')}</h3><div class="fg"><label>${t('prodName')}</label><input type="text" id="wn"></div><div class="fg"><label>${t('qty')}</label><input type="number" id="wq" value="0"></div><div class="ma"><button class="btn btn-ghost" onclick="closeM()">${t('cancel')}</button><button class="btn btn-pri" onclick="const n=document.getElementById('wn').value.trim(),q=parseInt(document.getElementById('wq').value)||0;if(n){WH.push({id:nwid++,nm:n,stk:q,imp:q,shipping:0,returning:0,delivered:0,returned:0})}closeM();toast('✓');R('wh')">${t('save')}</button></div>`)}
+function showIm(id){const p=WH.find(x=>x.id===id);showM(`<h3>${t('import2')} — ${p.nm}</h3><div class="fg"><label>${t('qty')}</label><input type="number" id="iq" value="0"></div><div class="ma"><button class="btn btn-ghost" onclick="closeM()">${t('cancel')}</button><button class="btn btn-green" onclick="const p=WH.find(x=>x.id===${id}),q=parseInt(document.getElementById('iq').value)||0;if(p&&q){p.imp+=q;p.stk+=q}closeM();toast('✓');R('wh')">${t('import2')}</button></div>`)}
+// INIT
+updateNav();R('dash');
+</script></body></html>

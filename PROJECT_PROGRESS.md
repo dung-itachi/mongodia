@@ -1225,7 +1225,220 @@ In Progress
   - Pre-create 5 Customer (KH000001..KH000005) để link cho "Lead đã có Customer"
 - **Lead Import Parser + Preview Completed**
 
+
+## Phase A — Foundation UI (2026-08-01)
+
+### Status
+
+✅ Completed
+
+### Mục tiêu Phase A
+
+- KHÔNG gọi API.
+- KHÔNG CRUD.
+- KHÔNG Revenue Engine / Warehouse Engine.
+- KHÔNG mock business logic.
+- Chỉ dựng khung giao diện (AppShell + Sidebar + Header + Route Group).
+
+### Cấu trúc thư mục
+
+```
+src/
+├── config/
+│   ├── nav.config.tsx              # NAV_GROUPS + BRAND_NAME (static)
+│   └── breadcrumb.config.ts        # buildBreadcrumbs(pathname)
+├── components/
+│   ├── layout/
+│   │   ├── AppShell.tsx            # Flex wrapper: Sidebar + Header + Content
+│   │   ├── Sidebar.tsx             # Logo + Nav groups + Collapse + Responsive
+│   │   └── Header.tsx              # Breadcrumb + Search + Notification + User menu
+│   └── placeholder/
+│       └── PlaceholderPage.tsx     # Generic placeholder cho mọi route
+└── app/
+    ├── page.tsx                    # Redirect → /dashboard
+    └── (admin)/                    # Route group: layout chứa AppShell
+        ├── layout.tsx
+        ├── dashboard/page.tsx
+        ├── marketing/
+        │   ├── dashboard/page.tsx
+        │   ├── input/page.tsx
+        │   └── orders/page.tsx
+        ├── leads/page.tsx
+        ├── customers/page.tsx
+        ├── orders/page.tsx
+        ├── products/page.tsx
+        ├── warehouses/page.tsx
+        ├── employees/page.tsx
+        └── roles/page.tsx
+```
+
+### Components
+
+#### `AppShell`
+- Flex container với `h-screen`, `overflow-hidden`.
+- Sidebar bên trái (sticky, fixed width khi mở rộng, collapsed width 64px).
+- Header `h-14` bên trên + main scrollable `flex-1` bên dưới.
+- Background `bg-gray-50`.
+
+#### `Sidebar`
+- AntD `Layout.Sider` với `collapsible`, `breakpoint="lg"`, `trigger={null}` (custom toggle).
+- Brand: icon + "Mongolia CRM" (ẩn khi collapse).
+- Nav groups 6 nhóm: `Tổng quan / Marketing / Bán hàng / Kho / Danh mục / Quản trị`.
+- Active state: `bg-blue-50 text-blue-600 font-medium` dựa trên `usePathname()`.
+- Tooltip label khi collapsed.
+- Toggle button ở footer.
+
+#### `Header`
+- Breadcrumb (từ `buildBreadcrumbs()`).
+- Search input (AntD `Search`, no-op).
+- Notification badge (AntD `Badge`, disabled).
+- User dropdown (AntD `Dropdown`, menu items disabled — Phase A placeholder).
+- Avatar cố định "Admin" (placeholder).
+
+#### `PlaceholderPage`
+- Props: `title`, `description`, `badge`, `children`.
+- Card với Title + Description + dashed div nội dung placeholder.
+- Badge nhắc Sprint sẽ dựng.
+
+### Các trang (route) — Phase A
+
+| Route | Phase sau | Trạng thái |
+|-------|-----------|------------|
+| `/dashboard` | Sprint 4 | Placeholder |
+| `/marketing/dashboard` | Sprint 4 | Placeholder (không có Ads report) |
+| `/marketing/input` | Sprint 9 | Placeholder |
+| `/marketing/orders` | Sprint 9 | Placeholder |
+| `/leads` | Sprint 5 | Placeholder |
+| `/customers` | Sprint 6 | Placeholder |
+| `/orders` | Sprint 7-8 | Placeholder |
+| `/products` | Sprint 10 | Placeholder |
+| `/warehouses` | Sprint 11 | Placeholder |
+| `/employees` | Sprint 12 | Placeholder |
+| `/roles` | Sprint 12 | Placeholder |
+
+### Domain logic KHÔNG động tới (Phase A)
+
+- KHÔNG gọi API.
+- KHÔNG CRUD / form submit.
+- KHÔNG kết nối `useAuthStore` / `auth.store` (chưa cần guard).
+- KHÔNG wire `React Query` (đã có provider, chưa dùng).
+- KHÔNG gọi `LeadImportPreview.tsx` (chưa mount).
+- KHÔNG sửa backend.
+
+### Dependencies
+
+- Không thêm dependency mới.
+- Tái sử dụng: `antd`, `@ant-design/icons`, `next/navigation`, `next/link`.
+
+### Deliverable
+
+- Truy cập `/` → redirect `/dashboard`.
+- Sidebar hiển thị đầy đủ nhóm nav, collapse/expand, responsive dưới `lg`.
+- Header có breadcrumb, search, notification, user menu (placeholder).
+- Click qua từng nav item → render trang placeholder với Title + badge Sprint.
+
+---
+
+## Phase A.1 — CSS Refactor (2026-08-01)
+
+### Status
+
+✅ Completed
+
+### Mục tiêu Phase A.1
+
+- Chuẩn hoá Foundation UI để sau này dựng toàn bộ CRM.
+- Tách toàn bộ CSS của HTML gốc (`mongolia-crm (7).html`) thành các file theo phạm vi.
+- **KHÔNG** thêm tính năng / Auth / API / CRUD / Sprint 2 / Dashboard thật.
+- **KHÔNG** đổi màu / font / animation / spacing so với HTML gốc.
+- **KHÔNG** dùng CSS-in-JS / styled-components / emotion / inline style.
+- Component React chỉ dùng `className`. Tailwind chỉ dùng flex/grid/spacing utility nhỏ.
+
+### Cấu trúc stylesheet mới
+
+```
+src/styles/
+├── globals.css        # Tailwind directives + reset + font + theme + import custom
+├── custom.css         # Import hub cho 14 file phạm vi bên dưới
+├── layout.css         # .main, .content, .empty, .backdrop, .mob-open, .cnt
+├── sidebar.css        # .sb, .brand, .ls/.lb, .rs/.rb, .nav, .ng/.ngs, .nh, .na, .nb, .ni, .pill, .sbf, .sb.col
+├── header.css         # .topbar, .pt, .vb (variants), .srch, .tbr
+├── card.css           # .card, .card-h, .card-body, .btn (+ variants), .btn-row, .btn-lg
+├── table.css          # .tw, table, thead th, tbody td, tbody tr:hover td
+├── modal.css          # .mo, .modal (+ h3), .fg, .ma
+├── popup.css          # .kp, .kp.show, .kp h4, .ki (+ .kn/.kd)
+├── toast.css          # .toast, .toast.show
+├── dashboard.css      # .sr, .sc0 (+ sb1/sg/sa/srd/sp2/st2), .db-bar/.db-lb/.db-tr/.db-fl/.db-vl
+├── marketing.css      # .prod-sel/.pc/.cl/.cr/.paste-tabs/.pz/.ph/.pw/.pwh/.pvb/.pwb/.rx/.pb/.ccb/.note-i/.ads-row/.ads-m/.nick-sel/.nk
+├── orders.css         # .chip, .dot, .c-* (status), .ss, .s2 (+ colored .on), .kb, .role-badge, .role-*
+├── warehouse.css      # .wg, .wi, .wi h4, .wi .wq, .wi .wd
+├── animation.css      # @keyframes sp2 + .pb (referenced animation)
+└── responsive.css     # @media (max-width: 768px) — full mobile overrides
+```
+
+### Thống kê
+
+| Metric | Value |
+|--------|-------|
+| Số file CSS trong `src/styles/` | **16** (15 module + `custom.css`) |
+| Tổng số dòng CSS | **1.514** |
+| Số class unique được tái sử dụng | **148** (bao gồm state classes `.on`, `.col`, `.show`, `.ct`, `.lt`, `.done`, `.open`) |
+| Mapping `globals.css` | Tailwind directives, reset, font, scrollbar, CSS Variables (theme), `@import custom.css` |
+| Mapping `custom.css` | chỉ `@import` 14 file phạm vi bên dưới |
+
+### Component ↔ Stylesheet mapping
+
+| Component (TSX) | Stylesheet chính | Classes sử dụng |
+|-----------------|------------------|-----------------|
+| `AppShell.tsx` | `layout.css` | `.main`, `.content` |
+| `Sidebar.tsx` | `sidebar.css` | `.sb`, `.brand`, `.ico`, `.brand-txt`, `.nm`, `.sub`, `.sb-tg`, `.ic-c`, `.ic-o`, `.nav`, `.ng`, `.ngs`, `.nh`, `.nl`, `.nb`, `.ni`, `.pill`, `.sbf`, `.ver`, `.sb.col` |
+| `Header.tsx` | `header.css` | `.topbar`, `.pt`, `.vb`, `.vb-b`, `.srch`, `.tbr`, `.cnt`, `.btn`, `.btn-ghost`, `.btn-sm` |
+| `PlaceholderPage.tsx` | `card.css` | `.card`, `.card-h`, `.card-body`, `.btn` |
+| `src/app/page.tsx` (redirect) | n/a | — |
+
+### Class names bảo tồn (mapping HTML gốc → React)
+
+| HTML gốc | React component / Stylesheet |
+|----------|------------------------------|
+| `.sb`, `.brand`, `.ni`, `.pill` | `Sidebar.tsx` ↔ `sidebar.css` |
+| `.topbar`, `.vb`, `.srch`, `.tbr`, `.cnt` | `Header.tsx` ↔ `header.css` |
+| `.card`, `.btn`, `.btn-pri/sec/green/red/purple/ghost/sm/lg` | `PlaceholderPage.tsx`, `Header.tsx` ↔ `card.css` |
+| `.sc0`, `.sb1`, `.sg`, `.sa`, `.srd`, `.sp2`, `.st2` | sẵn sàng cho Sprint 4 ↔ `dashboard.css` |
+| `.chip`, `.dot`, `.c-new/knm/cls/pot/non/cmt/ladi/ok/ret/rec` | sẵn sàng cho Sprint 5/7 ↔ `orders.css` |
+| `.kp`, `.ki` | sẵn sàng cho Sprint 5 (KNM popup) ↔ `popup.css` |
+| `.modal`, `.fg`, `.ma` | sẵn sàng cho form Sprint 5+ ↔ `modal.css` |
+| `.toast` | sẵn sàng cho feedback Sprint 5+ ↔ `toast.css` |
+| `.pc`, `.cr`, `.paste-tab`, `.pz`, `.ph`, `.pw`, `.pb` | sẵn sàng cho Sprint 9 (MKT Input) ↔ `marketing.css` |
+| `.wg`, `.wi`, `.wq`, `.wd` | sẵn sàng cho Sprint 11 (Kho) ↔ `warehouse.css` |
+| `@keyframes sp2`, `.pb` | sẵn sàng cho push-sale banner ↔ `animation.css` |
+| `@media (max-width: 768px)` | responsive sidebar / topbar / modal ↔ `responsive.css` |
+
+### Quy tắc đã áp dụng
+
+- **Class names bảo tồn 100%** so với HTML mẫu — Sprint sau chỉ cần mount JSX tương ứng.
+- **Tailwind hạn chế ở utility**: chỉ `flex`, `h-screen`, `w-screen`, `overflow-hidden` trong `AppShell`; phần còn lại là class từ CSS module.
+- **Không inline style** trong component Phase A — tất cả visual đi qua class.
+- **Không sửa backend**, **không thêm route mới**, **không đổi hành vi** của 11 route placeholder.
+- `src/app/globals.css` chỉ là bridge: `@import "../styles/globals.css"` để giữ convention của Next.js App Router.
+
+### Verification
+
+| Check | Kết quả |
+|-------|---------|
+| `tsc --noEmit` (Phase A files only) | 0 errors |
+| `eslint` (16 Phase A files) | 0 errors, 0 warnings |
+| Số route placeholder không đổi | 11/11 |
+| Số component Phase A không đổi logic | 4/4 |
+| Không thêm dependency mới | ✅ |
+
+### Xác nhận
+
+Foundation UI đã được chuẩn hoá với 16 stylesheet phạm vi + 148 class bảo tồn từ HTML mẫu. Sẵn sàng để bắt đầu Sprint 2.
+
+---
+
 ⏳ LeadHistory API
 ⏳ Seed Data
 ⏳ Auto Assign Sale
 ⏳ Dashboard
+⏳ Report

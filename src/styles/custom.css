@@ -1,0 +1,19 @@
+/* custom.css — Phase A.1 CSS Refactor
+   Central import hub for all scoped stylesheets.
+   Order roughly mirrors the layout cascade: layout → shell pieces → domain.
+*/
+
+@import "./layout.css";
+@import "./sidebar.css";
+@import "./header.css";
+@import "./card.css";
+@import "./table.css";
+@import "./modal.css";
+@import "./popup.css";
+@import "./toast.css";
+@import "./dashboard.css";
+@import "./marketing.css";
+@import "./orders.css";
+@import "./warehouse.css";
+@import "./animation.css";
+@import "./responsive.css";

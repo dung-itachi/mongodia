@@ -1,0 +1,13 @@
+/* animation.css — keyframes + animated elements
+   Currently: pulsing halo for the push-sale banner (.pb).
+*/
+
+@keyframes sp2 {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(29, 99, 237, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(29, 99, 237, 0.05);
+  }
+}

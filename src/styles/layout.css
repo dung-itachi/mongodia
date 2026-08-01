@@ -1,0 +1,77 @@
+/* layout.css — global shell + page scaffold
+   Used by: AppShell, main content area, mobile backdrop, count chip.
+*/
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 0;
+}
+
+.content {
+  flex: 1;
+  overflow: auto;
+  padding: 9px 12px 55px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.empty {
+  padding: 22px 12px;
+  text-align: center;
+}
+
+.empty p {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.mob-open {
+  display: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.mob-open svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+  color: var(--ink);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+
+.backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cnt {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--accent-s);
+  color: var(--accent);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 5px;
+}

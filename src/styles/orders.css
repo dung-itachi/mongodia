@@ -1,0 +1,175 @@
+/* orders.css — status chips, status pills, role badges
+   Classes: .chip, .dot, .c-* (status), .ss, .s2 (+ colored .on),
+   .kb, .role-badge, .role-* colors.
+*/
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 5px;
+  border-radius: 12px;
+  font-size: 8.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.c-new {
+  background: var(--accent-s);
+  color: var(--accent);
+}
+
+.c-knm {
+  background: var(--amber-s);
+  color: var(--amber);
+}
+
+.c-cls {
+  background: var(--green-s);
+  color: var(--green);
+}
+
+.c-pot {
+  background: var(--cyan-s);
+  color: var(--cyan);
+}
+
+.c-non {
+  background: var(--red-s);
+  color: var(--red);
+}
+
+.c-cmt {
+  background: var(--line2);
+  color: var(--ink2);
+}
+
+.c-ladi {
+  background: var(--teal-s);
+  color: var(--teal);
+}
+
+.c-ok {
+  background: var(--green-s);
+  color: var(--green);
+}
+
+.c-ret {
+  background: var(--orange-s);
+  color: var(--orange);
+}
+
+.c-rec {
+  background: var(--purple-s);
+  color: var(--purple);
+}
+
+/* status pill cluster */
+.ss {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.s2 {
+  padding: 3px 7px;
+  border-radius: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  color: var(--ink2);
+  transition: 0.12s;
+  cursor: pointer;
+}
+
+.s2:hover {
+  border-color: var(--accent);
+}
+
+.s2.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.s2.sk.on {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.s2.sc3.on {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.s2.sp4.on {
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.s2.sn3.on {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+/* KNM badge */
+.kb {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--amber-s);
+  color: var(--amber);
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.kb:hover {
+  background: var(--amber);
+  color: #fff;
+}
+
+/* role badges */
+.role-badge {
+  display: inline-flex;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.role-admin {
+  background: var(--red-s);
+  color: var(--red);
+}
+
+.role-vadmin {
+  background: var(--purple-s);
+  color: var(--purple);
+}
+
+.role-mkt {
+  background: var(--accent-s);
+  color: var(--accent);
+}
+
+.role-sale {
+  background: var(--green-s);
+  color: var(--green);
+}
+
+.role-kho {
+  background: var(--amber-s);
+  color: var(--amber);
+}

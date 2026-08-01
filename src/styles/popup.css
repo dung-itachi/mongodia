@@ -1,0 +1,49 @@
+/* popup.css — KNM call log popup (kpop)
+   Classes: .kp, .kp.show, .kp h4, .ki, .ki .kn, .ki .kd.
+*/
+
+.kp {
+  position: fixed;
+  z-index: 500;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  padding: 9px;
+  min-width: 170px;
+  max-width: 240px;
+  display: none;
+}
+
+.kp.show {
+  display: block;
+}
+
+.kp h4 {
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ki {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line2);
+  font-size: 9.5px;
+}
+
+.ki:last-child {
+  border-bottom: none;
+}
+
+.ki .kn {
+  font-weight: 700;
+  color: var(--amber);
+  min-width: 28px;
+}
+
+.ki .kd {
+  color: var(--muted);
+}

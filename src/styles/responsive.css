@@ -1,0 +1,169 @@
+/* responsive.css — mobile breakpoint (<=768px)
+   Mirrors the original HTML's @media block 1:1.
+*/
+
+@media (max-width: 768px) {
+  .sb {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    width: 255px !important;
+    transform: translateX(-100%);
+    transition: transform 0.28s;
+  }
+
+  .sb.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .sb.col {
+    width: 255px !important;
+  }
+
+  .sb.col .brand-txt {
+    opacity: 1;
+    max-width: 140px;
+  }
+
+  .sb.col .brand {
+    justify-content: flex-start;
+  }
+
+  .sb.col .sb-tg {
+    margin-left: auto;
+  }
+
+  .sb.col .sb-tg .ic-c {
+    display: block;
+  }
+
+  .sb.col .sb-tg .ic-o {
+    display: none;
+  }
+
+  .sb.col .ls,
+  .sb.col .rs {
+    opacity: 1;
+    max-height: 40px;
+    margin: 2px 8px 3px;
+    padding: 3px 8px;
+  }
+
+  .sb.col .nh .nl,
+  .sb.col .na {
+    opacity: 1;
+    max-width: 130px;
+  }
+
+  .sb.col .nh {
+    justify-content: flex-start;
+  }
+
+  .sb.col .nb .ni {
+    padding: 7px 7px 7px 11px;
+    margin-left: 3px;
+    justify-content: flex-start;
+  }
+
+  .sb.col .nb .ni span {
+    display: inline;
+  }
+
+  .sb.col .ngs .ni {
+    justify-content: flex-start;
+  }
+
+  .sb.col .ngs .ni span {
+    display: inline;
+  }
+
+  .sb.col .sbf {
+    opacity: 1;
+    height: auto;
+    padding: 5px 8px;
+  }
+
+  .mob-open {
+    display: flex;
+  }
+
+  .topbar {
+    padding: 0 8px;
+    height: 42px;
+  }
+
+  .pt {
+    font-size: 11px;
+  }
+
+  .vb {
+    display: none;
+  }
+
+  .srch {
+    max-width: none;
+    flex: 1;
+  }
+
+  .content {
+    padding: 7px 7px 55px;
+    gap: 5px;
+  }
+
+  .sr {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+  }
+
+  .sc0 {
+    padding: 8px;
+  }
+
+  .sc0 .sn {
+    font-size: 15px;
+  }
+
+  .btn {
+    padding: 6px 10px;
+    font-size: 10px;
+    min-height: 34px;
+  }
+
+  .btn-sm {
+    min-height: 30px;
+  }
+
+  .modal {
+    min-width: auto;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+    max-height: 76vh;
+  }
+
+  .mo.show {
+    align-items: flex-end;
+  }
+
+  .fg input,
+  .fg select {
+    padding: 8px;
+    font-size: 11.5px;
+    min-height: 36px;
+  }
+
+  .ma .btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 36px;
+  }
+
+  .toast {
+    bottom: 10px;
+    left: 7px;
+    right: 7px;
+    text-align: center;
+  }
+}
