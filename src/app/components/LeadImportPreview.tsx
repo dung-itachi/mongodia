@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Table,
   Tag,
@@ -22,6 +22,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   WarningOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 
@@ -29,10 +30,39 @@ import {
   parseLead,
   ParsedLead,
   LeadImportField,
+  LeadValidationIssue,
 } from "@/utils/import/leadParser";
+
+import {
+  loadLeadImportContext,
+  LeadImportContext,
+} from "@/services/import/leadImportValidation.service";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+
+// ==================================================
+// Helpers
+// ==================================================
+
+/** Field → display column key (table dataIndex). */
+const FIELD_TO_COLUMN: Partial<Record<LeadImportField, string>> = {
+  customerName: "customerName",
+  phone: "phone",
+  combo: "combo",
+  price: "price",
+  sourceType: "sourceType",
+  date: "date",
+};
+
+const fieldLabels: Record<LeadImportField, string> = {
+  customerName: "Tên (customerName)",
+  phone: "SĐT (phone)",
+  combo: "Combo",
+  price: "Giá (price)",
+  sourceType: "Loại (sourceType)",
+  date: "Ngày (date)",
+};
 
 // ==================================================
 // Component - UI only, no parsing/validation logic
@@ -44,13 +74,38 @@ export default function LeadImportPreview() {
   const [headerDetected, setHeaderDetected] = useState<string[]>([]);
   const [missingFields, setMissingFields] = useState<LeadImportField[]>([]);
 
+  // Business-validation cache loaded ONCE via batch query.
+  // Parser only ever reads from this; it never queries the DB itself.
+  const [importContext, setImportContext] = useState<LeadImportContext | null>(
+    null
+  );
+
+  // ==================================================
+  // Load reference-data context on mount (Phase 3.2 refactor)
+  // ==================================================
+  useEffect(() => {
+    let cancelled = false;
+    loadLeadImportContext()
+      .then(ctx => {
+        if (!cancelled) setImportContext(ctx);
+      })
+      .catch(err => {
+        // Context is optional - parser still works (format checks only).
+        // eslint-disable-next-line no-console
+        console.warn("[LeadImportPreview] Failed to load import context:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ==================================================
   // Handle textarea change - delegate to parser
   // ==================================================
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setRawData(value);
-    const { rows, headers, missing } = parseLead(value);
+    const { rows, headers, missing } = parseLead(value, importContext ?? undefined);
     setParsedRows(rows);
     setHeaderDetected(headers);
     setMissingFields(missing);
@@ -78,6 +133,15 @@ export default function LeadImportPreview() {
     () => parsedRows.filter(r => r.status === "INVALID").length,
     [parsedRows]
   );
+  const warningRows = useMemo(
+    () =>
+      parsedRows.filter(
+        r =>
+          r.status === "VALID" &&
+          r.errors.some(i => i.severity === "WARNING")
+      ).length,
+    [parsedRows]
+  );
 
   const hasData = totalRows > 0;
   const hasHeader = headerDetected.length > 0;
@@ -85,14 +149,82 @@ export default function LeadImportPreview() {
   const hasRowErrors = hasData && invalidRows > 0;
   const hasErrors = hasHeaderError || hasRowErrors;
 
-  const fieldLabels = useMemo<Record<LeadImportField, string>>(() => ({
-    customerName: "Tên (customerName)",
-    phone: "SĐT (phone)",
-    combo: "Combo",
-    price: "Giá (price)",
-    sourceType: "Loại (sourceType)",
-    date: "Ngày (date)",
-  }), []);
+  // ==================================================
+  // Cell render helpers (cell-level highlight)
+  // ==================================================
+  const fieldHasError = (
+    record: ParsedLead,
+    field: LeadImportField
+  ): LeadValidationIssue[] =>
+    record.errors.filter(
+      i => i.severity === "ERROR" && i.field === field
+    );
+
+  const fieldHasWarning = (
+    record: ParsedLead,
+    field: LeadImportField
+  ): LeadValidationIssue[] =>
+    record.errors.filter(
+      i => i.severity === "WARNING" && i.field === field
+    );
+
+  /**
+   * Wrap a cell value with optional red/yellow border highlight
+   * when there's an ERROR / WARNING attached to that field.
+   */
+  const renderCell = (
+    value: string,
+    record: ParsedLead,
+    field: LeadImportField,
+    displayNode: React.ReactNode
+  ): React.ReactNode => {
+    const errors = fieldHasError(record, field);
+    const warnings = fieldHasWarning(record, field);
+
+    if (errors.length === 0 && warnings.length === 0) {
+      return displayNode;
+    }
+
+    const tooltipContent = (
+      <Space direction="vertical" size={2}>
+        {errors.map((e, i) => (
+          <span key={`e-${i}`}>
+            <strong style={{ color: "#ff7875" }}>Lỗi:</strong> {e.message}{" "}
+            <Text type="secondary" style={{ fontSize: 11 }}>({e.code})</Text>
+          </span>
+        ))}
+        {warnings.map((w, i) => (
+          <span key={`w-${i}`}>
+            <strong style={{ color: "#ffe58f" }}>Cảnh báo:</strong>{" "}
+            {w.message}{" "}
+            <Text type="secondary" style={{ fontSize: 11 }}>({w.code})</Text>
+          </span>
+        ))}
+      </Space>
+    );
+
+    const isError = errors.length > 0;
+
+    return (
+      <Tooltip title={tooltipContent} placement="topLeft">
+        <span
+          data-testid={`cell-${field}-${record.rowNumber}`}
+          style={{
+            display: "inline-block",
+            width: "100%",
+            padding: "2px 6px",
+            borderRadius: 4,
+            border: isError
+              ? "1px solid #ff4d4f"
+              : "1px solid #faad14",
+            background: isError ? "#fff1f0" : "#fffbe6",
+          }}
+        >
+          {displayNode}
+        </span>
+      </Tooltip>
+    );
+  };
 
   // ==================================================
   // Table columns
@@ -116,6 +248,24 @@ export default function LeadImportPreview() {
       width: 130,
       align: "center",
       render: (_: unknown, record: ParsedLead) => {
+        const hasWarning = record.errors.some(i => i.severity === "WARNING");
+        if (record.status === "VALID" && hasWarning) {
+          return (
+            <Tooltip
+              title={
+                <Space direction="vertical" size={2}>
+                  {record.errors.map((e, i) => (
+                    <span key={i}>• [{e.severity}] {e.message}</span>
+                  ))}
+                </Space>
+              }
+            >
+              <Tag icon={<ExclamationCircleOutlined />} color="warning">
+                ⚠ WARNING
+              </Tag>
+            </Tooltip>
+          );
+        }
         if (record.status === "VALID") {
           return (
             <Tag icon={<CheckCircleOutlined />} color="success">
@@ -128,7 +278,7 @@ export default function LeadImportPreview() {
             title={
               <Space direction="vertical" size={2}>
                 {record.errors.map((e, i) => (
-                  <span key={i}>• {e}</span>
+                  <span key={i}>• [{e.severity}] {e.message}</span>
                 ))}
               </Space>
             }
@@ -141,9 +291,9 @@ export default function LeadImportPreview() {
       },
     },
     {
-      title: "Lý do lỗi",
+      title: "Lý do",
       key: "errors",
-      width: 260,
+      width: 280,
       render: (_: unknown, record: ParsedLead) => {
         if (record.errors.length === 0) {
           return <Text type="secondary">-</Text>;
@@ -151,8 +301,15 @@ export default function LeadImportPreview() {
         return (
           <Space direction="vertical" size={2} style={{ width: "100%" }}>
             {record.errors.map((e, i) => (
-              <Tag key={i} color="error" style={{ margin: 0 }}>
-                {e}
+              <Tag
+                key={i}
+                color={e.severity === "ERROR" ? "error" : "warning"}
+                style={{ margin: 0 }}
+              >
+                [{e.severity}] {e.message}{" "}
+                <Text type="secondary" style={{ fontSize: 10 }}>
+                  ({e.code})
+                </Text>
               </Tag>
             ))}
           </Space>
@@ -164,48 +321,70 @@ export default function LeadImportPreview() {
       dataIndex: "customerName",
       key: "customerName",
       ellipsis: true,
+      render: (value: string, record: ParsedLead) => {
+        const display = <span>{value || <Text type="secondary">-</Text>}</span>;
+        return renderCell(value, record, "customerName", display);
+      },
     },
     {
       title: "SĐT",
       dataIndex: "phone",
       key: "phone",
       width: 140,
+      render: (value: string, record: ParsedLead) =>
+        renderCell(value, record, "phone", <span>{value || "-"}</span>),
     },
     {
       title: "Combo",
       dataIndex: "combo",
       key: "combo",
       ellipsis: true,
+      render: (value: string, record: ParsedLead) =>
+        renderCell(value, record, "combo", <span>{value || "-"}</span>),
     },
     {
       title: "Giá",
       dataIndex: "price",
       key: "price",
-      width: 120,
+      width: 140,
       align: "right",
-      render: (value: string) => (
-        <Text strong style={{ color: "#d4380d" }}>
-          {value || "-"}
-        </Text>
-      ),
+      render: (value: string, record: ParsedLead) => {
+        const display = (
+          <Text strong style={{ color: "#d4380d" }}>
+            {value || "-"}
+          </Text>
+        );
+        return renderCell(value, record, "price", display);
+      },
     },
     {
       title: "Loại",
       dataIndex: "sourceType",
       key: "sourceType",
       width: 140,
-      render: (value: string) => {
-        if (!value) return <Text type="secondary">-</Text>;
-        return <Tag color="purple">{value}</Tag>;
+      render: (value: string, record: ParsedLead) => {
+        const display = value ? (
+          <Tag color="purple">{value}</Tag>
+        ) : (
+          <Text type="secondary">-</Text>
+        );
+        return renderCell(value, record, "sourceType", display);
       },
     },
     {
       title: "Ngày",
       dataIndex: "date",
       key: "date",
-      width: 140,
+      width: 160,
+      render: (value: string, record: ParsedLead) => {
+        const display = <span>{value || "-"}</span>;
+        return renderCell(value, record, "date", display);
+      },
     },
   ];
+
+  // suppress unused-var lint for FIELD_TO_COLUMN (kept for future cell-level config)
+  void FIELD_TO_COLUMN;
 
   // ==================================================
   // Render
@@ -280,6 +459,17 @@ export default function LeadImportPreview() {
                 <Tag color="red">SĐT</Tag>
                 <Text type="secondary">→ các cột khác optional</Text>
               </div>
+              <div style={{ marginTop: 4 }}>
+                <Text strong style={{ color: "#fa8c16" }}>
+                  Mức độ lỗi:
+                </Text>{" "}
+                <Tag color="error">ERROR</Tag>
+                <Text type="secondary">chặn import</Text>
+                <Tag color="warning" style={{ marginLeft: 8 }}>
+                  WARNING
+                </Tag>
+                <Text type="secondary">cho phép import (cảnh báo)</Text>
+              </div>
             </Space>
           </details>
 
@@ -306,7 +496,8 @@ export default function LeadImportPreview() {
               placeholder={`Ví dụ CÓ header:
 Tên KH\tĐiện thoại\tGói\tGiá\tLoại\tNgày
 Nguyễn Văn A\t0901234567\tCombo Cơ bản\t500000\tLANDING_PAGE\t2025-07-31
-Trần Thị B\t0909876543\tCombo Pro\t1000000\tLANDING_PAGE\t2025-07-31`}
+Trần Thị B\tabc123\tCombo Pro\t1000000\tLANDING_PAGE\t2025-07-31
+Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
               autoSize={{ minRows: 8, maxRows: 16 }}
               style={{ fontFamily: "monospace", fontSize: 13 }}
               data-testid="lead-import-textarea"
@@ -342,10 +533,10 @@ Trần Thị B\t0909876543\tCombo Pro\t1000000\tLANDING_PAGE\t2025-07-31`}
           {hasData && !hasHeaderError && (
             <Card size="small" style={{ background: "#fafafa" }}>
               <Row gutter={16}>
-                <Col span={8}>
+                <Col span={6}>
                   <Statistic title="Tổng số dòng" value={totalRows} />
                 </Col>
-                <Col span={8}>
+                <Col span={6}>
                   <Statistic
                     title="Hợp lệ"
                     value={validRows}
@@ -353,7 +544,17 @@ Trần Thị B\t0909876543\tCombo Pro\t1000000\tLANDING_PAGE\t2025-07-31`}
                     prefix={<CheckCircleOutlined />}
                   />
                 </Col>
-                <Col span={8}>
+                <Col span={6}>
+                  <Statistic
+                    title="Cảnh báo"
+                    value={warningRows}
+                    valueStyle={{
+                      color: warningRows > 0 ? "#fa8c16" : undefined,
+                    }}
+                    prefix={<ExclamationCircleOutlined />}
+                  />
+                </Col>
+                <Col span={6}>
                   <Statistic
                     title="Không hợp lệ"
                     value={invalidRows}
@@ -404,6 +605,9 @@ Trần Thị B\t0909876543\tCombo Pro\t1000000\tLANDING_PAGE\t2025-07-31`}
               {hasData && validRows > 0 && (
                 <Tag color="green">✔ {validRows} hợp lệ</Tag>
               )}
+              {hasData && warningRows > 0 && (
+                <Tag color="orange">⚠ {warningRows} cảnh báo</Tag>
+              )}
               {hasData && invalidRows > 0 && (
                 <Tag color="red">❌ {invalidRows} không hợp lệ</Tag>
               )}
@@ -440,16 +644,13 @@ Trần Thị B\t0909876543\tCombo Pro\t1000000\tLANDING_PAGE\t2025-07-31`}
                 rowKey="rowNumber"
                 size="small"
                 bordered
-                scroll={{ x: 1100 }}
+                scroll={{ x: 1200 }}
                 pagination={{
                   pageSize: 20,
                   showSizeChanger: true,
                   pageSizeOptions: ["10", "20", "50", "100"],
                   showTotal: total => `Tổng ${total} dòng đã parse`,
                 }}
-                rowClassName={(record) =>
-                  record.status === "INVALID" ? "lead-row-invalid" : ""
-                }
               />
             )}
           </div>

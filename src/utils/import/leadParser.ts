@@ -11,14 +11,22 @@
  * Pipeline:
  *   Parse  →  Mapping  →  Validation  →  Result
  *
+ * This module is intentionally DATABASE-FREE:
+ *   - NO Mongoose imports
+ *   - NO direct DB queries
+ *   - business-level lookups (Product / Combo / Facebook Page /
+ *     Customer / Employee) are performed by
+ *     `leadImportValidation.service.ts`, which batches them and
+ *     passes the result through the optional `context` argument.
+ *
  * Public API:
- *   parseLead(text) → LeadParseResult
+ *   parseLead(text, context?) → LeadParseResult
  *
  * Internal helpers (kept exported for testability / reuse):
  *   normalizeHeader(header)
  *   buildHeaderIndex(rawHeaderFields)
  *   parseRow(rawFields, columnIndex, rowNumber)
- *   validateRow(row) → ValidationResult
+ *   validateRow(row, context?) → ValidationResult
  * ==================================================
  */
 
@@ -28,9 +36,43 @@ import {
   LeadImportField,
 } from "@/constants/importHeaders";
 
+import type { LeadImportContext } from "@/services/import/leadImportValidation.service";
+
 // ==================================================
 // Types
 // ==================================================
+
+/** Severity of a single validation issue. */
+export type LeadValidationSeverity = "ERROR" | "WARNING";
+
+/** Stable codes used by the UI to highlight specific cells / messages. */
+export type LeadValidationCode =
+  // Required fields
+  | "MISSING_NAME"
+  | "MISSING_PHONE"
+  // Phone
+  | "PHONE_INVALID"
+  // Price
+  | "PRICE_INVALID"
+  | "PRICE_NEGATIVE"
+  // Date
+  | "DATE_INVALID"
+  // Source type
+  | "SOURCE_TYPE_INVALID"
+  // Business-existence checks (Phase 3.3 hooks - reserved)
+  | "PRODUCT_NOT_FOUND"
+  | "COMBO_NOT_FOUND"
+  | "FACEBOOK_PAGE_NOT_FOUND"
+  | "CUSTOMER_NOT_FOUND"
+  | "EMPLOYEE_NOT_FOUND";
+
+export interface LeadValidationIssue {
+  code: LeadValidationCode;
+  message: string;
+  severity: LeadValidationSeverity;
+  /** Field the issue is attached to (used for cell highlighting). */
+  field?: LeadImportField | "row";
+}
 
 export type LeadValidationStatus = "VALID" | "INVALID";
 
@@ -44,7 +86,7 @@ export interface ParsedLead {
   date: string;
   raw: string[];
   status: LeadValidationStatus;
-  errors: string[];
+  errors: LeadValidationIssue[];
 }
 
 export interface LeadParseResult {
@@ -67,8 +109,15 @@ const VIETNAMESE_PHONE_REGEX = /^(0[0-9]{9,10})$/;
 /** Lower-bound check cho price (>= 0). */
 const PRICE_MIN = 0;
 
-/** Lower-bound check cho quantity (>= 1). */
-const QUANTITY_MIN = 1;
+/** Allowed sourceType values (reused from createLeadSchema). */
+const ALLOWED_SOURCE_TYPES = new Set([
+  "LANDING_PAGE",
+  "FACEBOOK_COMMENT",
+  "FACEBOOK_INBOX",
+  "TIKTOK",
+  "ZALO",
+  "OTHER",
+]);
 
 // ==================================================
 // Internal helpers - Parsing
@@ -192,45 +241,95 @@ function isNonEmpty(value: string): boolean {
   return value !== undefined && value !== null && String(value).trim().length > 0;
 }
 
+// ==================================================
+// Issue builders
+// ==================================================
+
+function err(
+  code: LeadValidationCode,
+  message: string,
+  field: LeadImportField | "row"
+): LeadValidationIssue {
+  return { code, message, severity: "ERROR", field };
+}
+
+function warn(
+  code: LeadValidationCode,
+  message: string,
+  field: LeadImportField | "row"
+): LeadValidationIssue {
+  return { code, message, severity: "WARNING", field };
+}
+
+// ==================================================
+// Business-existence checks (Phase 3.3 hook)
+// ==================================================
+
+/**
+ * Hook for business-existence checks against the in-memory context.
+ *
+ * Currently returns NO issues — existence checks (Product / Combo /
+ * Facebook Page / Customer / Employee) are intentionally deferred to
+ * Phase 3.3 per project plan. The signature is finalised so the
+ * parser/UI pipeline won't need to change later.
+ *
+ * The function reads only from the provided maps, never from the DB.
+ */
+export function validateBusinessRow(
+  row: Omit<ParsedLead, "status" | "errors">,
+  _context: LeadImportContext | undefined
+): LeadValidationIssue[] {
+  // Reserved for Phase 3.3 (Product / Combo / Page / Customer / Employee
+  // existence + Duplicate detection + Auto-assign). Keeping the parser
+  // API stable now means later phases just add issues here.
+  return [];
+}
+
+// ==================================================
+// Validation entry point
+// ==================================================
+
 /**
  * Validate a single parsed row.
  *
- * Checks:
- *   - customerName, phone (required - duplicates the header-stage check
- *     to provide per-row error messaging)
- *   - phone: must match VIETNAMESE_PHONE_REGEX (when present)
+ * Errors block import. Warnings allow import.
+ *
+ * Phase 3.2 - format / required checks:
+ *   - customerName, phone (required)
+ *   - phone: must match VIETNAMESE_PHONE_REGEX
  *   - price: if present, parseable as number >= 0
  *   - date: if present, parseable as Date
+ *   - sourceType: warning when value is not in the allowed enum set
  *
- * Notes:
- *   - Phase 3.2 only validates format/required. Existence checks
- *     (Combo / Product / Page / Marketing / Sale / Customer)
- *     are intentionally deferred to Phase 3.3.
+ * Phase 3.3 - business-existence checks:
+ *   - delegated to `validateBusinessRow`, reads only from the
+ *     in-memory `context` (no DB access from this module).
  */
 export function validateRow(
-  row: Omit<ParsedLead, "status" | "errors">
-): { status: LeadValidationStatus; errors: string[] } {
-  const errors: string[] = [];
+  row: Omit<ParsedLead, "status" | "errors">,
+  context?: LeadImportContext
+): { status: LeadValidationStatus; errors: LeadValidationIssue[] } {
+  const issues: LeadValidationIssue[] = [];
 
   // Required: customerName
   if (!isNonEmpty(row.customerName)) {
-    errors.push("Thiếu tên khách hàng");
+    issues.push(err("MISSING_NAME", "Thiếu tên khách hàng", "customerName"));
   }
 
   // Required: phone
   if (!isNonEmpty(row.phone)) {
-    errors.push("Thiếu số điện thoại");
+    issues.push(err("MISSING_PHONE", "Thiếu số điện thoại", "phone"));
   } else if (!VIETNAMESE_PHONE_REGEX.test(row.phone.trim())) {
-    errors.push("Số điện thoại không hợp lệ");
+    issues.push(err("PHONE_INVALID", "Số điện thoại không hợp lệ", "phone"));
   }
 
   // Price (optional) - if present, must be >= 0
   if (isNonEmpty(row.price)) {
     const priceNum = parseNumericCell(row.price);
     if (priceNum === null) {
-      errors.push("Giá không hợp lệ");
+      issues.push(err("PRICE_INVALID", "Giá không hợp lệ", "price"));
     } else if (priceNum < PRICE_MIN) {
-      errors.push("Giá không được âm");
+      issues.push(err("PRICE_NEGATIVE", "Giá không được âm", "price"));
     }
   }
 
@@ -238,23 +337,45 @@ export function validateRow(
   if (isNonEmpty(row.date)) {
     const parsed = new Date(row.date.trim());
     if (Number.isNaN(parsed.getTime())) {
-      errors.push("Ngày không hợp lệ");
+      issues.push(err("DATE_INVALID", "Ngày không hợp lệ", "date"));
     }
   }
 
+  // Source type (optional) - warning if not in allowed enum
+  if (isNonEmpty(row.sourceType)) {
+    if (!ALLOWED_SOURCE_TYPES.has(row.sourceType.trim())) {
+      issues.push(
+        warn(
+          "SOURCE_TYPE_INVALID",
+          `Loại nguồn "${row.sourceType}" không hợp lệ - sẽ được ghi nhận`,
+          "sourceType"
+        )
+      );
+    }
+  }
+
+  // Phase 3.3 hook - business-existence checks against cached context.
+  // Currently no-op, but the slot is reserved.
+  if (context) {
+    issues.push(...validateBusinessRow(row, context));
+  }
+
+  const hasError = issues.some(i => i.severity === "ERROR");
+
   return {
-    status: errors.length === 0 ? "VALID" : "INVALID",
-    errors,
+    status: hasError ? "INVALID" : "VALID",
+    errors: issues,
   };
 }
 
 /**
- * Run validation on a fully-parsed row and attach status + errors.
+ * Run validation on a fully-parsed row and attach status + issues.
  */
 export function validateAndFinalize(
-  row: Omit<ParsedLead, "status" | "errors">
+  row: Omit<ParsedLead, "status" | "errors">,
+  context?: LeadImportContext
 ): ParsedLead {
-  const { status, errors } = validateRow(row);
+  const { status, errors } = validateRow(row, context);
   return { ...row, status, errors };
 }
 
@@ -271,10 +392,14 @@ export function validateAndFinalize(
  *   - missing:   required header fields missing
  *                (non-empty → caller should show validation error)
  *
- * If a required header field is missing, rows will be empty and the caller
- * is expected to surface the missing fields as an error.
+ * `context` is optional and forward-compatible. When provided, the
+ * parser may run business-existence checks against the in-memory maps.
+ * The parser itself NEVER queries the database.
  */
-export function parseLead(text: string): LeadParseResult {
+export function parseLead(
+  text: string,
+  context?: LeadImportContext
+): LeadParseResult {
   if (!text || !text.trim()) {
     return { rows: [], headers: [], missing: [] };
   }
@@ -324,7 +449,7 @@ export function parseLead(text: string): LeadParseResult {
     const fields = line.split("\t").map(f => f.trim());
     const rowNumber = startIndex + idx + 1;
     const draft = parseRow(fields, columnIndex, rowNumber);
-    return validateAndFinalize(draft);
+    return validateAndFinalize(draft, context);
   });
 
   return { rows, headers, missing: [] };

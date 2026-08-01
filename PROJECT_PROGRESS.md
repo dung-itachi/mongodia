@@ -607,6 +607,29 @@ In Progress
   - Phase 3.3 sẽ handle: Combo / Product / Page / Marketing / Sale / Customer existence
   - Statistics: Tổng dòng / Hợp lệ / Không hợp lệ
   - Preview table thêm cột: Trạng thái ✔❌ + Lý do lỗi (errors)
+- **Lead Validation Enhanced (2026-08-01)**
+  - Error Code: `MISSING_NAME`, `MISSING_PHONE`, `PHONE_INVALID`,
+    `PRICE_INVALID`, `PRICE_NEGATIVE`, `DATE_INVALID`, `SOURCE_TYPE_INVALID`
+  - Validation Issue structure: `{ code, message, severity, field }`
+  - Severity: `ERROR` (chặn import) vs `WARNING` (cho phép import, cảnh báo)
+  - `SOURCE_TYPE_INVALID` là WARNING (vẫn ghi nhận)
+  - Cell Highlight: đúng cell bị lỗi (đỏ) / cảnh báo (vàng), không chỉ highlight cả dòng
+  - Tooltip per-cell liệt kê issues kèm code
+  - Status pill: ✔ VALID / ⚠ WARNING / ❌ INVALID
+  - Statistics: Tổng / Hợp lệ / Cảnh báo / Không hợp lệ
+- **Lead Import Validation Architecture Refactor (2026-08-01)**
+  - Tạo `src/services/import/leadImportValidation.service.ts`
+    - `loadLeadImportContext()`: batch query Product/Combo/FacebookPage/Customer/Employee
+    - In-memory `Map` cache (TTL 5 phút), concurrency-safe
+    - `clearLeadImportContextCache()` + `emptyLeadImportContext()`
+  - Parser `leadParser.ts` hoàn toàn DATABASE-FREE
+    - Không import Mongoose / Model
+    - Nhận optional `LeadImportContext` qua parameter
+    - Phase 3.3 hook: `validateBusinessRow(row, context)` đã reserve
+    - Reserved codes: `PRODUCT_NOT_FOUND`, `COMBO_NOT_FOUND`,
+      `FACEBOOK_PAGE_NOT_FOUND`, `CUSTOMER_NOT_FOUND`, `EMPLOYEE_NOT_FOUND`
+  - Flow: LeadImportPreview → load context (1 batch / domain) → parseLead(text, context)
+  - Ready for: Duplicate Detection, Auto Create Customer, Auto Assign Sale, DB Import
 - **Lead Import Parser + Preview Completed**
 
 ⏳ LeadHistory API

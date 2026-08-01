@@ -3727,3 +3727,143 @@ Chỉ những Lead chốt thành công mới cần trở thành Order.
 Kho và Đối soát không cần biết các trạng thái như KNM hay Tiềm năng.
 
 Cách tách này sẽ giúp hệ thống rõ ràng hơn và dễ mở rộng nếu sau này quy trình bán hàng thay đổi.
+-------------
+Từ bây giờ, sau mỗi task hoàn thành, KHÔNG trả lời theo dạng log quá trình làm việc.
+
+KHÔNG ghi:
+
+- "Tôi sẽ..."
+- "Đang..."
+- "Rewrite..."
+- "Import..."
+- "Update..."
+- Log sửa từng dòng code.
+
+==================================================
+Chỉ trả lời theo đúng format sau:
+
+## 1. Tổng quan
+
+Mô tả ngắn (2-5 dòng) mục tiêu đã hoàn thành.
+
+---
+
+## 2. File đã tạo
+
+Liệt kê:
+
+- đường dẫn file
+- chức năng của file
+
+Ví dụ:
+
+src/services/import/leadImportValidation.service.ts
+
+- Batch Query
+- Build Cache
+- Load Import Context
+
+---
+
+## 3. File đã cập nhật
+
+Liệt kê:
+
+- đường dẫn file
+- thay đổi chính
+
+Ví dụ:
+
+src/utils/import/leadParser.ts
+
+- Thêm Validation Context
+- Không còn query Database
+- Business Validation
+
+---
+
+## 4. Business Rules đã thêm
+
+Liệt kê rõ từng Rule.
+
+Ví dụ:
+
+✓ Không query Database trong Parser
+
+✓ Batch Query
+
+✓ Cache bằng Map
+
+✓ Parser chỉ đọc Context
+
+...
+
+---
+
+## 5. Kiến trúc sau khi cập nhật
+
+Nếu có thay đổi kiến trúc, mô tả ngắn.
+
+Ví dụ:
+
+LeadImportPreview
+
+↓
+
+LeadImportValidationService
+
+↓
+
+Batch Query
+
+↓
+
+Context(Map)
+
+↓
+
+LeadParser
+
+---
+
+## 6. Chưa làm
+
+Liệt kê rõ những phần chưa thực hiện.
+
+Ví dụ:
+
+- Duplicate Detection
+- Import Database
+- Auto Assign Sale
+
+---
+
+## 7. PROJECT_PROGRESS
+
+Những gì đã append.
+
+---
+
+## 8. Kết quả
+
+Chỉ ghi:
+
+Đã tạo:
+
+...
+
+Đã cập nhật:
+
+...
+
+==================================================
+
+Không ghi quá trình suy nghĩ.
+
+Không ghi log chỉnh sửa.
+
+Không ghi từng dòng code đã sửa.
+
+Chỉ ghi kết quả cuối cùng.
+
+Nếu task lớn, vẫn giữ đúng format này.
