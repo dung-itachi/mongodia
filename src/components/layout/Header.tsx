@@ -1,110 +1,73 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Badge, Breadcrumb, Dropdown, Avatar } from "antd";
-import {
-  BellOutlined,
-  LogoutOutlined,
-  SettingOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+import { useState } from "react";
 
-import { buildBreadcrumbs } from "@/config/breadcrumb.config";
+import { useSidebar } from "@/components/layout/AppShell";
 
 /**
  * Header — topbar.
  *
- * Visual rules live in `src/styles/header.css` (`.topbar`, `.pt`,
- * `.vb`, `.srch`, `.tbr`). Class names mirror the original HTML.
+ * Visual rules live in `src/styles/header.css` (`.topbar`, `.mob-open`,
+ * `.pt`, `.vb`, `.srch`, `.tbr`, `.cnt`). Class names mirror the
+ * original HTML 1:1.
  *
- * Tailwind only for very small utilities; no inline styles.
+ * JSX hierarchy matches the spec:
+ *   header.topbar
+ *     button.mob-open (svg)
+ *     div.pt (span#tT + small#tS)
+ *     div#tB.vb vb-b
+ *     div.srch (svg + input#sq)
+ *     div.tbr > div.cnt (span#cntLbl + b#tc)
+ *
+ * Tailwind is not used here. No inline styles.
+ *
+ * Phase A.3: `.mob-open` is wired to AppShell's `openMobile()` so the
+ * sidebar slides in on mobile when the button is tapped.
  */
 export default function Header() {
-  const pathname = usePathname();
-  const items = buildBreadcrumbs(pathname);
-
-  const breadcrumbItems = items.map((item, idx) => ({
-    title:
-      idx === items.length - 1 ? (
-        <span className="pt">{item.label}</span>
-      ) : (
-        <Link href={item.href} className="pt">
-          {item.label}
-        </Link>
-      ),
-    // mark last item as non-link via empty href so AntD renders <span>
-    href: idx === items.length - 1 ? "" : item.href,
-  }));
-
-  const userMenu = {
-    items: [
-      {
-        key: "profile",
-        label: "Hồ sơ",
-        icon: <UserOutlined />,
-        disabled: true,
-      },
-      {
-        key: "settings",
-        label: "Cài đặt",
-        icon: <SettingOutlined />,
-        disabled: true,
-      },
-      { type: "divider" as const },
-      {
-        key: "logout",
-        label: "Đăng xuất",
-        icon: <LogoutOutlined />,
-        disabled: true,
-      },
-    ],
-  };
+  const { openMobile } = useSidebar();
+  const [pageTitle] = useState("Mongolia CRM");
+  const [pageSub] = useState("Phase A.2");
+  const [badgeText] = useState("Phase A");
+  const [badgeVariant] = useState<"vb-b" | "vb-g" | "vb-a" | "vb-p">("vb-b");
+  const [countLabel] = useState("SL:");
+  const [count] = useState(0);
 
   return (
     <header className="topbar">
+      <button
+        type="button"
+        className="mob-open"
+        aria-label="Open sidebar"
+        onClick={openMobile}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M3 12h18M3 6h18M3 18h18" />
+        </svg>
+      </button>
+
       <div className="pt">
-        <span>{items[items.length - 1]?.label ?? "Mongolia CRM"}</span>
-        <small>Phase A · Foundation UI</small>
+        <span id="tT">{pageTitle}</span>
+        <small id="tS">{pageSub}</small>
       </div>
-      <div className="vb vb-b">Phase A</div>
+
+      <div id="tB" className={`vb ${badgeVariant}`}>
+        {badgeText}
+      </div>
 
       <div className="srch">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <circle cx="11" cy="11" r="8" />
           <path d="m21 21-4.3-4.3" />
         </svg>
-        <input type="text" placeholder="Tìm tên, SĐT…" disabled />
+        <input id="sq" type="text" disabled />
       </div>
 
       <div className="tbr">
-        <Badge count={0} showZero={false} dot={false}>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            aria-label="Thông báo"
-            disabled
-          >
-            <BellOutlined />
-          </button>
-        </Badge>
-
-        <Dropdown menu={userMenu} trigger={["click"]} placement="bottomRight">
-          <button type="button" className="btn btn-ghost btn-sm">
-            <Avatar size="small" icon={<UserOutlined />} />
-            <span>Admin</span>
-          </button>
-        </Dropdown>
-
         <div className="cnt">
-          <span>SL:</span>
-          <b>0</b>
+          <span id="cntLbl">{countLabel}</span> <b id="tc">{count}</b>
         </div>
       </div>
-
-      {/* hidden AntD Breadcrumb mount: keeps build wiring consistent
-          with the prior Phase A integration. Class names still apply. */}
-      <Breadcrumb items={breadcrumbItems} className="srch" />
     </header>
   );
 }

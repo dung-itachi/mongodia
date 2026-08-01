@@ -64,6 +64,18 @@
   pointer-events: auto;
 }
 
+/* Mobile-only: backdrop becomes visible when sidebar is open.
+   On desktop the backdrop is always hidden (display:none). */
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .backdrop {
+    display: block;
+  }
+}
+
 .cnt {
   display: flex;
   align-items: center;

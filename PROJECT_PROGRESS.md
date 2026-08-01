@@ -1,5 +1,6 @@
 # Tiến độ dự án Mongodia
-
+Thư viện cần cài 
+npm install antd @ant-design/icons axios @tanstack/react-query react-hook-form @hookform/resolvers zod mongoose mongodb jsonwebtoken bcryptjs dotenv dayjs uuid cookie
 ## ✅ Đã hoàn thành
 
 ### 1. Backend Setup
