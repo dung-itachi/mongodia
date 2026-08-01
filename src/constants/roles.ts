@@ -1,3 +1,33 @@
+/**
+ * ==================================================
+ * ROLES & PERMISSION ASSIGNMENTS
+ * ==================================================
+ *
+ * Mỗi role gồm:
+ *   - `code`           : mã định danh (lưu DB + dùng trong code).
+ *   - `name`           : tên hiển thị.
+ *   - `permissions`    : danh sách permission code thuộc role.
+ *
+ * Nguyên tắc:
+ *   - KHÔNG hardcode role trong middleware / route — chỉ check permission.
+ *   - ADMIN dùng wildcard "*" (bypass toàn bộ check).
+ *   - Permission định nghĩa ở `src/constants/permissions.ts` — đây là source
+ *     of truth duy nhất cho permission code.
+ *
+ * Phase 5.1 (Order Permissions):
+ *   - Order giờ có 9 permission: view / create / update / delete / confirm /
+ *     cancel / history / revenue / reserve_stock.
+ *   - Phân quyền theo nghiệp vụ:
+ *       ADMIN       → Full (wildcard).
+ *       MANAGER     → Toàn bộ Order.
+ *       SALE        → view / create / update / history (chốt + sửa đơn của mình).
+ *       MKT         → chỉ view (xem đơn phát sinh từ Lead).
+ *       WAREHOUSE   → view / reserve_stock (giữ / trả chỗ kho cho đơn).
+ *       LEADER      → view / create / update (giữ tương thích với role cũ).
+ *       EMPLOYEE    → view (giữ tương thích — chỉ xem).
+ * ==================================================
+ */
+
 export const ROLES = [
   {
     code: "ADMIN",
@@ -51,9 +81,16 @@ export const ROLES = [
 
       "inventory.view",
 
+      // ---- Order (Full) --------------------------------------------
       "order.view",
       "order.create",
       "order.update",
+      "order.delete",
+      "order.confirm",
+      "order.cancel",
+      "order.history",
+      "order.revenue",
+      "order.reserve_stock",
 
       "facebook-page.view",
       "facebook-page.create",
@@ -76,6 +113,66 @@ export const ROLES = [
     ],
   },
 
+  /**
+   * SALE — nhân viên kinh doanh.
+   * Chốt đơn, sửa đơn, xem timeline. KHÔNG xóa đơn, KHÔNG reserve/release
+   * kho (do WAREHOUSE phụ trách), KHÔNG xem revenue detail.
+   */
+  {
+    code: "SALE",
+    name: "Sales",
+    permissions: [
+      "dashboard.view",
+
+      "customer.view",
+      "customer.create",
+      "customer.update",
+
+      "product.view",
+      "product-variant.view",
+      "combo.view",
+
+      // ---- Order --------------------------------------------------
+      "order.view",
+      "order.create",
+      "order.update",
+      "order.history",
+
+      "lead.view",
+
+      "report.view",
+    ],
+  },
+
+  /**
+   * WAREHOUSE — nhân viên kho.
+   * Xem đơn để biết cần giữ / trả chỗ kho cho đơn nào.
+   * KHÔNG sửa thông tin đơn, KHÔNG xóa đơn.
+   */
+  {
+    code: "WAREHOUSE",
+    name: "Warehouse",
+    permissions: [
+      "dashboard.view",
+
+      "warehouse.view",
+      "inventory.view",
+      "inventory-adjustment.view",
+
+      "product.view",
+      "product-variant.view",
+
+      // ---- Order --------------------------------------------------
+      "order.view",
+      "order.reserve_stock",
+      "order.history",
+    ],
+  },
+
+  /**
+   * LEADER — giữ tương thích với role cũ (Phase trước). Có thêm
+   * `order.confirm` / `order.cancel` so với SALE.
+   */
   {
     code: "LEADER",
     name: "Leader",
@@ -104,9 +201,13 @@ export const ROLES = [
       "inventory-adjustment.view",
       "inventory-adjustment.create",
 
+      // ---- Order --------------------------------------------------
       "order.view",
       "order.create",
       "order.update",
+      "order.confirm",
+      "order.cancel",
+      "order.history",
 
       "facebook-page.view",
 
@@ -120,6 +221,9 @@ export const ROLES = [
     ],
   },
 
+  /**
+   * EMPLOYEE — nhân viên cơ bản. Chỉ xem Order + tạo mới.
+   */
   {
     code: "EMPLOYEE",
     name: "Employee",
@@ -132,6 +236,7 @@ export const ROLES = [
       "inventory-adjustment.view",
       "inventory-adjustment.create",
 
+      // ---- Order --------------------------------------------------
       "order.view",
       "order.create",
 
@@ -141,6 +246,10 @@ export const ROLES = [
     ],
   },
 
+  /**
+   * MKT — Marketing. Chỉ xem Order (để đánh giá Lead → Order conversion).
+   * Bỏ `order.create` (do SALE chốt đơn).
+   */
   {
     code: "MKT",
     name: "Marketing",
@@ -170,8 +279,8 @@ export const ROLES = [
       "lead.update",
       "lead.assign",
 
+      // ---- Order (chỉ xem) ---------------------------------------
       "order.view",
-      "order.create",
 
       "report.view",
     ],

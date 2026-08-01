@@ -1,13 +1,21 @@
 import { z } from "zod";
 
+import {
+  InventoryAction,
+  InventoryReason,
+  InventorySource,
+  InventoryTransactionType,
+  InventoryReferenceType,
+} from "@/constants/inventoryStatus";
+
 export const loginSchema = z.object({
   username: z
     .string()
-    .min(3, "Tên đăng nhập phải có ít nhất 3 ký tự"),
+    .min(3, "TÃªn Ä‘Äƒng nháº­p pháº£i cÃ³ Ã­t nháº¥t 3 kÃ½ tá»±"),
 
   password: z
     .string()
-    .min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+    .min(6, "Máº­t kháº©u pháº£i cÃ³ Ã­t nháº¥t 6 kÃ½ tá»±"),
 });
 
 export type LoginForm = z.infer<typeof loginSchema>;
@@ -15,20 +23,20 @@ export const createEmployeeSchema = z.object({
   username: z
     .string()
     .trim()
-    .min(3, "Tên đăng nhập tối thiểu 3 ký tự")
-    .max(50, "Tên đăng nhập tối đa 50 ký tự"),
+    .min(3, "TÃªn Ä‘Äƒng nháº­p tá»‘i thiá»ƒu 3 kÃ½ tá»±")
+    .max(50, "TÃªn Ä‘Äƒng nháº­p tá»‘i Ä‘a 50 kÃ½ tá»±"),
 
   password: z
     .string()
-    .min(6, "Mật khẩu tối thiểu 6 ký tự"),
+    .min(6, "Máº­t kháº©u tá»‘i thiá»ƒu 6 kÃ½ tá»±"),
 
   fullName: z
     .string()
     .trim()
-    .min(2, "Họ tên không hợp lệ"),
+    .min(2, "Há» tÃªn khÃ´ng há»£p lá»‡"),
 
   email: z
-    .email("Email không hợp lệ")
+    .email("Email khÃ´ng há»£p lá»‡")
     .trim(),
 
   phone: z.string().optional(),
@@ -38,7 +46,7 @@ export const createEmployeeSchema = z.object({
   roleCode: z
     .string()
     .trim()
-    .min(1, "Vai trò là bắt buộc"),
+    .min(1, "Vai trÃ² lÃ  báº¯t buá»™c"),
 
   teamCode: z.string().nullable().optional(),
 
@@ -52,17 +60,17 @@ export const updateEmployeeSchema = z.object({
   username: z
     .string()
     .trim()
-    .min(3, "Tên đăng nhập tối thiểu 3 ký tự")
-    .max(50, "Tên đăng nhập tối đa 50 ký tự"),
+    .min(3, "TÃªn Ä‘Äƒng nháº­p tá»‘i thiá»ƒu 3 kÃ½ tá»±")
+    .max(50, "TÃªn Ä‘Äƒng nháº­p tá»‘i Ä‘a 50 kÃ½ tá»±"),
 
   fullName: z
     .string()
     .trim()
-    .min(2, "Họ tên không hợp lệ")
-    .max(100, "Họ tên tối đa 100 ký tự"),
+    .min(2, "Há» tÃªn khÃ´ng há»£p lá»‡")
+    .max(100, "Há» tÃªn tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
     email: z
-    .email("Email không hợp lệ")
+    .email("Email khÃ´ng há»£p lá»‡")
     .trim(),
 
   phone: z.string().optional(),
@@ -72,7 +80,7 @@ export const updateEmployeeSchema = z.object({
   roleCode: z
     .string()
     .trim()
-    .min(1, "Vai trò là bắt buộc"),
+    .min(1, "Vai trÃ² lÃ  báº¯t buá»™c"),
 
   teamCode: z.string().nullable().optional(),
 
@@ -88,8 +96,8 @@ export const resetPasswordSchema = z.object({
   newPassword: z
     .string()
     .trim()
-    .min(6, "Mật khẩu tối thiểu 6 ký tự")
-    .max(100, "Mật khẩu tối đa 100 ký tự"),
+    .min(6, "Máº­t kháº©u tá»‘i thiá»ƒu 6 kÃ½ tá»±")
+    .max(100, "Máº­t kháº©u tá»‘i Ä‘a 100 kÃ½ tá»±"),
 });
 
 export type ResetPasswordForm = z.infer<
@@ -99,14 +107,14 @@ export const createRoleSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã vai trò tối thiểu 2 ký tự")
-    .max(30, "Mã vai trò tối đa 30 ký tự"),
+    .min(2, "MÃ£ vai trÃ² tá»‘i thiá»ƒu 2 kÃ½ tá»±")
+    .max(30, "MÃ£ vai trÃ² tá»‘i Ä‘a 30 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên vai trò tối thiểu 2 ký tự")
-    .max(100, "Tên vai trò tối đa 100 ký tự"),
+    .min(2, "TÃªn vai trÃ² tá»‘i thiá»ƒu 2 kÃ½ tá»±")
+    .max(100, "TÃªn vai trÃ² tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   description: z.string().trim().optional(),
 });
@@ -117,14 +125,14 @@ export const updateRoleSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã vai trò tối thiểu 2 ký tự")
-    .max(30, "Mã vai trò tối đa 30 ký tự"),
+    .min(2, "MÃ£ vai trÃ² tá»‘i thiá»ƒu 2 kÃ½ tá»±")
+    .max(30, "MÃ£ vai trÃ² tá»‘i Ä‘a 30 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên vai trò tối thiểu 2 ký tự")
-    .max(100, "Tên vai trò tối đa 100 ký tự"),
+    .min(2, "TÃªn vai trÃ² tá»‘i thiá»ƒu 2 kÃ½ tá»±")
+    .max(100, "TÃªn vai trÃ² tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   description: z.string().trim().optional(),
 
@@ -137,13 +145,13 @@ export const createDepartmentSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã phòng ban tối thiểu 2 ký tự")
+    .min(2, "MÃ£ phÃ²ng ban tá»‘i thiá»ƒu 2 kÃ½ tá»±")
     .max(30),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên phòng ban tối thiểu 2 ký tự")
+    .min(2, "TÃªn phÃ²ng ban tá»‘i thiá»ƒu 2 kÃ½ tá»±")
     .max(100),
 });
 
@@ -167,44 +175,44 @@ export const createAreaSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã khu vực phải có ít nhất 2 ký tự")
-    .max(30, "Mã khu vực tối đa 30 ký tự"),
+    .min(2, "MÃ£ khu vá»±c pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(30, "MÃ£ khu vá»±c tá»‘i Ä‘a 30 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên khu vực phải có ít nhất 2 ký tự")
-    .max(100, "Tên khu vực tối đa 100 ký tự"),
+    .min(2, "TÃªn khu vá»±c pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn khu vá»±c tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   address: z.string().optional(),
 
   countryCode: z
     .string()
     .trim()
-    .min(2, "Mã quốc gia không hợp lệ")
-    .max(5, "Mã quốc gia không hợp lệ"),
+    .min(2, "MÃ£ quá»‘c gia khÃ´ng há»£p lá»‡")
+    .max(5, "MÃ£ quá»‘c gia khÃ´ng há»£p lá»‡"),
 });
 
 export const updateAreaSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã khu vực phải có ít nhất 2 ký tự")
-    .max(30, "Mã khu vực tối đa 30 ký tự"),
+    .min(2, "MÃ£ khu vá»±c pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(30, "MÃ£ khu vá»±c tá»‘i Ä‘a 30 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên khu vực phải có ít nhất 2 ký tự")
-    .max(100, "Tên khu vực tối đa 100 ký tự"),
+    .min(2, "TÃªn khu vá»±c pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn khu vá»±c tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   address: z.string().optional(),
 
   countryCode: z
     .string()
     .trim()
-    .min(2, "Mã quốc gia không hợp lệ")
-    .max(5, "Mã quốc gia không hợp lệ"),
+    .min(2, "MÃ£ quá»‘c gia khÃ´ng há»£p lá»‡")
+    .max(5, "MÃ£ quá»‘c gia khÃ´ng há»£p lá»‡"),
 
   isActive: z.boolean(),
 });
@@ -213,24 +221,24 @@ export const createTeamSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã nhóm tối thiểu 2 ký tự")
-    .max(30, "Mã nhóm tối đa 30 ký tự"),
+    .min(2, "MÃ£ nhÃ³m tá»‘i thiá»ƒu 2 kÃ½ tá»±")
+    .max(30, "MÃ£ nhÃ³m tá»‘i Ä‘a 30 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên nhóm tối thiểu 2 ký tự")
-    .max(100, "Tên nhóm tối đa 100 ký tự"),
+    .min(2, "TÃªn nhÃ³m tá»‘i thiá»ƒu 2 kÃ½ tá»±")
+    .max(100, "TÃªn nhÃ³m tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   departmentCode: z
     .string()
     .trim()
-    .min(1, "Phòng ban là bắt buộc"),
+    .min(1, "PhÃ²ng ban lÃ  báº¯t buá»™c"),
 
   areaCode: z
     .string()
     .trim()
-    .min(1, "Khu vực là bắt buộc"),
+    .min(1, "Khu vá»±c lÃ  báº¯t buá»™c"),
 
   leaderCode: z.string().nullable().optional(),
 
@@ -239,7 +247,7 @@ export const createTeamSchema = z.object({
 
 export const updateTeamSchema = createTeamSchema.extend({
   isActive: z.boolean({
-    message: "Trạng thái hoạt động không hợp lệ",
+    message: "Tráº¡ng thÃ¡i hoáº¡t Ä‘á»™ng khÃ´ng há»£p lá»‡",
   }),
 });
 
@@ -247,14 +255,14 @@ export const createCategorySchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã danh mục phải có ít nhất 2 ký tự")
-    .max(20, "Mã danh mục tối đa 20 ký tự"),
+    .min(2, "MÃ£ danh má»¥c pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(20, "MÃ£ danh má»¥c tá»‘i Ä‘a 20 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên danh mục phải có ít nhất 2 ký tự")
-    .max(100, "Tên danh mục tối đa 100 ký tự"),
+    .min(2, "TÃªn danh má»¥c pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn danh má»¥c tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   parentCode: z
     .string()
@@ -265,12 +273,12 @@ export const createCategorySchema = z.object({
   description: z
     .string()
     .trim()
-    .max(500, "Mô tả tối đa 500 ký tự")
+    .max(500, "MÃ´ táº£ tá»‘i Ä‘a 500 kÃ½ tá»±")
     .optional(),
 
   sortOrder: z
     .number({
-      error: "Thứ tự phải là số",
+      error: "Thá»© tá»± pháº£i lÃ  sá»‘",
     })
     .default(0),
 });
@@ -278,24 +286,24 @@ export const createCategorySchema = z.object({
 export const updateCategorySchema =
   createCategorySchema.extend({
     isActive: z.boolean({
-      error: "Trạng thái không hợp lệ",
+      error: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   });
 
   export const createProductSchema = z.object({
     code: z
       .string()
-      .min(2, "Mã sản phẩm phải có ít nhất 2 ký tự")
-      .max(50, "Mã sản phẩm không được quá 50 ký tự"),
+      .min(2, "MÃ£ sáº£n pháº©m pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+      .max(50, "MÃ£ sáº£n pháº©m khÃ´ng Ä‘Æ°á»£c quÃ¡ 50 kÃ½ tá»±"),
   
     name: z
       .string()
-      .min(2, "Tên sản phẩm phải có ít nhất 2 ký tự")
-      .max(200, "Tên sản phẩm không được quá 200 ký tự"),
+      .min(2, "TÃªn sáº£n pháº©m pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+      .max(200, "TÃªn sáº£n pháº©m khÃ´ng Ä‘Æ°á»£c quÃ¡ 200 kÃ½ tá»±"),
   
     categoryCode: z
       .string()
-      .min(2, "Mã danh mục không hợp lệ"),
+      .min(2, "MÃ£ danh má»¥c khÃ´ng há»£p lá»‡"),
   
     image: z
       .string()
@@ -311,20 +319,20 @@ export const updateCategorySchema =
   export const updateProductSchema =
   createProductSchema.extend({
     isActive: z.boolean({
-      message: "Trạng thái không hợp lệ",
+      message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   });
 
   export const createVariantOptionSchema = z.object({
     code: z
       .string()
-      .min(2, "Mã thuộc tính phải có ít nhất 2 ký tự")
-      .max(50, "Mã thuộc tính không được quá 50 ký tự"),
+      .min(2, "MÃ£ thuá»™c tÃ­nh pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+      .max(50, "MÃ£ thuá»™c tÃ­nh khÃ´ng Ä‘Æ°á»£c quÃ¡ 50 kÃ½ tá»±"),
   
     name: z
       .string()
-      .min(2, "Tên thuộc tính phải có ít nhất 2 ký tự")
-      .max(100, "Tên thuộc tính không được quá 100 ký tự"),
+      .min(2, "TÃªn thuá»™c tÃ­nh pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+      .max(100, "TÃªn thuá»™c tÃ­nh khÃ´ng Ä‘Æ°á»£c quÃ¡ 100 kÃ½ tá»±"),
   
     sortOrder: z.number().optional().default(0),
   });
@@ -332,7 +340,7 @@ export const updateCategorySchema =
   export const updateVariantOptionSchema =
   createVariantOptionSchema.extend({
     isActive: z.boolean({
-      message: "Trạng thái không hợp lệ",
+      message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   });
 
@@ -340,20 +348,20 @@ export const createVariantValueSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã giá trị phải có ít nhất 2 ký tự")
-    .max(50, "Mã giá trị không được quá 50 ký tự"),
+    .min(2, "MÃ£ giÃ¡ trá»‹ pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(50, "MÃ£ giÃ¡ trá»‹ khÃ´ng Ä‘Æ°á»£c quÃ¡ 50 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên giá trị phải có ít nhất 2 ký tự")
-    .max(100, "Tên giá trị không được quá 100 ký tự"),
+    .min(2, "TÃªn giÃ¡ trá»‹ pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn giÃ¡ trá»‹ khÃ´ng Ä‘Æ°á»£c quÃ¡ 100 kÃ½ tá»±"),
 
   variantOptionId: z
     .string({
-      message: "Thuộc tính biến thể không hợp lệ",
+      message: "Thuá»™c tÃ­nh biáº¿n thá»ƒ khÃ´ng há»£p lá»‡",
     })
-    .min(1, "Thuộc tính biến thể không hợp lệ"),
+    .min(1, "Thuá»™c tÃ­nh biáº¿n thá»ƒ khÃ´ng há»£p lá»‡"),
 
   sortOrder: z.number().default(0),
 });
@@ -361,22 +369,22 @@ export const createVariantValueSchema = z.object({
 export const updateVariantValueSchema =
   createVariantValueSchema.extend({
     isActive: z.boolean({
-      message: "Trạng thái không hợp lệ",
+      message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   });
 
 export const createProductVariantSchema = z.object({
   productId: z
     .string({
-      message: "Sản phẩm không hợp lệ",
+      message: "Sáº£n pháº©m khÃ´ng há»£p lá»‡",
     })
-    .min(1, "Sản phẩm không hợp lệ"),
+    .min(1, "Sáº£n pháº©m khÃ´ng há»£p lá»‡"),
 
   sku: z
     .string()
     .trim()
-    .min(2, "SKU phải có ít nhất 2 ký tự")
-    .max(100, "SKU tối đa 100 ký tự"),
+    .min(2, "SKU pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "SKU tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   barcode: z
     .string()
@@ -390,13 +398,13 @@ export const createProductVariantSchema = z.object({
 
   variantValues: z
     .array(z.string())
-    .min(1, "Phải chọn ít nhất một giá trị biến thể"),
+    .min(1, "Pháº£i chá»n Ã­t nháº¥t má»™t giÃ¡ trá»‹ biáº¿n thá»ƒ"),
 
   price: z
     .number({
-      message: "Giá phải là số",
+      message: "GiÃ¡ pháº£i lÃ  sá»‘",
     })
-    .min(0, "Giá không được âm"),
+    .min(0, "GiÃ¡ khÃ´ng Ä‘Æ°á»£c Ã¢m"),
 
   cost: z.number().default(0),
 
@@ -408,7 +416,7 @@ export const createProductVariantSchema = z.object({
 export const updateProductVariantSchema =
   createProductVariantSchema.extend({
     isActive: z.boolean({
-      message: "Trạng thái không hợp lệ",
+      message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   });
 
@@ -416,24 +424,24 @@ export const createSupplierSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã nhà cung cấp phải có ít nhất 2 ký tự")
-    .max(50, "Mã nhà cung cấp tối đa 50 ký tự"),
+    .min(2, "MÃ£ nhÃ  cung cáº¥p pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(50, "MÃ£ nhÃ  cung cáº¥p tá»‘i Ä‘a 50 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên nhà cung cấp phải có ít nhất 2 ký tự")
-    .max(100, "Tên nhà cung cấp tối đa 100 ký tự"),
+    .min(2, "TÃªn nhÃ  cung cáº¥p pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn nhÃ  cung cáº¥p tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   phone: z
     .string()
     .trim()
-    .regex(/^[0-9]{8,20}$/, "Số điện thoại không hợp lệ"),
+    .regex(/^[0-9]{8,20}$/, "Sá»‘ Ä‘iá»‡n thoáº¡i khÃ´ng há»£p lá»‡"),
 
   email: z
     .string()
     .trim()
-    .email("Email không hợp lệ")
+    .email("Email khÃ´ng há»£p lá»‡")
     .optional()
     .or(z.literal("")),
 
@@ -443,9 +451,9 @@ export const createSupplierSchema = z.object({
 
   areaId: z
     .string({
-      message: "Khu vực không hợp lệ",
+      message: "Khu vá»±c khÃ´ng há»£p lá»‡",
     })
-    .min(1, "Khu vực là bắt buộc"),
+    .min(1, "Khu vá»±c lÃ  báº¯t buá»™c"),
 
   note: z.string().default(""),
 });
@@ -453,7 +461,7 @@ export const createSupplierSchema = z.object({
 export const updateSupplierSchema =
   createSupplierSchema.extend({
     isActive: z.boolean({
-      message: "Trạng thái không hợp lệ",
+      message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   });
 
@@ -461,20 +469,20 @@ export const createWarehouseSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã kho phải có ít nhất 2 ký tự")
-    .max(50, "Mã kho tối đa 50 ký tự"),
+    .min(2, "MÃ£ kho pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(50, "MÃ£ kho tá»‘i Ä‘a 50 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên kho phải có ít nhất 2 ký tự")
-    .max(100, "Tên kho tối đa 100 ký tự"),
+    .min(2, "TÃªn kho pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn kho tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   areaId: z
     .string({
-      message: "Khu vực không hợp lệ",
+      message: "Khu vá»±c khÃ´ng há»£p lá»‡",
     })
-    .min(1, "Khu vực là bắt buộc"),
+    .min(1, "Khu vá»±c lÃ  báº¯t buá»™c"),
 
   address: z.string().default(""),
 
@@ -486,7 +494,7 @@ export const createWarehouseSchema = z.object({
 export const updateWarehouseSchema =
   createWarehouseSchema.extend({
     isActive: z.boolean({
-      message: "Trạng thái không hợp lệ",
+      message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   });
 
@@ -494,24 +502,24 @@ export const createInventoryAdjustmentSchema =
   z.object({
     inventoryId: z
       .string({
-        message: "ID tồn kho không hợp lệ",
+        message: "ID tá»“n kho khÃ´ng há»£p lá»‡",
       })
-      .min(1, "ID tồn kho là bắt buộc"),
+      .min(1, "ID tá»“n kho lÃ  báº¯t buá»™c"),
 
     type: z.enum(["IN", "OUT", "ADJUST"], {
-      message: "Loại điều chỉnh không hợp lệ",
+      message: "Loáº¡i Ä‘iá»u chá»‰nh khÃ´ng há»£p lá»‡",
     }),
 
     quantity: z
       .number({
-        message: "Số lượng không hợp lệ",
+        message: "Sá»‘ lÆ°á»£ng khÃ´ng há»£p lá»‡",
       })
-      .min(1, "Số lượng tối thiểu là 1"),
+      .min(1, "Sá»‘ lÆ°á»£ng tá»‘i thiá»ƒu lÃ  1"),
 
     reason: z
       .string()
       .trim()
-      .min(1, "Lý do là bắt buộc"),
+      .min(1, "LÃ½ do lÃ  báº¯t buá»™c"),
 
     note: z.string().default(""),
   });
@@ -520,30 +528,30 @@ export const createCustomerSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã khách hàng phải có ít nhất 2 ký tự")
-    .max(50, "Mã khách hàng tối đa 50 ký tự"),
+    .min(2, "MÃ£ khÃ¡ch hÃ ng pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(50, "MÃ£ khÃ¡ch hÃ ng tá»‘i Ä‘a 50 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên khách hàng phải có ít nhất 2 ký tự")
-    .max(100, "Tên khách hàng tối đa 100 ký tự"),
+    .min(2, "TÃªn khÃ¡ch hÃ ng pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn khÃ¡ch hÃ ng tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   phone: z
     .string()
     .trim()
-    .min(8, "Số điện thoại phải có ít nhất 8 ký tự")
-    .max(20, "Số điện thoại tối đa 20 ký tự"),
+    .min(8, "Sá»‘ Ä‘iá»‡n thoáº¡i pháº£i cÃ³ Ã­t nháº¥t 8 kÃ½ tá»±")
+    .max(20, "Sá»‘ Ä‘iá»‡n thoáº¡i tá»‘i Ä‘a 20 kÃ½ tá»±"),
 
   email: z
     .string()
     .trim()
-    .email("Email không hợp lệ")
+    .email("Email khÃ´ng há»£p lá»‡")
     .optional()
     .or(z.literal("")),
 
   gender: z.enum(["MALE", "FEMALE", "OTHER"], {
-    message: "Giới tính không hợp lệ",
+    message: "Giá»›i tÃ­nh khÃ´ng há»£p lá»‡",
   }),
 
   birthday: z.string().optional(),
@@ -552,21 +560,21 @@ export const createCustomerSchema = z.object({
 
   areaId: z
     .string({
-      message: "Khu vực không hợp lệ",
+      message: "Khu vá»±c khÃ´ng há»£p lá»‡",
     })
-    .min(1, "Khu vực là bắt buộc"),
+    .min(1, "Khu vá»±c lÃ  báº¯t buá»™c"),
 
   teamId: z
     .string({
-      message: "Nhóm không hợp lệ",
+      message: "NhÃ³m khÃ´ng há»£p lá»‡",
     })
-    .min(1, "Nhóm là bắt buộc"),
+    .min(1, "NhÃ³m lÃ  báº¯t buá»™c"),
 
   marketingEmployeeId: z
     .string({
-      message: "Nhân viên marketing không hợp lệ",
+      message: "NhÃ¢n viÃªn marketing khÃ´ng há»£p lá»‡",
     })
-    .min(1, "Nhân viên marketing phụ trách là bắt buộc"),
+    .min(1, "NhÃ¢n viÃªn marketing phá»¥ trÃ¡ch lÃ  báº¯t buá»™c"),
 
   note: z.string().default(""),
 });
@@ -574,7 +582,7 @@ export const createCustomerSchema = z.object({
 export const updateCustomerSchema =
   createCustomerSchema.extend({
     isActive: z.boolean({
-      message: "Trạng thái không hợp lệ",
+      message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   });
 
@@ -582,14 +590,14 @@ export const createFacebookPageSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã page phải có ít nhất 2 ký tự")
-    .max(30, "Mã page tối đa 30 ký tự"),
+    .min(2, "MÃ£ page pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(30, "MÃ£ page tá»‘i Ä‘a 30 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên page phải có ít nhất 2 ký tự")
-    .max(100, "Tên page tối đa 100 ký tự"),
+    .min(2, "TÃªn page pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn page tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   pageUrl: z
     .string()
@@ -611,14 +619,14 @@ export const updateFacebookPageSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã page phải có ít nhất 2 ký tự")
-    .max(30, "Mã page tối đa 30 ký tự"),
+    .min(2, "MÃ£ page pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(30, "MÃ£ page tá»‘i Ä‘a 30 kÃ½ tá»±"),
 
   name: z
     .string()
     .trim()
-    .min(2, "Tên page phải có ít nhất 2 ký tự")
-    .max(100, "Tên page tối đa 100 ký tự"),
+    .min(2, "TÃªn page pháº£i cÃ³ Ã­t nháº¥t 2 kÃ½ tá»±")
+    .max(100, "TÃªn page tá»‘i Ä‘a 100 kÃ½ tá»±"),
 
   pageUrl: z
     .string()
@@ -636,7 +644,7 @@ export const updateFacebookPageSchema = z.object({
     .default(""),
 
   isActive: z.boolean({
-    message: "Trạng thái không hợp lệ",
+    message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
   }),
 });
 
@@ -644,25 +652,25 @@ export const createFacebookPageAssignmentSchema = z
   .object({
     facebookPageId: z
       .string({
-        message: "Facebook Page không hợp lệ",
+        message: "Facebook Page khÃ´ng há»£p lá»‡",
       })
-      .min(1, "Facebook Page là bắt buộc"),
+      .min(1, "Facebook Page lÃ  báº¯t buá»™c"),
 
     marketingEmployeeId: z
       .string({
-        message: "Nhân viên marketing không hợp lệ",
+        message: "NhÃ¢n viÃªn marketing khÃ´ng há»£p lá»‡",
       })
-      .min(1, "Nhân viên marketing là bắt buộc"),
+      .min(1, "NhÃ¢n viÃªn marketing lÃ  báº¯t buá»™c"),
 
     startDate: z
       .string({
-        message: "Ngày bắt đầu không hợp lệ",
+        message: "NgÃ y báº¯t Ä‘áº§u khÃ´ng há»£p lá»‡",
       })
-      .min(1, "Ngày bắt đầu là bắt buộc"),
+      .min(1, "NgÃ y báº¯t Ä‘áº§u lÃ  báº¯t buá»™c"),
 
     endDate: z
       .string({
-        message: "Ngày kết thúc không hợp lệ",
+        message: "NgÃ y káº¿t thÃºc khÃ´ng há»£p lá»‡",
       })
       .nullable()
       .optional(),
@@ -678,7 +686,7 @@ export const createFacebookPageAssignmentSchema = z
       return !isNaN(start.getTime());
     },
     {
-      message: "Ngày bắt đầu không hợp lệ",
+      message: "NgÃ y báº¯t Ä‘áº§u khÃ´ng há»£p lá»‡",
       path: ["startDate"],
     }
   )
@@ -691,7 +699,7 @@ export const createFacebookPageAssignmentSchema = z
       return !isNaN(end.getTime());
     },
     {
-      message: "Ngày kết thúc không hợp lệ",
+      message: "NgÃ y káº¿t thÃºc khÃ´ng há»£p lá»‡",
       path: ["endDate"],
     }
   )
@@ -705,7 +713,7 @@ export const createFacebookPageAssignmentSchema = z
       return end >= start;
     },
     {
-      message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu",
+      message: "NgÃ y káº¿t thÃºc pháº£i lá»›n hÆ¡n hoáº·c báº±ng ngÃ y báº¯t Ä‘áº§u",
       path: ["endDate"],
     }
   );
@@ -717,7 +725,7 @@ const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const facebookLinkSchema = z
   .string()
   .trim()
-  .url("Link Facebook không hợp lệ")
+  .url("Link Facebook khÃ´ng há»£p lá»‡")
   .refine((value) => {
     try {
       const hostname = new URL(value).hostname.toLowerCase();
@@ -725,13 +733,13 @@ const facebookLinkSchema = z
     } catch {
       return false;
     }
-  }, "Link phải thuộc tên miền Facebook");
+  }, "Link pháº£i thuá»™c tÃªn miá»n Facebook");
 
 const assignedAtSchema = z
   .union([z.iso.datetime(), z.date()])
   .refine(
     (value) => typeof value === "string" || !Number.isNaN(value.getTime()),
-    "Ngày phân công không hợp lệ"
+    "NgÃ y phÃ¢n cÃ´ng khÃ´ng há»£p lá»‡"
   )
   .nullable()
   .optional();
@@ -739,20 +747,20 @@ const assignedAtSchema = z
 export const createLeadSchema = z.object({
   customerId: z
     .string()
-    .regex(OBJECT_ID_REGEX, "Khách hàng không hợp lệ")
+    .regex(OBJECT_ID_REGEX, "KhÃ¡ch hÃ ng khÃ´ng há»£p lá»‡")
     .optional()
     .nullable(),
 
   customerName: z
     .string()
     .trim()
-    .min(1, "Tên khách hàng là bắt buộc")
-    .max(200, "Tên khách hàng tối đa 200 ký tự"),
+    .min(1, "TÃªn khÃ¡ch hÃ ng lÃ  báº¯t buá»™c")
+    .max(200, "TÃªn khÃ¡ch hÃ ng tá»‘i Ä‘a 200 kÃ½ tá»±"),
 
   customerNewName: z
     .string()
     .trim()
-    .max(200, "Tên mới tối đa 200 ký tự")
+    .max(200, "TÃªn má»›i tá»‘i Ä‘a 200 kÃ½ tá»±")
     .optional(),
 
   facebookLink: facebookLinkSchema
@@ -762,39 +770,39 @@ export const createLeadSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại không hợp lệ")
+    .regex(VIETNAMESE_PHONE_REGEX, "Sá»‘ Ä‘iá»‡n thoáº¡i khÃ´ng há»£p lá»‡")
     .optional()
     .or(z.literal("")),
 
   phone2: z
     .string()
     .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại 2 không hợp lệ")
+    .regex(VIETNAMESE_PHONE_REGEX, "Sá»‘ Ä‘iá»‡n thoáº¡i 2 khÃ´ng há»£p lá»‡")
     .optional()
     .or(z.literal("")),
 
   address: z
     .string()
     .trim()
-    .max(500, "Địa chỉ tối đa 500 ký tự")
+    .max(500, "Äá»‹a chá»‰ tá»‘i Ä‘a 500 kÃ½ tá»±")
     .optional(),
 
   province: z
     .string()
     .trim()
-    .max(100, "Tỉnh/Thành phố tối đa 100 ký tự")
+    .max(100, "Tá»‰nh/ThÃ nh phá»‘ tá»‘i Ä‘a 100 kÃ½ tá»±")
     .optional(),
 
   district: z
     .string()
     .trim()
-    .max(100, "Quận/Huyện tối đa 100 ký tự")
+    .max(100, "Quáº­n/Huyá»‡n tá»‘i Ä‘a 100 kÃ½ tá»±")
     .optional(),
 
   ward: z
     .string()
     .trim()
-    .max(100, "Phường/Xã tối đa 100 ký tự")
+    .max(100, "PhÆ°á»ng/XÃ£ tá»‘i Ä‘a 100 kÃ½ tá»±")
     .optional(),
 
   sourceType: z.enum([
@@ -805,7 +813,7 @@ export const createLeadSchema = z.object({
     "ZALO",
     "OTHER",
   ], {
-    message: "Nguồn không hợp lệ",
+    message: "Nguá»“n khÃ´ng há»£p lá»‡",
   }),
 
   facebookPageId: z
@@ -843,28 +851,28 @@ export const createLeadSchema = z.object({
 
   quantity: z
     .number()
-    .int("Số lượng phải là số nguyên")
-    .min(1, "Số lượng tối thiểu là 1")
+    .int("Sá»‘ lÆ°á»£ng pháº£i lÃ  sá»‘ nguyÃªn")
+    .min(1, "Sá»‘ lÆ°á»£ng tá»‘i thiá»ƒu lÃ  1")
     .optional(),
 
   unitPriceMNT: z
     .number()
-    .min(0, "Giá MNT không được âm")
+    .min(0, "GiÃ¡ MNT khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .optional(),
 
   unitPriceVND: z
     .number()
-    .min(0, "Giá VND không được âm")
+    .min(0, "GiÃ¡ VND khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .optional(),
 
   exchangeRate: z
     .number()
-    .min(0, "Tỷ giá không được âm")
+    .min(0, "Tá»· giÃ¡ khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .optional(),
 
   estimatedWeight: z
     .number()
-    .min(0, "Trọng lượng ước tính không được âm")
+    .min(0, "Trá»ng lÆ°á»£ng Æ°á»›c tÃ­nh khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .optional(),
 
   status: z.enum([
@@ -881,13 +889,13 @@ export const createLeadSchema = z.object({
   latestRemark: z
     .string()
     .trim()
-    .max(2000, "Ghi chú xử lý tối đa 2000 ký tự")
+    .max(2000, "Ghi chÃº xá»­ lÃ½ tá»‘i Ä‘a 2000 kÃ½ tá»±")
     .optional(),
 
   note: z
     .string()
     .trim()
-    .max(1000, "Ghi chú tối đa 1000 ký tự")
+    .max(1000, "Ghi chÃº tá»‘i Ä‘a 1000 kÃ½ tá»±")
     .optional(),
 
   isDuplicate: z.boolean().optional().default(false),
@@ -896,21 +904,21 @@ export const createLeadSchema = z.object({
 export const updateLeadSchema = z.object({
   customerId: z
     .string()
-    .regex(OBJECT_ID_REGEX, "Khách hàng không hợp lệ")
+    .regex(OBJECT_ID_REGEX, "KhÃ¡ch hÃ ng khÃ´ng há»£p lá»‡")
     .optional()
     .nullable(),
 
   customerName: z
     .string()
     .trim()
-    .min(1, "Tên khách hàng là bắt buộc")
-    .max(200, "Tên khách hàng tối đa 200 ký tự")
+    .min(1, "TÃªn khÃ¡ch hÃ ng lÃ  báº¯t buá»™c")
+    .max(200, "TÃªn khÃ¡ch hÃ ng tá»‘i Ä‘a 200 kÃ½ tá»±")
     .optional(),
 
   customerNewName: z
     .string()
     .trim()
-    .max(200, "Tên mới tối đa 200 ký tự")
+    .max(200, "TÃªn má»›i tá»‘i Ä‘a 200 kÃ½ tá»±")
     .optional()
     .nullable(),
 
@@ -921,39 +929,39 @@ export const updateLeadSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại không hợp lệ")
+    .regex(VIETNAMESE_PHONE_REGEX, "Sá»‘ Ä‘iá»‡n thoáº¡i khÃ´ng há»£p lá»‡")
     .optional()
     .or(z.literal("")),
 
   phone2: z
     .string()
     .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại 2 không hợp lệ")
+    .regex(VIETNAMESE_PHONE_REGEX, "Sá»‘ Ä‘iá»‡n thoáº¡i 2 khÃ´ng há»£p lá»‡")
     .optional()
     .or(z.literal("")),
 
   address: z
     .string()
     .trim()
-    .max(500, "Địa chỉ tối đa 500 ký tự")
+    .max(500, "Äá»‹a chá»‰ tá»‘i Ä‘a 500 kÃ½ tá»±")
     .optional(),
 
   province: z
     .string()
     .trim()
-    .max(100, "Tỉnh/Thành phố tối đa 100 ký tự")
+    .max(100, "Tá»‰nh/ThÃ nh phá»‘ tá»‘i Ä‘a 100 kÃ½ tá»±")
     .optional(),
 
   district: z
     .string()
     .trim()
-    .max(100, "Quận/Huyện tối đa 100 ký tự")
+    .max(100, "Quáº­n/Huyá»‡n tá»‘i Ä‘a 100 kÃ½ tá»±")
     .optional(),
 
   ward: z
     .string()
     .trim()
-    .max(100, "Phường/Xã tối đa 100 ký tự")
+    .max(100, "PhÆ°á»ng/XÃ£ tá»‘i Ä‘a 100 kÃ½ tá»±")
     .optional(),
 
   sourceType: z.enum([
@@ -1008,28 +1016,28 @@ export const updateLeadSchema = z.object({
 
   quantity: z
     .number()
-    .int("Số lượng phải là số nguyên")
-    .min(1, "Số lượng tối thiểu là 1")
+    .int("Sá»‘ lÆ°á»£ng pháº£i lÃ  sá»‘ nguyÃªn")
+    .min(1, "Sá»‘ lÆ°á»£ng tá»‘i thiá»ƒu lÃ  1")
     .optional(),
 
   unitPriceMNT: z
     .number()
-    .min(0, "Giá MNT không được âm")
+    .min(0, "GiÃ¡ MNT khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .optional(),
 
   unitPriceVND: z
     .number()
-    .min(0, "Giá VND không được âm")
+    .min(0, "GiÃ¡ VND khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .optional(),
 
   exchangeRate: z
     .number()
-    .min(0, "Tỷ giá không được âm")
+    .min(0, "Tá»· giÃ¡ khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .optional(),
 
   estimatedWeight: z
     .number()
-    .min(0, "Trọng lượng ước tính không được âm")
+    .min(0, "Trá»ng lÆ°á»£ng Æ°á»›c tÃ­nh khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .optional(),
 
   status: z.enum([
@@ -1046,14 +1054,14 @@ export const updateLeadSchema = z.object({
   latestRemark: z
     .string()
     .trim()
-    .max(2000, "Ghi chú xử lý tối đa 2000 ký tự")
+    .max(2000, "Ghi chÃº xá»­ lÃ½ tá»‘i Ä‘a 2000 kÃ½ tá»±")
     .optional()
     .nullable(),
 
   note: z
     .string()
     .trim()
-    .max(1000, "Ghi chú tối đa 1000 ký tự")
+    .max(1000, "Ghi chÃº tá»‘i Ä‘a 1000 kÃ½ tá»±")
     .optional()
     .nullable(),
 
@@ -1069,16 +1077,16 @@ export type UpdateLeadForm = z.infer<typeof updateLeadSchema>;
 const comboItemSchema = z.object({
   productVariantId: z
     .string({
-      message: "ProductVariant không hợp lệ",
+      message: "ProductVariant khÃ´ng há»£p lá»‡",
     })
-    .min(1, "ProductVariant là bắt buộc"),
+    .min(1, "ProductVariant lÃ  báº¯t buá»™c"),
 
   quantity: z
     .number({
-      message: "Số lượng không hợp lệ",
+      message: "Sá»‘ lÆ°á»£ng khÃ´ng há»£p lá»‡",
     })
-    .int("Số lượng phải là số nguyên")
-    .min(1, "Số lượng phải lớn hơn 0"),
+    .int("Sá»‘ lÆ°á»£ng pháº£i lÃ  sá»‘ nguyÃªn")
+    .min(1, "Sá»‘ lÆ°á»£ng pháº£i lá»›n hÆ¡n 0"),
 
   isGift: z.boolean().default(false),
 });
@@ -1088,46 +1096,46 @@ export const createComboSchema = z
     code: z
       .string()
       .trim()
-      .min(1, "Mã combo là bắt buộc")
-      .max(50, "Mã combo tối đa 50 ký tự"),
+      .min(1, "MÃ£ combo lÃ  báº¯t buá»™c")
+      .max(50, "MÃ£ combo tá»‘i Ä‘a 50 kÃ½ tá»±"),
 
     name: z
       .string()
       .trim()
-      .min(1, "Tên combo là bắt buộc")
-      .max(200, "Tên combo tối đa 200 ký tự"),
+      .min(1, "TÃªn combo lÃ  báº¯t buá»™c")
+      .max(200, "TÃªn combo tá»‘i Ä‘a 200 kÃ½ tá»±"),
 
     productCode: z
       .string()
       .trim()
-      .nonempty("Sản phẩm là bắt buộc"),
+      .nonempty("Sáº£n pháº©m lÃ  báº¯t buá»™c"),
 
     categoryCode: z
       .string()
       .trim()
-      .nonempty("Danh mục là bắt buộc"),
+      .nonempty("Danh má»¥c lÃ  báº¯t buá»™c"),
 
     comboItems: z
       .array(comboItemSchema)
-      .min(1, "Combo phải có ít nhất 1 sản phẩm"),
+      .min(1, "Combo pháº£i cÃ³ Ã­t nháº¥t 1 sáº£n pháº©m"),
 
     sellingPrice: z
       .number({
-        message: "Giá bán không hợp lệ",
+        message: "GiÃ¡ bÃ¡n khÃ´ng há»£p lá»‡",
       })
-      .min(0, "Giá bán phải lớn hơn hoặc bằng 0"),
+      .min(0, "GiÃ¡ bÃ¡n pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0"),
 
     packageSize: z
       .number({
-        message: "Số lượng combo không hợp lệ",
+        message: "Sá»‘ lÆ°á»£ng combo khÃ´ng há»£p lá»‡",
       })
-      .int("Số lượng combo phải là số nguyên")
-      .min(1, "Số lượng combo phải lớn hơn 0"),
+      .int("Sá»‘ lÆ°á»£ng combo pháº£i lÃ  sá»‘ nguyÃªn")
+      .min(1, "Sá»‘ lÆ°á»£ng combo pháº£i lá»›n hÆ¡n 0"),
 
     displayOrder: z
       .number()
-      .int("Thứ tự hiển thị phải là số nguyên")
-      .min(0, "Thứ tự hiển thị không được âm")
+      .int("Thá»© tá»± hiá»ƒn thá»‹ pháº£i lÃ  sá»‘ nguyÃªn")
+      .min(0, "Thá»© tá»± hiá»ƒn thá»‹ khÃ´ng Ä‘Æ°á»£c Ã¢m")
       .optional()
       .default(0),
 
@@ -1142,7 +1150,7 @@ export const createComboSchema = z
       return uniqueIds.size === variantIds.length;
     },
     {
-      message: "ProductVariant bị trùng trong combo",
+      message: "ProductVariant bá»‹ trÃ¹ng trong combo",
       path: ["comboItems"],
     }
   );
@@ -1152,46 +1160,46 @@ export const updateComboSchema = z
     code: z
       .string()
       .trim()
-      .min(1, "Mã combo là bắt buộc")
-      .max(50, "Mã combo tối đa 50 ký tự"),
+      .min(1, "MÃ£ combo lÃ  báº¯t buá»™c")
+      .max(50, "MÃ£ combo tá»‘i Ä‘a 50 kÃ½ tá»±"),
 
     name: z
       .string()
       .trim()
-      .min(1, "Tên combo là bắt buộc")
-      .max(200, "Tên combo tối đa 200 ký tự"),
+      .min(1, "TÃªn combo lÃ  báº¯t buá»™c")
+      .max(200, "TÃªn combo tá»‘i Ä‘a 200 kÃ½ tá»±"),
 
     productCode: z
       .string()
       .trim()
-      .nonempty("Sản phẩm là bắt buộc"),
+      .nonempty("Sáº£n pháº©m lÃ  báº¯t buá»™c"),
 
     categoryCode: z
       .string()
       .trim()
-      .nonempty("Danh mục là bắt buộc"),
+      .nonempty("Danh má»¥c lÃ  báº¯t buá»™c"),
 
     comboItems: z
       .array(comboItemSchema)
-      .min(1, "Combo phải có ít nhất 1 sản phẩm"),
+      .min(1, "Combo pháº£i cÃ³ Ã­t nháº¥t 1 sáº£n pháº©m"),
 
     sellingPrice: z
       .number({
-        message: "Giá bán không hợp lệ",
+        message: "GiÃ¡ bÃ¡n khÃ´ng há»£p lá»‡",
       })
-      .min(0, "Giá bán phải lớn hơn hoặc bằng 0"),
+      .min(0, "GiÃ¡ bÃ¡n pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0"),
 
     packageSize: z
       .number({
-        message: "Số lượng combo không hợp lệ",
+        message: "Sá»‘ lÆ°á»£ng combo khÃ´ng há»£p lá»‡",
       })
-      .int("Số lượng combo phải là số nguyên")
-      .min(1, "Số lượng combo phải lớn hơn 0"),
+      .int("Sá»‘ lÆ°á»£ng combo pháº£i lÃ  sá»‘ nguyÃªn")
+      .min(1, "Sá»‘ lÆ°á»£ng combo pháº£i lá»›n hÆ¡n 0"),
 
     displayOrder: z
       .number()
-      .int("Thứ tự hiển thị phải là số nguyên")
-      .min(0, "Thứ tự hiển thị không được âm")
+      .int("Thá»© tá»± hiá»ƒn thá»‹ pháº£i lÃ  sá»‘ nguyÃªn")
+      .min(0, "Thá»© tá»± hiá»ƒn thá»‹ khÃ´ng Ä‘Æ°á»£c Ã¢m")
       .optional()
       .default(0),
 
@@ -1208,7 +1216,7 @@ export const updateComboSchema = z
       return uniqueIds.size === variantIds.length;
     },
     {
-      message: "ProductVariant bị trùng trong combo",
+      message: "ProductVariant bá»‹ trÃ¹ng trong combo",
       path: ["comboItems"],
     }
   );
@@ -1233,11 +1241,11 @@ const ORDER_SOURCES = [
 
 const orderPaymentSchema = z.object({
   method: z.enum(PAYMENT_METHODS, {
-    message: "Phương thức thanh toán không hợp lệ",
+    message: "PhÆ°Æ¡ng thá»©c thanh toÃ¡n khÃ´ng há»£p lá»‡",
   }),
   amount: z
-    .number({ message: "Số tiền không hợp lệ" })
-    .min(0, "Số tiền không được âm"),
+    .number({ message: "Sá»‘ tiá»n khÃ´ng há»£p lá»‡" })
+    .min(0, "Sá»‘ tiá»n khÃ´ng Ä‘Æ°á»£c Ã¢m"),
   currency: z.enum(CURRENCIES).default("VND"),
   paidAt: z.string().datetime().optional().nullable(),
   transactionId: z.string().default(""),
@@ -1248,17 +1256,17 @@ const orderShippingSchema = z.object({
   receiverName: z
     .string()
     .trim()
-    .min(1, "Tên người nhận là bắt buộc")
+    .min(1, "TÃªn ngÆ°á»i nháº­n lÃ  báº¯t buá»™c")
     .max(200),
   receiverPhone: z
     .string()
     .trim()
-    .min(1, "SĐT người nhận là bắt buộc")
+    .min(1, "SÄT ngÆ°á»i nháº­n lÃ  báº¯t buá»™c")
     .max(20),
   address: z
     .string()
     .trim()
-    .min(1, "Địa chỉ giao hàng là bắt buộc")
+    .min(1, "Äá»‹a chá»‰ giao hÃ ng lÃ  báº¯t buá»™c")
     .max(500),
   province: z.string().max(100).optional(),
   district: z.string().max(100).optional(),
@@ -1276,77 +1284,83 @@ const OBJECT_ID_REGEX_ORDER = /^[a-f\d]{24}$/i;
 export const createOrderSchema = z.object({
   customerId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Customer không hợp lệ")
-    .min(1, "Customer là bắt buộc"),
+    .regex(OBJECT_ID_REGEX_ORDER, "Customer khÃ´ng há»£p lá»‡")
+    .min(1, "Customer lÃ  báº¯t buá»™c"),
 
   customerName: z
     .string()
     .trim()
-    .min(1, "Tên khách hàng là bắt buộc")
+    .min(1, "TÃªn khÃ¡ch hÃ ng lÃ  báº¯t buá»™c")
     .max(200),
 
   customerPhone: z.string().max(20).optional(),
 
   leadId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Lead không hợp lệ")
+    .regex(OBJECT_ID_REGEX_ORDER, "Lead khÃ´ng há»£p lá»‡")
     .optional()
     .nullable(),
 
   productId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Product không hợp lệ")
+    .regex(OBJECT_ID_REGEX_ORDER, "Product khÃ´ng há»£p lá»‡")
+    .optional()
+    .nullable(),
+
+  productVariantId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER, "ProductVariant khÃ´ng há»£p lá»‡")
     .optional()
     .nullable(),
 
   comboId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Combo không hợp lệ")
+    .regex(OBJECT_ID_REGEX_ORDER, "Combo khÃ´ng há»£p lá»‡")
     .optional()
     .nullable(),
 
   quantity: z
-    .number({ message: "Số lượng không hợp lệ" })
-    .int("Số lượng phải là số nguyên")
-    .min(1, "Số lượng tối thiểu là 1"),
+    .number({ message: "Sá»‘ lÆ°á»£ng khÃ´ng há»£p lá»‡" })
+    .int("Sá»‘ lÆ°á»£ng pháº£i lÃ  sá»‘ nguyÃªn")
+    .min(1, "Sá»‘ lÆ°á»£ng tá»‘i thiá»ƒu lÃ  1"),
 
   unitPrice: z
-    .number({ message: "Đơn giá không hợp lệ" })
-    .min(0, "Đơn giá không được âm"),
+    .number({ message: "ÄÆ¡n giÃ¡ khÃ´ng há»£p lá»‡" })
+    .min(0, "ÄÆ¡n giÃ¡ khÃ´ng Ä‘Æ°á»£c Ã¢m"),
 
   totalAmount: z
-    .number({ message: "Tổng tiền không hợp lệ" })
-    .min(0, "Tổng tiền không được âm"),
+    .number({ message: "Tá»•ng tiá»n khÃ´ng há»£p lá»‡" })
+    .min(0, "Tá»•ng tiá»n khÃ´ng Ä‘Æ°á»£c Ã¢m"),
 
   currency: z.enum(CURRENCIES).default("VND"),
 
   estimatedWeight: z
-    .number({ message: "Trọng lượng ước tính không hợp lệ" })
+    .number({ message: "Trá»ng lÆ°á»£ng Æ°á»›c tÃ­nh khÃ´ng há»£p lá»‡" })
     .min(0)
     .optional()
     .nullable(),
 
   actualWeight: z
-    .number({ message: "Trọng lượng thực tế không hợp lệ" })
+    .number({ message: "Trá»ng lÆ°á»£ng thá»±c táº¿ khÃ´ng há»£p lá»‡" })
     .min(0)
     .optional()
     .nullable(),
 
   warehouseId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Warehouse không hợp lệ")
+    .regex(OBJECT_ID_REGEX_ORDER, "Warehouse khÃ´ng há»£p lá»‡")
     .optional()
     .nullable(),
 
   marketingEmployeeId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Nhân viên marketing không hợp lệ")
+    .regex(OBJECT_ID_REGEX_ORDER, "NhÃ¢n viÃªn marketing khÃ´ng há»£p lá»‡")
     .optional()
     .nullable(),
 
   saleEmployeeId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Nhân viên sale không hợp lệ")
+    .regex(OBJECT_ID_REGEX_ORDER, "NhÃ¢n viÃªn sale khÃ´ng há»£p lá»‡")
     .optional()
     .nullable(),
 
@@ -1355,18 +1369,18 @@ export const createOrderSchema = z.object({
   isPrepaid: z.boolean().default(false),
 
   orderType: z
-    .enum(ORDER_TYPES, { message: "Loại đơn không hợp lệ" })
+    .enum(ORDER_TYPES, { message: "Loáº¡i Ä‘Æ¡n khÃ´ng há»£p lá»‡" })
     .default("NORMAL"),
 
   orderSource: z
-    .enum(ORDER_SOURCES, { message: "Nguồn đơn không hợp lệ" })
+    .enum(ORDER_SOURCES, { message: "Nguá»“n Ä‘Æ¡n khÃ´ng há»£p lá»‡" })
     .default("MANUAL"),
 
   payments: z.array(orderPaymentSchema).default([]),
 
   totalPaid: z
-    .number({ message: "Tổng thanh toán không hợp lệ" })
-    .min(0, "Tổng thanh toán không được âm")
+    .number({ message: "Tá»•ng thanh toÃ¡n khÃ´ng há»£p lá»‡" })
+    .min(0, "Tá»•ng thanh toÃ¡n khÃ´ng Ä‘Æ°á»£c Ã¢m")
     .default(0),
 
   shipping: orderShippingSchema.optional(),
@@ -1377,7 +1391,7 @@ export const createOrderSchema = z.object({
 export const updateOrderSchema = z.object({
   customerId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Customer không hợp lệ")
+    .regex(OBJECT_ID_REGEX_ORDER, "Customer khÃ´ng há»£p lá»‡")
     .optional(),
   customerName: z
     .string()
@@ -1392,6 +1406,11 @@ export const updateOrderSchema = z.object({
     .optional()
     .nullable(),
   productId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_ORDER)
+    .optional()
+    .nullable(),
+  productVariantId: z
     .string()
     .regex(OBJECT_ID_REGEX_ORDER)
     .optional()
@@ -1454,25 +1473,25 @@ export const updateFacebookPageAssignmentSchema = z
   .object({
     facebookPageId: z
       .string({
-        message: "Facebook Page không hợp lệ",
+        message: "Facebook Page khÃ´ng há»£p lá»‡",
       })
-      .min(1, "Facebook Page là bắt buộc"),
+      .min(1, "Facebook Page lÃ  báº¯t buá»™c"),
 
     marketingEmployeeId: z
       .string({
-        message: "Nhân viên marketing không hợp lệ",
+        message: "NhÃ¢n viÃªn marketing khÃ´ng há»£p lá»‡",
       })
-      .min(1, "Nhân viên marketing là bắt buộc"),
+      .min(1, "NhÃ¢n viÃªn marketing lÃ  báº¯t buá»™c"),
 
     startDate: z
       .string({
-        message: "Ngày bắt đầu không hợp lệ",
+        message: "NgÃ y báº¯t Ä‘áº§u khÃ´ng há»£p lá»‡",
       })
-      .min(1, "Ngày bắt đầu là bắt buộc"),
+      .min(1, "NgÃ y báº¯t Ä‘áº§u lÃ  báº¯t buá»™c"),
 
     endDate: z
       .string({
-        message: "Ngày kết thúc không hợp lệ",
+        message: "NgÃ y káº¿t thÃºc khÃ´ng há»£p lá»‡",
       })
       .nullable()
       .optional(),
@@ -1483,7 +1502,7 @@ export const updateFacebookPageAssignmentSchema = z
       .default(""),
 
     isActive: z.boolean({
-      message: "Trạng thái không hợp lệ",
+      message: "Tráº¡ng thÃ¡i khÃ´ng há»£p lá»‡",
     }),
   })
   .refine(
@@ -1492,7 +1511,7 @@ export const updateFacebookPageAssignmentSchema = z
       return !isNaN(start.getTime());
     },
     {
-      message: "Ngày bắt đầu không hợp lệ",
+      message: "NgÃ y báº¯t Ä‘áº§u khÃ´ng há»£p lá»‡",
       path: ["startDate"],
     }
   )
@@ -1505,7 +1524,7 @@ export const updateFacebookPageAssignmentSchema = z
       return !isNaN(end.getTime());
     },
     {
-      message: "Ngày kết thúc không hợp lệ",
+      message: "NgÃ y káº¿t thÃºc khÃ´ng há»£p lá»‡",
       path: ["endDate"],
     }
   )
@@ -1519,8 +1538,148 @@ export const updateFacebookPageAssignmentSchema = z
       return end >= start;
     },
     {
-      message: "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu",
+      message: "NgÃ y káº¿t thÃºc pháº£i lá»›n hÆ¡n hoáº·c báº±ng ngÃ y báº¯t Ä‘áº§u",
       path: ["endDate"],
     }
   );
 
+
+// ================================================================
+// Inventory History schemas
+// ================================================================
+
+const OBJECT_ID_REGEX_INVENTORY = /^[a-f\d]{24}$/i;
+
+/**
+ * Schema táº¡o má»›i 1 InventoryHistory.
+ * Foundation (Phase 4.1) chá»‰ validate input shape. CÃ¡c field `beforeQuantity`
+ * / `afterQuantity` sáº½ do Stock Engine (Phase 4.2) tÃ­nh tá»± Ä‘á»™ng â€” nhÆ°ng váº«n
+ * cho phÃ©p caller truyá»n vÃ o Ä‘á»ƒ há»— trá»£ test / seed / migration.
+ */
+export const createInventoryHistorySchema = z.object({
+  warehouseId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_INVENTORY, "Kho khÃ´ng há»£p lá»‡"),
+
+  productVariantId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_INVENTORY, "ProductVariant khÃ´ng há»£p lá»‡")
+    .optional(),
+
+  comboId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_INVENTORY, "Combo khÃ´ng há»£p lá»‡")
+    .optional(),
+
+  orderId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_INVENTORY, "Order khÃ´ng há»£p lá»‡")
+    .optional(),
+
+  employeeId: z
+    .string()
+    .regex(OBJECT_ID_REGEX_INVENTORY, "NhÃ¢n viÃªn khÃ´ng há»£p lá»‡"),
+
+  transactionType: z.enum([
+    InventoryTransactionType.INBOUND,
+    InventoryTransactionType.OUTBOUND,
+    InventoryTransactionType.TRANSFER,
+    InventoryTransactionType.ADJUST,
+  ]),
+
+  action: z.enum([
+    InventoryAction.RESERVE,
+    InventoryAction.UNRESERVE,
+    InventoryAction.OUT,
+    InventoryAction.RETURN,
+    InventoryAction.INBOUND,
+    InventoryAction.ADJUST,
+    InventoryAction.TRANSFER_OUT,
+    InventoryAction.TRANSFER_IN,
+  ]),
+
+  reason: z.enum([
+    InventoryReason.ORDER_RESERVED,
+    InventoryReason.ORDER_UNRESERVED,
+    InventoryReason.ORDER_OUT,
+    InventoryReason.ORDER_CANCELLED,
+    InventoryReason.ORDER_RETURNED,
+    InventoryReason.SUPPLIER_RECEIVED,
+    InventoryReason.SUPPLIER_RETURNED,
+    InventoryReason.WAREHOUSE_TRANSFER,
+    InventoryReason.WAREHOUSE_AUDIT,
+    InventoryReason.WAREHOUSE_DAMAGED,
+    InventoryReason.WAREHOUSE_LOST,
+    InventoryReason.WAREHOUSE_FOUND,
+    InventoryReason.SYSTEM_ADJUST,
+    InventoryReason.SYSTEM_MIGRATION,
+  ]),
+
+  source: z
+    .enum([
+      InventorySource.MANUAL,
+      InventorySource.ORDER,
+      InventorySource.SUPPLIER_RECEIPT,
+      InventorySource.STOCKTAKE,
+      InventorySource.SYSTEM,
+    ])
+    .default(InventorySource.SYSTEM),
+
+  referenceType: z
+    .enum([
+      InventoryReferenceType.ORDER,
+      InventoryReferenceType.LEAD,
+      InventoryReferenceType.PURCHASE,
+      InventoryReferenceType.TRANSFER,
+      InventoryReferenceType.ADJUSTMENT,
+      InventoryReferenceType.SUPPLIER,
+      InventoryReferenceType.MANUAL,
+      InventoryReferenceType.SYSTEM,
+    ])
+    .optional(),
+
+  referenceCode: z
+    .string()
+    .trim()
+    .min(3, "Ma tham chieu qua ngan (toi thieu 3 ky tu)")
+    .max(64, "Ma tham chieu toi da 64 ky tu")
+    .optional(),
+
+  beforeQuantity: z.number().int("TrÆ°á»›c pháº£i lÃ  sá»‘ nguyÃªn").default(0),
+
+  changeQuantity: z
+    .number()
+    .int("LÆ°á»£ng thay Ä‘á»•i pháº£i lÃ  sá»‘ nguyÃªn")
+    .refine((n) => n !== 0, {
+      message: "LÆ°á»£ng thay Ä‘á»•i khÃ´ng Ä‘Æ°á»£c báº±ng 0",
+    }),
+
+  afterQuantity: z.number().int("Sau pháº£i lÃ  sá»‘ nguyÃªn"),
+
+  note: z.string().trim().default(""),
+});
+
+export type CreateInventoryHistoryForm = z.infer<
+  typeof createInventoryHistorySchema
+>;
+
+/**
+ * Schema cáº­p nháº­t 1 InventoryHistory.
+ *
+ * Foundation (Phase 4.1): lá»‹ch sá»­ kho lÃ  báº¥t biáº¿n (append-only).
+ * NÃªn update chá»‰ cho phÃ©p sá»­a `note` â€” má»i field khÃ¡c sáº½ do Stock Engine
+ * (Phase 4.2) reverse transaction báº±ng cÃ¡ch táº¡o row má»›i.
+ *
+ * Náº¿u sau nÃ y cho phÃ©p admin sá»­a thÃªm, má»Ÿ rá»™ng schema táº¡i Ä‘Ã¢y.
+ */
+export const updateInventoryHistorySchema = z.object({
+  note: z
+    .string()
+    .trim()
+    .min(1, "Ghi chÃº khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    .max(2000, "Ghi chÃº tá»‘i Ä‘a 2000 kÃ½ tá»±"),
+});
+
+export type UpdateInventoryHistoryForm = z.infer<
+  typeof updateInventoryHistorySchema
+>;

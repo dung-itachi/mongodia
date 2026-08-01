@@ -836,7 +836,353 @@ In Progress
     - Mọi history entry gắn `fieldName` cụ thể (customerId / customerName / productId / comboId / warehouseId / status / payments / shipping).
     - Thay `JSON.stringify` payments/shipping so sánh bằng helper `isPaymentChanged()` / `isShippingChanged()`.
   - GET `histories[]` sort `createdAt DESC` — UI không cần sort lại.
-- **Order Revenue Lock Engine (2026-08-01)**
+- **Order Module - Phase 3.1: Revenue Rule Design (2026-08-01)**
+  - **KHÔNG viết API / CRUD / Engine thật.** Chỉ xây dựng Business Rule Layer (pure functions).
+  - Tạo `src/constants/revenueRule.ts`:
+    - `RevenueOwnerType` (SAME_PRODUCT_FAMILY / NON_REVENUE_ORDER / DIFFERENT_PRODUCT_FAMILY / DIFFERENT_CUSTOMER).
+    - `RevenueLockReason` (NONE / WAITING_PREVIOUS_ORDER / PREPAID_PRIORITY / CUSTOMER_ALREADY_BUYING / ORDER_CANCELLED / NON_REVENUE_ORDER).
+    - `RevenueUnlockReason` (PREVIOUS_ORDER_CANCELLED / NEXT_ORDER_PREPAID / ORDER_STATUS_UNLOCKED).
+    - `RevenuePriority` (NONE / NORMAL / PREPAID / COMPLETED) — dùng để compareOrder trong cùng family.
+    - `RevenueState` (ELIGIBLE / LOCKED / UNLOCKED / EXEMPTED) — độc lập với OrderStatus.
+    - Helpers: `isNonRevenueOrderType()`, `isRevenueActiveStatus()`, `isRevenueUnlockStatus()`.
+  - Tạo `src/services/order/revenueRule.service.ts` (PURE):
+    - KHÔNG import mongoose / Model / DB.
+    - Input: `OrderRuleInput` DTO (plain object, KHÔNG phải Document).
+    - Hàm:
+      * `getRevenueOwner(a, b)` — phân loại quan hệ giữa 2 Order.
+      * `canLockRevenue(subject, other)` — có thể bị lock bởi other không?
+      * `canUnlockRevenue(subject, previouslyActiveSibling)` — lý do unlock.
+      * `shouldTransferRevenue(from, to)` — có nên transfer slot từ from → to không? (PREPAID takeover case).
+      * `getRevenuePriority(input)` — lấy priority COMPLETED > PREPAID > NORMAL > NONE.
+      * `getRevenueState(input)` — phân loại state nhanh (snapshot ban đầu).
+      * `compareRevenuePriority(a, b)` — so sánh priority, tie-break createdAt ASC, cuối cùng _id.
+      * `decideForOrder(subject, siblings)` — quyết định cuối cùng cho 1 Order.
+      * `decideForAll(orders)` — bulk decide, sort createdAt ASC rồi map → decision.
+    - Decision model 4 nhóm:
+      * EXEMPTED (GIFT/EXCHANGE/REPLACEMENT) → reason=NON_REVENUE_ORDER
+      * UNLOCKED (CANCELLED/REJECTED/FAILED) → reason=ORDER_CANCELLED
+      * ELIGIBLE (là owner) → reason=NONE hoặc PREPAID_PRIORITY (nếu giành slot từ đơn trước)
+      * LOCKED (chờ đơn trước) → reason=WAITING_PREVIOUS_ORDER
+  - Engine Layer (Phase 4 - tương lai) sẽ wire rule layer này vào persist + transaction.
+- **Order Module - Phase 3.2: Revenue Lock Engine (2026-08-01)**
+  - Tạo `src/services/order/revenueEngine.service.ts`:
+    - ĐỌC Mongo (Order collection).
+    - DÙNG Transaction (`startTransaction` + `commitTransaction` / `abortTransaction`).
+    - UPDATE Order (`revenueLocked` / `revenueOwnerOrderId` / `revenueLockReason` / `revenueCalculatedAt`).
+    - GHI `OrderHistory` với action `REVENUE_LOCKED` / `REVENUE_UNLOCKED` / `REVENUE_RECALCULATED` + `fieldName="revenue"`.
+  - **KHÔNG tự viết Rule.** Mọi quyết định gọi `decideForAll()` từ `revenueRule.service.ts`.
+  - API:
+    - `resolveCustomerRevenue(customerId, options?)`:
+      * Load `Order.find({ customerId, isActive: true })`.
+      * Map sang `OrderRuleInput` DTO.
+      * `decideForAll()` → `Map<orderId, RevenueDecision>`.
+      * Detect thay đổi so với DB (locked/owner/reason).
+      * Persist batched trong transaction.
+      * Ghi `OrderHistory` (khi có `actorEmployeeId`).
+      * Skip order không đổi (trừ `options.force`).
+    - `resolveAllCustomers(actorEmployeeId?)`:
+      * Quét `Order.distinct("customerId")` + loop `resolveCustomerRevenue()`.
+      * Cron / migration / manual trigger.
+  - Hỗ trợ options:
+    - `session?: mongoose.ClientSession` — caller truyền session riêng (POST/PUT wire).
+    - `actorEmployeeId?: Types.ObjectId | null` — null = skip history (seed/migration).
+    - `force?: boolean` — bỏ qua diff check.
+  - **KHÔNG viết API. KHÔNG gọi từ Route.** Wire sẽ làm ở Phase 4.
+  - Trả về `CustomerRevenueResult` (totals + persistedCount + changedCount + elapsedMs).
+- **Order Module - Phase 4.1: Warehouse Foundation (2026-08-01)**
+  - Mục tiêu: chuẩn bị nền tảng để Order giữ kho / trừ kho / hoàn kho ở Phase sau.
+  - **KHÔNG làm:** Shipment / Stock Engine / Auto Reserve / Inventory Adjustment API / Dashboard / API trigger.
+  - Tạo `src/constants/inventoryStatus.ts`:
+    - `InventoryTransactionType` (INBOUND / OUTBOUND / TRANSFER / ADJUST).
+    - `InventoryAction` (RESERVE / UNRESERVE / OUT / RETURN / INBOUND / ADJUST / TRANSFER_OUT / TRANSFER_IN).
+    - `InventoryReason` (ORDER_RESERVED / ORDER_UNRESERVED / ORDER_OUT / ORDER_CANCELLED / ORDER_RETURNED / SUPPLIER_RECEIVED / SUPPLIER_RETURNED / WAREHOUSE_TRANSFER / WAREHOUSE_AUDIT / WAREHOUSE_DAMAGED / WAREHOUSE_LOST / WAREHOUSE_FOUND / SYSTEM_ADJUST / SYSTEM_MIGRATION).
+    - `InventoryState` (AVAILABLE / RESERVED / SOLD / RETURNED / ADJUSTED / TRANSFERRED_OUT / TRANSFERRED_IN / LOST / DAMAGED).
+    - `InventorySource` (MANUAL / ORDER / SUPPLIER_RECEIPT / STOCKTAKE / SYSTEM).
+    - Helpers + mapping sets: `INBOUND_ACTIONS`, `OUTBOUND_ACTIONS`, `ORDER_REQUIRED_ACTIONS`, `TRANSACTION_TYPE_ACTIONS`.
+  - Tạo `src/models/InventoryHistory.ts`:
+    - Fields: warehouseId / productVariantId? / comboId? / orderId? / employeeId / transactionType / action / reason / source / beforeQuantity / changeQuantity / afterQuantity / note? / createdAt.
+    - **Append-only log** (không UPDATE field khác ngoài `note` ở schema).
+    - Indexes: `warehouseId`, `productVariantId`, `orderId`, `createdAt DESC`; compound `(warehouseId, productVariantId, createdAt DESC)`, `(warehouseId, comboId, createdAt DESC)`, `(orderId, createdAt DESC)`.
+  - Tạo `src/mappers/inventory.mapper.ts`:
+    - `InventoryHistoryResponse` DTO + 4 label records (`INVENTORY_TRANSACTION_TYPE_LABELS` / `INVENTORY_ACTION_LABELS` / `INVENTORY_REASON_LABELS` / `INVENTORY_SOURCE_LABELS`).
+    - `mapInventoryHistory(doc)` + `mapInventoryHistoryList(docs)`.
+    - Helper ép enum an toàn `asTransactionType/asAction/asReason/asSource` (chống string cũ trong DB).
+  - `src/utils/validator.ts` thêm:
+    - Import 4 enum từ `inventoryStatus.ts`.
+    - `createInventoryHistorySchema` — Zod schema đầy đủ, ObjectId regex, `changeQuantity` không được 0.
+    - `updateInventoryHistorySchema` — chỉ cho phép sửa `note` (append-only philosophy).
+    - Types: `CreateInventoryHistoryForm`, `UpdateInventoryHistoryForm`.
+  - **KHÔNG viết API. KHÔNG CRUD. KHÔNG Transaction. KHÔNG Stock Engine.** Phase 4.2+ sẽ wire.
+  - **Phase 4.1 mở rộng (2026-08-01) — Reference Code & Type:**
+    - `src/constants/inventoryStatus.ts` thêm:
+      * `InventoryReferenceType` (ORDER / LEAD / PURCHASE / TRANSFER / ADJUSTMENT / SUPPLIER / MANUAL / SYSTEM).
+      * `INVENTORY_REFERENCE_CODE_PREFIXES` map prefix `OD` / `LD` / `WH` / `TR` / `AD` / `SP` / `MN` / `SY`.
+    - `src/models/InventoryHistory.ts` thêm fields: `referenceType` (optional enum, indexed) + `referenceCode` (optional string, indexed).
+      * Compound indexes thêm: `(referenceCode, warehouseId)` + `(referenceType, createdAt DESC)`.
+    - `src/mappers/inventory.mapper.ts`:
+      * `INVENTORY_REFERENCE_TYPE_LABELS` record.
+      * DTO thêm `referenceType` + `referenceTypeLabel` + `referenceCode`.
+      * Helper `asReferenceType()` ép enum an toàn.
+    - `src/utils/validator.ts` `createInventoryHistorySchema` thêm 2 field optional:
+      * `referenceType` (enum 8 giá trị).
+      * `referenceCode` (string 3-64 ký tự).
+  - Mục đích: Timeline UI đọc mã người-đọc (`OD250801001`) làm anchor, không phải đoán qua `reason`.
+- **Order Module - Phase 4.2: Stock Engine (2026-08-01)**
+  - Tầng Infrastructure — quản lý tồn kho chuẩn. Phase sau chỉ cần gọi Stock Engine.
+  - **KHÔNG làm:** Shipment / Dashboard / Commission / API Route / UI /
+    Inventory Adjustment API / Warehouse CRUD / tự viết Business Rule.
+  - Tạo `src/services/warehouse/stockEngine.errors.ts` — Chuẩn hoá error layer:
+    - `StockEngineError` (abstract base) — `name` / `code` / `statusCode` / `context`.
+    - `InsufficientStockError` (409) — `availableQuantity < requested`.
+    - `InsufficientReservedStockError` (409) — `reservedQuantity < requested`.
+    - `InsufficientQuantityError` (409) — `quantity < |signedChange|`.
+    - `InventoryNotFoundError` (404) — row không tồn tại.
+    - `WarehouseNotFoundError` (404) — warehouseId không tồn tại / inactive.
+    - `InvalidStockInputError` (400) — input sai (lineItem, quantity, comboId chưa hỗ trợ, ...).
+    - `UnsupportedActionError` (400) — action không qua đúng hàm.
+    - API layer Phase sau chỉ cần `instanceof` → trả HTTP đúng.
+  - Tạo `src/services/warehouse/stockEngine.service.ts`:
+    - `reserveStock(warehouseId, items, ctx, options?) → StockChangeResult[]`
+      * `RESERVE` — tăng `reservedQuantity`, throw `InsufficientStockError` nếu thiếu available.
+      * `changeQuantity = 0` (RESERVE không đổi `quantity` tổng).
+      * History: action=RESERVE, reason=ORDER_RESERVED.
+    - `releaseReservedStock(warehouseId, items, ctx, options?) → StockChangeResult[]`
+      * `UNRESERVE` — giảm `reservedQuantity`, throw `InsufficientReservedStockError`.
+      * History: action=UNRESERVE, reason=ORDER_UNRESERVED.
+    - `deductStock(warehouseId, items, ctx, options?) → StockChangeResult[]`
+      * `OUT` — giảm `quantity` + `reservedQuantity` đồng thời.
+      * Throw `InsufficientReservedStockError` hoặc `InsufficientQuantityError`.
+      * History: action=OUT, reason=ORDER_OUT.
+    - `returnStock(warehouseId, items, ctx, options?) → StockChangeResult[]`
+      * `RETURN` — tăng `quantity`, upsert row nếu thiếu.
+      * History: action=RETURN, reason=ORDER_RETURNED.
+    - `adjustStock(warehouseId, inputs, ctx, options?) → StockChangeResult[]`
+      * `ADJUST` — `signedQuantity` có dấu: dương = tăng, âm = giảm.
+      * Upsert row nếu thiếu.
+      * Reason mặc định: `WAREHOUSE_FOUND` (tăng) / `WAREHOUSE_AUDIT` (giảm); caller override được.
+      * History: action=ADJUST, changeQuantity giữ dấu âm nếu giảm.
+    - `transferStock(input, ctx, options?) → TransferStockResult[]`
+      * Cặp `TRANSFER_OUT` (source) + `TRANSFER_IN` (destination) trong CÙNG transaction.
+      * Source phải có sẵn row, destination upsert nếu thiếu.
+      * Cùng `referenceType` + `referenceCode` để truy vết cặp.
+      * History: action=TRANSFER_OUT / TRANSFER_IN, reason=WAREHOUSE_TRANSFER.
+      * Throw `InvalidStockInputError` nếu source = destination.
+  - Mỗi hàm:
+    - Dùng `mongoose.startSession()` + `runInTransaction` helper (tự start/commit/abort nếu caller không truyền session).
+    - Nhận `session?: mongoose.ClientSession` (optional) — caller truyền để share với transaction khác.
+    - Rollback khi lỗi (abort + rethrow).
+    - Kiểm tra tồn trước khi update (throw error class chuẩn hoá).
+    - Append `InventoryHistory` trong CÙNG session (chỉ persist khi commit).
+    - KHÔNG tự viết Business Rule — chỉ chuẩn hoá infrastructure.
+  - Return type `StockChangeResult` (mỗi item) gồm:
+    ```
+    {
+      warehouseId, productVariantId?, comboId?, action,
+      before:  { quantity, reservedQuantity, availableQuantity },
+      after:   { quantity, reservedQuantity, availableQuantity },
+      changed: { quantity, reservedQuantity, availableQuantity },
+      historyId  // trỏ về InventoryHistory row vừa tạo (audit link)
+    }
+    ```
+    Caller (Dashboard / Audit / API) đọc trực tiếp, KHÔNG query lại DB.
+  - `TransferStockResult` wrap cho TRANSFER: `{ item, out: StockChangeResult, in: StockChangeResult }`.
+  - Public types:
+    - `StockLineItem { productVariantId? | comboId?, quantity }` — đúng 1 trong 2 id.
+    - `StockContext { actorEmployeeId, referenceType?, referenceCode?, orderId?, note?, source? }`.
+    - `AdjustStockInput extends StockLineItem { signedQuantity, reason? }`.
+    - `TransferStockInput { sourceWarehouseId, destinationWarehouseId, items[] }`.
+  - Quy ước kỹ thuật:
+    - Update Inventory dùng `$inc` (atomic) cho `quantity` / `reservedQuantity` + `$set` cho `availableQuantity`.
+    - StockLineItem nếu dùng `comboId` → throw `InvalidStockInputError` (Inventory model hiện chưa hỗ trợ combo, Phase sau sẽ mở rộng schema).
+    - Transaction type mặc định theo action (RESERVE/UNRESERVE/OUT → OUTBOUND, RETURN/ADJUST → ADJUST, TRANSFER_* → TRANSFER).
+    - `reason` mặc định: ORDER_RESERVED / ORDER_UNRESERVED / ORDER_OUT / ORDER_RETURNED / WAREHOUSE_TRANSFER.
+    - `source` mặc định: SYSTEM (caller override được).
+  - **KHÔNG viết API. KHÔNG gọi từ Order CRUD.** Phase 4.3+ sẽ wire.
+  - **Phase 4.2 Refactor (2026-08-01) — Standardize Error + Return Snapshot:**
+    - Tách error ra file riêng `stockEngine.errors.ts` để API layer `instanceof` → HTTP code chuẩn.
+    - Mỗi hàm giờ trả `StockChangeResult[]` (hoặc `TransferStockResult[]`) với `before` / `after` / `changed` + `historyId` — Dashboard / Audit không cần query lại DB.
+- **Order Module - Phase 5.1: Order Permissions (2026-08-01)**
+  - **Mục tiêu:** hoàn thiện Permission cho toàn bộ Order Module — chuẩn bị nền cho Phase 5.x (Confirm / Cancel API), Phase 6.x (Revenue UI), Phase 7.x (Shipment), v.v.
+  - **KHÔNG làm:** API / CRUD / Revenue / Warehouse / Shipment / Dashboard / Seed.
+  - **`src/constants/permissions.ts` — bổ sung 5 permission Order:**
+    - `order.view`             — Xem đơn.
+    - `order.create`           — Tạo đơn.
+    - `order.update`           — Sửa đơn.
+    - `order.delete`           — Xóa đơn.
+    - `order.confirm`          — Xác nhận đơn (phase sau sẽ dùng).
+    - `order.cancel`           — Hủy đơn (phase sau sẽ dùng).
+    - `order.history`          — Xem OrderHistory timeline.
+    - `order.revenue`          — Xem thông tin revenue (marketing/sale final, lock reason).
+    - `order.reserve_stock`    — Giữ / trả chỗ kho cho đơn (do WAREHOUSE role dùng).
+    - `permissions.seed.ts` tự động pick up khi seed (dùng `PERMISSIONS` constant — không cần sửa seeder).
+  - **`src/constants/roles.ts` — phân quyền theo nghiệp vụ:**
+    - `ADMIN`        → Full (wildcard `*`).
+    - `MANAGER`      → Full Order (9 permission ở trên).
+    - `SALE`         → `order.view / create / update / history` (chốt + sửa đơn, không xóa, không reserve/release kho).
+    - `MKT`          → `order.view` (xem đơn phát sinh từ Lead — đánh giá conversion).
+    - `WAREHOUSE`    → `order.view / reserve_stock / history` (giữ/trả chỗ kho).
+    - `LEADER`       → giữ tương thích + thêm `order.confirm / cancel / history`.
+    - `EMPLOYEE`     → `order.view / create` (giữ tương thích).
+  - **Nguyên tắc áp dụng:**
+    - Middleware / route **CHỈ check permission** — KHÔNG hardcode role name.
+    - `currentUser.permissions.includes("order.<action>")` là pattern duy nhất.
+    - SALE không xóa đơn (`order.delete`) — chỉ Manager trở lên.
+    - WAREHOUSE không sửa thông tin đơn (`order.update`) — chỉ reserve/release kho qua Stock Engine.
+    - MKT chỉ xem — không tạo đơn (do SALE chốt).
+  - **Kiểm tra toàn bộ API Order (Phase 4.3 đã dùng đúng key):**
+    - `GET /api/orders`        → `order.view`.
+    - `GET /api/orders/[id]`   → `order.view`.
+    - `POST /api/orders`       → `order.create`.
+    - `PUT /api/orders/[id]`   → `order.update`.
+    - `DELETE /api/orders/[id]`→ `order.delete`.
+    - Không còn hardcode role name trong route layer.
+  - **Phase sau (tham khảo):**
+    - 5.2 Order Seed (sample data 18 đơn, đã có — xem bên dưới).
+    - 5.3 Confirm Order API → dùng `order.confirm`.
+    - 5.4 Cancel Order API → dùng `order.cancel`.
+    - 5.5 OrderHistory UI → dùng `order.history`.
+    - 5.6 Revenue UI / Dashboard → dùng `order.revenue`.
+    - 5.7 Stock Reservation API (tách riêng) → dùng `order.reserve_stock`.
+- **Order Module - Phase 5.2: Order Seed (2026-08-01)**
+  - **Mục tiêu:** tạo dữ liệu mẫu để test toàn bộ backend Order — idempotent, chạy lại nhiều lần không sinh document trùng.
+  - **KHÔNG làm:** API / CRUD / Revenue / Warehouse / Shipment / Dashboard.
+  - **File mới: `src/db/seeds/orders.seed.ts`** — seed 18 Order, bao phủ đầy đủ:
+    - **Status (7)**: `PENDING / CONFIRMED / PREPAID / SHIPPING / COMPLETED / CANCELLED / FAILED` — `REJECTED` không seed riêng (giống FAILED về revenue) nhưng enum vẫn nhận.
+    - **OrderType (5)**: `NORMAL / COMBO / GIFT / EXCHANGE / REPLACEMENT`.
+    - **OrderSource (5)**: `FACEBOOK / IMPORT / PHONE / WEBSITE / MANUAL`.
+    - **Revenue Lock**: cả `revenueLocked=true` (#2, #3, #4, #5, #6, #13, #15) và `revenueLocked=false`.
+    - **Stock Reservation (audit-only)**: `stockReservedAt` set cho 9 đơn, không set cho 9 đơn còn lại.
+    - **Linked Documents**:
+      - `customerId` — 5 đơn dùng Customer từ Lead seed (KH000001..005), 6 đơn tạo mới Customer KH-SPEC-* trong Order seed.
+      - `leadId` — 6 đơn link trực tiếp tới Lead (#1, #2, #4, #13, #15, #17); các đơn khác bỏ qua (đơn Manual / Import / REPLACEMENT).
+      - `productVariantId` / `comboId` — link theo từng orderType (NORMAL ↔ variant, COMBO/GIFT ↔ combo).
+      - `warehouseId` — tự tạo 2 Warehouse `WH-PVD-01` / `WH-PVD-02` (chưa có seed Warehouse riêng) idempotent qua `Warehouse.findOneAndUpdate({ code })`.
+      - `marketingEmployeeId` / `saleEmployeeId` — `EMP_MKT001/002`, `EMP_SALE001/002/003`.
+    - **Payments**: phủ `CASH / BANK_TRANSFER / MOMO` (partial + full) trên các đơn đã thanh toán.
+    - **Shipping**: 3 đơn VNPost, 3 đơn J&T, có `trackingNumber / carrier / estimatedDelivery / actualDelivery / shippingFee` đầy đủ.
+  - **OrderHistory:**
+    - Tất cả 18 đơn đều có 1 entry `CREATED`.
+    - **Action extra** (đa dạng): `STATUS_CHANGED`, `PAYMENT_ADDED`, `SHIPPING_UPDATED`, `STOCK_RESERVED`, `REVENUE_LOCKED`, `REVENUE_UNLOCKED`, `DELETED`.
+    - 6 đơn (#1, #2, #4, #10, #12, #13, #14, #15, #18) có `STOCK_RESERVED` để test audit-only Phase 4.3.
+    - Idempotent qua `findOne({ orderId, action, note }).lean()` — chạy lại nhiều lần không thêm entry trùng.
+  - **Idempotency strategy:**
+    - Mỗi `spec.seedCode` deterministic theo `baseDateKey` (vd `OD2508010001`) → `Order.findOne({ orderCode })` trả cùng doc qua các lần seed.
+    - Fallback `Order.findOne({ customerName, customerPhone, totalAmount, productVariantId / comboId, createdAt ±1h })` để an toàn khi các seed chạy ngày khác nhau.
+    - **Warehouse**: tự upsert `code` (giống pattern Lead seed tự tạo Customer).
+    - **Customer**: nếu `customerCode` không có → `ensureCustomer({ code: "KH-SPEC-..." })`.
+    - `Counter` KHÔNG reset, không dùng để build orderCode (giữ route POST counter riêng).
+  - **Constraints tuân thủ Phase 4.3 Refactor:**
+    - KHÔNG set `stockReserved` (boolean) — đã bỏ khỏi model.
+    - CHỈ set `stockReservedAt` cho đơn "từng chạm Stock Engine" (audit).
+    - `stockReservedAt` ≠ `true` ngay cả khi set; audit field chỉ để biết "lần cuối Order reserve/release là khi nào".
+  - **`src/db/seed.ts`** — gọi `await seedOrders()` SAU `seedLeads()` (vì Order seed dùng Customer mà Lead seed đã tạo).
+  - **Verification khi chạy:**
+    - In log: `Status:` (đếm theo status), `Type:`, `Source:`, `revenueLocked=true/false`, `unlock-status orders`.
+    - Có thể `db.orders.find({ revenueLocked: true }).count()` / `db.orderhistories.countDocuments()`.
+- **Order Module - Phase 4.3 Refactor (2026-08-01) — Drop `stockReserved` flag + Add STOCK_RESERVED/RELEASED actions**
+  - **Vấn đề:**
+    - `Order.stockReserved` (boolean) dễ lệch sau chuỗi Reserve ↓ Release ↓ Reserve. Nếu chỉ dựa vào flag, caller không biết thực sự còn giữ chỗ hay không → có thể reserve / release trùng.
+    - OrderHistory chỉ có `UPDATED` chung chung → Timeline UI khó đọc (không phân biệt "đổi field" với "đã reserve/release kho").
+  - **Giải pháp — InventoryHistory làm source of truth:**
+    - Bỏ `Order.stockReserved` (boolean). Chỉ giữ `Order.stockReservedAt?: Date` cho **audit** (lần cuối Stock Engine được gọi cho Order này).
+    - Thêm field `reservedChange: number` (signed, default 0) vào `InventoryHistory`:
+      - `RESERVE` → `reservedChange = +qty` (input StockLineItem).
+      - `UNRESERVE` → `reservedChange = −qty`.
+      - Các action khác (`OUT` / `RETURN` / `INBOUND` / `ADJUST` / `TRANSFER_*`) → 0.
+    - `orderStockWiring.helper.queryNetReserved(orderId, session)` aggregate `Σ reservedChange where orderId = X` theo `productVariantId` → `Map<variantId, netReserved>`.
+    - Rule "đang giữ chỗ" = `netReserved >= oldOrder.quantity`.
+  - **`OrderStockSnapshot` rút gọn:** bỏ field `stockReserved` (không còn dựa vào flag).
+    - `buildStockWiringPlan(old, new, netMap)`, `buildStockWiringPlanForCreate(new)`, `buildStockWiringPlanForDelete(old, netMap)` — helper nhận `netMap` (hoặc rỗng cho POST) thay vì `stockReserved`.
+  - **`OrderAction` mới:**
+    - `STOCK_RESERVED = "STOCK_RESERVED"` (label: "Giữ chỗ tồn kho")
+    - `STOCK_RELEASED = "STOCK_RELEASED"` (label: "Trả chỗ tồn kho")
+    - `ORDER_ACTION_LABELS` được cập nhật tương ứng.
+  - **POST /api/orders flow cập nhật:**
+    - Bỏ `stockReserved: false` trong payload Order.create.
+    - Sau `reserveStock` thành công → chỉ `$set stockReservedAt = now` (audit). KHÔNG set cờ.
+    - `OrderHistory.create()` giờ emit **2 entry** (cùng session): `CREATED` + (nếu reserve) `STOCK_RESERVED`.
+  - **PUT /api/orders/:id flow cập nhật:**
+    - Trong transaction, `queryNetReserved(existedOrder._id, session)` trước khi tính plan.
+    - `oldStockSnapshot` không còn `stockReserved`.
+    - Sau `releaseReservedStock` → push history `STOCK_RELEASED` (note kèm qty).
+    - Sau `reserveStock` → push history `STOCK_RESERVED` + `updateData.stockReservedAt = now` (audit).
+    - Bỏ nhánh update `updateData.stockReserved` (đã bỏ field).
+  - **DELETE /api/orders/:id flow cập nhật:**
+    - Trong transaction, `queryNetReserved(...)` + `buildStockWiringPlanForDelete(snap, netMap)`.
+    - Sau `releaseReservedStock` → emit history `STOCK_RELEASED`.
+    - Soft delete: `$set isActive = false, stockReservedAt = undefined` (KHÔNG set cờ).
+  - **Mapper (`order.mapper.ts`):** thêm `stockReservedAt?: string` (ISO) vào `OrderResponse` — cho frontend audit.
+  - **Invariant đảm bảo:**
+    - Không còn race condition giữa `Order.stockReserved` và `Inventory.reservedQuantity`.
+    - `queryNetReserved` đọc CÙNG session với write → luôn thấy được trạng thái thực tại tính đến trước thời điểm gọi.
+    - Reserve / Release / Reserve không bao giờ lệch.
+  - **InventoryHistory schema mở rộng:** thêm `reservedChange: { type: Number, default: 0 }` (backward-compat với rows cũ — default 0 nên aggregate vẫn đúng).
+- **Order Module - Phase 4.3: Wire Stock Engine + Revenue Engine (2026-08-01)**
+  - Mục tiêu: wire Order CRUD với 2 service đã có (`stockEngine.service.ts` + `revenueEngine.service.ts`). KHÔNG sửa Business Rule, KHÔNG sửa Stock Engine, KHÔNG sửa Revenue Rule.
+  - **KHÔNG làm:** Shipment / Dashboard / Commission / KPI / Notification / Auto Assign / UI.
+  - **Order model mở rộng (chuẩn bị wiring):**
+    - Thêm `productVariantId?: ObjectId` (ref ProductVariant) — key Stock Engine dùng để reserve / release.
+    - Thêm `stockReservedAt?: Date` (audit-only) — KHÔNG dùng làm cờ boolean nữa. Source of truth cho "đang giữ chỗ" là `Σ reservedChange` trên InventoryHistory (xem Phase 4.3 Refactor).
+    - Index `(productVariantId)` + duplicate `(warehouseId, isActive)` đã có.
+  - **Validator mở rộng:**
+    - `createOrderSchema` / `updateOrderSchema` thêm `productVariantId` (optional, nullable, ObjectId regex).
+  - **Mapper mở rộng:**
+    - `OrderResponse` + `mapOrder()` + `mapOrderList()` export `productVariantId`.
+  - **Helper wiring (mới):**
+    - `src/services/order/orderStockWiring.helper.ts` — pure helper, có aggregate DB call cho `netMap`.
+      * `OrderStockSnapshot` — chỉ chứa field cần thiết (warehouseId / productVariantId / comboId / quantity / orderType). KHÔNG có `stockReserved` (đã bỏ).
+      * `StockPlan { release: StockLineItem | null, reserve: StockLineItem | null }` — caller tự gọi Stock Engine.
+      * `canHaveStockReserve()` — gate theo OrderType (non-revenue ⇒ skip) + presence (warehouse + variant/combo + qty).
+      * `queryNetReserved(orderId, session)` — aggregate `Σ reservedChange` từ InventoryHistory (cùng session) → `Map<variantId, netReserved>`. Source of truth.
+      * `buildStockWiringPlan(old, new, netMap)` — cho PUT:
+        - Không đổi (warehouse/productVariant/combo/qty) → skip.
+        - Đổi → release reserved (nếu `netMap[oldVariant] >= oldQty`) + reserve mới (nếu newOrder đủ điều kiện).
+      * `buildStockWiringPlanForCreate(new)` — cho POST (không cần netMap).
+      * `buildStockWiringPlanForDelete(old, netMap)` — cho DELETE.
+  - **POST /api/orders — flow trong 1 transaction:**
+    1. Validate + reference existence (Customer / Lead / Product / ProductVariant / Combo / Warehouse / Employee).
+    2. Generate `orderCode` qua Counter (atomic).
+    3. `Order.create()` với `stockReservedAt=undefined`, revenue defaults. KHÔNG set `stockReserved` (đã bỏ).
+    4. `buildStockWiringPlanForCreate(snapshot)` → nếu `reserve != null` → `reserveStock({ session, ...)
+       - Catch `StockEngineError` → abort transaction + trả HTTP statusCode từ error class.
+       - Update `Order.stockReservedAt = now` (audit).
+    5. `resolveCustomerRevenue(customerId, { session, actorEmployeeId })` — cùng session.
+    6. `OrderHistory.create()` emit 2 entry: `CREATED` + (nếu reserve) `STOCK_RESERVED`.
+    7. `session.commitTransaction()` — toàn bộ rollback nếu bất kỳ bước nào throw.
+  - **PUT /api/orders/:id — flow trong 1 transaction:**
+    1. Validate + status lock guard (COMPLETED/CANCELLED/REJECTED/FAILED → 409).
+    2. Build `updateData` từ diff (customer / product / productVariant / combo / warehouse / status / payments / shipping / passthrough).
+    3. Build `oldStockSnapshot` (từ existedOrder) + `newStockSnapshot` (từ updateData + old fallback). KHÔNG có `stockReserved`.
+    4. `startTransaction()` + `queryNetReserved(existedOrder._id, session)` → netMap.
+    5. `buildStockWiringPlan(old, new, netMap)` → plan.
+    6. Trong transaction:
+       - Nếu `release != null` → `releaseReservedStock({ session, ... })` + pushHistory(STOCK_RELEASED).
+       - Nếu `reserve != null` → `reserveStock({ session, ... })` + pushHistory(STOCK_RESERVED) + set `updateData.stockReservedAt = now`.
+       - `Order.updateOne(...)` + `OrderHistory.insertMany(...)`.
+       - Nếu đổi customerId / productId / productVariantId / comboId / status / isPrepaid → `resolveCustomerRevenue(customerId, { session, actorEmployeeId })`.
+    6. `session.commitTransaction()`.
+  - **DELETE /api/orders/:id — flow trong 1 transaction:**
+    1. Validate + status lock guard (COMPLETED → 409).
+    2. `startTransaction()` + `queryNetReserved(...)` → netMap.
+    3. Build `oldStockSnapshot` từ existedOrder + `buildStockWiringPlanForDelete(snap, netMap)`.
+    4. Nếu `release != null` → `releaseReservedStock({ session, ... })`.
+    5. `Order.updateOne(isActive=false, stockReservedAt=undefined)` (soft delete). KHÔNG set cờ `stockReserved`.
+    6. `resolveCustomerRevenue(customerId, { session, actorEmployeeId })` — mở khóa slot cho đơn sau của cùng Customer.
+    7. `OrderHistory.create()` emit 2 entry: `DELETED` + (nếu đã release) `STOCK_RELEASED`.
+    8. `session.commitTransaction()`.
+  - **Quy ước xuyên suốt:**
+    - Order CRUD tự tạo `session` qua `mongoose.startSession()` + `startTransaction()`.
+    - `Stock Engine` + `Revenue Engine` + `Order` + `OrderHistory` + `InventoryHistory` đều dùng CÙNG session — rollback toàn bộ nếu lỗi bất kỳ bước nào.
+    - `StockEngineError` (statusCode 400/404/409) được catch + map sang HTTP tại route layer.
+    - `referenceType = InventoryReferenceType.ORDER`, `referenceCode = orderCode` cho mọi `InventoryHistory` sinh ra từ Order CRUD.
+    - `actorEmployeeId = currentUser.employee._id` cho cả Revenue Engine + Stock Engine.
+    - KHÔNG duplicate reserve / duplicate release — `InventoryHistory.reservedChange` aggregate (queryNetReserved) + `buildStockWiringPlan` đảm bảo idempotent (xem Phase 4.3 Refactor).
+    - KHÔNG tự viết Business Rule — chỉ gọi service.
+    - KHÔNG hardcode logic — chỉ wire.
+  - **Đã có chuẩn bị cho phase sau:**
+    - `reserveStock` / `releaseReservedStock` trả `StockChangeResult[]` với `historyId` — Audit / Dashboard phase sau dùng trực tiếp, không query lại DB.
+    - `resolveCustomerRevenue` đã ghi `OrderHistory(action=REVENUE_LOCKED/UNLOCKED/RECALCULATED)` tự động.
+- **Order Module - Phase 4 (tương lai) — Wire Engine vào POST/PUT Orders**
   - Tạo `src/constants/orderStatus.ts`
     - `OrderStatus` (PENDING / CONFIRMED / PREPAID / SHIPPING / COMPLETED / CANCELLED / REJECTED / FAILED)
     - `REVENUE_UNLOCK_STATUSES` (CANCELLED / REJECTED / FAILED)

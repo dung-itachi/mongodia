@@ -8,9 +8,11 @@ import { OrderHistory } from "@/models/OrderHistory";
 import {
   OrderStatus,
   OrderAction,
+  OrderType,
   ORDER_STATUS_LABELS,
 } from "@/constants/orderStatus";
 import Product from "@/models/Product";
+import ProductVariant from "@/models/ProductVariant";
 import Combo from "@/models/Combo";
 import Employee from "@/models/Employee";
 import Customer from "@/models/Customer";
@@ -25,6 +27,20 @@ import {
   isPaymentChanged,
   isShippingChanged,
 } from "@/helpers/orderChange";
+
+import { resolveCustomerRevenue } from "@/services/order/revenueEngine.service";
+import {
+  releaseReservedStock,
+  reserveStock,
+} from "@/services/warehouse/stockEngine.service";
+import { StockEngineError } from "@/services/warehouse/stockEngine.errors";
+import {
+  buildStockWiringPlan,
+  buildStockWiringPlanForDelete,
+  queryNetReserved,
+  type OrderStockSnapshot,
+} from "@/services/order/orderStockWiring.helper";
+import { InventoryReferenceType } from "@/constants/inventoryStatus";
 
 // ==================================================
 // Status guards
@@ -65,6 +81,7 @@ export async function GET(
       .populate("customer", "_id code name phone")
       .populate("lead", "_id leadCode")
       .populate("product", "_id code name")
+      .populate("productVariant", "_id sku")
       .populate("combo", "_id code name")
       .populate("warehouse", "_id code name")
       .populate("marketingEmployee", "_id employeeCode fullName")
@@ -152,6 +169,8 @@ export async function PUT(
     if (data.customerId !== undefined) checks.push(Customer.exists({ _id: data.customerId }));
     if (data.leadId !== undefined) checks.push(Lead.exists({ _id: data.leadId }));
     if (data.productId !== undefined) checks.push(Product.exists({ _id: data.productId }));
+    if (data.productVariantId !== undefined)
+      checks.push(ProductVariant.exists({ _id: data.productVariantId }));
     if (data.comboId !== undefined) checks.push(Combo.exists({ _id: data.comboId }));
     if (data.warehouseId !== undefined)
       checks.push(Warehouse.exists({ _id: data.warehouseId }));
@@ -173,6 +192,10 @@ export async function PUT(
     if (data.productId !== undefined) {
       if (!existsResults[idx++])
         return errorResponse("Sản phẩm không tồn tại", 400);
+    }
+    if (data.productVariantId !== undefined) {
+      if (!existsResults[idx++])
+        return errorResponse("Biến thể sản phẩm không tồn tại", 400);
     }
     if (data.comboId !== undefined) {
       if (!existsResults[idx++])
@@ -267,6 +290,21 @@ export async function PUT(
         });
       }
       updateData.productId = data.productId || undefined;
+    }
+
+    // productVariant
+    if (data.productVariantId !== undefined) {
+      const oldV = existedOrder.productVariantId?.toString() || "";
+      const newV = data.productVariantId || "";
+      if (oldV !== newV) {
+        pushHistory(OrderAction.UPDATED, {
+          fieldName: "productVariantId",
+          oldValue: oldV,
+          newValue: newV,
+          note: "Đổi biến thể sản phẩm",
+        });
+      }
+      updateData.productVariantId = data.productVariantId || undefined;
     }
 
     // combo
@@ -405,12 +443,142 @@ export async function PUT(
       }
     }
 
+    // ---- Stock wiring (Phase 4.3) ------------------------------------
+    // Tính diff giữa oldOrder ↔ newOrder. Stock Engine chỉ quan tâm
+    // warehouse / productVariantId / comboId / quantity.
+    //
+    // - Nếu KHÔNG thay đổi các field trên → plan = skip (không đụng Stock).
+    // - Nếu có thay đổi → release reserved (nếu đang thực sự giữ) + reserve lại (nếu đủ điều kiện).
+    //
+    // Source of truth cho "Order đang giữ chỗ hay không" là
+    // `Σ reservedChange` trên InventoryHistory (append-only log).
+    const oldStockSnapshot: OrderStockSnapshot = {
+      warehouseId: existedOrder.warehouseId?.toString() ?? null,
+      productVariantId: existedOrder.productVariantId?.toString() ?? null,
+      comboId: existedOrder.comboId?.toString() ?? null,
+      quantity: existedOrder.quantity,
+      orderType: existedOrder.orderType as OrderType,
+    };
+    const newStockSnapshot: OrderStockSnapshot = {
+      warehouseId:
+        updateData.warehouseId !== undefined
+          ? ((updateData.warehouseId as string | undefined) ?? null)
+          : oldStockSnapshot.warehouseId,
+      productVariantId:
+        updateData.productVariantId !== undefined
+          ? ((updateData.productVariantId as string | undefined) ?? null)
+          : oldStockSnapshot.productVariantId,
+      comboId:
+        updateData.comboId !== undefined
+          ? ((updateData.comboId as string | undefined) ?? null)
+          : oldStockSnapshot.comboId,
+      quantity:
+        updateData.quantity !== undefined
+          ? (updateData.quantity as number)
+          : oldStockSnapshot.quantity,
+      orderType:
+        updateData.orderType !== undefined
+          ? (updateData.orderType as OrderType)
+          : oldStockSnapshot.orderType,
+    };
+
     session.startTransaction();
 
+    // Query netReserved TRONG transaction (đảm bảo nhất quán).
+    const netMap = await queryNetReserved(existedOrder._id, session);
+    const stockPlan = buildStockWiringPlan(
+      oldStockSnapshot,
+      newStockSnapshot,
+      netMap
+    );
+
+    // ---- 1) Stock Engine: release reserved (nếu cần) ----------------
+    if (stockPlan.release) {
+      try {
+        await releaseReservedStock(
+          oldStockSnapshot.warehouseId as string,
+          [stockPlan.release],
+          {
+            actorEmployeeId: currentUser.employee._id,
+            referenceType: InventoryReferenceType.ORDER,
+            referenceCode: existedOrder.orderCode,
+            orderId: existedOrder._id,
+            note: `Cập nhật đơn ${existedOrder.orderCode} - trả chỗ giữ`,
+          },
+          { session }
+        );
+      } catch (err) {
+        if (err instanceof StockEngineError) {
+          await session.abortTransaction();
+          return errorResponse(err.message, (err as { statusCode?: number }).statusCode ?? 500);
+        }
+        throw err;
+      }
+
+      pushHistory(OrderAction.STOCK_RELEASED, {
+        note: `Trả chỗ tồn kho (${stockPlan.release.quantity})`,
+      });
+    }
+
+    // ---- 2) Stock Engine: reserve mới (nếu cần) ---------------------
+    if (stockPlan.reserve) {
+      try {
+        await reserveStock(
+          newStockSnapshot.warehouseId as string,
+          [stockPlan.reserve],
+          {
+            actorEmployeeId: currentUser.employee._id,
+            referenceType: InventoryReferenceType.ORDER,
+            referenceCode: existedOrder.orderCode,
+            orderId: existedOrder._id,
+            note: `Cập nhật đơn ${existedOrder.orderCode} - giữ chỗ mới`,
+          },
+          { session }
+        );
+      } catch (err) {
+        if (err instanceof StockEngineError) {
+          await session.abortTransaction();
+          return errorResponse(err.message, (err as { statusCode?: number }).statusCode ?? 500);
+        }
+        throw err;
+      }
+
+      pushHistory(OrderAction.STOCK_RESERVED, {
+        note: `Giữ chỗ tồn kho (${stockPlan.reserve.quantity})`,
+      });
+
+      // Audit timestamp — KHÔNG set cờ `stockReserved` (đã bỏ).
+      updateData.stockReservedAt = new Date();
+    }
+
+    // ---- 3) Order update ---------------------------------------------
     if (Object.keys(updateData).length > 0) {
       await Order.updateOne({ _id: id }, { $set: updateData }, { session });
     }
 
+    // ---- 4) Revenue Lock Engine (cùng transaction) -------------------
+    // Recalc nếu đổi customerId / productId / comboId / status / isPrepaid.
+    const needsRevenueRecalc =
+      data.customerId !== undefined ||
+      data.productId !== undefined ||
+      data.productVariantId !== undefined ||
+      data.comboId !== undefined ||
+      data.status !== undefined ||
+      data.isPrepaid !== undefined;
+
+    if (needsRevenueRecalc) {
+      await resolveCustomerRevenue(
+        // customerId có thể đã đổi trong updateData — dùng customerId mới nếu có.
+        (updateData.customerId as string | undefined) ??
+          existedOrder.customerId.toString(),
+        {
+          session,
+          actorEmployeeId: currentUser.employee._id,
+        }
+      );
+    }
+
+    // ---- 5) OrderHistory ---------------------------------------------
     if (historyEntries.length > 0) {
       await OrderHistory.insertMany(historyEntries, { session });
     }
@@ -421,6 +589,7 @@ export async function PUT(
       .populate("customer", "_id code name phone")
       .populate("lead", "_id leadCode")
       .populate("product", "_id code name")
+      .populate("productVariant", "_id sku")
       .populate("combo", "_id code name")
       .populate("warehouse", "_id code name")
       .populate("marketingEmployee", "_id employeeCode fullName")
@@ -481,23 +650,90 @@ export async function DELETE(
 
     session.startTransaction();
 
+    // ---- Stock wiring (Phase 4.3) ------------------------------------
+    // Nếu đơn đang thực sự giữ reserved stock → release trước.
+    // Source of truth = `Σ reservedChange` từ InventoryHistory (cùng session).
+    const oldStockSnapshot: OrderStockSnapshot = {
+      warehouseId: existedOrder.warehouseId?.toString() ?? null,
+      productVariantId: existedOrder.productVariantId?.toString() ?? null,
+      comboId: existedOrder.comboId?.toString() ?? null,
+      quantity: existedOrder.quantity,
+      orderType: existedOrder.orderType as OrderType,
+    };
+
+    session.startTransaction();
+
+    const netMap = await queryNetReserved(existedOrder._id, session);
+    const deleteStockPlan = buildStockWiringPlanForDelete(
+      oldStockSnapshot,
+      netMap
+    );
+
+    let stockReleased = false;
+    let stockReleasedQty = 0;
+
+    if (deleteStockPlan.release) {
+      try {
+        await releaseReservedStock(
+          oldStockSnapshot.warehouseId as string,
+          [deleteStockPlan.release],
+          {
+            actorEmployeeId: currentUser.employee._id,
+            referenceType: InventoryReferenceType.ORDER,
+            referenceCode: existedOrder.orderCode,
+            orderId: existedOrder._id,
+            note: `Xóa đơn ${existedOrder.orderCode} - trả chỗ giữ`,
+          },
+          { session }
+        );
+      } catch (err) {
+        if (err instanceof StockEngineError) {
+          await session.abortTransaction();
+          return errorResponse(err.message, (err as { statusCode?: number }).statusCode ?? 500);
+        }
+        throw err;
+      }
+      stockReleased = true;
+      stockReleasedQty = deleteStockPlan.release.quantity;
+    }
+
+    // ---- Soft delete --------------------------------------------------
     await Order.updateOne(
       { _id: id },
-      { $set: { isActive: false } },
+      {
+        $set: {
+          isActive: false,
+          stockReservedAt: undefined,
+        },
+      },
       { session }
     );
 
-    await OrderHistory.create(
-      [
-        {
-          orderId: existedOrder._id,
-          employeeId: currentUser.employee._id,
-          action: OrderAction.DELETED,
-          note: "Xóa đơn hàng (soft delete)",
-        },
-      ],
-      { session }
-    );
+    // ---- Revenue Lock Engine (mở khóa slot cho đơn sau) -------------
+    await resolveCustomerRevenue(existedOrder.customerId, {
+      session,
+      actorEmployeeId: currentUser.employee._id,
+    });
+
+    // ---- OrderHistory -----------------------------------------------
+    // Tách 2 entry (DELETED + STOCK_RELEASED) để Timeline dễ đọc.
+    const historyDocs: Array<Record<string, unknown>> = [
+      {
+        orderId: existedOrder._id,
+        employeeId: currentUser.employee._id,
+        action: OrderAction.DELETED,
+        note: "Xóa đơn hàng (soft delete)",
+      },
+    ];
+    if (stockReleased) {
+      historyDocs.push({
+        orderId: existedOrder._id,
+        employeeId: currentUser.employee._id,
+        action: OrderAction.STOCK_RELEASED,
+        note: `Trả chỗ tồn kho (${stockReleasedQty})`,
+      });
+    }
+    await OrderHistory.create(historyDocs, { session });
 
     await session.commitTransaction();
 

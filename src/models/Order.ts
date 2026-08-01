@@ -96,6 +96,12 @@ export interface IOrder extends Document {
   /** Sản phẩm / combo của đơn - key để Revenue Lock Engine so khớp. */
   productId?: Types.ObjectId;
   comboId?: Types.ObjectId;
+  /**
+   * Biến thể sản phẩm cụ thể (sku/color/size).
+   * Phase 4.3: là key Stock Engine dùng để reserve / release.
+   * Có thể null nếu đơn gắn với combo (stock combo sẽ handle ở Phase sau).
+   */
+  productVariantId?: Types.ObjectId;
   productSnapshot?: { code: string; name: string };
   comboSnapshot?: { code: string; name: string };
 
@@ -111,6 +117,25 @@ export interface IOrder extends Document {
 
   // ---- Warehouse -----------------------------------------------------
   warehouseId?: Types.ObjectId;
+
+  // ---- Stock Reservation (Phase 4.3 — audit-only) ---------------------
+  /**
+   * Phase 4.3 (refactor): KHÔNG dùng cờ này làm source of truth cho "đang giữ
+   * chỗ hay không". Cờ boolean dễ lệch sau chuỗi Reserve ↓ Release ↓ Reserve.
+   *
+   * Source of truth là `Inventory.reservedQuantity` (cộng dồn qua InventoryHistory).
+   * Wire layer đọc trực tiếp Inventory.reservedQuantity (cùng session) để quyết
+   * định có nên gọi `releaseReservedStock()` hay không.
+   *
+   * Field này hiện giữ lại cho mục đích **audit** — biết "lần cuối Order này
+   * chạm vào Stock Engine là khi nào". Phase sau (Shipment / Audit / Dashboard)
+   * có thể dựa vào đây để xác định Order đã từng tương tác kho.
+   *
+   * KHÔNG dùng để:
+   *   - Check idempotency reserve / release.
+   *   - Đoán "đơn có giữ kho hay không".
+   */
+  stockReservedAt?: Date;
 
   // ---- Employees -----------------------------------------------------
   marketingEmployeeId?: Types.ObjectId;
@@ -219,6 +244,11 @@ const OrderSchema = new Schema<IOrder>(
       ref: "Combo",
       index: true,
     },
+    productVariantId: {
+      type: Schema.Types.ObjectId,
+      ref: "ProductVariant",
+      index: true,
+    },
     productSnapshot: {
       code: { type: String, default: "" },
       name: { type: String, default: "" },
@@ -247,6 +277,13 @@ const OrderSchema = new Schema<IOrder>(
       ref: "Warehouse",
       index: true,
     },
+
+    // ---- Stock Reservation (Phase 4.3 — audit only) ------------------
+    // Bỏ `stockReserved` boolean flag (dễ lệch). Chỉ giữ `stockReservedAt`
+    // để audit — biết lần cuối Stock Engine được gọi cho Order này.
+    // Source of truth cho "đang giữ chỗ hay không" là
+    // `Inventory.reservedQuantity` (xem orderStockWiring.helper).
+    stockReservedAt: { type: Date },
 
     marketingEmployeeId: {
       type: Schema.Types.ObjectId,
@@ -370,7 +407,6 @@ OrderSchema.index({ customerId: 1, productId: 1, revenueLocked: 1, createdAt: 1 
 OrderSchema.index({ customerId: 1, comboId: 1, revenueLocked: 1, createdAt: 1 });
 // Phục vụ Warehouse & Lead lookups.
 OrderSchema.index({ warehouseId: 1, isActive: 1 });
-OrderSchema.index({ leadId: 1 });
 // Phục vụ Dashboard: lọc theo orderType + status.
 OrderSchema.index({ orderType: 1, status: 1, createdAt: -1 });
 OrderSchema.index({ orderSource: 1, createdAt: -1 });

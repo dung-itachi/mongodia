@@ -65,7 +65,7 @@ const WarehouseSchema = new Schema<IWarehouse>(
   }
 );
 
-WarehouseSchema.index({ code: 1 }, { unique: true });
+// `code` đã được đánh unique ở field def — không cần khai báo lại ở đây.
 WarehouseSchema.index({ areaId: 1 });
 WarehouseSchema.index({ managerId: 1 });
 

@@ -12,6 +12,7 @@ import {
   OrderAction,
 } from "@/constants/orderStatus";
 import Product from "@/models/Product";
+import ProductVariant from "@/models/ProductVariant";
 import Combo from "@/models/Combo";
 import Employee from "@/models/Employee";
 import Customer from "@/models/Customer";
@@ -23,6 +24,17 @@ import { mapOrderList } from "@/mappers/order.mapper";
 
 import { success, error as errorResponse } from "@/utils/response";
 import { createOrderSchema } from "@/utils/validator";
+
+import { resolveCustomerRevenue } from "@/services/order/revenueEngine.service";
+import {
+  reserveStock,
+} from "@/services/warehouse/stockEngine.service";
+import { StockEngineError } from "@/services/warehouse/stockEngine.errors";
+import {
+  buildStockWiringPlanForCreate,
+  type OrderStockSnapshot,
+} from "@/services/order/orderStockWiring.helper";
+import { InventoryReferenceType } from "@/constants/inventoryStatus";
 
 // ==================================================
 // Helpers
@@ -195,11 +207,14 @@ export async function POST(request: Request) {
     const data = parsedBody.data;
 
     // ---- Reference existence checks ------------------------------------
-    const [customer, lead, product, combo, warehouse, marketing, sale] =
+    const [customer, lead, product, productVariant, combo, warehouse, marketing, sale] =
       await Promise.all([
         Customer.exists({ _id: data.customerId }),
         data.leadId ? Lead.exists({ _id: data.leadId }) : null,
         data.productId ? Product.exists({ _id: data.productId }) : null,
+        data.productVariantId
+          ? ProductVariant.exists({ _id: data.productVariantId })
+          : null,
         data.comboId ? Combo.exists({ _id: data.comboId }) : null,
         data.warehouseId ? Warehouse.exists({ _id: data.warehouseId }) : null,
         data.marketingEmployeeId
@@ -214,6 +229,8 @@ export async function POST(request: Request) {
     if (data.leadId && !lead) return errorResponse("Lead không tồn tại", 400);
     if (data.productId && !product)
       return errorResponse("Sản phẩm không tồn tại", 400);
+    if (data.productVariantId && !productVariant)
+      return errorResponse("Biến thể sản phẩm không tồn tại", 400);
     if (data.comboId && !combo) return errorResponse("Combo không tồn tại", 400);
     if (data.warehouseId && !warehouse)
       return errorResponse("Kho không tồn tại", 400);
@@ -224,6 +241,8 @@ export async function POST(request: Request) {
 
     // ---- orderType / orderSource are validated by Zod enum above ------
     const status = (data.status as OrderStatus) || OrderStatus.PENDING;
+    const orderType = (data.orderType as OrderType) || OrderType.NORMAL;
+    const orderSource = (data.orderSource as OrderSource) || OrderSource.MANUAL;
 
     session.startTransaction();
 
@@ -238,6 +257,7 @@ export async function POST(request: Request) {
           customerPhone: data.customerPhone || undefined,
           leadId: data.leadId || undefined,
           productId: data.productId || undefined,
+          productVariantId: data.productVariantId || undefined,
           comboId: data.comboId || undefined,
           productSnapshot: undefined,
           comboSnapshot: undefined,
@@ -252,8 +272,8 @@ export async function POST(request: Request) {
           saleEmployeeId: data.saleEmployeeId || undefined,
           status,
           isPrepaid: data.isPrepaid ?? false,
-          orderType: (data.orderType as OrderType) || OrderType.NORMAL,
-          orderSource: (data.orderSource as OrderSource) || OrderSource.MANUAL,
+          orderType,
+          orderSource,
           payments: (data.payments ?? []).map((p) => ({
             method: p.method,
             amount: p.amount,
@@ -294,6 +314,12 @@ export async function POST(request: Request) {
           revenueEligible: false,
           revenueLockReason: "NONE",
           revenueCalculatedAt: undefined,
+          // ---- Stock wiring (Phase 4.3) --------------------------------
+          // KHÔNG set `stockReserved` boolean flag (đã bỏ). Chỉ giữ
+          // `stockReservedAt` cho audit. Source of truth cho "đang giữ
+          // chỗ" là `Σ reservedChange` trên InventoryHistory (aggregate
+          // từ orderStockWiring.helper.queryNetReserved).
+          stockReservedAt: undefined,
           note: data.note || undefined,
           isActive: true,
         },
@@ -301,18 +327,74 @@ export async function POST(request: Request) {
       { session }
     );
 
-    await OrderHistory.create(
-      [
-        {
-          orderId: order._id,
-          employeeId: currentUser.employee._id,
-          action: OrderAction.CREATED,
-          newValue: status,
-          note: "Tạo đơn hàng",
-        },
-      ],
-      { session }
-    );
+    // ---- Reserve stock (nếu đủ điều kiện) ---------------------------
+    const stockSnapshot: OrderStockSnapshot = {
+      warehouseId: data.warehouseId,
+      productVariantId: data.productVariantId,
+      comboId: data.comboId,
+      quantity: data.quantity,
+      orderType,
+    };
+    const stockPlan = buildStockWiringPlanForCreate(stockSnapshot);
+
+    if (stockPlan.reserve) {
+      try {
+        await reserveStock(
+          data.warehouseId as string,
+          [stockPlan.reserve],
+          {
+            actorEmployeeId: currentUser.employee._id,
+            referenceType: InventoryReferenceType.ORDER,
+            referenceCode: orderCode,
+            orderId: order._id,
+            note: `Tạo đơn ${orderCode}`,
+          },
+          { session }
+        );
+      } catch (err) {
+        if (err instanceof StockEngineError) {
+          await session.abortTransaction();
+          return errorResponse(err.message, (err as { statusCode?: number }).statusCode ?? 500);
+        }
+        throw err;
+      }
+
+      // Đánh dấu audit: Order đã chạm vào Stock Engine lần cuối vào lúc này.
+      // KHÔNG set cờ `stockReserved` (đã bỏ). Stock Engine đã ghi
+      // InventoryHistory.reservedChange = +qty → queryNetReserved sẽ trả về > 0.
+      await Order.updateOne(
+        { _id: order._id },
+        { $set: { stockReservedAt: new Date() } },
+        { session }
+      );
+    }
+
+    // ---- Revenue Lock Engine (cùng transaction) ---------------------
+    await resolveCustomerRevenue(order.customerId, {
+      session,
+      actorEmployeeId: currentUser.employee._id,
+    });
+
+    // ---- OrderHistory -----------------------------------------------
+    // Tách 2 entry (CREATED + STOCK_RESERVED) để Timeline dễ đọc.
+    const historyDocs: Array<Record<string, unknown>> = [
+      {
+        orderId: order._id,
+        employeeId: currentUser.employee._id,
+        action: OrderAction.CREATED,
+        newValue: status,
+        note: "Tạo đơn hàng",
+      },
+    ];
+    if (stockPlan.reserve) {
+      historyDocs.push({
+        orderId: order._id,
+        employeeId: currentUser.employee._id,
+        action: OrderAction.STOCK_RESERVED,
+        note: `Giữ chỗ tồn kho (${stockPlan.reserve.quantity})`,
+      });
+    }
+    await OrderHistory.create(historyDocs, { session });
 
     await session.commitTransaction();
 
@@ -320,6 +402,7 @@ export async function POST(request: Request) {
       .populate("customer", "_id code name phone")
       .populate("lead", "_id leadCode")
       .populate("product", "_id code name")
+      .populate("productVariant", "_id sku")
       .populate("combo", "_id code name")
       .populate("warehouse", "_id code name")
       .populate("marketingEmployee", "_id employeeCode fullName")

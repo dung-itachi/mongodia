@@ -89,6 +89,7 @@ export interface OrderResponse {
   // ---- Product / Combo ---------------------------------------------
   productId?: string;
   comboId?: string;
+  productVariantId?: string;
   productSnapshot?: { code: string; name: string };
   comboSnapshot?: { code: string; name: string };
 
@@ -104,6 +105,13 @@ export interface OrderResponse {
 
   // ---- Warehouse ----------------------------------------------------
   warehouseId?: string;
+
+  // ---- Stock Reservation (Phase 4.3 — audit-only) ---------------
+  /**
+   * Lần cuối Order chạm vào Stock Engine. KHÔNG phải source of truth cho
+   * "đang giữ chỗ hay không" — chỉ phục vụ audit / Timeline.
+   */
+  stockReservedAt?: string;
 
   // ---- Employees ---------------------------------------------------
   marketingEmployeeId?: string;
@@ -235,6 +243,7 @@ export function mapOrder(order: IOrder): OrderResponse {
     leadId: order.leadId?.toString(),
     productId: order.productId?.toString(),
     comboId: order.comboId?.toString(),
+    productVariantId: order.productVariantId?.toString(),
     productSnapshot: order.productSnapshot,
     comboSnapshot: order.comboSnapshot,
     quantity: order.quantity,
@@ -244,6 +253,7 @@ export function mapOrder(order: IOrder): OrderResponse {
     estimatedWeight: order.estimatedWeight,
     actualWeight: order.actualWeight,
     warehouseId: order.warehouseId?.toString(),
+    stockReservedAt: order.stockReservedAt?.toISOString(),
     marketingEmployeeId: order.marketingEmployeeId?.toString(),
     saleEmployeeId: order.saleEmployeeId?.toString(),
     status: order.status as OrderStatus,

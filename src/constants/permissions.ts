@@ -273,6 +273,26 @@ export const PERMISSIONS = [
     code: "order.delete",
     name: "Delete Order",
   },
+  {
+    code: "order.confirm",
+    name: "Confirm Order",
+  },
+  {
+    code: "order.cancel",
+    name: "Cancel Order",
+  },
+  {
+    code: "order.history",
+    name: "View Order History",
+  },
+  {
+    code: "order.revenue",
+    name: "View Order Revenue",
+  },
+  {
+    code: "order.reserve_stock",
+    name: "Reserve Stock For Order",
+  },
 
 // Facebook Page
 {
