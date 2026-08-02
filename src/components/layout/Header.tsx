@@ -25,7 +25,7 @@ import { useSidebar } from "@/components/layout/AppShell";
  * sidebar slides in on mobile when the button is tapped.
  */
 export default function Header() {
-  const { openMobile } = useSidebar();
+  const { toggleMobile } = useSidebar();
   const [pageTitle] = useState("Mongolia CRM");
   const [pageSub] = useState("Phase A.2");
   const [badgeText] = useState("Phase A");
@@ -39,7 +39,7 @@ export default function Header() {
         type="button"
         className="mob-open"
         aria-label="Open sidebar"
-        onClick={openMobile}
+        onClick={toggleMobile}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M3 12h18M3 6h18M3 18h18" />

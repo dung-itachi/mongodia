@@ -1,8 +1,6 @@
-/* responsive.css — mobile breakpoint (<=768px)
-   Mirrors the original HTML's @media block 1:1.
-*/
+﻿/* responsive.css - mobile/tablet breakpoint (max-width: 1024px). Mirrors the original HTML @media block 1:1, but raised from 768px to 1024px so 13-14 inch laptops at default zoom are not incorrectly put into mobile mode. */
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .sb {
     position: fixed;
     left: 0;
@@ -128,7 +126,7 @@
   .btn {
     padding: 6px 10px;
     font-size: 10px;
-    min-height: 34px;
+    min-height: 36px;
   }
 
   .btn-sm {
