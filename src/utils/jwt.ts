@@ -1,6 +1,12 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("Missing JWT_SECRET environment variable");
+  }
+  return secret;
+}
 
 export interface JwtPayload {
   employeeId: string;
@@ -8,19 +14,18 @@ export interface JwtPayload {
 }
 
 export function signToken(payload: JwtPayload) {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: "7d",
   });
 }
 
 export function verifyToken(token: string): JwtPayload {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+    return jwt.verify(token, getJwtSecret()) as JwtPayload;
   } catch (error) {
     console.error("========== JWT ERROR ==========");
     console.error(error);
-    console.log("JWT_SECRET =", JWT_SECRET);
-    console.log("TOKEN =", token);
+    console.error("Token verification failed");
     console.error("===============================");
     throw error;
   }
