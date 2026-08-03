@@ -1,5 +1,5 @@
 /* header.css — topbar (Topbar in HTML)
-   Classes: .topbar, .pt, .vb (and variants), .srch, .tbr.
+   Classes: .topbar, .pt, .vb (and variants), .srch, .tbr, .sb-toggle.
 */
 
 .topbar {
@@ -11,6 +11,43 @@
   display: flex;
   align-items: center;
   gap: 7px;
+}
+
+/* Sidebar toggle button - always visible on desktop */
+.sb-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.sb-toggle:hover {
+  background: var(--bg);
+}
+
+.sb-toggle svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+/* Mobile menu button - hidden on desktop */
+.sb-toggle {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .sb-toggle {
+    display: none !important;
+  }
 }
 
 .pt {

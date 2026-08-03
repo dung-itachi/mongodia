@@ -13,7 +13,7 @@ import { useSidebar } from "@/components/layout/AppShell";
  *
  * JSX hierarchy matches the spec:
  *   header.topbar
- *     button.mob-open (svg)
+ *     button.sb-toggle (sidebar collapse/expand)
  *     div.pt (span#tT + small#tS)
  *     div#tB.vb vb-b
  *     div.srch (svg + input#sq)
@@ -21,11 +21,10 @@ import { useSidebar } from "@/components/layout/AppShell";
  *
  * Tailwind is not used here. No inline styles.
  *
- * Phase A.3: `.mob-open` is wired to AppShell's `openMobile()` so the
- * sidebar slides in on mobile when the button is tapped.
+ * Phase A.3: `.sb-toggle` toggles sidebar collapse/expand on desktop.
  */
 export default function Header() {
-  const { openMobile } = useSidebar();
+  const { toggleMobile, toggleCollapsed } = useSidebar();
   const [pageTitle] = useState("Mongolia CRM");
   const [pageSub] = useState("Phase A.2");
   const [badgeText] = useState("Phase A");
@@ -35,14 +34,28 @@ export default function Header() {
 
   return (
     <header className="topbar">
+      {/* Sidebar toggle button - always visible, toggles collapse on desktop */}
+      <button
+        type="button"
+        className="sb-toggle"
+        aria-label="Toggle sidebar"
+        onClick={toggleCollapsed}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M3 12h18M3 6h18M3 18h18" />
+        </svg>
+      </button>
+
+      {/* Mobile menu button - only shown on mobile via CSS */}
       <button
         type="button"
         className="mob-open"
         aria-label="Open sidebar"
-        onClick={openMobile}
+        onClick={toggleMobile}
+        style={{ display: "none" }}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M3 12h18M3 6h18M3 18h18" />
+          <path d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
 

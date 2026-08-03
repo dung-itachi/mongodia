@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -23,6 +23,10 @@ type Props = {
   mobileOpen?: boolean;
   /** Notify parent when sidebar wants to close the mobile overlay. */
   onCloseMobile?: () => void;
+  /** Current collapsed state (controlled by AppShell). */
+  collapsed?: boolean;
+  /** Callback when collapsed state changes. */
+  onCollapsedChange?: (v: boolean) => void;
 };
 
 /**
@@ -49,9 +53,10 @@ type Props = {
 export default function Sidebar({
   mobileOpen = false,
   onCloseMobile,
+  collapsed = false,
+  onCollapsedChange,
 }: Props) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
   const [lang, setLang] = useState<(typeof LANGUAGES)[number]["code"]>(
     DEFAULT_LANG
   );
@@ -59,6 +64,7 @@ export default function Sidebar({
     DEFAULT_ROLE
   );
 
+  // Derive class from props (controlled state from AppShell)
   const asideClass = [
     "sb",
     collapsed ? "col" : "",
@@ -80,7 +86,7 @@ export default function Sidebar({
           type="button"
           className="sb-tg"
           onClick={() => {
-            setCollapsed((v) => !v);
+            if (onCollapsedChange) onCollapsedChange(!collapsed);
             if (mobileOpen && onCloseMobile) onCloseMobile();
           }}
           aria-label="Toggle sidebar"

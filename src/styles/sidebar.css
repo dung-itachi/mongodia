@@ -5,7 +5,9 @@
 
 .sb {
   width: 228px;
+  flex: 0 0 228px;
   flex-shrink: 0;
+  flex-grow: 0;
   background: linear-gradient(180deg, var(--sb), var(--sb2));
   color: var(--sb-txt);
   display: flex;
@@ -328,17 +330,29 @@
 }
 
 .sb.col .brand {
-  padding: 12px 9px;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 5px;
+  gap: 8px;
+  justify-content: flex-start;
+  width: 50px;
+}
+
+.sb.col .brand .ico {
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
 }
 
 .sb.col .brand-txt {
-  opacity: 0;
-  max-width: 0;
+  display: none;
 }
 
 .sb.col .sb-tg {
   margin-left: 0;
+  margin-top: 0;
+  align-self: center;
 }
 
 .sb.col .sb-tg .ic-c {

@@ -8,6 +8,7 @@
   flex-direction: column;
   height: 100vh;
   min-width: 0;
+  margin-left: 0;
 }
 
 .content {
@@ -17,6 +18,20 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Force main content to respect sidebar width on desktop */
+@media screen and (min-width: 769px) {
+  .main {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .content {
+    width: calc(100% - 228px) !important;
+  }
 }
 
 .empty {

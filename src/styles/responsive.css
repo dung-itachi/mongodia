@@ -2,22 +2,104 @@
    Mirrors the original HTML's @media block 1:1.
 */
 
-@media (max-width: 768px) {
+/* ═══════════════════════════════════════════════════
+   DESKTOP SIDEBAR — ALWAYS VISIBLE
+   These rules cannot be overridden because they use !important
+   and are the most specific rules for desktop viewports.
+   ═══════════════════════════════════════════════════ */
+@media screen and (min-width: 769px) {
+  /* Desktop sidebar — always show, always accessible */
   .sb {
-    position: fixed;
-    left: 0;
-    top: 0;
-    z-index: 100;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: 228px !important;
+    min-width: 228px !important;
+    max-width: 228px !important;
+    height: 100vh !important;
+    flex-shrink: 0 !important;
+    z-index: 100 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+    flex: 0 0 228px !important;
+  }
+
+  /* Collapsed sidebar on desktop */
+  .sb.col {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    flex: 0 0 50px !important;
+    transition: width 0.25s !important;
+  }
+
+  /* Even if .open class is added, keep it visible */
+  .sb.open {
+    transform: none !important;
+    box-shadow: none !important;
+    left: auto !important;
+  }
+
+  /* Main content area always fills remaining space */
+  .main {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  .content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Hide mobile-only toggle button */
+  .mob-open {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Never show backdrop overlay on desktop */
+  .backdrop {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE (<=768px) — only essential overrides
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Sidebar becomes a fixed overlay on mobile */
+  .sb {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
     width: 255px !important;
-    transform: translateX(-100%);
-    transition: transform 0.28s;
+    height: 100vh !important;
+    z-index: 100 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.28s !important;
+    box-shadow: none !important;
   }
 
   .sb.open {
-    transform: translateX(0);
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+    transform: translateX(0) !important;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3) !important;
   }
 
+  /* Collapsed mobile sidebar */
   .sb.col {
     width: 255px !important;
   }
@@ -85,85 +167,87 @@
     padding: 5px 8px;
   }
 
+  /* Show hamburger menu button on mobile */
   .mob-open {
-    display: flex;
+    display: flex !important;
   }
 
+  /* Mobile topbar adjustments */
   .topbar {
-    padding: 0 8px;
-    height: 42px;
+    padding: 0 8px !important;
+    height: 42px !important;
   }
 
   .pt {
-    font-size: 11px;
+    font-size: 11px !important;
   }
 
   .vb {
-    display: none;
+    display: none !important;
   }
 
   .srch {
-    max-width: none;
-    flex: 1;
+    max-width: none !important;
+    flex: 1 !important;
   }
 
   .content {
-    padding: 7px 7px 55px;
-    gap: 5px;
+    padding: 7px 7px 55px !important;
+    gap: 5px !important;
   }
 
   .sr {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 4px !important;
   }
 
   .sc0 {
-    padding: 8px;
+    padding: 8px !important;
   }
 
   .sc0 .sn {
-    font-size: 15px;
+    font-size: 15px !important;
   }
 
   .btn {
-    padding: 6px 10px;
-    font-size: 10px;
-    min-height: 34px;
+    padding: 6px 10px !important;
+    font-size: 10px !important;
+    min-height: 34px !important;
   }
 
   .btn-sm {
-    min-height: 30px;
+    min-height: 30px !important;
   }
 
   .modal {
-    min-width: auto;
-    width: 100%;
-    max-width: 100%;
-    border-radius: 12px 12px 0 0;
-    max-height: 76vh;
+    min-width: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 12px 12px 0 0 !important;
+    max-height: 76vh !important;
   }
 
   .mo.show {
-    align-items: flex-end;
+    align-items: flex-end !important;
   }
 
   .fg input,
   .fg select {
-    padding: 8px;
-    font-size: 11.5px;
-    min-height: 36px;
+    padding: 8px !important;
+    font-size: 11.5px !important;
+    min-height: 36px !important;
   }
 
   .ma .btn {
-    flex: 1;
-    justify-content: center;
-    min-height: 36px;
+    flex: 1 !important;
+    justify-content: center !important;
+    min-height: 36px !important;
   }
 
   .toast {
-    bottom: 10px;
-    left: 7px;
-    right: 7px;
-    text-align: center;
+    bottom: 10px !important;
+    left: 7px !important;
+    right: 7px !important;
+    text-align: center !important;
   }
 }
