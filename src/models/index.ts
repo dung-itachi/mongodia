@@ -29,13 +29,16 @@ export { default as Inventory } from "./Inventory";
 
 export { default as InventoryAdjustment } from "./InventoryAdjustment";
 
-export { default as InventoryHistory } from "./InventoryHistory";
+// InventoryHistory uses named export
+export { InventoryHistory } from "./InventoryHistory";
 
 export { default as InventoryTransaction } from "./InventoryTransaction";
 
-export { default as Lead } from "./Lead";
+// Lead uses named export
+export { Lead } from "./Lead";
 
-export { default as LeadHistory } from "./LeadHistory";
+// LeadHistory uses named export
+export { LeadHistory } from "./LeadHistory";
 
 export { default as LoginHistory } from "./LoginHistory";
 
@@ -43,7 +46,8 @@ export { default as Notification } from "./Notification";
 
 export { default as Order } from "./Order";
 
-export { default as OrderHistory } from "./OrderHistory";
+// OrderHistory uses named export
+export { OrderHistory } from "./OrderHistory";
 
 export { default as Permission } from "./Permission";
 

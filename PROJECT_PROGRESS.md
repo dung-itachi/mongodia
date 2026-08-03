@@ -117,28 +117,123 @@ Fix toàn bộ TypeScript errors đang tồn tại trong project.
 
 | File | Fix |
 |------|-----|
-| `src/models/Counter.ts` | Đổi `ICounter.value` → `ICounter.seq`, thêm `_id?: Types.ObjectId` |
-| `src/app/login/page.tsx` | Fix `ZodError.errors` → `ZodError.issues`, import `ZodIssue` |
-| `src/app/api/leads/[id]/route.ts` | Fix shorthand property `newValue` → `newSaleId`, cast `LeadStatus` |
-| `src/app/api/inventories/route.ts` | Thêm `mapInventoryList` vào mapper |
-| `src/app/api/inventory-adjustments/route.ts` | Fix Mongoose create typing với `(Model as any).create()` |
-| `src/services/customer/customer.service.ts` | Fix `.value` → `.seq` |
-| `src/lib/generateEmployeeCode.ts` | Fix `.value` → `.seq` |
-| `src/db/seeds/leads.seed.ts` | Fix `.value` → `.seq` |
-| `src/app/api/test-lead-transaction-*.ts` | Fix `.value` → `.seq` (3 files) |
-| `src/services/import/leadImport.service.ts` | Fix `.value` → `.seq` |
+| `src/models/index.ts` | Sửa export cho các model dùng named export (Lead, LeadHistory, InventoryHistory, OrderHistory) |
+
+### Chi tiết fix
+
+- **Models với named export** (`export const Lead` thay vì `export default`):
+  - `InventoryHistory` — đổi từ `export default` → `export { InventoryHistory }`
+  - `Lead` — đổi từ `export default` → `export { Lead }`
+  - `LeadHistory` — đổi từ `export default` → `export { LeadHistory }`
+  - `OrderHistory` — đổi từ `export default` → `export { OrderHistory }`
+
+- **models/index.ts** — sử dụng named import cho các model trên:
+  - `export { InventoryHistory } from "./InventoryHistory"`
+  - `export { Lead } from "./Lead"`
+  - `export { LeadHistory } from "./LeadHistory"`
+  - `export { OrderHistory } from "./OrderHistory"`
+
+### Root Cause
+
+Một số model file dùng named export (`export const Lead`) thay vì default export (`export default Lead`), nhưng `models/index.ts` vẫn import chúng như default exports → TypeScript báo lỗi "Module has no exported member 'default'".
 
 ### Verification
 
-- [x] `npx tsc --noEmit` → 0 TypeScript Error
-- [x] Không thêm lỗi mới
-- [x] Không thay đổi logic runtime
+| Check | Result |
+|-------|--------|
+| `npx tsc --noEmit` | 0 TypeScript Error |
+| Không thêm lỗi mới | ✅ |
+| Không thay đổi logic runtime | ✅ |
 
 ### Review
 
 Reviewed by Cursor Agent
 
 Status: Ready for Sprint 2.4
+
+### Sprint 2.4 — Route Guard (RBAC)
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Hoàn thiện lớp bảo mật Route. Người dùng không có quyền không được truy cập Route.
+
+### Files tạo mới
+
+| File | Mục đích |
+|------|-----------|
+| `src/config/routePermissions.ts` | Central registry cho route → permission mapping |
+| `src/app/403/page.tsx` | 403 Forbidden page |
+
+### Files chỉnh sửa
+
+| File | Thay đổi |
+|------|-----------|
+| `src/components/auth/AuthGuard.tsx` | Mở rộng check permission sau khi check login |
+
+### Kiến trúc
+
+```
+User → Route → AuthGuard → Check Login → Check Permission → Render / 403
+```
+
+### Route Permission Config
+
+```typescript
+ROUTE_PERMISSIONS: RoutePermission[] = [
+  { path: "/dashboard", permission: "dashboard.view" },
+  { path: "/leads", permission: "lead.view" },
+  { path: "/orders", permission: "order.view" },
+  { path: "/products", permission: "product.view" },
+  { path: "/warehouses", permission: "warehouse.view" },
+  { path: "/employees", permission: "employee.view" },
+  { path: "/roles", permission: "role.view" },
+  { path: "/customers", permission: "customer.view" },
+  { path: "/marketing/*", permission: "report.view" / "lead.create" },
+  ...
+]
+```
+
+### Nguyên tắc
+
+- **Không hardcode**: Chỉ dùng `authStore.user?.permissions` + `hasPermission()`
+- **Không dùng role.code**: Không `if(role === "ADMIN")`
+- **ADMIN wildcard**: permissions = `*` → đi toàn bộ route
+- **Sidebar chỉ là UI**: Route Guard mới là Security
+
+### 403 Page
+
+- Hiển thị "403 - Không có quyền truy cập"
+- Nút "Quay về Dashboard"
+
+### AuthGuard Flow
+
+```
+1. Check isHydrated
+2. Check accessToken → redirect /login nếu không có
+3. Get route permission từ routePermissions.ts
+4. Check hasPermission(userPermissions, permission)
+5. Nếu không có quyền → redirect /403
+6. Render children
+```
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+- [x] Admin login → đi toàn bộ route
+- [x] Marketing → /employees → 403
+- [x] Warehouse → /customers → 403
+- [x] Sale → /marketing/dashboard → 403
+- [x] Refresh → không mất quyền (persist via auth store)
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint tiếp theo
 
 ### 1. Backend Setup
 - Next.js App Router

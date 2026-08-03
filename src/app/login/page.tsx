@@ -21,6 +21,7 @@ function getRandomStart() {
 function LoginPage() {
   const [isMuted, setIsMuted] = useState(true);
   const [startTime, setStartTime] = useState(0);
+  const [isLocalhost, setIsLocalhost] = useState(true);
   const router = useRouter();
   const { login } = useAuthStore();
   const [loading, setLoading] = useState(false);
@@ -29,6 +30,7 @@ function LoginPage() {
 
   useEffect(() => {
     setStartTime(getRandomStart());
+    setIsLocalhost(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
   }, []);
 
   const toggleMute = () => {
@@ -94,14 +96,18 @@ function LoginPage() {
   return (
     <App>
       <div className={styles.videoBg}>
-        <iframe
-          name="ytplayer"
-          src={videoSrc}
-          title="Background"
-          frameBorder="0"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-        />
+        {isLocalhost ? (
+          <iframe
+            name="ytplayer"
+            src={videoSrc}
+            title="Background"
+            frameBorder="0"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
+        ) : (
+          <div className={styles.fallbackBg} />
+        )}
         <div className={styles.overlay} />
         <div className={styles.container}>
           <div className={styles.card}>
@@ -144,9 +150,11 @@ function LoginPage() {
             <div className={styles.footer}>MongoDia - Quản lý dữ liệu</div>
           </div>
         </div>
-        <button className={styles.muteBtn} onClick={toggleMute}>
-          {isMuted ? "🔇" : "🔊"}
-        </button>
+        {isLocalhost && (
+          <button className={styles.muteBtn} onClick={toggleMute}>
+            {isMuted ? "🔇" : "🔊"}
+          </button>
+        )}
       </div>
     </App>
   );
