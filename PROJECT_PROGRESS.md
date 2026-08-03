@@ -235,6 +235,229 @@ Reviewed by Cursor Agent
 
 Status: Ready for Sprint tiếp theo
 
+### Sprint 3.1 — Complete Common UI Kit
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Hoàn thiện UI Kit. Tổ chức lại thư mục thành các nhóm. Thêm các component mới.
+
+### Cấu trúc thư mục
+
+```
+src/components/common/
+├── buttons/       → ActionButton
+├── cards/         → StatCard, StatGrid, CardSection
+├── charts/        → ChartContainer
+├── display/       → SectionTitle, Metric, InfoItem, DescriptionList, StatusBadge, EmptyState
+├── feedback/      → ConfirmDialog, Toast
+├── filters/       → FilterBar, FilterSelect, FilterDate, FilterDateRange, FilterInput
+├── forms/         → FormField, FieldGroup, FormSection, DrawerForm
+├── inputs/        → SearchInput, DateRangePicker, AsyncSelect, UploadImage
+├── layout/        → PageContainer, PageHeader
+├── overlay/       → LoadingOverlay, SkeletonCard, SkeletonTable, SkeletonForm
+├── table/         → DataTable, TableToolbar, Pagination, ToolbarActions, CardActions
+└── index.ts       → Barrel export
+```
+
+### Components mới
+
+| Component | Mục đích |
+|-----------|---------|
+| PageContainer | Standard page layout |
+| StatGrid | Grid chứa StatCard |
+| SkeletonCard | Skeleton cho card |
+| SkeletonTable | Skeleton cho table |
+| SkeletonForm | Skeleton cho form |
+| SectionTitle | Section title |
+| Metric | Metric value với trend |
+| InfoItem | Label/value pair |
+| DescriptionList | List các InfoItem |
+| UploadImage | Image upload (avatar/product/facebook) |
+| DateRangePicker | Date range với presets |
+| AsyncSelect | Search API ready |
+| FormField | Standard form field |
+| FieldGroup | Form fields in row |
+| ToolbarActions | Toolbar actions |
+| CardActions | Card actions |
+| ChartContainer | Wrapper cho charts |
+| PermissionGate | Permission gate (export chung) |
+| Toast | Toast/notification wrapper |
+
+### Hooks mới
+
+| Hook | Mục đích |
+|------|---------|
+| useDrawer | Drawer state |
+| useDialog | Dialog state |
+| useSelection | Selection state |
+| useSorting | Sorting state |
+| useSearchParams | URL params |
+| useTableState | Combined table state |
+
+### Quy tắc
+
+- **Reusable**: Không phụ thuộc module
+- **Ant Design**: Ưu tiên Ant Design
+- **Generic names**: DataTable, CardSection, UploadImage, FieldGroup (KHÔNG MarketingTable, EmployeeCard)
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+- [x] Barrel export qua `src/components/common/index.ts`
+- [x] Hooks export qua `src/hooks/common.ts`
+- [x] Folder structure organized
+- [x] Tất cả component export được
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint tiếp theo
+
+### Sprint 3 — Common UI Kit
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Xây dựng bộ UI Components dùng chung cho toàn bộ CRM.
+
+### Files tạo mới
+
+| File | Mục đích |
+|------|-----------|
+| `src/components/common/` | Common UI Kit components |
+| `src/components/common/PageHeader.tsx` | Standard page header |
+| `src/components/common/StatCard.tsx` | Statistic card with trend |
+| `src/components/common/SearchInput.tsx` | Search input component |
+| `src/components/common/FilterBar.tsx` | Multiple filter controls |
+| `src/components/common/StatusBadge.tsx` | Standard status badges |
+| `src/components/common/ActionButton.tsx` | Action buttons |
+| `src/components/common/TableToolbar.tsx` | Table toolbar |
+| `src/components/common/DataTable.tsx` | Table wrapper |
+| `src/components/common/Pagination.tsx` | Pagination wrapper |
+| `src/components/common/EmptyState.tsx` | Empty state display |
+| `src/components/common/LoadingOverlay.tsx` | Loading overlay |
+| `src/components/common/ConfirmDialog.tsx` | Confirmation dialog |
+| `src/components/common/DrawerForm.tsx` | Drawer form wrapper |
+| `src/components/common/FormSection.tsx` | Form section wrapper |
+| `src/components/common/CardSection.tsx` | Card section wrapper |
+| `src/components/common/filters/` | Filter components |
+| `src/hooks/useDebounce.ts` | Debounce hook |
+| `src/hooks/usePagination.ts` | Pagination hook |
+| `src/hooks/useFilters.ts` | Filters hook |
+| `src/components/common/index.ts` | Export index |
+| `src/hooks/common.ts` | Hooks export index |
+
+### Components
+
+1. **PageHeader** — title, subtitle, breadcrumb, actions
+2. **StatCard** — value, icon, color, trend
+3. **SearchInput** — debounced search
+4. **FilterBar** — select, date, dateRange, input filters
+5. **StatusBadge** — standard colors for common statuses
+6. **ActionButton** — primary, secondary, danger, ghost
+7. **TableToolbar** — search, refresh, export, create, filter
+8. **DataTable** — wrapper for Ant Design Table
+9. **Pagination** — pagination controls
+10. **EmptyState** — icon, title, description, action
+11. **LoadingOverlay** — spinner with text
+12. **ConfirmDialog** — delete, warning, confirm
+13. **DrawerForm** — drawer wrapper
+14. **FormSection** — titled form section
+15. **CardSection** — card wrapper
+
+### Nguyên tắc
+
+- **Reusable**: Không phụ thuộc module
+- **Ant Design**: Ưu tiên Ant Design components
+- **CSS hiện có**: Không inline style, không CSS mới
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+- [x] Export qua `src/components/common/index.ts`
+- [x] Export hooks qua `src/hooks/common.ts`
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint tiếp theo
+
+### Sprint 2.5 — Central Module Registry (Single Source of Truth)
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Tạo Single Source of Truth cho module definitions. Tránh lệch giữa nav.config và routePermissions.
+
+### Files tạo mới
+
+| File | Mục đích |
+|------|-----------|
+| `src/config/modules.ts` | Central Module Registry — Single Source of Truth |
+
+### Files chỉnh sửa
+
+| File | Thay đổi |
+|------|-----------|
+| `src/config/nav.config.tsx` | Build từ modules.ts thay vì hardcode |
+| `src/config/routePermissions.ts` | Build từ modules.ts thay vì hardcode |
+
+### Kiến trúc
+
+```
+modules.ts (Single Source of Truth)
+    │
+    ├── nav.config.tsx (generated)
+    │
+    └── routePermissions.ts (generated)
+```
+
+### Module Definition
+
+```typescript
+export type ModuleDefinition = {
+  id: string;           // "dashboard", "employees", ...
+  title: string;        // "Tổng quan", "QL tài khoản", ...
+  route: string;        // "/dashboard", "/employees", ...
+  permission: string;    // "dashboard.view", "employee.view", ...
+  group: NavGroupKey;   // "DASHBOARD", "ACCOUNTS", ...
+  icon: string;         // SVG path data
+  standalone?: boolean; // Dashboard = true
+  pill?: number | null;
+};
+```
+
+### Lợi ích
+
+- **1 chỗ thay đổi**: route, permission, title, icon đều edit ở modules.ts
+- **Không lệch**: nav.config và routePermissions luôn sync
+- **Dễ bảo trì**: Thêm module mới chỉ cần thêm vào MODULES array
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+- [x] Sidebar hoạt động như cũ
+- [x] Route Guard hoạt động như cũ
+- [x] Không thay đổi hành vi
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint tiếp theo
+
 ### 1. Backend Setup
 - Next.js App Router
 - MongoDB + Mongoose
