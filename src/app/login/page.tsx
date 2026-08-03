@@ -1,6 +1,6 @@
 "use client";
 
-import { message } from "antd";
+import { App } from "antd";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
@@ -25,6 +25,7 @@ function LoginPage() {
   const { login } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { message } = App.useApp();
 
   useEffect(() => {
     setStartTime(getRandomStart());
@@ -91,61 +92,63 @@ function LoginPage() {
   const videoSrc = `https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${VIDEO_ID}&start=${startTime}&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1`;
 
   return (
-    <div className={styles.videoBg}>
-      <iframe
-        name="ytplayer"
-        src={videoSrc}
-        title="Background"
-        frameBorder="0"
-        allow="autoplay; encrypted-media"
-        allowFullScreen
-      />
-      <div className={styles.overlay} />
-      <div className={styles.container}>
-        <div className={styles.card}>
-          <h1>Welcome</h1>
-          <p>Đăng nhập hệ thống</p>
+    <App>
+      <div className={styles.videoBg}>
+        <iframe
+          name="ytplayer"
+          src={videoSrc}
+          title="Background"
+          frameBorder="0"
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+        />
+        <div className={styles.overlay} />
+        <div className={styles.container}>
+          <div className={styles.card}>
+            <h1>Welcome</h1>
+            <p>Đăng nhập hệ thống</p>
 
-          <form onSubmit={onSubmit}>
-            <input
-              className={styles.input}
-              type="text"
-              name="username"
-              placeholder="Username"
-              required
-            />
-
-            <div className={styles.passwordBox}>
+            <form onSubmit={onSubmit}>
               <input
-                id="password"
                 className={styles.input}
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder="Password"
+                type="text"
+                name="username"
+                placeholder="Username"
                 required
               />
-              <span className={styles.show} onClick={togglePassword}>
-                {showPassword ? "👁" : "👁"}
-              </span>
+
+              <div className={styles.passwordBox}>
+                <input
+                  id="password"
+                  className={styles.input}
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Password"
+                  required
+                />
+                <span className={styles.show} onClick={togglePassword}>
+                  {showPassword ? "👁" : "👁"}
+                </span>
+              </div>
+
+              <button type="submit" className={styles.submitBtn} disabled={loading}>
+                {loading ? "ĐANG ĐĂNG NHẬP..." : "LOGIN"}
+              </button>
+            </form>
+
+            <div className={styles.links}>
+              <a href="#">Quên mật khẩu?</a>
+              <a href="/register">Đăng ký</a>
             </div>
 
-            <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? "ĐANG ĐĂNG NHẬP..." : "LOGIN"}
-            </button>
-          </form>
-
-          <div className={styles.links}>
-            <a href="#">Quên mật khẩu?</a>
-            <a href="/register">Đăng ký</a>
+            <div className={styles.footer}>MongoDia - Quản lý dữ liệu</div>
           </div>
-
-          <div className={styles.footer}>MongoDia - Quản lý dữ liệu</div>
         </div>
+        <button className={styles.muteBtn} onClick={toggleMute}>
+          {isMuted ? "🔇" : "🔊"}
+        </button>
       </div>
-      <button className={styles.muteBtn} onClick={toggleMute}>
-        {isMuted ? "🔇" : "🔊"}
-      </button>
-    </div>
+    </App>
   );
 }
 
