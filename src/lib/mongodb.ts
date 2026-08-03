@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 
+// Import all models to ensure they are registered with Mongoose
+// This must be done before any queries are executed
+import "@/models";
+
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
