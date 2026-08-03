@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     const { password } = parsedBody.data;
 
     const employee = await Employee.findOne({
-      username,
+      username: username.toLowerCase(),
       isActive: true,
     })
       .select("+password")
@@ -149,8 +149,10 @@ export async function POST(request: Request) {
       },
       "Đăng nhập thành công"
     );
-  } catch (error) {
-    console.error("Login error:", error);
+  } catch (err) {
+    console.error("========== LOGIN ERROR ==========");
+    console.error(err);
+    console.error("==================================");
 
     return errorResponse("Không thể đăng nhập lúc này", 500);
   }
