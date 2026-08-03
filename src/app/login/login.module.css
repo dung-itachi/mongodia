@@ -1,12 +1,9 @@
 .videoBg {
   position: fixed;
   inset: 0;
-  z-index: -3;
+  z-index: 0;
   overflow: hidden;
   background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .videoBg iframe {
@@ -36,7 +33,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
-  z-index: -2;
+  z-index: 1;
 }
 
 .container {
@@ -46,8 +43,7 @@
   justify-content: center;
   align-items: center;
   position: relative;
-  z-index: 1;
-  flex-direction: column;
+  z-index: 10;
 }
 
 .card {
@@ -106,7 +102,7 @@
   color: #ddd;
   user-select: none;
   transition: color 0.3s ease;
-  z-index: 1;
+  z-index: 11;
 }
 
 .show:hover {
@@ -157,6 +153,30 @@
   text-align: center;
   font-size: 13px;
   color: #ddd;
+}
+
+.muteBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.muteBtn:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
 }
 
 @media (max-width: 500px) {

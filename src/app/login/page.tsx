@@ -1,6 +1,6 @@
 "use client";
 
-import { App } from "antd";
+import { message } from "antd";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
@@ -18,21 +18,30 @@ function getRandomStart() {
   return Math.floor(Math.random() * (MAX_START - MIN_START + 1)) + MIN_START;
 }
 
-function getVideoSrc(startTime: number, muted: boolean) {
-  return `https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${VIDEO_ID}&start=${startTime}&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0`;
-}
-
 function LoginPage() {
-  const [muted, setMuted] = useState(false);
-  const [startTime] = useState(getRandomStart);
+  const [isMuted, setIsMuted] = useState(true);
+  const [startTime, setStartTime] = useState(0);
   const router = useRouter();
   const { login } = useAuthStore();
-  const { message: messageApi, contextHolder } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    setStartTime(getRandomStart());
+  }, []);
+
   const toggleMute = () => {
-    setMuted(!muted);
+    const iframe = document.querySelector("iframe[name=ytplayer]") as HTMLIFrameElement | null;
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(
+        JSON.stringify({
+          event: "command",
+          func: isMuted ? "unMute" : "mute",
+        }),
+        "*"
+      );
+      setIsMuted(!isMuted);
+    }
   };
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,7 +66,7 @@ function LoginPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        messageApi.error(result.message || "Đăng nhập thất bại");
+        message.error(result.message || "Đăng nhập thất bại");
         setLoading(false);
         return;
       }
@@ -67,10 +76,10 @@ function LoginPage() {
         user: result.data.user,
       });
 
-      messageApi.success("Đăng nhập thành công!");
+      message.success("Đăng nhập thành công!");
       setTimeout(() => router.push("/dashboard"), 500);
     } catch {
-      messageApi.error("Không thể kết nối máy chủ");
+      message.error("Không thể kết nối máy chủ");
       setLoading(false);
     }
   };
@@ -79,68 +88,64 @@ function LoginPage() {
     setShowPassword(!showPassword);
   };
 
-  return (
-    <App>
-      {contextHolder}
-      <div className={styles.videoBg}>
-        <iframe
-          src={getVideoSrc(startTime, muted)}
-          title="Background"
-          frameBorder="0"
-          allow="autoplay"
-          allowFullScreen
-          suppressHydrationWarning
-        />
-        <div className={styles.overlay} />
-        <div className={styles.container}>
-          <div className={styles.card}>
-            <h1>Welcome</h1>
-            <p>Đăng nhập hệ thống</p>
+  const videoSrc = `https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&mute=1&controls=0&loop=1&playlist=${VIDEO_ID}&start=${startTime}&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1`;
 
-            <form onSubmit={onSubmit}>
+  return (
+    <div className={styles.videoBg}>
+      <iframe
+        name="ytplayer"
+        src={videoSrc}
+        title="Background"
+        frameBorder="0"
+        allow="autoplay; encrypted-media"
+        allowFullScreen
+      />
+      <div className={styles.overlay} />
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <h1>Welcome</h1>
+          <p>Đăng nhập hệ thống</p>
+
+          <form onSubmit={onSubmit}>
+            <input
+              className={styles.input}
+              type="text"
+              name="username"
+              placeholder="Username"
+              required
+            />
+
+            <div className={styles.passwordBox}>
               <input
+                id="password"
                 className={styles.input}
-                type="text"
-                name="username"
-                placeholder="Username"
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password"
                 required
               />
-
-              <div className={styles.passwordBox}>
-                <input
-                  id="password"
-                  className={styles.input}
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Password"
-                  required
-                />
-                <span className={styles.show} onClick={togglePassword}>
-                  {showPassword ? "👁" : "👁"}
-                </span>
-              </div>
-
-              <button type="submit" className={styles.submitBtn} disabled={loading}>
-                {loading ? "ĐANG ĐĂNG NHẬP..." : "LOGIN"}
-              </button>
-            </form>
-
-            <div className={styles.links}>
-              <a href="#">Quên mật khẩu?</a>
-              <a href="/register">Đăng ký</a>
+              <span className={styles.show} onClick={togglePassword}>
+                {showPassword ? "👁" : "👁"}
+              </span>
             </div>
 
-            <div className={styles.footer}>MongoDia - Quản lý dữ liệu</div>
+            <button type="submit" className={styles.submitBtn} disabled={loading}>
+              {loading ? "ĐANG ĐĂNG NHẬP..." : "LOGIN"}
+            </button>
+          </form>
+
+          <div className={styles.links}>
+            <a href="#">Quên mật khẩu?</a>
+            <a href="/register">Đăng ký</a>
           </div>
+
+          <div className={styles.footer}>MongoDia - Quản lý dữ liệu</div>
         </div>
-        <button
-          className={styles.muteBtn}
-          onClick={toggleMute}
-        >
-          {muted ? "🔇" : "🔊"}
-        </button>
       </div>
-    </App>
+      <button className={styles.muteBtn} onClick={toggleMute}>
+        {isMuted ? "🔇" : "🔊"}
+      </button>
+    </div>
   );
 }
 
