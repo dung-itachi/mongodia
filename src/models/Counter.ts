@@ -1,8 +1,9 @@
 import mongoose, { Model, Schema } from "mongoose";
 
 export interface ICounter {
+  _id?: mongoose.Types.ObjectId;
   key: string;
-  value: number;
+  seq: number;
 }
 
 const CounterSchema = new Schema<ICounter>(
@@ -13,7 +14,7 @@ const CounterSchema = new Schema<ICounter>(
       unique: true,
       trim: true,
     },
-    value: {
+    seq: {
       type: Number,
       default: 0,
     },

@@ -50,7 +50,7 @@ async function nextLeadCode(): Promise<string> {
     { $inc: { value: 1 } },
     { returnDocument: "after", upsert: true, setDefaultsOnInsert: true }
   ).exec();
-  const value = updated?.value ?? 1;
+  const value = updated?.seq ?? 1;
   return `LE${String(value).padStart(6, "0")}`;
 }
 

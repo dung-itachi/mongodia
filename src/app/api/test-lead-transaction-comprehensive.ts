@@ -61,7 +61,7 @@ async function generateLeadCodeWithCounter(): Promise<string> {
     { new: true, upsert: true }
   );
 
-  const sequence = (counter.value || 1).toString().padStart(4, "0");
+  const sequence = (counter.seq || 1).toString().padStart(4, "0");
   return `LD${year}${month}${day}${sequence}`;
 }
 
@@ -90,7 +90,7 @@ async function test_POST_Commit_Success(): Promise<string | null> {
       { upsert: true, session }
     );
 
-    const currentValue = counter?.value || 1;
+    const currentValue = counter?.seq || 1;
     const sequence = currentValue.toString().padStart(4, "0");
     const leadCode = `LD${year}${month}${day}${sequence}`;
 
@@ -130,11 +130,11 @@ async function test_POST_Commit_Success(): Promise<string | null> {
 
     if (!leadInDb) return "Lead not persisted after commit";
     if (!historyInDb) return "LeadHistory not persisted after commit";
-    if (!counterInDb || counterInDb.value < 1) return "Counter not incremented";
+    if (!counterInDb || counterInDb.seq < 1) return "Counter not incremented";
 
     console.log(`    ✓ Lead persisted: ${leadCode}`);
     console.log(`    ✓ LeadHistory persisted with employeeId: ${employeeId}`);
-    console.log(`    ✓ Counter incremented: ${counterInDb.value}`);
+    console.log(`    ✓ Counter incremented: ${counterInDb.seq}`);
 
     return null;
   } catch (error) {
@@ -158,7 +158,7 @@ async function test_POST_Rollback_By_ValidationError(): Promise<string | null> {
     const counterKey = `lead_${year}${month}${day}`;
 
     const counterBefore = await Counter.findOne({ key: counterKey });
-    const seqBefore = counterBefore?.value || 0;
+    const seqBefore = counterBefore?.seq || 0;
     const leadCountBefore = await Lead.countDocuments({ customerName: "Test Comp POST Validation" });
 
     session.startTransaction();
@@ -213,8 +213,8 @@ async function test_POST_Rollback_By_ValidationError(): Promise<string | null> {
     if (leadCountAfter !== leadCountBefore) {
       return `Lead not rolled back: ${leadCountBefore} -> ${leadCountAfter}`;
     }
-    if (counterAfter && counterAfter.value > seqBefore) {
-      return `Counter not rolled back: ${seqBefore} -> ${counterAfter.value}`;
+    if (counterAfter && counterAfter.seq > seqBefore) {
+      return `Counter not rolled back: ${seqBefore} -> ${counterAfter.seq}`;
     }
 
     console.log("    ✓ Lead rolled back");
@@ -321,7 +321,7 @@ async function test_POST_Rollback_By_RequiredField(): Promise<string | null> {
     const counterKey = `lead_${year}${month}${day}`;
 
     const counterBefore = await Counter.findOne({ key: counterKey });
-    const seqBefore = counterBefore?.value || 0;
+    const seqBefore = counterBefore?.seq || 0;
 
     session.startTransaction();
 
@@ -376,8 +376,8 @@ async function test_POST_Rollback_By_RequiredField(): Promise<string | null> {
     console.log("    ✓ Lead rolled back");
 
     const counterAfter = await Counter.findOne({ key: counterKey });
-    if (counterAfter && counterAfter.value > seqBefore) {
-      return `Counter not rolled back: ${seqBefore} -> ${counterAfter.value}`;
+    if (counterAfter && counterAfter.seq > seqBefore) {
+      return `Counter not rolled back: ${seqBefore} -> ${counterAfter.seq}`;
     }
     console.log("    ✓ Counter rolled back");
 
@@ -403,7 +403,7 @@ async function test_POST_Rollback_By_InvalidEnum(): Promise<string | null> {
     const counterKey = `lead_${year}${month}${day}`;
 
     const counterBefore = await Counter.findOne({ key: counterKey });
-    const seqBefore = counterBefore?.value || 0;
+    const seqBefore = counterBefore?.seq || 0;
 
     session.startTransaction();
 
@@ -482,7 +482,7 @@ async function test_POST_Rollback_By_CastError(): Promise<string | null> {
     const counterKey = `lead_${year}${month}${day}`;
 
     const counterBefore = await Counter.findOne({ key: counterKey });
-    const seqBefore = counterBefore?.value || 0;
+    const seqBefore = counterBefore?.seq || 0;
 
     session.startTransaction();
 
@@ -537,8 +537,8 @@ async function test_POST_Rollback_By_CastError(): Promise<string | null> {
     console.log("    ✓ Lead rolled back");
 
     const counterAfter = await Counter.findOne({ key: counterKey });
-    if (counterAfter && counterAfter.value > seqBefore) {
-      return `Counter not rolled back: ${seqBefore} -> ${counterAfter.value}`;
+    if (counterAfter && counterAfter.seq > seqBefore) {
+      return `Counter not rolled back: ${seqBefore} -> ${counterAfter.seq}`;
     }
     console.log("    ✓ Counter rolled back");
 

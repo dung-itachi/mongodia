@@ -195,3 +195,87 @@ export function mapInventoryHistoryList(
 ): InventoryHistoryResponse[] {
   return histories.map(mapInventoryHistory);
 }
+
+// ==================================================
+// Inventory List Mapper
+// ==================================================
+
+export interface InventoryListItem {
+  _id: string;
+  warehouse: {
+    _id: string;
+    code: string;
+    name: string;
+  };
+  productVariant: {
+    _id: string;
+    sku: string;
+    barcode: string;
+    product: {
+      _id: string;
+      code: string;
+      name: string;
+    };
+    variantValues: Array<{
+      _id: string;
+      code: string;
+      name: string;
+    }>;
+  };
+  quantity: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Map inventory list item from populated Inventory document. */
+export function mapInventoryList(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  item: any
+): InventoryListItem {
+  const warehouse = item.warehouseId as Record<string, unknown> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const productVariant = (item.productVariantId as any) as Record<string, unknown> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const product = (productVariant?.productId as any) as Record<string, unknown> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const variantValues = (productVariant?.variantValues ?? []) as any[];
+
+  return {
+    _id: (item._id as { toString(): string }).toString(),
+    warehouse: warehouse
+      ? {
+          _id: (warehouse._id as { toString(): string }).toString(),
+          code: warehouse.code as string,
+          name: warehouse.name as string,
+        }
+      : { _id: "", code: "", name: "" },
+    productVariant: {
+      _id: productVariant
+        ? (productVariant._id as { toString(): string }).toString()
+        : "",
+      sku: (productVariant?.sku as string) ?? "",
+      barcode: (productVariant?.barcode as string) ?? "",
+      product: product
+        ? {
+            _id: (product._id as { toString(): string }).toString(),
+            code: product.code as string,
+            name: product.name as string,
+          }
+        : { _id: "", code: "", name: "" },
+      variantValues: variantValues.map((v) => ({
+        _id: (v._id as { toString(): string }).toString(),
+        code: v.code as string,
+        name: v.name as string,
+      })),
+    },
+    quantity: (item.quantity as number) ?? 0,
+    reservedQuantity: (item.reservedQuantity as number) ?? 0,
+    availableQuantity: (item.availableQuantity as number) ?? 0,
+    isActive: (item.isActive as boolean) ?? true,
+    createdAt: (item.createdAt as Date)?.toISOString() ?? "",
+    updatedAt: (item.updatedAt as Date)?.toISOString() ?? "",
+  };
+}

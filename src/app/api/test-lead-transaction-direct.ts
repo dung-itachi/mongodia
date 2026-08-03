@@ -59,7 +59,7 @@ async function generateLeadCodeWithCounter(): Promise<string> {
     { new: true, upsert: true }
   );
 
-  const sequence = (counter.value || 1).toString().padStart(4, "0");
+  const sequence = (counter.seq || 1).toString().padStart(4, "0");
   return `LD${year}${month}${day}${sequence}`;
 }
 
@@ -84,7 +84,7 @@ async function test_POST_Lead_Transaction_Success(): Promise<string | null> {
 
     // Get counter before
     const counterBefore = await Counter.findOne({ key: counterKey }).session(session);
-    const seqBefore = counterBefore?.value || 0;
+    const seqBefore = counterBefore?.seq || 0;
 
     // 1. Update counter in transaction
     const counter = await Counter.findOneAndUpdate(
@@ -92,10 +92,10 @@ async function test_POST_Lead_Transaction_Success(): Promise<string | null> {
       { $inc: { value: 1 } },
       { new: true, upsert: true, session }
     );
-    console.log("    ✓ Counter incremented:", counter?.value);
+    console.log("    ✓ Counter incremented:", counter?.seq);
 
     // 2. Create Lead with generated code
-    const sequence = (counter?.value || seqBefore + 1).toString().padStart(4, "0");
+    const sequence = (counter?.seq || seqBefore + 1).toString().padStart(4, "0");
     const leadCode = `LD${year}${month}${day}${sequence}`;
 
     const lead = await Lead.create(
@@ -163,10 +163,10 @@ async function test_POST_Lead_Transaction_Success(): Promise<string | null> {
     console.log("    ✓ LeadHistory persisted after commit");
 
     const counterAfter = await Counter.findOne({ key: counterKey }).lean();
-    if (!counterAfter || counterAfter.value <= seqBefore) {
+    if (!counterAfter || counterAfter.seq <= seqBefore) {
       return "Counter not incremented";
     }
-    console.log("    ✓ Counter incremented:", counterAfter.value);
+    console.log("    ✓ Counter incremented:", counterAfter.seq);
 
     return null; // Success
   } catch (error) {
@@ -193,7 +193,7 @@ async function test_POST_Lead_Transaction_Rollback(): Promise<string | null> {
 
     // Get initial counter value
     const counterBefore = await Counter.findOne({ key: counterKey });
-    const seqBefore = counterBefore?.value || 0;
+    const seqBefore = counterBefore?.seq || 0;
 
     // Get initial lead count
     const leadCountBefore = await Lead.countDocuments({ customerName: "Test Rollback Customer" });
@@ -209,7 +209,7 @@ async function test_POST_Lead_Transaction_Rollback(): Promise<string | null> {
     console.log("    ✓ Counter incremented in transaction");
 
     // 2. Create Lead
-    const sequence = (counter?.value || seqBefore + 1).toString().padStart(4, "0");
+    const sequence = (counter?.seq || seqBefore + 1).toString().padStart(4, "0");
     const leadCode = `LD${year}${month}${day}${sequence}`;
 
     const lead = await Lead.create(
@@ -260,7 +260,7 @@ async function test_POST_Lead_Transaction_Rollback(): Promise<string | null> {
     console.log("    ✓ Lead rolled back");
 
     const counterAfter = await Counter.findOne({ key: counterKey });
-    if (counterAfter && counterAfter.value > seqBefore) {
+    if (counterAfter && counterAfter.seq > seqBefore) {
       return "Counter incremented after rollback - transaction failed";
     }
     console.log("    ✓ Counter unchanged after rollback");

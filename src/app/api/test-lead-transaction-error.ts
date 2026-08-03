@@ -58,7 +58,7 @@ async function generateLeadCodeWithCounter(): Promise<string> {
     { new: true, upsert: true }
   );
 
-  const sequence = (counter.value || 1).toString().padStart(4, "0");
+  const sequence = (counter.seq || 1).toString().padStart(4, "0");
   return `LD${year}${month}${day}${sequence}`;
 }
 
@@ -80,7 +80,7 @@ async function test_POST_Lead_Rollback_With_RealError(): Promise<string | null> 
 
     // Get initial state (before transaction)
     const counterBefore = await Counter.findOne({ key: counterKey });
-    const seqBefore = counterBefore?.value || 0;
+    const seqBefore = counterBefore?.seq || 0;
     const leadCountBefore = await Lead.countDocuments({ customerName: "Test Error POST Lead" });
 
     session.startTransaction();
@@ -156,8 +156,8 @@ async function test_POST_Lead_Rollback_With_RealError(): Promise<string | null> 
     console.log("    ✓ Lead does not exist in database - rollback worked");
 
     const counterAfter = await Counter.findOne({ key: counterKey });
-    if (counterAfter && counterAfter.value > seqBefore) {
-      return `Counter incremented after error - rollback failed: ${seqBefore} -> ${counterAfter.value}`;
+    if (counterAfter && counterAfter.seq > seqBefore) {
+      return `Counter incremented after error - rollback failed: ${seqBefore} -> ${counterAfter.seq}`;
     }
     console.log("    ✓ Counter unchanged - rollback worked");
 

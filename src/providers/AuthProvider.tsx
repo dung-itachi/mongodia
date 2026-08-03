@@ -9,15 +9,12 @@ type Props = {
 };
 
 export default function AuthProvider({ children }: Props) {
-  const setToken = useAuthStore((state) => state.setToken);
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      setToken(token);
-    }
-  }, [setToken]);
+    // Token is automatically restored by persist middleware
+    // No manual restoration needed
+  }, []);
 
   return <>{children}</>;
 }

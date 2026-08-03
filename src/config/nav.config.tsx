@@ -21,6 +21,8 @@ export type NavItem = {
    * `.ni` styling override from sidebar.css.
    */
   standalone?: boolean;
+  /** Permission required to show this item. */
+  permission?: string;
 };
 
 export type NavGroup = {
@@ -75,6 +77,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/dashboard",
         iconSvg: ICON.dash,
         standalone: true,
+        permission: "dashboard.view",
       },
     ],
   },
@@ -88,6 +91,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Tổng quan MKT",
         href: "/marketing/dashboard",
         iconSvg: ICON.mktDash,
+        permission: "report.view",
       },
       {
         key: "mkt",
@@ -95,12 +99,14 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/marketing/input",
         iconSvg: ICON.mktInput,
         pill: 0,
+        permission: "lead.create",
       },
       {
         key: "mkt-orders",
         label: "QL đơn hàng",
         href: "/marketing/orders",
         iconSvg: ICON.mktOrd,
+        permission: "order.view",
       },
     ],
   },
@@ -115,6 +121,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/leads",
         iconSvg: ICON.leads,
         pill: 0,
+        permission: "lead.view",
       },
       {
         key: "closed",
@@ -122,6 +129,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/orders?status=CLOSED",
         iconSvg: ICON.closed,
         pill: 0,
+        permission: "order.view",
       },
     ],
   },
@@ -136,6 +144,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/orders?status=SHIPPING",
         iconSvg: ICON.ship,
         pill: 0,
+        permission: "order.view",
       },
       {
         key: "ok",
@@ -143,6 +152,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/orders?status=COMPLETED",
         iconSvg: ICON.ok,
         pill: 0,
+        permission: "order.view",
       },
       {
         key: "ret",
@@ -150,6 +160,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/orders?status=CANCELLED",
         iconSvg: ICON.ret,
         pill: 0,
+        permission: "order.view",
       },
       {
         key: "rec",
@@ -157,6 +168,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/orders?status=RECONCILED",
         iconSvg: ICON.rec,
         pill: 0,
+        permission: "order.view",
       },
     ],
   },
@@ -170,6 +182,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "QL sản phẩm",
         href: "/products",
         iconSvg: ICON.prod,
+        permission: "product.view",
       },
     ],
   },
@@ -183,6 +196,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "QL tài khoản",
         href: "/employees",
         iconSvg: ICON.acc,
+        permission: "employee.view",
       },
     ],
   },
@@ -196,6 +210,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Quản lý kho",
         href: "/warehouses",
         iconSvg: ICON.wh,
+        permission: "warehouse.view",
       },
     ],
   },

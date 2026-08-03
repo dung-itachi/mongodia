@@ -255,7 +255,7 @@ export async function PUT(
           employeeId: currentUser.employee._id as mongoose.Types.ObjectId,
           action: LeadAction.SALE_CHANGED,
           oldValue: oldSaleId || undefined,
-          newValue,
+          newValue: newSaleId,
         });
 
         // assignedAt chỉ set khi Sale từ null -> có giá trị
@@ -314,8 +314,8 @@ export async function PUT(
           leadId: existedLead._id as mongoose.Types.ObjectId,
           employeeId: currentUser.employee._id as mongoose.Types.ObjectId,
           action: LeadAction.STATUS_CHANGED,
-          oldValue: LEAD_STATUS_LABELS[existedLead.status],
-          newValue: LEAD_STATUS_LABELS[data.status as keyof typeof LEAD_STATUS_LABELS],
+          oldValue: LEAD_STATUS_LABELS[existedLead.status as LeadStatus],
+          newValue: LEAD_STATUS_LABELS[data.status as LeadStatus],
         });
       }
       updateData.status = data.status;

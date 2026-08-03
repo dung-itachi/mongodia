@@ -92,7 +92,7 @@ async function nextLeadCode(session?: ClientSession): Promise<string> {
   )
     .session(session ?? null)
     .exec();
-  const value = updated?.value ?? 1;
+  const value = updated?.seq ?? 1;
   return `LE${String(value).padStart(6, "0")}`;
 }
 

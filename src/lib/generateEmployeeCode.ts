@@ -16,5 +16,5 @@ export async function generateEmployeeCode() {
     }
   );
 
-  return `EMP${counter.value.toString().padStart(6, "0")}`;
+  return `EMP${counter.seq.toString().padStart(6, "0")}`;
 }

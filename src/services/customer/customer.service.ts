@@ -67,7 +67,7 @@ async function nextCustomerCode(session?: ClientSession): Promise<string> {
     { $inc: { value: 1 } },
     { returnDocument: "after", upsert: true, setDefaultsOnInsert: true }
   ).session(session ?? null).exec();
-  const value = updated?.value ?? 1;
+  const value = updated?.seq ?? 1;
   return `KH${String(value).padStart(6, "0")}`;
 }
 

@@ -1,44 +1,16 @@
-import { Schema, model, models, InferSchemaType } from "mongoose";
+import { Permission } from "@/types/permission";
 
-const PermissionSchema = new Schema(
-  {
-    code: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    module: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    description: {
-      type: String,
-      default: "",
-    },
-
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-  },
-  {
-    timestamps: true,
+export function hasPermission(
+  userPermissions: Permission[] | string[] | undefined,
+  permission: Permission | string
+): boolean {
+  if (!userPermissions || !Array.isArray(userPermissions)) {
+    return false;
   }
-);
 
-export type Permission = InferSchemaType<typeof PermissionSchema>;
+  if ((userPermissions as string[]).includes("*")) {
+    return true;
+  }
 
-const PermissionModel =
-  models.Permission || model("Permission", PermissionSchema);
-
-export default PermissionModel;
+  return (userPermissions as string[]).includes(permission);
+}

@@ -20,13 +20,6 @@ const RoleSchema = new Schema(
       default: "",
     },
 
-    permissions: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Permission",
-      },
-    ],
-
     isActive: {
       type: Boolean,
       default: true,
@@ -37,8 +30,10 @@ const RoleSchema = new Schema(
   }
 );
 
+RoleSchema.index({ isActive: 1 });
+
 export type Role = InferSchemaType<typeof RoleSchema>;
 
-const RoleModel = models.Role || model("Role", RoleSchema);
+const RoleModel = models.Role || model<Role>("Role", RoleSchema);
 
 export default RoleModel;

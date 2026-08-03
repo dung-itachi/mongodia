@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import {
   NAV_GROUPS,
@@ -17,6 +18,8 @@ import {
   type NavItem,
   type NavGroup,
 } from "@/config/nav.config";
+import { useAuthStore } from "@/store/auth.store";
+import { hasPermission } from "@/lib/permission";
 
 type Props = {
   /** True when the mobile overlay should be shown. */
@@ -57,6 +60,8 @@ export default function Sidebar({
   onCollapsedChange,
 }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout, user } = useAuthStore();
   const [lang, setLang] = useState<(typeof LANGUAGES)[number]["code"]>(
     DEFAULT_LANG
   );
@@ -72,6 +77,21 @@ export default function Sidebar({
   ]
     .filter(Boolean)
     .join(" ");
+
+  // Filter groups and items by permission
+  const userPermissions = user?.permissions ?? [];
+  const visibleGroups = NAV_GROUPS.map((group) => {
+    const visibleItems = group.items.filter(
+      (item) =>
+        !item.permission || hasPermission(userPermissions, item.permission)
+    );
+    return { ...group, items: visibleItems };
+  }).filter((group) => group.items.length > 0);
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
 
   return (
     <aside className={asideClass}>
@@ -138,20 +158,33 @@ export default function Sidebar({
         ))}
       </div>
 
-      {/* Nav groups */}
+      {/* Nav groups (filtered by permission) */}
       <nav className="nav">
-        {NAV_GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <NavGroupBlock
             key={group.key}
             group={group}
             pathname={pathname}
-            standalone={group.items.length === 1 && group.items[0].standalone}
+            standalone={group.items.length === 1 && !!group.items[0].standalone}
           />
         ))}
       </nav>
 
       {/* Footer (.sbf > .ver) */}
       <div className="sbf">
+        <button
+          type="button"
+          className="logout-btn"
+          onClick={handleLogout}
+          aria-label="Đăng xuất"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          <span>Đăng xuất</span>
+        </button>
         <div className="ver">v6.0 · Mongolia CRM</div>
       </div>
     </aside>

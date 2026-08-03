@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import Employee from "@/models/Employee";
 import Permission from "@/models/Permission";
 import Role from "@/models/Role";
+import RolePermission from "@/models/RolePermission";
 
 import { verifyToken } from "@/utils/jwt";
 
@@ -18,6 +19,12 @@ export class ForbiddenError extends Error {
     super(message);
     this.name = "ForbiddenError";
   }
+}
+
+interface PopulatedRolePermission {
+  permissionId: {
+    code: string;
+  } | null;
 }
 
 export async function getCurrentUser(request: Request) {
@@ -60,18 +67,24 @@ export async function getCurrentUser(request: Request) {
     throw new UnauthorizedError("Vai trò không tồn tại hoặc đã bị vô hiệu hóa");
   }
 
-  const permissions = role.permissions.length
-    ? await Permission.find({
-        _id: { $in: role.permissions },
-        isActive: true,
-      })
-        .select("code -_id")
-        .lean()
-    : [];
+  // Fetch permissions via RolePermission junction table
+  const rolePermissions = await RolePermission.find({
+    roleId: role._id,
+  })
+    .populate<{ permissionId: { code: string } }>({
+      path: "permissionId",
+      match: { isActive: true },
+      select: "code",
+    })
+    .lean() as PopulatedRolePermission[];
+
+  const permissions = rolePermissions
+    .filter((rp) => rp.permissionId != null)
+    .map((rp) => rp.permissionId!.code);
 
   return {
     employee,
     role,
-    permissions: permissions.map((p) => p.code),
+    permissions,
   };
 }

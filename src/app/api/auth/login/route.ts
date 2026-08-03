@@ -2,8 +2,8 @@ import { connectDB } from "@/lib/mongodb";
 
 import Employee from "@/models/Employee";
 import LoginHistory from "@/models/LoginHistory";
-import Permission from "@/models/Permission";
 import Role from "@/models/Role";
+import RolePermission from "@/models/RolePermission";
 
 import { comparePassword } from "@/utils/bcrypt";
 import { signToken } from "@/utils/jwt";
@@ -18,6 +18,12 @@ function getClientIp(request: Request) {
     request.headers.get("x-real-ip") ??
     ""
   );
+}
+
+interface PopulatedRolePermission {
+  permissionId: {
+    code: string;
+  } | null;
 }
 
 export async function POST(request: Request) {
@@ -83,66 +89,66 @@ export async function POST(request: Request) {
       );
     }
 
-    const permissions = role.permissions.length
-      ? await Permission.find({
-          _id: {
-            $in: role.permissions,
-          },
-          isActive: true,
-        })
-          .select("code -_id")
-          .lean()
-      : [];
+    // Fetch permissions via RolePermission junction table
+    const rolePermissions = await RolePermission.find({
+      roleId: role._id,
+    })
+      .populate<{ permissionId: { code: string } }>({
+        path: "permissionId",
+        match: { isActive: true },
+        select: "code",
+      })
+      .lean() as PopulatedRolePermission[];
 
-    const permissionCodes = permissions.map(
-      (permission) => permission.code
-    );
+    const permissionCodes = rolePermissions
+      .filter((rp) => rp.permissionId != null)
+      .map((rp) => rp.permissionId!.code);
 
-    // Bước 9: JWT
+    // JWT
     const accessToken = signToken({
-        employeeId: employee._id.toString(),
-        roleId: role._id.toString(),
-      });
-      
-      const ip = getClientIp(request);
-      const userAgent = request.headers.get("user-agent") ?? "";
-      
-      await Promise.all([
-        Employee.updateOne(
-          { _id: employee._id },
-          {
-            $set: {
-              lastLogin: new Date(),
-            },
-          }
-        ),
-      
-        LoginHistory.create({
-          employeeId: employee._id,
-          username: employee.username,
-          ip,
-          userAgent,
-          success: true,
-        }),
-      ]);
-      
-      return success(
+      employeeId: employee._id.toString(),
+      roleId: role._id.toString(),
+    });
+
+    const ip = getClientIp(request);
+    const userAgent = request.headers.get("user-agent") ?? "";
+
+    await Promise.all([
+      Employee.updateOne(
+        { _id: employee._id },
         {
-          accessToken,
-      
-          user: {
-            _id: employee._id.toString(),
-            employeeCode: employee.employeeCode,
-            username: employee.username,
-            fullName: employee.fullName,
-            email: employee.email,
-            avatar: employee.avatar,
-            role: role.code,
-            permissions: permissionCodes,
+          $set: {
+            lastLogin: new Date(),
           },
+        }
+      ),
+
+      LoginHistory.create({
+        employeeId: employee._id,
+        username: employee.username,
+        ip,
+        userAgent,
+        success: true,
+      }),
+    ]);
+
+    return success(
+      {
+        accessToken,
+
+        user: {
+          _id: employee._id.toString(),
+          employeeCode: employee.employeeCode,
+          username: employee.username,
+          fullName: employee.fullName,
+          email: employee.email,
+          avatar: employee.avatar,
+          role: role.code,
+          permissions: permissionCodes,
         },
-        "Đăng nhập thành công"
-      );
+      },
+      "Đăng nhập thành công"
+    );
   } catch (error) {
     console.error("Login error:", error);
 

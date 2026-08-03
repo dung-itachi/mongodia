@@ -37,7 +37,7 @@ type Props = {
 };
 
 /**
- * AppShell — primary layout for authenticated (admin) routes.
+ * AppShell — primary layout for authenticated (protected) routes.
  *
  * Mirrors the original HTML's `body{display:flex}` + `.main` shell
  * (`layout.css`). The wrapper div is intentionally absent — the body
@@ -58,7 +58,7 @@ type Props = {
  *
  * Phase A.3 (Shell Behavior):
  *  - Sidebar and Header persist across route changes because they live
- *    in the route-group layout `(admin)/layout.tsx`. Only `<main
+ *    in the route-group layout `(protected)/layout.tsx`. Only `<main
  *    class="content">` re-renders on navigation.
  *  - Collapse (`.sb.col`) is owned by AppShell, passed to Sidebar.
  *  - Mobile overlay (`.sb.open` + `.backdrop.show`) is opened by

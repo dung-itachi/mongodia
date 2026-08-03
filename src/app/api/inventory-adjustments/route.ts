@@ -236,15 +236,19 @@ export async function POST(request: Request) {
         data.quantity - inventory.reservedQuantity;
     }
 
-    const adjustment = await InventoryAdjustment.create(
-      {
-        inventoryId: data.inventoryId,
-        type: data.type,
-        quantity: data.quantity,
-        reason: data.reason,
-        employeeId: currentUser._id,
-        note: data.note ?? "",
-      },
+    // Use type assertion to bypass strict Mongoose typing for model.create with session
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const adjustmentDoc = await (InventoryAdjustment as any).create(
+      [
+        {
+          inventoryId: data.inventoryId,
+          type: data.type,
+          quantity: data.quantity,
+          reason: data.reason,
+          employeeId: currentUser.employee._id,
+          note: data.note ?? "",
+        },
+      ],
       { session }
     );
 
@@ -260,60 +264,66 @@ export async function POST(request: Request) {
     );
 
     const beforeQuantity = inventory.quantity;
+    const createdAdjustment = adjustmentDoc[0];
 
-    await InventoryTransaction.create(
-      {
-        inventoryId: inventory._id,
-        adjustmentId: adjustment[0]._id,
-        type: data.type,
-        quantity: data.quantity,
-        beforeQuantity,
-        afterQuantity: newQuantity,
-        employeeId: currentUser._id,
-        referenceNo: adjustment[0]._id.toString(),
-        note: data.note ?? "",
-      },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (InventoryTransaction as any).create(
+      [
+        {
+          inventoryId: inventory._id,
+          adjustmentId: createdAdjustment._id,
+          type: data.type as "IN" | "OUT" | "ADJUST",
+          quantity: data.quantity,
+          beforeQuantity,
+          afterQuantity: newQuantity,
+          employeeId: currentUser.employee._id,
+          referenceNo: createdAdjustment._id.toString(),
+          note: data.note ?? "",
+        },
+      ],
       { session }
     );
 
     await session.commitTransaction();
     session.endSession();
 
-    const populatedAdjustment =
-      await InventoryAdjustment.findById(adjustment[0]._id)
-        .populate({
-          path: "inventoryId",
-          populate: [
-            {
-              path: "warehouseId",
-              select: "_id code name",
-            },
-            {
-              path: "productVariantId",
-              populate: [
-                {
-                  path: "productId",
-                  select: "_id code name",
-                },
-                {
-                  path: "variantValues",
-                  select: "_id code name",
-                },
-              ],
-              select:
-                "_id sku barcode productId variantValues",
-            },
-          ],
-          select: "_id warehouseId productVariantId",
-        })
-        .populate(
-          "employeeId",
-          "_id employeeCode fullName"
-        )
-        .lean();
+    // Fetch populated result
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const populatedAdjustment: any = await InventoryAdjustment.findById(
+      createdAdjustment._id
+    )
+      .populate({
+        path: "inventoryId",
+        populate: [
+          {
+            path: "warehouseId",
+            select: "_id code name",
+          },
+          {
+            path: "productVariantId",
+            populate: [
+              {
+                path: "productId",
+                select: "_id code name",
+              },
+              {
+                path: "variantValues",
+                select: "_id code name",
+              },
+            ],
+            select: "_id sku barcode productId variantValues",
+          },
+        ],
+        select: "_id warehouseId productVariantId",
+      })
+      .populate(
+        "employeeId",
+        "_id employeeCode fullName"
+      )
+      .lean();
 
     return success(
-      mapInventoryAdjustment(populatedAdjustment!),
+      mapInventoryAdjustment(populatedAdjustment),
       "Tạo điều chỉnh tồn kho thành công"
     );
   } catch (error) {

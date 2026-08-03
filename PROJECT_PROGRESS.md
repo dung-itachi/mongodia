@@ -3,6 +3,143 @@ Thư viện cần cài
 npm install antd @ant-design/icons axios @tanstack/react-query react-hook-form @hookform/resolvers zod mongoose mongodb jsonwebtoken bcryptjs dotenv dayjs uuid cookie
 ## ✅ Đã hoàn thành
 
+### Sprint 2.1 — Authentication Foundation
+- AuthGuard component (src/components/auth/AuthGuard.tsx)
+- Protected Layout with AuthGuard (src/app/(protected)/layout.tsx)
+- Auth Store với persist (src/store/auth.store.ts)
+  - accessToken, refreshToken, user
+  - login(), logout(), clear()
+  - isAuthenticated()
+- Login flow: gọi API → lưu token → redirect /dashboard
+- Logout: clear store → redirect /login (không reload)
+- Refresh (F5): Token được restore từ localStorage qua persist middleware
+- Loading State: Spin khi AuthGuard đang kiểm tra
+
+### Sprint 2.2 — Permission Foundation
+- `src/types/permission.ts` — String literal permissions cho toàn bộ CRM
+  - Employee, Role, Product, Order, Lead, Customer, Marketing, Warehouse, Combo, Facebook
+  - Type: `Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]`
+- `src/lib/permission.ts` — Pure function `hasPermission(userPermissions, permission)`
+  - Không phụ thuộc Zustand / React
+  - Hỗ trợ wildcard `*` cho admin
+- `src/hooks/useCan.ts` — Hook `useCan(permission)` đọc từ authStore
+  - Trả về false nếu chưa login
+- `src/components/auth/PermissionGate.tsx` — Component `<PermissionGate permission="...">`
+  - Có quyền → render children
+  - Không có quyền → return null (không hiển thị 403 UI)
+
+### Sprint 2.3 — Sidebar Permission (RBAC)
+✅ Hoàn thành (2026-08-03)
+- **nav.config.tsx:** Thêm field `permission` cho tất cả NavItem
+- **Sidebar.tsx:** Filter menu bằng `hasPermission(userPermissions, item.permission)`
+  - Group không có item nào visible → Ẩn cả group
+  - ADMIN ("*") → Hiện toàn bộ menu
+- **Source:** Chỉ đọc `authStore.user?.permissions`, không đọc `ROLE_SEED`
+
+---
+
+## Sprint 2.3 — Sidebar Permission (RBAC)
+
+### Status
+
+✅ Completed
+
+### Mục tiêu
+
+Sidebar tự động hiển thị menu theo `authStore.user?.permissions`.
+
+### Files tạo mới
+
+Không có (chỉnh sửa existing files)
+
+### Files chỉnh sửa
+
+- `src/config/nav.config.tsx` — Thêm field `permission` cho mỗi NavItem
+- `src/components/layout/Sidebar.tsx` — Filter menu bằng `hasPermission()`
+
+### Menu Permission Mapping
+
+| Menu | Permission |
+|------|-----------|
+| Tổng quan | dashboard.view |
+| Tổng quan MKT | report.view |
+| Nhập số | lead.create |
+| QL đơn hàng (MKT) | order.view |
+| Số cần gọi | lead.view |
+| Chốt đơn | order.view |
+| Đang giao / Giao TC / Hoàn hàng / Đối soát | order.view |
+| QL sản phẩm | product.view |
+| QL tài khoản | employee.view |
+| Quản lý kho | warehouse.view |
+
+### Sidebar Logic
+
+```tsx
+const visibleGroups = NAV_GROUPS
+  .map(group => {
+    const visibleItems = group.items.filter(
+      item => !item.permission || hasPermission(userPermissions, item.permission)
+    );
+    return { ...group, items: visibleItems };
+  })
+  .filter(group => group.items.length > 0);
+```
+
+- Group không có item visible → Ẩn cả group
+- ADMIN ("*") → hasPermission tự xử lý wildcard → Hiện toàn bộ
+
+### Verification
+
+- [x] Admin login → Hiện toàn bộ menu (dashboard.view, warehouse.view, employee.view...)
+- [x] Marketing login → Ẩn Employees, Roles, Settings
+- [x] Sale login → Không thấy Marketing (MKT group)
+- [x] Warehouse login → Không thấy Customers, Employees
+- [x] Reload → Sidebar vẫn đúng (persisted via auth store)
+- [x] 0 TypeScript Error (Sidebar, nav.config)
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint 2.4
+
+### Sprint 2.3.5 — Fix Existing TypeScript Errors
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Fix toàn bộ TypeScript errors đang tồn tại trong project.
+
+### Files chỉnh sửa
+
+| File | Fix |
+|------|-----|
+| `src/models/Counter.ts` | Đổi `ICounter.value` → `ICounter.seq`, thêm `_id?: Types.ObjectId` |
+| `src/app/login/page.tsx` | Fix `ZodError.errors` → `ZodError.issues`, import `ZodIssue` |
+| `src/app/api/leads/[id]/route.ts` | Fix shorthand property `newValue` → `newSaleId`, cast `LeadStatus` |
+| `src/app/api/inventories/route.ts` | Thêm `mapInventoryList` vào mapper |
+| `src/app/api/inventory-adjustments/route.ts` | Fix Mongoose create typing với `(Model as any).create()` |
+| `src/services/customer/customer.service.ts` | Fix `.value` → `.seq` |
+| `src/lib/generateEmployeeCode.ts` | Fix `.value` → `.seq` |
+| `src/db/seeds/leads.seed.ts` | Fix `.value` → `.seq` |
+| `src/app/api/test-lead-transaction-*.ts` | Fix `.value` → `.seq` (3 files) |
+| `src/services/import/leadImport.service.ts` | Fix `.value` → `.seq` |
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+- [x] Không thêm lỗi mới
+- [x] Không thay đổi logic runtime
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint 2.4
+
 ### 1. Backend Setup
 - Next.js App Router
 - MongoDB + Mongoose
@@ -278,6 +415,13 @@ NEW → ASSIGNED → CALLING → CONFIRMED → PACKING → SHIPPING → DELIVERE
 ---
 
 ## 🔜 Cần làm tiếp
+
+### Sprint 2.2 — Permission Foundation
+✅ Hoàn thành (2026-08-03)
+- Permission Engine: types, lib, hook, PermissionGate
+
+### Sprint 2.3 — Tiếp theo
+- CRUD (theo Sprint tiếp theo)
 
 ### Ưu tiên cao:
 1. **Lead** (20%) - Module CRM quan trọng nhất
@@ -1443,3 +1587,66 @@ Foundation UI đã được chuẩn hoá với 16 stylesheet phạm vi + 148 cla
 ⏳ Auto Assign Sale
 ⏳ Dashboard
 ⏳ Report
+⏳ Sprint tiếp theo
+
+---
+
+## Sprint 2.2A — Migrate RBAC (Database becomes Source of Truth)
+
+### Status
+
+✅ Completed
+
+### Kiến trúc MongoDB (Source of Truth)
+
+```
+roles          (code, name, description, isActive)
+permissions    (code, name, module, description, isActive)
+role_permissions (roleId, permissionId) — Junction table
+employees      (roleId → roles._id)
+```
+
+### Files tạo mới
+
+- `src/models/RolePermission.ts` — Junction table model
+  - Indexes: `(roleId, permissionId)` unique, `(roleId)`, `(permissionId)`
+
+### Files chỉnh sửa
+
+- `src/models/Role.ts` — Bỏ embedded `permissions[]` array
+- `src/db/seeds/permissions.seed.ts` — Thêm `module` field (Dashboard, Employee...)
+- `src/db/seeds/roles.seed.ts` — Seed Roles + RolePermission junction table (idempotent)
+- `src/lib/auth.ts` — getCurrentUser() fetch permissions qua RolePermission
+- `src/app/api/auth/login/route.ts` — Login fetch permissions qua RolePermission
+
+### Seed Order
+
+```
+Permissions → Roles → RolePermissions → Employees
+```
+
+### Auth Flow (Source of Truth: MongoDB)
+
+```
+Employee → Role → RolePermission → Permission → Response
+```
+
+### Verification
+
+- [x] Roles collection: ADMIN, MANAGER, SALE, WAREHOUSE, MKT, LEADER, EMPLOYEE
+- [x] Permissions collection: ~50 permissions đầy đủ modules
+- [x] RolePermissions collection: Junction documents (roleId, permissionId)
+- [x] Admin login → permissions đầy đủ (wildcard "*" → all permissions)
+- [x] Manager login → permissions theo ROLES config
+- [x] Sale login → permissions đúng (order.view, lead.view...)
+- [x] Warehouse login → permissions đúng (inventory.view, order.reserve_stock...)
+- [x] Marketing login → permissions đúng (facebook-page.view, lead.create...)
+- [x] Frontend KHÔNG đọc `src/constants/roles.ts` sau login
+- [x] `src/constants/roles.ts` chỉ là ROLE_SEED — chạy khi seed xong KHÔNG dùng lại
+- [x] 0 TypeScript Error (RBAC files)
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint 2.4
