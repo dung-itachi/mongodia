@@ -37,8 +37,13 @@ export function useDashboardQuickActions() {
   } = useQuery<QuickAction[], Error>({
     queryKey: ["dashboard", "quick-actions"],
     queryFn: fetchDashboardQuickActions,
-    staleTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+    retryDelay: 1500,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    refetchInterval: false,
   });
 
   return {

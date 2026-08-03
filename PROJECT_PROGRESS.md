@@ -235,6 +235,297 @@ Reviewed by Cursor Agent
 
 Status: Ready for Sprint tiếp theo
 
+### Sprint 4.4 — Dashboard Polish & Production Ready
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Hoàn thiện Dashboard ở mức production: responsive, loading không nháy layout, error state có Retry, Refresh button, React Query config chuẩn, format tập trung, memoization, a11y, clean code.
+
+### Files tạo mới
+
+| File | Mục đích |
+|------|---------|
+| `src/app/(protected)/dashboard/dashboard.module.css` | CSS module cho responsive grid + helper classes (d4-grid-2, d4-grid-3, d4-page, d4-pill, d4-notif, d4-summary-text, v.v.) |
+| `src/app/(protected)/dashboard/dashboard.config.tsx` | Cấu hình KPI stat cards (icons, color, trend, format) — tách khỏi page |
+| `src/app/(protected)/dashboard/DashboardStatsGrid.tsx` | Component render StatGrid từ DashboardStatItem[] |
+| `src/app/(protected)/dashboard/DashboardErrorState.tsx` | Error state đồng nhất có Retry button |
+| `src/app/(protected)/dashboard/DashboardRefreshButton.tsx` | Nút Refresh dùng useDashboardRefresh |
+| `src/hooks/useDashboardRefresh.ts` | Hook invalidate mọi dashboard React Query key |
+
+### Files sửa
+
+| File | Thay đổi |
+|------|---------|
+| `src/app/(protected)/dashboard/page.tsx` | Clean composition: PageContainer + PageHeader + StatsGrid + Charts + Widgets. useMemo cho stats, useCallback cho retry, không fetch/format trực tiếp |
+| `src/app/(protected)/dashboard/charts/DashboardCharts.tsx` | memo + SkeletonCard/SkeletonTable thay LoadingOverlay + DashboardErrorState với retry + CSS module |
+| `src/app/(protected)/dashboard/widgets/DashboardWidgets.tsx` | memo + SkeletonCard/SkeletonTable + DashboardErrorState với retry + CSS module |
+| `src/app/(protected)/dashboard/widgets/RecentOrders.tsx` | memo + useMemo cho columns/tableData + DataTable scroll x + aria-label |
+| `src/app/(protected)/dashboard/widgets/RecentLeads.tsx` | memo + useMemo cho columns/tableData + DataTable scroll x |
+| `src/app/(protected)/dashboard/widgets/RecentInventory.tsx` | memo + DataTable scroll x + CSS pill thay inline style + aria-label |
+| `src/app/(protected)/dashboard/widgets/NotificationPanel.tsx` | memo + CSS module thay inline style + role="list"/role="listitem" + aria-label |
+| `src/app/(protected)/dashboard/widgets/QuickActions.tsx` | memo + aria-label cho từng button + role="group" cho space |
+| `src/hooks/useDashboardCharts.ts` | Thêm gcTime, retry, retryDelay (exponential), refetchOnReconnect |
+| `src/hooks/useDashboardActivities.ts` | Thêm gcTime, retry, retryDelay (exponential), refetchOnReconnect |
+| `src/hooks/useDashboardQuickActions.ts` | gcTime 10 phút, retry 1, refetchOnReconnect |
+
+### Performance
+
+| Kỹ thuật | Áp dụng |
+|-----------|---------|
+| `React.memo` | DashboardCharts, DashboardWidgets, RecentOrders, RecentLeads, RecentInventory, NotificationPanel, QuickActions, DashboardStatsGrid |
+| `useMemo` | `columns` & `tableData` cho DataTable; `stats` cho Page |
+| `useCallback` | `handleRetry` cho Dashboard Page |
+| React Query `staleTime` | 60s (charts, activities), 5min (quick actions) |
+| React Query `gcTime` | 5min (charts, activities), 10min (quick actions) |
+| React Query `retry` | 2 (charts, activities), 1 (quick actions) |
+| React Query `retryDelay` | exponential backoff (1s, 2s, 4s, 8s) |
+| React Query `refetchOnWindowFocus` | false |
+| React Query `refetchOnReconnect` | true |
+| React Query `refetchInterval` | false |
+
+### Responsive
+
+CSS module `dashboard.module.css` với các breakpoint:
+
+| Breakpoint | Hành vi |
+|-----------|---------|
+| ≥1280px | 3 cột stat + 2 cột charts/widgets |
+| 1025–1280px | 2 cột stat + 2 cột charts/widgets |
+| 769–1024px | 2 cột stat + 1 cột charts/widgets |
+| ≤768px | 1 cột cho mọi grid |
+
+Card tự wrap, table có `scroll={{ x }}` để scroll ngang khi thiếu chiều rộng.
+
+Đã test trên: 1920, 1600, 1440, 1366, 1280, 1024, 768.
+
+### Loading (không nháy layout)
+
+Mỗi section render **SkeletonCard/SkeletonTable** thay vì LoadingOverlay → giữ khung layout ổn định, không flash.
+
+### Error State
+
+`DashboardErrorState` đồng nhất cho mọi section:
+- `EmptyState` icon + title + description
+- `ActionButton` Retry gọi `refetch()` của React Query
+
+### Refresh
+
+`DashboardRefreshButton` trong PageHeader actions:
+- Click → invalidate tất cả dashboard query keys
+- Không reload page
+- Hiển thị loading spinner khi đang fetch
+
+### Format
+
+Mọi format (Currency, Number, Date, Relative Time) qua `src/lib/format.ts`. Không format trực tiếp trong component.
+
+### Accessibility
+
+- `aria-label` cho PageHeader actions, button, list, listitem, table
+- `role="group"` cho QuickActions
+- `role="list"` + `role="listitem"` cho NotificationPanel
+- `aria-hidden="true"` cho icon trang trí
+- `aria-busy` cho DashboardWidgets khi loading
+
+### UI Kit sử dụng
+
+| Component | Mục đích |
+|-----------|---------|
+| PageContainer | Wrapper page |
+| PageHeader | Title + subtitle + actions |
+| StatGrid | KPI grid |
+| StatCard | KPI card |
+| CardSection | Card wrapper |
+| DataTable | Table với pagination/scroll/rowKey |
+| StatusBadge | Trạng thái |
+| LoadingOverlay | Loading toàn page |
+| SkeletonCard | Skeleton cho widget |
+| SkeletonTable | Skeleton cho table |
+| EmptyState | Error/empty |
+| ActionButton | Button đồng nhất |
+
+### Dashboard page (clean)
+
+Dashboard chỉ còn:
+
+```
+<PageContainer>
+  <PageHeader title="..." subtitle="..." actions={<DashboardRefreshButton />} />
+  <div className={d4-page}>
+    <DashboardStatsGrid stats={stats} />
+    <DashboardCharts />
+    <DashboardWidgets />
+  </div>
+</PageContainer>
+```
+
+Không còn logic. Không fetch. Không format.
+
+### Coding Rules tuân thủ
+
+- [x] Không sửa Sprint trước (Sprint 4.1/4.2/4.3 nguyên vẹn)
+- [x] Không đổi Sidebar/Header
+- [x] Không sửa Auth/Permission/RouteGuard
+- [x] Không sửa UI Kit hiện có (StatCardProps, Column import trực tiếp từ file)
+- [x] Không thêm dependency mới
+- [x] Không any
+- [x] Không inline style thừa (CSS module cho widget mới)
+- [x] Không duplicate code (config tái sử dụng qua buildDashboardStats)
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: 🟢 Dashboard COMPLETE — Sẵn sàng cho Sprint 5 — Marketing Module.
+
+### Sprint 5.1 — Marketing Dashboard
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Xây dựng Dashboard riêng cho Marketing theo kiến trúc đã dùng ở Dashboard tổng: API → Type → Hook → Component → Page.
+
+### Files tạo mới
+
+| File | Mục đích |
+|------|---------|
+| `src/types/marketing-dashboard.ts` | Types: MarketingSummary, DailyLeadChartItem, LeadSourceChartItem, TopMarketingItem, MarketingChartData, MarketingDashboardData |
+| `src/app/api/marketing/dashboard/route.ts` | API GET /api/marketing/dashboard (mock) |
+| `src/hooks/useMarketingDashboard.ts` | React Query hook |
+| `src/app/(protected)/marketing/dashboard/marketing.module.css` | CSS module responsive grid + helper classes |
+| `src/app/(protected)/marketing/dashboard/marketing.config.tsx` | KPI stat configs (icons, color, trend, format) |
+| `src/app/(protected)/marketing/dashboard/MarketingStatsGrid.tsx` | StatGrid cho 6 KPI marketing |
+| `src/app/(protected)/marketing/dashboard/MarketingCharts.tsx` | Container: charts + top performers |
+| `src/app/(protected)/marketing/dashboard/MarketingErrorState.tsx` | Error state có Retry |
+| `src/app/(protected)/marketing/dashboard/charts/DailyLeadChart.tsx` | Leads theo ngày (vertical bar) |
+| `src/app/(protected)/marketing/dashboard/charts/LeadSourceChart.tsx` | Phân bố nguồn leads (horizontal bar) |
+| `src/app/(protected)/marketing/dashboard/TopMarketingTable.tsx` | Bảng top marketing |
+
+### Files sửa
+
+| File | Thay đổi |
+|------|---------|
+| `src/app/(protected)/marketing/dashboard/page.tsx` | Thay PlaceholderPage bằng composition: PageContainer + PageHeader + MarketingStatsGrid + MarketingCharts |
+
+### API
+
+```
+GET /api/marketing/dashboard
+
+Response:
+{
+  success: true,
+  data: {
+    summary: { totalLead, todayLead, assignedLead, unassignedLead, closedLead, conversionRate },
+    chart:   { dailyLead: [], source: [] },
+    topMarketing: []
+  }
+}
+```
+
+### Types
+
+| Type | Mục đích |
+|------|---------|
+| MarketingSummary | 6 field KPI cho marketing |
+| DailyLeadChartItem | { date, count } |
+| LeadSourceChartItem | { source, count } |
+| TopMarketingItem | { name, count } |
+| MarketingChartData | { dailyLead, source } |
+| MarketingDashboardData | { summary, chart, topMarketing } |
+| MarketingDashboardApiResponse | API wrapper |
+
+### Hook
+
+| Hook | Mục đích |
+|------|---------|
+| useMarketingDashboard | React Query: staleTime 60s, gcTime 5min, retry 2, retryDelay exponential, refetchOnWindowFocus false, refetchOnReconnect true |
+
+### Components
+
+| Component | Mô tả |
+|-----------|-------|
+| MarketingStatsGrid | StatGrid 6 KPI cards (Tổng Leads, Hôm nay, Đã phân công, Chưa phân công, Chốt, Tỷ lệ chuyển đổi) |
+| MarketingCharts | Container: 2 charts (DailyLead, LeadSource) + TopMarketingTable |
+| DailyLeadChart | ChartContainer vertical bar cho leads 7 ngày |
+| LeadSourceChart | ChartContainer horizontal bar cho phân bố nguồn |
+| TopMarketingTable | CardSection + DataTable top 5 nhân viên marketing |
+| MarketingErrorState | EmptyState + ActionButton Retry |
+
+### UI Kit sử dụng
+
+| Component | Mục đích |
+|-----------|---------|
+| PageContainer | Wrapper page |
+| PageHeader | Title + subtitle |
+| StatGrid | KPI grid |
+| StatCard | KPI card |
+| ChartContainer | Chart wrapper |
+| CardSection | Card wrapper cho table |
+| DataTable | Top performers table |
+| LoadingOverlay | Loading toàn page |
+| SkeletonCard | Skeleton cho chart |
+| SkeletonTable | Skeleton cho table |
+| EmptyState | Error state |
+| ActionButton | Retry button |
+
+### Responsive (tested 1920, 1600, 1440, 1366, 1280, 1024, 768)
+
+| Breakpoint | Hành vi |
+|-----------|---------|
+| ≥1280px | 3 cột stat + 2 cột charts |
+| 1025–1280px | 2 cột stat + 2 cột charts |
+| 769–1024px | 2 cột stat + 1 cột charts |
+| ≤768px | 1 cột cho mọi grid |
+
+Table có `scroll={{ x }}` để scroll ngang khi thiếu chiều rộng.
+
+### Marketing page (clean)
+
+```
+<PageContainer>
+  <PageHeader title="..." subtitle="..." />
+  <div className={mk-page}>
+    <MarketingStatsGrid stats={stats} />
+    <MarketingCharts />
+  </div>
+</PageContainer>
+```
+
+Không còn logic. Không fetch. Không format.
+
+### Coding Rules tuân thủ
+
+- [x] Không sửa Dashboard
+- [x] Không đổi Sidebar/Header
+- [x] Không sửa Auth/RBAC
+- [x] Không thêm dependency mới
+- [x] Không any
+- [x] Không inline style thừa (CSS module)
+- [x] Không duplicate code (buildMarketingStats tương tự buildDashboardStats)
+- [x] UI Kit hiện có (không tạo UI mới)
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint tiếp theo
+
 ### Sprint 4.3 — Dashboard Activity & Quick Actions
 
 ### Status

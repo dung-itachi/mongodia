@@ -1,0 +1,211 @@
+/* Dashboard layout & responsive grid (Sprint 4.4 — Dashboard Polish)
+   Class-prefix: d4- to avoid collision with existing dashboard.css classes.
+*/
+
+.d4-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.d4-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.d4-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.d4-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.d4-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.d4-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.d4-row-tight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.d4-fill {
+  width: 100%;
+  min-width: 0;
+}
+
+.d4-skel-pad {
+  padding: 16px 0;
+}
+
+.d4-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Inventory status pill */
+.d4-pill {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.d4-pill-in {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.d4-pill-out {
+  background-color: #fff1f0;
+  color: #ff4d4f;
+}
+
+/* Notification item */
+.d4-notif {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.d4-notif-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.d4-notif-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.d4-notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.d4-notif-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.d4-notif-time {
+  font-size: 11px;
+  color: #8c8c8c;
+  flex-shrink: 0;
+}
+
+.d4-notif-msg {
+  font-size: 12px;
+  color: #595959;
+}
+
+.d4-summary-text {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+.d4-icon-blue {
+  color: #1890ff;
+}
+
+.d4-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.d4-sk-line {
+  height: 24px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.06) 25%,
+    rgba(0, 0, 0, 0.12) 50%,
+    rgba(0, 0, 0, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: d4-shimmer 1.4s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes d4-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ─────────────── Responsive breakpoints ───────────────
+   Tested: 1920, 1600, 1440, 1366, 1280, 1024, 768
+   Desktop: 3 col stats + 2 col charts/widgets
+   Mid (≤1280): 3 col stats + 2 col charts/widgets (still fits)
+   Small (≤1024): 2 col stats + 1 col charts/widgets
+   Tablet (≤768): 1 col everything
+*/
+
+@media (max-width: 1280px) {
+  .d4-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .d4-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .d4-grid-3,
+  .d4-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .d4-page {
+    gap: 12px;
+  }
+}

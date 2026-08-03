@@ -1,20 +1,23 @@
 /**
- * RecentInventory Widget (Sprint 4.3 - Dashboard Activity & Quick Actions)
+ * RecentInventory Widget (Sprint 4.4 — Dashboard Polish)
  *
  * Displays the 5 most recent inventory changes.
- * Uses CardSection, DataTable from UI Kit.
+ * Memoized to prevent re-render when other widgets change.
+ * Uses CardSection, DataTable from UI Kit and CSS module for status pill.
  */
 
+import { memo } from "react";
 import { CardSection, DataTable } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import type { RecentInventory } from "@/types/dashboard-activity";
 import { formatRelativeTime } from "@/lib/format";
+import styles from "../dashboard.module.css";
 
 export type RecentInventoryProps = {
   data: RecentInventory[];
 };
 
-export default function RecentInventory({ data }: RecentInventoryProps) {
+function RecentInventoryInner({ data }: RecentInventoryProps) {
   const columns: Column[] = [
     {
       key: "product",
@@ -30,16 +33,11 @@ export default function RecentInventory({ data }: RecentInventoryProps) {
         const type = String(value);
         const isIn = type === "IN";
         const label = isIn ? "Nhập" : "Xuất";
+        const cls = isIn ? styles["d4-pill-in"] : styles["d4-pill-out"];
         return (
           <span
-            style={{
-              padding: "2px 8px",
-              borderRadius: 4,
-              backgroundColor: isIn ? "#f6ffed" : "#fff1f0",
-              color: isIn ? "#52c41a" : "#ff4d4f",
-              fontSize: 12,
-              fontWeight: 500,
-            }}
+            className={`${styles["d4-pill"]} ${cls}`}
+            aria-label={`Loại: ${label}`}
           >
             {label}
           </span>
@@ -78,7 +76,11 @@ export default function RecentInventory({ data }: RecentInventoryProps) {
         pagination={false}
         rowKey="id"
         size="small"
+        scroll={{ x: 480 }}
       />
     </CardSection>
   );
 }
+
+const RecentInventory = memo(RecentInventoryInner);
+export default RecentInventory;

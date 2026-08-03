@@ -1,0 +1,252 @@
+/* Marketing Dashboard layout (Sprint 5.1 — Marketing Dashboard)
+   Class-prefix: mk- to avoid collision with existing styles.
+*/
+
+.mk-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mk-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mk-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mk-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mk-fill {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Daily lead chart (line/bar placeholder) */
+.mk-daily {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 100%;
+  padding: 0 8px;
+}
+
+.mk-daily-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mk-daily-value {
+  font-size: 11px;
+  color: #8c8c8c;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mk-daily-bar {
+  width: 100%;
+  min-height: 4px;
+  background-color: #1890ff;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+}
+
+.mk-daily-label {
+  font-size: 11px;
+  color: #595959;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+/* Lead source bar */
+.mk-source {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.mk-source-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mk-source-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mk-source-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #262626;
+}
+
+.mk-source-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mk-source-percent {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.mk-source-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+  min-width: 50px;
+  text-align: right;
+}
+
+.mk-source-track {
+  height: 8px;
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mk-source-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Top marketing row */
+.mk-top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mk-top-rank {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mk-top-rank-gold {
+  background-color: #faad14;
+  color: #fff;
+}
+
+.mk-top-rank-silver {
+  background-color: #bfbfbf;
+  color: #fff;
+}
+
+.mk-top-rank-bronze {
+  background-color: #d4880d;
+  color: #fff;
+}
+
+.mk-top-rank-rest {
+  background-color: #f0f0f0;
+  color: #595959;
+}
+
+.mk-top-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mk-top-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mk-top-name {
+  font-size: 13px;
+  color: #262626;
+}
+
+.mk-top-count {
+  font-size: 13px;
+  color: #262626;
+  font-weight: 600;
+}
+
+.mk-top-track {
+  height: 6px;
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.mk-top-fill {
+  height: 100%;
+  background-color: #722ed1;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* ─────────────── Responsive breakpoints ───────────────
+   Tested: 1920, 1600, 1440, 1366, 1280, 1024, 768
+*/
+
+@media (max-width: 1280px) {
+  .mk-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .mk-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .mk-grid-3,
+  .mk-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .mk-page {
+    gap: 12px;
+  }
+}

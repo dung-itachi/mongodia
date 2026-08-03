@@ -1,114 +1,69 @@
 /**
- * NotificationPanel Widget (Sprint 4.3 - Dashboard Activity & Quick Actions)
+ * NotificationPanel Widget (Sprint 4.4 — Dashboard Polish)
  *
  * Displays the 5 most recent notifications with icon, color and time.
- * Uses CardSection from UI Kit.
+ * Memoized to avoid re-render when other widgets change.
+ * Uses CardSection from UI Kit and CSS module for layout.
  */
 
+import { memo } from "react";
 import { CardSection } from "@/components/common";
 import type { NotificationItem } from "@/types/dashboard-activity";
 import { formatRelativeTime } from "@/lib/format";
+import styles from "../dashboard.module.css";
 
 export type NotificationPanelProps = {
   data: NotificationItem[];
 };
 
-const TYPE_COLORS: Record<NotificationItem["type"], string> = {
+const TYPE_COLOR: Record<NotificationItem["type"], string> = {
   info: "#1890ff",
   success: "#52c41a",
   warning: "#fa8c16",
   error: "#ff4d4f",
 };
 
-const TYPE_LABELS: Record<NotificationItem["type"], string> = {
+const TYPE_GLYPH: Record<NotificationItem["type"], string> = {
   info: "i",
   success: "✓",
   warning: "!",
   error: "×",
 };
 
-export default function NotificationPanel({ data }: NotificationPanelProps) {
+const TYPE_LABEL: Record<NotificationItem["type"], string> = {
+  info: "Thông tin",
+  success: "Thành công",
+  warning: "Cảnh báo",
+  error: "Lỗi",
+};
+
+function NotificationPanelInner({ data }: NotificationPanelProps) {
   return (
     <CardSection title="Thông báo">
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-        }}
-      >
+      <div className={styles["d4-stack"]} role="list" aria-label="Danh sách thông báo">
         {data.map((item) => {
-          const color = TYPE_COLORS[item.type];
+          const color = TYPE_COLOR[item.type];
           return (
             <div
               key={item.id}
-              style={{
-                display: "flex",
-                gap: 12,
-                alignItems: "flex-start",
-              }}
+              role="listitem"
+              className={styles["d4-notif"]}
+              aria-label={`${TYPE_LABEL[item.type]}: ${item.title}`}
             >
               <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  backgroundColor: `${color}1a`,
-                  color,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
+                className={styles["d4-notif-icon"]}
+                style={{ backgroundColor: `${color}1a`, color }}
               >
-                {TYPE_LABELS[item.type]}
+                {TYPE_GLYPH[item.type]}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 8,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "#262626",
-                    }}
-                  >
-                    {item.title}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "#8c8c8c",
-                      flexShrink: 0,
-                    }}
-                  >
+              <div className={styles["d4-notif-body"]}>
+                <div className={styles["d4-notif-head"]}>
+                  <span className={styles["d4-notif-title"]}>{item.title}</span>
+                  <span className={styles["d4-notif-time"]}>
                     {formatRelativeTime(item.createdAt)}
                   </span>
                 </div>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: "#595959",
-                  }}
-                >
-                  {item.message}
-                </span>
+                <span className={styles["d4-notif-msg"]}>{item.message}</span>
               </div>
             </div>
           );
@@ -117,3 +72,6 @@ export default function NotificationPanel({ data }: NotificationPanelProps) {
     </CardSection>
   );
 }
+
+const NotificationPanel = memo(NotificationPanelInner);
+export default NotificationPanel;

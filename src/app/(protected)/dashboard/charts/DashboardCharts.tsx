@@ -1,51 +1,63 @@
 /**
- * DashboardCharts Component (Sprint 4.2 - Dashboard Charts)
+ * DashboardCharts Component (Sprint 4.4 — Dashboard Polish)
  *
  * Container component that aggregates all dashboard charts.
  * Uses useDashboardCharts hook (React Query).
+ * Memoized to prevent re-renders when other widgets update.
  */
 
-import { CardSection, LoadingOverlay, EmptyState } from "@/components/common";
-import { useDashboardCharts } from "@/hooks/useDashboardCharts";
+import { memo } from "react";
+import {
+  CardSection,
+  SkeletonCard,
+  SkeletonTable,
+} from "@/components/common";
 import { BarChartOutlined } from "@ant-design/icons";
+import { useDashboardCharts } from "@/hooks/useDashboardCharts";
+import DashboardErrorState from "../DashboardErrorState";
 import PipelineChart from "./PipelineChart";
 import RevenueChart from "./RevenueChart";
 import LeadSourceChart from "./LeadSourceChart";
 import TopSaleChart from "./TopSaleChart";
 import TopMarketingChart from "./TopMarketingChart";
+import styles from "../dashboard.module.css";
 
-export default function DashboardCharts() {
-  const { data, loading, error } = useDashboardCharts();
+function DashboardChartsInner() {
+  const { data, loading, error, refetch } = useDashboardCharts();
 
   if (loading) {
     return (
-      <CardSection title="Charts">
-        <LoadingOverlay text="Đang tải biểu đồ..." />
-      </CardSection>
+      <div className={styles["d4-section"]}>
+        <div className={styles["d4-grid-2"]}>
+          <SkeletonCard rows={5} />
+          <SkeletonCard rows={5} />
+          <SkeletonCard rows={5} />
+          <SkeletonCard rows={5} />
+        </div>
+        <CardSection title="Top Marketing">
+          <SkeletonTable rows={5} columns={3} />
+        </CardSection>
+      </div>
     );
   }
 
   if (error || !data) {
     return (
-      <CardSection title="Charts">
-        <EmptyState
-          icon={<BarChartOutlined />}
-          title="Không thể tải biểu đồ"
-          description={error || "Đã xảy ra lỗi khi tải dữ liệu"}
-        />
-      </CardSection>
+      <DashboardErrorState
+        cardTitle="Charts"
+        icon={<BarChartOutlined />}
+        title="Không thể tải biểu đồ"
+        message={error || "Đã xảy ra lỗi khi tải dữ liệu"}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
-          gap: 16,
-        }}
-      >
+    <div className={styles["d4-section"]} aria-label="Dashboard charts">
+      <div className={styles["d4-grid-2"]}>
         <PipelineChart data={data.pipeline} />
         <RevenueChart data={data.revenue} />
         <LeadSourceChart data={data.leadSource} />
@@ -55,3 +67,6 @@ export default function DashboardCharts() {
     </div>
   );
 }
+
+const DashboardCharts = memo(DashboardChartsInner);
+export default DashboardCharts;

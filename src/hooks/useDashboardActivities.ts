@@ -38,7 +38,12 @@ export function useDashboardActivities() {
     queryKey: ["dashboard", "activities"],
     queryFn: fetchDashboardActivities,
     staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    refetchInterval: false,
   });
 
   return {
