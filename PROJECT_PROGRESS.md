@@ -235,6 +235,351 @@ Reviewed by Cursor Agent
 
 Status: Ready for Sprint tiếp theo
 
+### Sprint 4.3 — Dashboard Activity & Quick Actions
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Hoàn thiện Dashboard bằng các widget còn thiếu giống CRM thật: đơn hàng gần đây, leads mới, biến động kho, thông báo và thao tác nhanh.
+
+### Files tạo mới
+
+| File | Mục đích |
+|------|-----------|
+| `src/types/dashboard-activity.ts` | Types cho activity & quick actions |
+| `src/app/api/dashboard/activities/route.ts` | API GET /api/dashboard/activities |
+| `src/app/api/dashboard/quick-actions/route.ts` | API GET /api/dashboard/quick-actions |
+| `src/hooks/useDashboardActivities.ts` | Hook React Query cho activities |
+| `src/hooks/useDashboardQuickActions.ts` | Hook React Query cho quick actions |
+| `src/app/(protected)/dashboard/widgets/RecentOrders.tsx` | 5 đơn hàng mới nhất |
+| `src/app/(protected)/dashboard/widgets/RecentLeads.tsx` | 5 lead mới |
+| `src/app/(protected)/dashboard/widgets/RecentInventory.tsx` | 5 thay đổi kho |
+| `src/app/(protected)/dashboard/widgets/NotificationPanel.tsx` | 5 thông báo gần nhất |
+| `src/app/(protected)/dashboard/widgets/QuickActions.tsx` | Thao tác nhanh (Lead, Đơn hàng, Khách hàng, Facebook, Sản phẩm, Kho) |
+| `src/app/(protected)/dashboard/widgets/DashboardWidgets.tsx` | Container gọi 2 hooks, render tất cả widget |
+
+### Files sửa
+
+| File | Thay đổi |
+|------|-----------|
+| `src/app/(protected)/dashboard/page.tsx` | Thêm import DashboardWidgets + render sau DashboardCharts |
+| `src/lib/format.ts` | Thêm `formatRelativeTime` helper |
+
+### API
+
+```
+GET /api/dashboard/activities
+
+Response:
+{
+  success: true,
+  data: {
+    recentOrders: [{ id, code, customer, status, total, createdAt }],
+    recentLeads: [{ id, name, source, sale, status, createdAt }],
+    recentInventory: [{ id, product, type, quantity, createdAt }],
+    notifications: [{ id, title, message, type, createdAt }]
+  }
+}
+```
+
+```
+GET /api/dashboard/quick-actions
+
+Response:
+{
+  success: true,
+  data: [
+    { id, label, icon, color, route },
+    ...
+  ]
+}
+```
+
+### Types
+
+| Type | Mục đích |
+|------|---------|
+| RecentOrder | { id, code, customer, status, total, createdAt } |
+| RecentLead | { id, name, source, sale, status, createdAt } |
+| RecentInventory | { id, product, type, quantity, createdAt } |
+| NotificationItem | { id, title, message, type, createdAt } |
+| DashboardActivityData | Aggregate type |
+| DashboardActivityApiResponse | API response wrapper |
+| QuickAction | { id, label, icon, color, route } |
+| DashboardQuickActionsApiResponse | API response wrapper |
+
+### Hooks
+
+| Hook | Mục đích |
+|------|---------|
+| useDashboardActivities | React Query fetch /api/dashboard/activities |
+| useDashboardQuickActions | React Query fetch /api/dashboard/quick-actions |
+
+### Components
+
+| Component | Mô tả |
+|-----------|-------|
+| RecentOrders | DataTable 5 đơn mới nhất: mã đơn, khách hàng, trạng thái (StatusBadge), tổng tiền |
+| RecentLeads | DataTable 5 lead mới: tên, nguồn, sale, trạng thái (StatusBadge) |
+| RecentInventory | DataTable 5 biến động kho: sản phẩm, loại, số lượng, thời gian |
+| NotificationPanel | 5 thông báo: icon + màu trạng thái (info/success/warning/error) + thời gian |
+| QuickActions | 6 nút: Lead, Đơn hàng, Khách hàng, Facebook, Sản phẩm, Kho |
+| DashboardWidgets | Container gọi 2 hooks + render các widget |
+
+### UI Kit sử dụng
+
+| Component | Mục đích |
+|-----------|---------|
+| CardSection | Wrapper cho mỗi widget |
+| DataTable | Bảng hiển thị cho orders/leads/inventory |
+| StatusBadge | Trạng thái (orders, leads) |
+| LoadingOverlay | Loading state |
+| EmptyState | Error state |
+| ActionButton | (Đã import sẵn cho QuickActions nếu cần) |
+
+### Dashboard page
+
+Dashboard render theo thứ tự:
+
+1. PageHeader
+2. StatGrid
+3. DashboardCharts
+4. DashboardWidgets
+
+Không hardcode. Không fetch trực tiếp. Chỉ gọi hook.
+
+### Coding Rules tuân thủ
+
+- [x] Không sửa Sprint trước (Sprint 4.2 nguyên vẹn)
+- [x] Không đổi Sidebar
+- [x] Không đổi Header
+- [x] Không sửa UI Kit (Column import trực tiếp từ file)
+- [x] Không sửa Auth/Permission/RouteGuard
+- [x] Không thêm dependency mới
+- [x] Không any
+- [x] Không inline style thừa
+- [x] Không duplicate code
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint tiếp theo
+
+### Sprint 4.2 — Dashboard Charts
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Hoàn thiện Dashboard bằng các Chart. Component chỉ gọi hook, không mock trong component.
+
+### Files tạo mới
+
+| File | Mục đích |
+|------|-----------|
+| `src/types/dashboard-chart.ts` | Types cho Dashboard charts |
+| `src/app/api/dashboard/charts/route.ts` | API GET /api/dashboard/charts (mock data) |
+| `src/hooks/useDashboardCharts.ts` | Hook React Query cho charts |
+| `src/app/(protected)/dashboard/charts/PipelineChart.tsx` | Pipeline chart |
+| `src/app/(protected)/dashboard/charts/RevenueChart.tsx` | Revenue chart |
+| `src/app/(protected)/dashboard/charts/LeadSourceChart.tsx` | Lead source chart |
+| `src/app/(protected)/dashboard/charts/TopSaleChart.tsx` | Top sale chart |
+| `src/app/(protected)/dashboard/charts/TopMarketingChart.tsx` | Top marketing chart |
+| `src/app/(protected)/dashboard/charts/DashboardCharts.tsx` | Container tổng hợp charts |
+
+### Files chỉnh sửa
+
+| File | Thay đổi |
+|------|-----------|
+| `src/app/(protected)/dashboard/page.tsx` | Thay PipelineCard + placeholder chart → DashboardCharts |
+
+### API
+
+```
+GET /api/dashboard/charts
+
+Response:
+{
+  success: true,
+  data: {
+    pipeline: [{ label, value }],
+    revenue: [{ date, revenue }],
+    leadSource: [{ source, count }],
+    topSale: [{ name, total }],
+    topMarketing: [{ name, count }]
+  }
+}
+```
+
+### Components
+
+| Component | Mô tả |
+|-----------|-------|
+| PipelineChart | Horizontal progress bars cho pipeline stages |
+| RevenueChart | Bar chart doanh thu theo tháng |
+| LeadSourceChart | Horizontal bars phân bố nguồn leads |
+| TopSaleChart | Top 5 sale performers với progress bars |
+| TopMarketingChart | Top 5 marketing performers với progress bars |
+| DashboardCharts | Container component gọi useDashboardCharts + render all charts |
+
+### Hooks
+
+| Hook | Mục đích |
+|------|---------|
+| useDashboardCharts | React Query hook fetch /api/dashboard/charts |
+
+### Types
+
+| Type | Mục đích |
+|------|---------|
+| PipelineChartItem | { label, value } |
+| RevenueChartItem | { date, revenue } |
+| LeadSourceChartItem | { source, count } |
+| TopSaleItem | { name, total } |
+| TopMarketingItem | { name, count } |
+| DashboardChartsData | Aggregate type |
+
+### UI Kit sử dụng
+
+| Component | Mục đích |
+|-----------|---------|
+| ChartContainer | Wrapper cho charts |
+| CardSection | Container cho DashboardCharts |
+| LoadingOverlay | Loading state |
+| EmptyState | Error state |
+
+### Dashboard page
+
+Dashboard chỉ render:
+
+1. PageHeader
+2. StatGrid (6 KPI cards)
+3. DashboardCharts
+
+Không hardcode. Không mock.
+
+### Coding Rules tuân thủ
+
+- [x] Không sửa Sprint trước (chỉ chỉnh sửa page.tsx để tích hợp charts)
+- [x] Không đổi Sidebar/Header
+- [x] Không sửa UI Kit
+- [x] Component chỉ gọi hook (useDashboardCharts)
+- [x] Không mock trong component
+- [x] Không hardcode trong component
+- [x] Không any
+- [x] Không duplicate
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint tiếp theo
+
+### Sprint 4.1 — Dashboard Foundation
+
+### Status
+
+✅ Completed (2026-08-03)
+
+### Mục tiêu
+
+Xây dựng Dashboard thật (không còn PlaceholderPage) sử dụng UI Kit từ Sprint 3.
+
+### Files tạo mới
+
+| File | Mục đích |
+|------|-----------|
+| `src/types/dashboard.ts` | Types cho Dashboard |
+| `src/app/api/dashboard/route.ts` | API GET /api/dashboard (mock data) |
+| `src/hooks/useDashboard.ts` | Hook fetch dashboard |
+| `src/lib/format.ts` | Format currency/number helpers |
+| `src/app/(protected)/dashboard/PipelineCard.tsx` | Pipeline visualization |
+
+### Files chỉnh sửa
+
+| File | Thay đổi |
+|------|-----------|
+| `src/app/(protected)/dashboard/page.tsx` | Dashboard thật (UI Kit). Thay thế PlaceholderPage |
+
+### API
+
+```
+GET /api/dashboard
+
+Response:
+{
+  success: true,
+  data: {
+    summary: {
+      totalLeads, closedLeads, shippingOrders,
+      deliveredOrders, returnedOrders, revenue
+    },
+    pipeline: {
+      new, contacted, closed,
+      shipping, delivered, returned
+    }
+  }
+}
+```
+
+### Components sử dụng từ UI Kit
+
+| Component | Mục đích |
+|-----------|---------|
+| PageContainer | Layout wrapper |
+| PageHeader | Title + subtitle |
+| StatGrid | Grid 3 cột cho KPI |
+| StatCard | 6 KPI cards (Tổng Leads, Chốt, Đang giao, Giao TC, Hoàn hàng, Doanh thu) |
+| ChartContainer | Placeholder chart area |
+| LoadingOverlay | Loading state |
+| EmptyState | Error state |
+
+### Hooks
+
+| Hook | Mục đích |
+|------|---------|
+| useDashboard | Fetch dashboard data từ /api/dashboard |
+
+### Types
+
+| Type | Mục đích |
+|------|---------|
+| DashboardSummary | Type cho summary data |
+| DashboardPipeline | Type cho pipeline data |
+| DashboardResponse | Response shape |
+
+### Coding Rules tuân thủ
+
+- [x] Không inline style thừa (chỉ trong component cần thiết)
+- [x] Không any
+- [x] Không hardcode số trong component
+- [x] Không sửa Sprint trước
+- [x] Không đụng Marketing/Sale/Warehouse
+
+### Verification
+
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint tiếp theo
+
 ### Sprint 3.1 — Complete Common UI Kit
 
 ### Status
