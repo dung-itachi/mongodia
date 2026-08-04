@@ -38,6 +38,8 @@ import {
 } from "@/configs/order-status.config";
 import Employee from "@/models/Employee";
 import Customer, { ICustomer } from "@/models/Customer";
+// Sprint 6.3: Warehouse Integration
+import { warehouseService } from "@/services/warehouse.service";
 
 import type {
   OrderFilter,
@@ -290,6 +292,15 @@ export class OrderService {
         },
         session
       );
+
+      // Sprint 6.3: Auto-create WarehouseTask when Order moves to PACKING
+      if (newStatus === OrderStatus.PACKING) {
+        await warehouseService.createFromOrder({
+          orderId,
+          employeeId,
+          note: "Tự động tạo task khi đơn chuyển sang PACKING",
+        });
+      }
 
       await session.commitTransaction();
       return { success: true, order: updatedOrder };

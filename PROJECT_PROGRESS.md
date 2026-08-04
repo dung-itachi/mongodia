@@ -3437,7 +3437,359 @@ Status: Ready for next Sprint
 
 ---
 
-## Sprint 6.1 — Order Detail & Product Lines
+## Sprint 6.3 — Warehouse Integration
+
+### Status
+
+✅ Completed
+
+### Mục tiêu
+
+Kết nối Order với Warehouse. Warehouse nhận danh sách đơn cần xử lý.
+
+**CHƯA cập nhật tồn kho. CHƯA trừ tồn.**
+
+### Kiến trúc
+
+```
+React Query
+    ↓
+API Route
+    ↓
+WarehouseService
+    ↓
+WarehouseRepository
+    ↓
+MongoDB
+    ↓
+WarehouseHistory
+```
+
+### Warehouse Status Workflow
+
+```
+WAITING_PICK → PICKING → PACKED → READY_TO_SHIP → SHIPPED
+```
+
+### Business Flow
+
+```
+Order PACKING → Warehouse WAITING_PICK → PICKING → PACKED → READY_TO_SHIP
+                                                            ↓
+                                                      Order SHIPPING
+```
+
+### Order Integration
+
+- Khi Order chuyển `PACKING` → tự động tạo `WarehouseTask`
+- Nếu đã tồn tại → không tạo lại
+
+### Files tạo mới
+
+#### `src/constants/warehouseStatus.ts`
+
+```typescript
+enum WarehouseStatus {
+  WAITING_PICK, PICKING, PACKED, READY_TO_SHIP, SHIPPED
+}
+enum WarehouseAction {
+  CREATED, UPDATED, WAITING_PICK, PICKING, PACKED,
+  READY_TO_SHIP, SHIPPED, ASSIGNED, NOTE_UPDATED
+}
+```
+
+#### `src/configs/warehouse-status.config.ts`
+
+Centralized config cho Warehouse Status:
+- Labels
+- Colors
+- Icons
+- Allowed transitions
+- Actions
+
+#### `src/models/WarehouseTask.ts`
+
+Collection: `WarehouseTask`
+
+Fields:
+- _id
+- orderId (unique)
+- warehouseStatus
+- assignedEmployeeId
+- note
+- createdAt
+- updatedAt
+
+#### `src/models/WarehouseHistory.ts`
+
+Collection: `WarehouseHistory`
+
+Fields:
+- _id
+- warehouseTaskId
+- action
+- oldValue
+- newValue
+- employeeId
+- note
+- createdAt
+
+#### `src/repositories/warehouse.repository.ts`
+
+```typescript
+create()
+findById()
+findAll()
+changeStatus()
+assignEmployee()
+existsByOrderId()
+```
+
+#### `src/repositories/warehouse-history.repository.ts`
+
+```typescript
+create()
+findByTaskId()
+findByTaskIdWithPopulate()
+countByTaskId()
+```
+
+#### `src/services/warehouse.service.ts`
+
+```typescript
+createFromOrder()
+changeStatus()
+assignEmployee()
+getTaskById()
+getTaskByOrderId()
+getAllTasks()
+completePacking()
+validateWarehouseTransition()
+getAllowedTransitions()
+```
+
+#### `src/services/warehouse-history.service.ts`
+
+```typescript
+createStatusChangeHistory()
+createHistory()
+getHistoryByTaskId()
+```
+
+#### `src/hooks/useWarehouseTasks.ts`
+
+```typescript
+useWarehouseTasks()
+useWarehouseTask()
+useChangeWarehouseStatus()
+useAssignWarehouseTask()
+```
+
+### API Endpoints
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | /api/warehouse/tasks | warehouse.view | Danh sách tasks |
+| GET | /api/warehouse/tasks/:id | warehouse.view | Chi tiết task |
+| PATCH | /api/warehouse/tasks/:id/status | warehouse.update | Đổi trạng thái |
+| PATCH | /api/warehouse/tasks/:id/assign | warehouse.assign | Giao việc |
+
+### Frontend Pages
+
+#### `/warehouses` - Warehouse List
+
+- Danh sách Warehouse Tasks
+- Search, Filter by Status
+- Pagination
+
+#### `/warehouses/[id]` - Warehouse Detail
+
+- Order Info
+- Warehouse Status với dropdown actions
+- Assigned Employee
+- Timeline (WarehouseHistory)
+
+### Warehouse Status Actions
+
+| Status | Actions |
+|--------|---------|
+| WAITING_PICK | Bắt đầu nhặt |
+| PICKING | Đóng gói xong |
+| PACKED | Sẵn sàng giao |
+| READY_TO_SHIP | Hoàn tất |
+| SHIPPED | - |
+
+### Config Files
+
+#### `src/configs/warehouse-status.config.ts`
+
+| Status | Icon |
+|--------|------|
+| WAITING_PICK | ClockCircleOutlined |
+| PICKING | SyncOutlined |
+| PACKED | InboxOutlined |
+| READY_TO_SHIP | CarOutlined |
+| SHIPPED | CheckCircleOutlined |
+
+### Verification
+
+- [x] npx tsc --noEmit — 0 TypeScript Error
+- [x] WarehouseTask tạo tự động khi Order → PACKING
+- [x] Workflow Warehouse đúng (WAITING_PICK → ... → SHIPPED)
+- [x] WarehouseHistory ghi đầy đủ
+- [x] Timeline đọc MongoDB
+- [x] React Query refetch đúng
+- [x] Config-driven UI (không hardcode)
+- [x] PROJECT_PROGRESS.md cập nhật Sprint 6.3
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
+
+### Status
+
+✅ Completed
+
+---
+
+## Sprint 6.4 — Inventory Movement
+
+### Mục tiêu
+
+Hoàn thiện nghiệp vụ Xuất kho. Khi WarehouseTask chuyển SHIPPED → Inventory phải tự động trừ tồn kho.
+
+### Kiến trúc
+
+```
+WarehouseService
+    ↓
+InventoryService
+    ↓
+InventoryRepository
+    ↓
+MongoDB
+    ↓
+InventoryMovement
+```
+
+### Flow
+
+```
+WarehouseTask READY_TO_SHIP
+    ↓
+SHIPPED
+    ↓
+InventoryService.exportOrder()
+    ↓
+InventoryMovement
+    ↓
+Update Product Stock
+    ↓
+Success
+```
+
+### Database — InventoryMovement Collection
+
+Fields:
+- `_id`
+- `warehouseId` — Warehouse thực hiện movement
+- `orderId` — Order liên quan
+- `warehouseTaskId` — WarehouseTask liên quan
+- `productVariantId` — Biến thể sản phẩm
+- `sku` — SKU sản phẩm
+- `productName` — Tên sản phẩm
+- `quantity` — Số lượng
+- `type` — Loại (EXPORT / IMPORT / ADJUSTMENT)
+- `employeeId` — Nhân viên thực hiện
+- `note` — Ghi chú
+- `createdAt`
+
+### Service — InventoryService
+
+Methods:
+- `exportOrder()` — Xuất kho cho order (transactional)
+- `rollbackExport()` — Rollback xuất kho (khi hủy/trả hàng)
+- `checkStock()` — Kiểm tra tồn kho trước khi xuất
+- `reserveStock()` — Giữ chỗ tồn kho
+- `releaseStock()` — Hủy giữ chỗ
+
+Business Rules:
+1. Kiểm tra tồn kho. Nếu `stock < quantity` → throw Business Error. Không xuất một phần.
+2. Nếu tất cả sản phẩm đủ → Transaction → Trừ tồn → Ghi InventoryMovement → Commit
+3. Nếu lỗi → Rollback toàn bộ
+
+### Repository — InventoryRepository
+
+Methods:
+- `decreaseStock()` — Trừ tồn kho (atomic, kèm session)
+- `increaseStock()` — Tăng tồn kho
+- `findProductStock()` — Lấy tồn kho hiện tại
+- `createMovement()` — Ghi InventoryMovement
+- `findMovements()` — Danh sách movements với filter
+- `findMovementById()` — Lấy movement theo ID
+
+### API
+
+- `GET /api/inventory/movements` — Danh sách movements
+- `GET /api/inventory/movements/:id` — Chi tiết movement
+- `GET /api/warehouse/tasks/:id/inventory` — Movements theo warehouse task
+
+### Frontend
+
+- Warehouse Detail page — Inventory Section (Table với SKU, tên SP, SL xuất, loại, thời gian, ghi chú)
+- `/inventory/movements` — Trang danh sách với DataTable + Search + Filter + Pagination
+
+### Permission
+
+- `inventory.view` — Xem inventory movements
+- `inventory.export` — Xuất kho (auto từ WarehouseTask SHIPPED)
+
+### Files tạo mới (Sprint 6.4)
+
+#### Models
+- `src/models/InventoryMovement.ts` — InventoryMovement schema + enum MovementType
+
+#### Configs
+- `src/configs/inventory.config.ts` — Movement labels, colors, icons
+
+#### Repositories
+- `src/repositories/inventory.repository.ts` — Stock queries + movements CRUD
+
+#### Services
+- `src/services/inventory.service.ts` — Business logic (exportOrder, rollbackExport, checkStock, reserveStock, releaseStock)
+
+#### API Routes
+- `src/app/api/inventory/movements/route.ts` — GET list
+- `src/app/api/inventory/movements/[id]/route.ts` — GET detail
+- `src/app/api/warehouse/tasks/[id]/inventory/route.ts` — GET movements by task
+
+#### Hooks
+- `src/hooks/useInventoryMovements.ts` — React Query hooks
+
+#### Components
+- `src/components/inventory/InventorySection.tsx` — Hiển thị movements trong Warehouse Detail
+
+#### Pages
+- `src/app/(protected)/inventory/movements/page.tsx` — Trang danh sách movements
+
+### Cập nhật
+
+- `src/services/warehouse.service.ts` — Tích hợp exportOrder khi SHIPPED (transactional, trước khi đổi Order SHIPPING)
+- `src/hooks/useWarehouseTasks.ts` — Invalidate inventory queries sau khi đổi status
+- `src/app/(protected)/warehouses/[id]/page.tsx` — Thêm InventorySection component
+
+### Verification
+
+- [x] `npx tsc --noEmit` — 0 TypeScript Error
+- [x] Mongo Transaction hoạt động (session + commit/abort)
+- [x] Không đủ tồn → rollback toàn bộ
+- [x] Đủ tồn → trừ đúng số lượng
+- [x] InventoryMovement ghi đầy đủ (EXPORT + InventoryHistory)
+- [x] Product stock cập nhật (quantity, availableQuantity)
+- [x] React Query refetch đúng (warehouse-task, warehouse-tasks, orders, inventory, products)
+- [x] PROJECT_PROGRESS.md cập nhật Sprint 6.4
 
 ### Status
 
