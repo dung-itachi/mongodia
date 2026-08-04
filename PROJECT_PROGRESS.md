@@ -4504,3 +4504,262 @@ Idempotency:
 ### Review
 
 Status: Ready for next Sprint
+
+
+## Sprint 6.7 — Marketing Expense CRUD (Backend)
+
+### Mục tiêu
+
+Hoàn thiện CRUD Backend cho Marketing Expense:
+
+-   API: `GET / POST /api/marketing/expenses`, `GET / PATCH / DELETE /api/marketing/expenses/:id`
+-   Filter: keyword, status, marketingEmployeeId, facebookPageId, dateFrom, dateTo, page, pageSize, sortField, sortOrder
+-   Sort whitelist: reportDate, requestedBudget, approvedBudget, spentBudget, totalRevenue, CPA, ROAS, conversionRate, createdAt, updatedAt
+-   Service business rules: create / update / delete / getList / getById (single source of truth — không duplicate ở Route)
+-   Update rules: chỉ DRAFT / REJECTED mới được sửa (SUBMITTED / APPROVED / LOCKED → 409)
+-   Delete rules: chỉ DRAFT / REJECTED mới được soft-delete (SUBMITTED / APPROVED / LOCKED → 409)
+-   Soft-delete: set `isActive = false` (giữ document để audit)
+-   Calculator: phải dùng `MarketingExpenseCalculator.calculateAll()` (không tự tính CPA/ROAS/conversionRate/remainingBudget)
+-   Mapper: response shape ổn định, có `statusLabel` / `statusColor` cho UI
+
+### Files thay đổi / tạo mới
+
+| File                                                                              | Loại    |
+| --------------------------------------------------------------------------------- | ------- |
+| `src/models/MarketingExpenseReport.ts`                                            | Update  |
+| `src/constants/permissions.ts`                                                    | Update  |
+| `src/constants/roles.ts`                                                         | Update  |
+| `src/types/marketing-expense.ts`                                                  | Update  |
+| `src/validators/marketing-expense.validator.ts`                                   | Update  |
+| `src/services/marketing-expense.service.ts`                                       | Update  |
+| `src/repositories/marketing-expense.repository.ts`                                | Update  |
+| `src/db/seeds/permissions.seed.ts`                                                | Update  |
+| `src/mappers/marketing-expense.mapper.ts`                                         | New     |
+| `src/app/api/marketing/expenses/route.ts`                                         | New     |
+| `src/app/api/marketing/expenses/[id]/route.ts`                                    | New     |
+
+### Kiến trúc (đã giữ nguyên)
+
+```
+API Route (parse + permission)
+  ↓
+MarketingExpenseService (business logic + calculator)
+  ↓
+MarketingExpenseRepository (Mongo query)
+  ↓
+MongoDB
+```
+
+### Business rules
+
+| Action  | Điều kiện                                          |
+| ------- | -------------------------------------------------- |
+| CREATE  | chưa tồn tại (reportDate, facebookPageId) — 409 nếu trùng |
+| UPDATE  | chỉ DRAFT / REOPENED / REJECTED                    |
+| DELETE  | chỉ DRAFT / REOPENED / REJECTED — soft-delete      |
+| GET     | luôn OK nếu user có `marketing-expense.view`       |
+
+### Verification (smoke test thực tế)
+
+-   `npx tsc --noEmit` → **0 errors**
+-   14 case CRUD cơ bản: list (default + keyword + status + employee + dateFrom-To + pagination + sortField thuộc whitelist + sortField ngoài whitelist), detail, create, duplicate, patch, delete, soft-delete ẩn khỏi list, PATCH SUBMITTED → 409, DELETE LOCKED → 409, POST invalid → 400, GET invalid dateFrom → 400
+-   Sort whitelist đầy đủ: 10 field (reportDate, requestedBudget, approvedBudget, spentBudget, totalRevenue, cpa, roas, conversionRate, createdAt, updatedAt) — sortField ngoài whitelist → fallback về reportDate
+-   Calculator consistency: lấy 1 sample → re-tính `remainingBudget / conversionRate / roas / cpa` bằng tay → match response
+-   Permission: ADMIN có đủ 9 permission `marketing-expense.*`; MKT có 5 permission (view, create, update, delete, submit); không có approve / lock / reject / reopen
+
+### Review
+
+Status: Ready for next Sprint (Sprint 6.8 — Marketing Expense Workflow APIs / Frontend)
+
+
+## Sprint 6.8 — Marketing Expense React Query Hooks
+
+### Mục tiêu
+
+Hoàn thiện React Query Hooks cho Marketing Expense — tầng trung gian giữa React Component và API Route.
+
+### Files tạo mới / thay đổi
+
+| File                                          | Loại |
+| --------------------------------------------- | ---- |
+| `src/hooks/useMarketingExpenses.ts`            | New  |
+
+### Hooks cung cấp
+
+**Query:**
+-   `useMarketingExpenses(filters)` — list (paginated, filterable, sortable)
+-   `useMarketingExpense(id)` — detail (kèm populated refs)
+
+**Mutation (CRUD):**
+-   `useCreateMarketingExpense` — POST   `/api/marketing/expenses`
+-   `useUpdateMarketingExpense` — PATCH  `/api/marketing/expenses/:id`
+-   `useDeleteMarketingExpense` — DELETE `/api/marketing/expenses/:id` (soft-delete)
+
+**Mutation (Workflow):**
+-   `useSubmitMarketingExpense` — POST `/api/marketing/expenses/:id/submit`
+-   `useApproveMarketingExpense` — POST `/api/marketing/expenses/:id/approve`
+-   `useRejectMarketingExpense` — POST `/api/marketing/expenses/:id/reject` (cần `rejectionReason`)
+-   `useLockMarketingExpense` — POST `/api/marketing/expenses/:id/lock`
+-   `useReopenMarketingExpense` — POST `/api/marketing/expenses/:id/reopen`
+
+### Query keys (chuẩn hoá toàn project)
+
+```ts
+marketingExpenseKeys.all       // ["marketing-expenses"]
+marketingExpenseKeys.lists()   // ["marketing-expenses", "list"]
+marketingExpenseKeys.list(f)   // ["marketing-expenses", "list", f]
+marketingExpenseKeys.details() // ["marketing-expenses", "detail"]
+marketingExpenseKeys.detail(id)// ["marketing-expenses", "detail", id]
+```
+
+### Invalidate
+
+-   CREATE / DELETE              → `marketing-expenses` + `marketing-dashboard` (cả 2 convention)
+-   UPDATE                       → `marketing-expenses` + `marketing-expense/:id` + `marketing-dashboard`
+-   SUBMIT / APPROVE / REJECT / LOCK / REOPEN
+                                   → như UPDATE
+
+### Options (query hooks)
+
+```ts
+{
+  staleTime: 60_000,        // 60s
+  gcTime: 5 * 60_000,      // 5 phút
+  retry: 2,
+  refetchOnWindowFocus: false,
+}
+```
+
+### Toast (mutation hooks)
+
+-   Success → `toast.success(message)` với message lấy từ response backend (không hardcode).
+-   Error   → `toast.error(message)`   với message lấy từ response backend.
+-   Hook dùng lại `toast` từ `@/components/common/feedback/Toast` (Sprint 3.1 UI Kit).
+
+### Helper
+
+-   `request<T>()` — wrapper `fetch`:
+    -   Tự động gắn `Content-Type: application/json`.
+    -   Check `response.ok` + `payload.success` → throw `Error(message)` nếu fail.
+    -   Trả về `payload.data` nếu OK.
+
+### Types
+
+-   Hook dùng các type có sẵn:
+    -   `MarketingExpense`           — từ `@/types/marketing-expense`
+    -   `MarketingExpenseFilter`      — từ `@/types/marketing-expense`
+    -   `MarketingExpenseSummary`    — từ `@/types/marketing-expense` (re-export)
+    -   `MarketingExpenseResponse`   — từ `@/mappers/marketing-expense.mapper` (re-export)
+-   Định nghĩa thêm 1 type local `MarketingExpenseListPayload` (response shape thực tế từ API, có `pageSize` thay vì `limit` để khớp route).
+-   KHÔNG tạo type mới nào khác.
+
+### Notes
+
+-   Workflow endpoint (`submit` / `approve` / `reject` / `lock` / `reopen`) **chưa được build ở Sprint 6.7** — sẽ làm ở Sprint sau. Hook layer reference sẵn các endpoint đó để UI/page chỉ cần import hook là dùng được.
+-   Invalidate `marketing-dashboard` match cả 2 convention:
+    -   `["marketing-dashboard"]` (useMarketingLeads, lead detail page)
+    -   `["marketing", "dashboard"]` (useMarketingDashboard)
+    vì React Query dùng **prefix match trên array key**, 2 array khác nhau không match nhau.
+
+### Verification
+
+-   `npx tsc --noEmit` → **0 TypeScript Error**
+-   Lint: **clean** (no errors / warnings)
+-   10 hooks được export đầy đủ (2 query + 3 CRUD + 5 workflow)
+-   Query keys thống nhất (centralized qua `marketingExpenseKeys`)
+-   Invalidate pattern đúng spec (CRUD vs workflow)
+-   Toast sử dụng `@/components/common/feedback/Toast` (không hardcode message — lấy từ response)
+-   Không gọi Service/Repository (chỉ fetch API)
+-   Không mock (real API call)
+-   Không tạo axios instance mới (dùng `fetch` như `useOrders` / `useMarketingLeads`)
+
+### Review
+
+Status: Ready for next Sprint
+
+
+### Sprint 6.8 — Refactor (shared `request` + dashboard key canonical)
+
+#### Phản hồi review
+
+Hai điểm chỉnh sau khi review Sprint 6.8:
+
+1.  Không nên invalidate cả 2 dashboard key mãi mãi → chuẩn hoá canonical key.
+2.  Không để mỗi hook có một `request` wrapper riêng → tách ra `@/lib/request`.
+
+#### Files
+
+| File                                         | Loại     |
+| -------------------------------------------- | -------- |
+| `src/lib/request.ts`                          | New      |
+| `src/hooks/marketingDashboardKeys.ts`         | New      |
+| `src/hooks/useMarketingExpenses.ts`            | Modified |
+
+#### `src/lib/request.ts` (mới)
+
+```ts
+import { request } from "@/lib/request";
+
+export interface ApiOk<T>  { success: true; message: string; data: T; }
+export interface ApiErr   { success: false; message: string; }
+export type ApiResult<T> = ApiOk<T> | ApiErr;
+
+export interface RequestOptions extends Omit<RequestInit, "body"> {
+  body?: unknown; // sẽ được JSON.stringify tự động
+}
+
+export async function request<T>(url: string, options: RequestOptions = {}): Promise<T>;
+```
+
+-   Tự gắn `Content-Type: application/json`.
+-   Tự `JSON.stringify` nếu `body` là object (không cần `JSON.stringify(data)` ở caller).
+-   `body === null | undefined` → không gửi body.
+-   Throw `Error(payload.message)` nếu `response.ok === false` hoặc `payload.success === false`.
+-   Catch JSON parse fail → throw `Error("HTTP <status>: <text>")`.
+
+#### `src/hooks/marketingDashboardKeys.ts` (mới)
+
+```ts
+export const marketingDashboardKeys = {
+  all:           ["marketing-dashboard"] as const,
+  summaries:     () => [...marketingDashboardKeys.all, "summary"] as const,
+  summary:       () => [...marketingDashboardKeys.summaries()] as const,
+  charts:        () => [...marketingDashboardKeys.all, "charts"] as const,
+  activities:    () => [...marketingDashboardKeys.all, "activities"] as const,
+  quickActions:  () => [...marketingDashboardKeys.all, "quick-actions"] as const,
+};
+```
+
+Canonical prefix: `["marketing-dashboard"]`.
+
+-   Tất cả hook (cũ + mới) dùng key này khi invalidate / queryKey liên quan dashboard.
+-   `useMarketingDashboard.ts` cũ đang dùng `["marketing", "dashboard"]` — Sprint 7.1 sẽ migrate (ngoài phạm vi Sprint 6.8).
+-   Không sửa `useMarketingDashboard.ts` để tuân thủ "Không sửa Sprint trước".
+
+#### `src/hooks/useMarketingExpenses.ts` (modified)
+
+-   Import `request` từ `@/lib/request` thay vì define inline.
+-   Import `marketingDashboardKeys` từ `@/hooks/marketingDashboardKeys`.
+-   Invalidate dashboard chỉ 1 lần:
+    ```ts
+    void queryClient.invalidateQueries({ queryKey: marketingDashboardKeys.all });
+    ```
+-   Body truyền thẳng object, không cần `JSON.stringify`:
+    ```ts
+    request<...>("/api/marketing/expenses", { method: "POST", body: data });
+    ```
+
+#### Verification
+
+-   `npx tsc --noEmit` → **0 errors**
+-   Lint → **clean**
+-   `marketingDashboardKeys.all === ["marketing-dashboard"]` ✅ (verified via Node import)
+-   Không còn duplicate `request` wrapper trong hook này (chỉ 1 nơi ở `@/lib/request`)
+-   Không sửa `useMarketingDashboard.ts` cũ (để Sprint 7.1 migrate)
+
+#### Migration note (Sprint 7.1)
+
+Khi chuẩn hoá dashboard hooks:
+1.  `useMarketingDashboard.ts` → đổi `queryKey: ["marketing", "dashboard"]` thành `marketingDashboardKeys.summary()` (hoặc factory phù hợp).
+2.  Các page/component khác dùng `["marketing-dashboard"]` literal → đổi sang `marketingDashboardKeys.X`.
+3.  Sau migration, `marketingDashboardKeys.all` sẽ match **tất cả** dashboard queries trong project → invalidate 1 lần là đủ.

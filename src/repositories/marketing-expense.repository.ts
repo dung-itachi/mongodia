@@ -58,6 +58,8 @@ export interface UpdateMarketingExpenseReportData {
   lockedAt?: Date | null;
   rejectedAt?: Date | null;
   rejectionReason?: string;
+  note?: string;
+  isActive?: boolean;
 }
 
 // ============================================================================
@@ -88,6 +90,8 @@ function mapToReport(doc: IMarketingExpenseReport) {
     lockedAt: doc.lockedAt ? doc.lockedAt.toISOString() : null,
     rejectedAt: doc.rejectedAt ? doc.rejectedAt.toISOString() : null,
     rejectionReason: doc.rejectionReason ?? "",
+    note: doc.note ?? "",
+    isActive: doc.isActive ?? true,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };
@@ -99,6 +103,26 @@ function mapToReport(doc: IMarketingExpenseReport) {
 
 function buildFilter(params: MarketingExpenseFilter): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
+
+  // isActive — soft-delete semantics.
+  //
+  //   - Client truyền `isActive=false` → chỉ lấy report đã soft-delete.
+  //   - Client KHÔNG truyền           → mặc định lấy report CHƯA soft-delete.
+  //
+  // "Chưa soft-delete" = `isActive !== false` (match cả doc `true`,
+  // `null`, hoặc missing field). Lý do: doc seed cũ chưa set field này.
+  if (params.isActive === false) {
+    filter.isActive = false;
+  } else if (params.isActive === true) {
+    filter.isActive = true;
+  } else {
+    filter.isActive = { $ne: false };
+  }
+
+  // keyword — search trên `note` (case-insensitive substring).
+  if (params.keyword && params.keyword.trim().length > 0) {
+    filter.note = { $regex: escapeRegex(params.keyword.trim()), $options: "i" };
+  }
 
   if (params.status) {
     filter.status = params.status;
@@ -131,19 +155,40 @@ function buildFilter(params: MarketingExpenseFilter): Record<string, unknown> {
   return filter;
 }
 
+/**
+ * Escape regex meta-characters trong `keyword` để tránh
+ * người dùng inject regex pattern vào `$regex`.
+ */
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Sprint 6.7 — Sort whitelist.
+ *
+ * Cố ý KHÔNG cho sort theo các sub-doc field (e.g. `remainingBudget`,
+ * `requestedBudget.morning`...) để giữ sort đơn giản và dùng index được.
+ *
+ * Nếu client gửi field ngoài whitelist → fallback về `reportDate`.
+ */
 const SORT_FIELDS = new Set([
   "reportDate",
+  "requestedBudget",
+  "approvedBudget",
+  "spentBudget",
+  "totalRevenue",
+  "cpa",
+  "roas",
+  "conversionRate",
   "createdAt",
   "updatedAt",
-  "totalRevenue",
-  "roas",
-  "cpa",
 ]);
 
 function buildSort(params: MarketingExpenseFilter): Record<string, SortOrder> {
+  const requested = params.sortField;
   const sortField =
-    params.sort && SORT_FIELDS.has(params.sort) ? params.sort : "reportDate";
-  const sortOrder: SortOrder = params.order === "asc" ? 1 : -1;
+    requested && SORT_FIELDS.has(requested) ? requested : "reportDate";
+  const sortOrder: SortOrder = params.sortOrder === "asc" ? 1 : -1;
   return { [sortField]: sortOrder };
 }
 
@@ -168,23 +213,36 @@ export class MarketingExpenseRepository {
   }
 
   /**
-   * Find report by ID.
+   * Find report by ID (skip soft-deleted).
    */
   async findById(id: string): Promise<ReturnType<typeof mapToReport> | null> {
-    const doc = await MarketingExpenseReport.findById(id).lean();
+    const doc = await MarketingExpenseReport.findOne({
+      _id: id,
+      isActive: { $ne: false },
+    }).lean();
     if (!doc) return null;
     return mapToReport(doc as IMarketingExpenseReport);
   }
 
   /**
    * Find report by ID with populated refs.
+   *
+   * Trả về raw lean document — caller chịu trách nhiệm mapping sang DTO
+   * (xem `marketing-expense.mapper.ts`).
    */
   async findByIdWithPopulate(
     id: string
   ): Promise<IMarketingExpenseReport | null> {
-    return MarketingExpenseReport.findById(id)
+    return MarketingExpenseReport.findOne({
+      _id: id,
+      isActive: { $ne: false },
+    })
       .populate("marketingEmployeeId", "_id employeeCode fullName")
       .populate("facebookPageId", "_id code name")
+      .populate("createdBy", "_id employeeCode fullName")
+      .populate("approvedBy", "_id employeeCode fullName")
+      .populate("lockedBy", "_id employeeCode fullName")
+      .populate("rejectedBy", "_id employeeCode fullName")
       .lean();
   }
 
@@ -193,8 +251,8 @@ export class MarketingExpenseRepository {
    */
   async findAll(params: MarketingExpenseFilter) {
     const page = params.page ?? 1;
-    const limit = params.limit ?? 20;
-    const skip = (page - 1) * limit;
+    const pageSize = params.pageSize ?? 20;
+    const skip = (page - 1) * pageSize;
     const filter = buildFilter(params);
 
     const [items, total] = await Promise.all([
@@ -203,7 +261,7 @@ export class MarketingExpenseRepository {
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
         .skip(skip)
-        .limit(limit)
+        .limit(pageSize)
         .lean(),
       MarketingExpenseReport.countDocuments(filter),
     ]);
@@ -212,8 +270,8 @@ export class MarketingExpenseRepository {
       items: items.map((doc) => mapToReport(doc as IMarketingExpenseReport)),
       total,
       page,
-      limit,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
     };
   }
 
@@ -234,10 +292,26 @@ export class MarketingExpenseRepository {
   }
 
   /**
-   * Soft delete a report by ID (hard delete theo yêu cầu nghiệp vụ).
+   * Soft delete a report by ID (set `isActive = false`).
    *
-   * Lưu ý: Repository cho phép hard-delete; Service sẽ kiểm tra status
-   * trước khi cho phép xóa.
+   * Sprint 6.7 — chuyển từ hard delete (Sprint 6.5) sang soft delete.
+   * Service sẽ kiểm tra status trước khi cho phép xóa.
+   */
+  async softDelete(
+    id: string,
+    session?: mongoose.ClientSession
+  ): Promise<boolean> {
+    const result = await MarketingExpenseReport.findByIdAndUpdate(
+      id,
+      { $set: { isActive: false } },
+      { new: true, session }
+    ).lean();
+    return result !== null;
+  }
+
+  /**
+   * Hard delete (giữ lại để tương thích ngược với code cũ — KHÔNG dùng
+   * trong luồng CRUD chính của Sprint 6.7).
    */
   async delete(id: string, session?: mongoose.ClientSession): Promise<boolean> {
     const result = await MarketingExpenseReport.findByIdAndDelete(id, {

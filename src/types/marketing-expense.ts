@@ -58,8 +58,8 @@ export interface MarketingExpense {
   cpa: number;
 
   status: MarketingExpenseReportStatus;
-  statusLabel: string;
-  statusColor: string;
+  statusLabel?: string;
+  statusColor?: string;
 
   createdBy: string;
   approvedBy?: string | null;
@@ -69,6 +69,15 @@ export interface MarketingExpense {
   lockedAt?: string | null;
   rejectedAt?: string | null;
   rejectionReason?: string | null;
+
+  /** Ghi chú tự do của nhân viên marketing (Sprint 6.7). */
+  note?: string;
+
+  /**
+   * Soft-delete flag (Sprint 6.7).
+   * `false` nghĩa là report đã bị xóa mềm, query mặc định sẽ loại trừ.
+   */
+  isActive?: boolean;
 
   createdAt: string;
   updatedAt: string;
@@ -96,6 +105,10 @@ export interface MarketingExpenseSummary {
 // ============================================================================
 
 export interface MarketingExpenseFilter {
+  /**
+   * Search theo `note` (case-insensitive substring).
+   * Có thể mở rộng thêm (employeeCode, fullName) ở tầng Service sau này.
+   */
   keyword?: string;
   status?: MarketingExpenseReportStatus;
   marketingEmployeeId?: string;
@@ -104,9 +117,11 @@ export interface MarketingExpenseFilter {
   dateFrom?: string;
   dateTo?: string;
   page?: number;
-  limit?: number;
-  sort?: string;
-  order?: "asc" | "desc";
+  pageSize?: number;
+  sortField?: string;
+  sortOrder?: "asc" | "desc";
+  /** Default `true`. Set `false` để lấy cả report đã soft-delete. */
+  isActive?: boolean;
 }
 
 // ============================================================================
@@ -134,6 +149,7 @@ export interface CreateMarketingExpenseInput {
   totalRevenue?: number;
   totalLeads?: number;
   closedLeads?: number;
+  note?: string;
   createdBy: string;
 }
 
@@ -149,6 +165,7 @@ export interface UpdateMarketingExpenseInput {
   totalRevenue?: number;
   totalLeads?: number;
   closedLeads?: number;
+  note?: string;
 }
 
 // ============================================================================

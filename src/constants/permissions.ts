@@ -370,6 +370,44 @@ export const PERMISSIONS = [
   name: "Assign Lead",
 },
 
+// Marketing Expense
+{
+  code: "marketing-expense.view",
+  name: "View Marketing Expense",
+},
+{
+  code: "marketing-expense.create",
+  name: "Create Marketing Expense",
+},
+{
+  code: "marketing-expense.update",
+  name: "Update Marketing Expense",
+},
+{
+  code: "marketing-expense.delete",
+  name: "Delete Marketing Expense",
+},
+{
+  code: "marketing-expense.submit",
+  name: "Submit Marketing Expense",
+},
+{
+  code: "marketing-expense.approve",
+  name: "Approve Marketing Expense",
+},
+{
+  code: "marketing-expense.lock",
+  name: "Lock Marketing Expense",
+},
+{
+  code: "marketing-expense.reject",
+  name: "Reject Marketing Expense",
+},
+{
+  code: "marketing-expense.reopen",
+  name: "Reopen Marketing Expense",
+},
+
 // Report
   {
     code: "report.view",

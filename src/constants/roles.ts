@@ -109,6 +109,17 @@ export const ROLES = [
       "lead.update",
       "lead.assign",
 
+      // ---- Marketing Expense (Sprint 6.7 — full) ----------------
+      "marketing-expense.view",
+      "marketing-expense.create",
+      "marketing-expense.update",
+      "marketing-expense.delete",
+      "marketing-expense.submit",
+      "marketing-expense.approve",
+      "marketing-expense.lock",
+      "marketing-expense.reject",
+      "marketing-expense.reopen",
+
       "report.view",
     ],
   },
@@ -217,6 +228,14 @@ export const ROLES = [
 
       "lead.view",
 
+      // ---- Marketing Expense (Sprint 6.7) ------------------------
+      // Leader duyệt báo cáo của team mình.
+      "marketing-expense.view",
+      "marketing-expense.approve",
+      "marketing-expense.reject",
+      "marketing-expense.lock",
+      "marketing-expense.reopen",
+
       "report.view",
     ],
   },
@@ -249,6 +268,11 @@ export const ROLES = [
   /**
    * MKT — Marketing. Chỉ xem Order (để đánh giá Lead → Order conversion).
    * Bỏ `order.create` (do SALE chốt đơn).
+   *
+   * Sprint 6.7 — Marketing Expense CRUD:
+   *   - view / create / update / delete: làm việc với report của chính mình
+   *     (kiểm tra ownership trong Service/Repository, không phải ở đây).
+   *   - submit: nộp báo cáo sau khi soạn xong.
    */
   {
     code: "MKT",
@@ -281,6 +305,13 @@ export const ROLES = [
 
       // ---- Order (chỉ xem) ---------------------------------------
       "order.view",
+
+      // ---- Marketing Expense (Sprint 6.7) ------------------------
+      "marketing-expense.view",
+      "marketing-expense.create",
+      "marketing-expense.update",
+      "marketing-expense.delete",
+      "marketing-expense.submit",
 
       "report.view",
     ],

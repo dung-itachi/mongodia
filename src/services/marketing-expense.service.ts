@@ -133,24 +133,15 @@ export class MarketingExpenseService {
     const totalLeads = Math.max(0, input.totalLeads ?? 0);
     const closedLeads = Math.max(0, input.closedLeads ?? 0);
 
-    const remainingBudget =
-      MarketingExpenseCalculator.calculateRemainingBudget(
+    // Sprint 6.7: dùng `calculateAll()` để không duplicate công thức.
+    const { remainingBudget, conversionRate, roas, cpa } =
+      MarketingExpenseCalculator.calculateAll({
         requestedBudget,
-        spentBudget
-      );
-
-    const conversionRate = MarketingExpenseCalculator.calculateConversionRate(
-      totalLeads,
-      closedLeads
-    );
-    const roas = MarketingExpenseCalculator.calculateROAS(
-      totalRevenue,
-      spentBudget
-    );
-    const cpa = MarketingExpenseCalculator.calculateCPA(
-      spentBudget,
-      closedLeads
-    );
+        spentBudget,
+        totalRevenue,
+        totalLeads,
+        closedLeads,
+      });
 
     const data: CreateMarketingExpenseReportData = {
       reportDate,
@@ -208,6 +199,11 @@ export class MarketingExpenseService {
       data.facebookPageId = coerceFacebookPageId(input.facebookPageId);
     }
 
+    // note — không validate, chỉ clamp độ dài.
+    if (input.note !== undefined) {
+      data.note = (input.note ?? "").toString().slice(0, 2000);
+    }
+
     const budgetChanged =
       input.requestedBudget !== undefined || input.spentBudget !== undefined;
     const metricsChanged =
@@ -242,27 +238,22 @@ export class MarketingExpenseService {
         data.spentBudget = nextSpent;
       }
 
-      data.remainingBudget =
-        MarketingExpenseCalculator.calculateRemainingBudget(
-          nextRequested,
-          nextSpent
-        );
+      // Sprint 6.7: dùng `calculateAll()` để không duplicate công thức.
+      const metrics = MarketingExpenseCalculator.calculateAll({
+        requestedBudget: nextRequested,
+        spentBudget: nextSpent,
+        totalRevenue: nextRevenue,
+        totalLeads: nextLeads,
+        closedLeads: nextClosed,
+      });
 
+      data.remainingBudget = metrics.remainingBudget;
       data.totalRevenue = nextRevenue;
       data.totalLeads = nextLeads;
       data.closedLeads = nextClosed;
-      data.conversionRate = MarketingExpenseCalculator.calculateConversionRate(
-        nextLeads,
-        nextClosed
-      );
-      data.roas = MarketingExpenseCalculator.calculateROAS(
-        nextRevenue,
-        nextSpent
-      );
-      data.cpa = MarketingExpenseCalculator.calculateCPA(
-        nextSpent,
-        nextClosed
-      );
+      data.conversionRate = metrics.conversionRate;
+      data.roas = metrics.roas;
+      data.cpa = metrics.cpa;
     }
 
     const updated = await marketingExpenseRepository.update(id, data);
@@ -273,10 +264,12 @@ export class MarketingExpenseService {
   }
 
   /**
-   * Delete a report (hard delete).
+   * Soft delete a report (Sprint 6.7).
    *
    * Business rules:
    *   - Chỉ xóa được khi status = DRAFT / REOPENED / REJECTED.
+   *   - Submitted / Approved / Locked → KHÔNG được xóa.
+   *   - Set `isActive = false` (giữ document để audit).
    */
   async delete(id: string): Promise<MarketingExpenseResult<boolean>> {
     const existing = await marketingExpenseRepository.findById(id);
@@ -291,7 +284,7 @@ export class MarketingExpenseService {
       };
     }
 
-    const ok = await marketingExpenseRepository.delete(id);
+    const ok = await marketingExpenseRepository.softDelete(id);
     if (!ok) {
       return { success: false, error: "Không thể xóa báo cáo" };
     }
@@ -299,7 +292,10 @@ export class MarketingExpenseService {
   }
 
   /**
-   * Get report by ID (with populated refs).
+   * Get report by ID (with populated refs — used by GET detail API).
+   *
+   * Trả về raw lean document kèm populate. Caller map sang DTO qua
+   * `marketing-expense.mapper.ts`.
    */
   async getById(id: string) {
     return marketingExpenseRepository.findByIdWithPopulate(id);

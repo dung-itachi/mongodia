@@ -88,6 +88,15 @@ export interface IMarketingExpenseReport extends Document {
   /** Lý do leader từ chối (kèm khi status = REJECTED). */
   rejectionReason?: string;
 
+  /** Ghi chú tự do của nhân viên marketing (Sprint 6.7). */
+  note?: string;
+
+  /**
+   * Soft-delete flag (Sprint 6.7).
+   * Mặc định `true`. Khi xóa → set `false` thay vì remove document.
+   */
+  isActive: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -192,6 +201,8 @@ const MarketingExpenseReportSchema = new Schema<IMarketingExpenseReport>(
     lockedAt: { type: Date },
     rejectedAt: { type: Date },
     rejectionReason: { type: String, default: "" },
+    note: { type: String, default: "" },
+    isActive: { type: Boolean, default: true, index: true },
   },
   {
     timestamps: true,
