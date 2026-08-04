@@ -55,6 +55,10 @@ export interface Lead {
   note?: string;
   isDuplicate: boolean;
   isActive: boolean;
+  // Sprint 5.7 — Lead Convert
+  isConverted: boolean;
+  orderId?: string;
+  convertedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

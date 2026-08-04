@@ -34,7 +34,7 @@ dayjs.extend(relativeTime);
 import { notFound } from "next/navigation";
 import { PageContainer, PageHeader, CardSection, DescriptionList, StatusBadge, SkeletonCard, EmptyState } from "@/components/common";
 import AssignSaleDrawer from "@/components/marketing/leads/AssignSaleDrawer";
-import { useMarketingLead, useLeadTimeline, useUpdateLead, useDeleteLead } from "@/hooks/useMarketingLeads";
+import { useMarketingLead, useLeadTimeline, useConvertLead, useUpdateLead, useDeleteLead } from "@/hooks/useMarketingLeads";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LeadStatus } from "@/constants/leadStatus";
 import { MARKETING_LEAD_STATUS_OPTIONS } from "@/types/marketing-lead";
@@ -499,10 +499,9 @@ interface ActionBarProps {
   onDelete: () => void;
 }
 
-function ActionBar({ lead, onEdit, onAssignSaleOpen, onConvert, onChangeStatus, onDelete }: ActionBarProps) {
+function ActionBar({ lead, onEdit, onAssignSaleOpen, onConvert, onChangeStatus, onDelete, canConvert }: ActionBarProps & { canConvert: boolean }) {
   const user = useAuthStore((state) => state.user);
   const permissions = user?.permissions ?? [];
-  const canConvert = lead.status === LeadStatus.QUALIFIED;
 
   const statusMenuItems: MenuProps["items"] = MARKETING_LEAD_STATUS_OPTIONS.map((opt) => ({
     key: opt.value,
@@ -547,16 +546,21 @@ function ActionBar({ lead, onEdit, onAssignSaleOpen, onConvert, onChangeStatus, 
           return null;
         }
 
-        // Special: convert disabled unless QUALIFIED
+        // Special: convert disabled unless QUALIFIED and not already converted
         if (action.id === "convert") {
+          const tooltip = !canConvert
+            ? "Chỉ lead ở trạng thái QUALIFIED mới có thể chuyển đổi"
+            : lead.isConverted
+            ? "Lead đã được chuyển đổi"
+            : "Chuyển lead thành đơn hàng";
           return (
             <Button
               key={action.id}
-              type={canConvert ? "primary" : "default"}
+              type={canConvert && !lead.isConverted ? "primary" : "default"}
               icon={action.icon}
               onClick={onConvert}
-              disabled={!canConvert}
-              title={!canConvert ? "Chỉ lead ở trạng thái QUALIFIED mới có thể chuyển đổi" : "Chuyển lead thành đơn hàng"}
+              disabled={!canConvert || lead.isConverted}
+              title={tooltip}
             >
               {action.label}
             </Button>
@@ -693,6 +697,44 @@ function StatusChangeConfirmModal({
 }
 
 // =============================================================================
+// Convert Confirm Modal
+// =============================================================================
+
+function ConvertConfirmModal({
+  lead,
+  open,
+  loading,
+  onConfirm,
+  onCancel,
+}: {
+  lead: MarketingLead;
+  open: boolean;
+  loading: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Modal
+      title="Xác nhận Convert Lead"
+      open={open}
+      okText="Convert"
+      cancelText="Hủy"
+      onCancel={onCancel}
+      onOk={onConfirm}
+      okButtonProps={{ loading }}
+    >
+      <p>
+        Bạn có chắc muốn chuyển đổi lead <strong>{lead.leadCode}</strong> —{" "}
+        <strong>{lead.customerName}</strong> thành đơn hàng?
+      </p>
+      <p style={{ color: "#8c8c8c", fontSize: 13 }}>
+        Hành động này sẽ tạo Order mới và không thể hoàn tác.
+      </p>
+    </Modal>
+  );
+}
+
+// =============================================================================
 // Page Header Content
 // =============================================================================
 
@@ -737,12 +779,14 @@ export default function LeadDetailPage({
 
   const updateMutation = useUpdateLead();
   const deleteMutation = useDeleteLead();
+  const convertMutation = useConvertLead();
   const queryClient = useQueryClient();
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [statusChangeOpen, setStatusChangeOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<MarketingLeadStatus | null>(null);
   const [assignDrawerOpen, setAssignDrawerOpen] = useState(false);
+  const [convertModalOpen, setConvertModalOpen] = useState(false);
 
   // 404 if loaded and lead is null
   if (!loading && !lead && !error) {
@@ -787,7 +831,23 @@ export default function LeadDetailPage({
   };
 
   const handleConvert = () => {
-    void message.info("Tính năng Convert đang được phát triển — Sprint Order tiếp theo");
+    setConvertModalOpen(true);
+  };
+
+  const handleConvertConfirm = () => {
+    if (!lead) return;
+
+    convertMutation.mutate(lead._id, {
+      onSuccess: (result) => {
+        void message.success("Convert Lead thành công");
+        setConvertModalOpen(false);
+        void router.push(`/orders/${result.orderId}`);
+      },
+      onError: (err) => {
+        void message.error(`Lỗi: ${err.message}`);
+        setConvertModalOpen(false);
+      },
+    });
   };
 
   const handleChangeStatus = (status: MarketingLeadStatus) => {
@@ -933,6 +993,7 @@ export default function LeadDetailPage({
               onConvert={handleConvert}
               onChangeStatus={handleChangeStatus}
               onDelete={handleDelete}
+              canConvert={lead.status === LeadStatus.QUALIFIED && !lead.isConverted && !!lead.saleEmployee}
             />
           </CardSection>
 
@@ -967,6 +1028,14 @@ export default function LeadDetailPage({
             lead={lead}
             onClose={handleAssignSaleClose}
             onConfirm={handleAssignSaleConfirm}
+          />
+
+          <ConvertConfirmModal
+            lead={lead}
+            open={convertModalOpen}
+            loading={convertMutation.isPending}
+            onConfirm={handleConvertConfirm}
+            onCancel={() => setConvertModalOpen(false)}
           />
         </>
       )}

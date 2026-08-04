@@ -15,6 +15,7 @@ export interface MarketingLead {
   _id: string;
   leadCode: string;
   customerName: string;
+  customerId?: string;
   phone?: string;
   phone2?: string;
   email?: string;
@@ -35,6 +36,12 @@ export interface MarketingLead {
   };
   note?: string;
   isDuplicate: boolean;
+  /** Lead đã được convert thành Order (Sprint 5.7). */
+  isConverted: boolean;
+  /** Order ID nếu đã convert (Sprint 5.7). */
+  orderId?: string;
+  /** Thời điểm convert (Sprint 5.7). */
+  convertedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

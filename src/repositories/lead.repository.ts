@@ -84,6 +84,10 @@ function mapToLead(doc: ILead) {
     note: doc.note,
     isDuplicate: doc.isDuplicate,
     isActive: doc.isActive,
+    // Sprint 5.7 — Lead Convert
+    isConverted: doc.isConverted,
+    orderId: doc.orderId?.toString(),
+    convertedAt: doc.convertedAt,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

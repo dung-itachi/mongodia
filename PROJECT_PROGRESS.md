@@ -704,6 +704,96 @@ LeadRoute → LeadHistoryService.getTimeline() → LeadHistoryRepository.findTim
 
 Status: 🟢 Lead Timeline COMPLETE — Production Ready
 
+### Sprint 5.7 — Lead Convert → Order (Production)
+
+### Status
+
+✅ Completed (2026-08-04)
+
+### Mục tiêu
+
+Hoàn thiện chức năng Convert Lead thành Order — kết thúc luồng Marketing trước khi chuyển sang Order Module.
+
+### Business Flow
+
+```
+LeadRoute → LeadService.convertLead() → OrderService.createFromLead() → OrderRepository.create() → MongoDB → LeadHistory
+```
+
+### Files tạo mới
+
+| File | Mô tả |
+|------|--------|
+| `src/repositories/order.repository.ts` | OrderRepository với `create()`, `generateOrderCode()` |
+| `src/services/order.service.ts` | OrderService với `createFromLead()` |
+| `src/app/api/marketing/leads/[id]/convert/route.ts` | POST endpoint convert |
+
+### Files sửa
+
+| File | Thay đổi |
+|------|----------|
+| `src/models/Lead.ts` | Thêm `isConverted`, `orderId`, `convertedAt` + indexes |
+| `src/constants/leadAction.ts` | Thêm `LeadAction.CONVERT` |
+| `src/types/lead.ts` | Thêm `isConverted`, `orderId`, `convertedAt` |
+| `src/types/marketing-lead.ts` | Thêm `isConverted`, `orderId`, `convertedAt`, `customerId` |
+| `src/repositories/lead.repository.ts` | `mapToLead()` trả thêm fields convert |
+| `src/services/lead.service.ts` | Thêm `convertLead()` với business rules |
+| `src/hooks/useMarketingLeads.ts` | Thêm `useConvertLead()` hook |
+| `src/app/(protected)/marketing/input/[id]/page.tsx` | Wire Convert button + `ConvertConfirmModal` |
+| `src/app/api/marketing/leads/[id]/route.ts` | `mapMarketingLead()` trả thêm fields |
+| `src/app/api/marketing/leads/route.ts` | `mapMarketingLead()` trả thêm fields |
+
+### Business Rules (LeadService.convertLead)
+
+- Lead phải tồn tại
+- Lead active
+- Lead phải có `saleEmployeeId`
+- Lead phải ở trạng thái `QUALIFIED`
+- Lead chưa từng convert (`isConverted == false`)
+- Lead phải có `customerId`
+
+### Sau khi Convert
+
+1. Tạo Order từ Lead (dùng `OrderRepository.create()`)
+2. Cập nhật Lead: `isConverted = true`, `orderId`, `convertedAt`
+3. Ghi `LeadHistory` record: `action = CONVERT`, `oldValue = null`, `newValue = orderId`
+4. Transaction rollback nếu có lỗi
+
+### Frontend — Convert Button
+
+- Enable khi: `status === QUALIFIED && !isConverted && !!saleEmployee`
+- Disable + Tooltip giải thích lý do không thể convert
+- `permission: "lead.convert"` (từ MongoDB RBAC)
+- Confirm dialog trước khi convert
+- Sau convert thành công: navigate sang `/orders/{orderId}`
+
+### React Query Invalidation
+
+Sau convert: invalidate `marketing-leads`, `marketing-lead`, `marketing-dashboard`, `orders`
+
+### API Response
+
+```json
+{
+  "success": true,
+  "data": { "orderId": "..." },
+  "message": "Convert Lead thành công"
+}
+```
+
+### Verification
+
+- `npx tsc --noEmit` — 0 TypeScript Error
+- Convert thành công
+- MongoDB tạo Order
+- Lead cập nhật: `isConverted`, `orderId`, `convertedAt`
+- `LeadHistory` có record `CONVERT`
+- Điều hướng sang Order Detail
+
+### Review
+
+Status: 🟢 Lead Convert COMPLETE — Production Ready
+
 ### Sprint 5.4A — Dashboard Repository Refactor
 
 ### Status

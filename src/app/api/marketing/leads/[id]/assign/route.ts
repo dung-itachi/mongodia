@@ -19,6 +19,14 @@ import type { Lead } from "@/types/lead";
 import type { MarketingLead } from "@/types/marketing-lead";
 
 function mapMarketingLead(lead: Lead): MarketingLead {
+  const leadAny = lead as Lead & {
+    customerId?: string;
+    marketingEmployee?: { _id: string; employeeCode: string; name: string };
+    saleEmployee?: { _id: string; employeeCode: string; name: string };
+    isConverted?: boolean;
+    orderId?: string;
+    convertedAt?: Date;
+  };
   return {
     _id: lead._id,
     leadCode: lead.leadCode,
@@ -31,10 +39,14 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     sourceLabel: LEAD_SOURCE_LABELS[lead.sourceType as LeadSource],
     status: lead.status,
     statusLabel: LEAD_STATUS_LABELS[lead.status],
-    marketingEmployee: (lead as Lead & { marketingEmployee?: { _id: string; employeeCode: string; name: string } }).marketingEmployee,
-    saleEmployee: (lead as Lead & { saleEmployee?: { _id: string; employeeCode: string; name: string } }).saleEmployee,
+    marketingEmployee: leadAny.marketingEmployee,
+    saleEmployee: leadAny.saleEmployee,
     note: lead.note,
     isDuplicate: lead.isDuplicate,
+    // Sprint 5.7 — Lead Convert
+    isConverted: leadAny.isConverted ?? false,
+    orderId: leadAny.orderId,
+    convertedAt: leadAny.convertedAt?.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
   };

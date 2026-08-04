@@ -326,3 +326,43 @@ export function useLeadTimeline(leadId: string | null) {
     refetch,
   };
 }
+
+// ============================================================================
+// Convert
+// ============================================================================
+
+async function convertLead(leadId: string): Promise<{ orderId: string }> {
+  const response = await fetch(`/api/marketing/leads/${leadId}/convert`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.message || "Failed to convert lead");
+  }
+
+  return result.data;
+}
+
+/**
+ * Hook to convert a lead to order (Sprint 5.7)
+ */
+export function useConvertLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (leadId: string) => convertLead(leadId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
+      void queryClient.invalidateQueries({ queryKey: ["marketing-lead"] });
+      void queryClient.invalidateQueries({ queryKey: ["marketing-dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+}

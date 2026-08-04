@@ -16,6 +16,7 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     _id: lead._id,
     leadCode: lead.leadCode,
     customerName: lead.customerName,
+    customerId: (lead as Lead & { customerId?: string }).customerId,
     phone: lead.phone,
     phone2: lead.phone2,
     email: lead.email,
@@ -28,6 +29,10 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     saleEmployee: (lead as Lead & { saleEmployee?: { _id: string; employeeCode: string; name: string } }).saleEmployee,
     note: lead.note,
     isDuplicate: lead.isDuplicate,
+    // Sprint 5.7 — Lead Convert
+    isConverted: (lead as Lead & { isConverted?: boolean }).isConverted ?? false,
+    orderId: (lead as Lead & { orderId?: string }).orderId,
+    convertedAt: (lead as Lead & { convertedAt?: Date }).convertedAt?.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
   };

@@ -10,6 +10,7 @@ export enum LeadAction {
   MARKETING_CHANGED = "MARKETING_CHANGED",
   NOTE_UPDATED = "NOTE_UPDATED",
   DELETED = "DELETED",
+  CONVERT = "CONVERT",
 }
 
 export const LEAD_ACTION_LABELS: Record<LeadAction, string> = {
@@ -24,6 +25,7 @@ export const LEAD_ACTION_LABELS: Record<LeadAction, string> = {
   [LeadAction.MARKETING_CHANGED]: "Đổi Marketing phụ trách",
   [LeadAction.NOTE_UPDATED]: "Cập nhật ghi chú",
   [LeadAction.DELETED]: "Xóa Lead",
+  [LeadAction.CONVERT]: "Convert Lead thành Order",
 };
 
 export const LEAD_ACTIONS = Object.values(LeadAction);

@@ -11,8 +11,10 @@ import { LeadStatus } from "@/constants/leadStatus";
 import { LeadHistory } from "@/models/LeadHistory";
 import { LeadAction } from "@/constants/leadAction";
 import { leadRepository } from "@/repositories/lead.repository";
+import { Lead } from "@/models/Lead";
 import Employee from "@/models/Employee";
 import Role from "@/models/Role";
+import { orderService } from "@/services/order.service";
 import type {
   Lead as LeadDomain,
   LeadSearchParams,
@@ -314,6 +316,123 @@ export class LeadService {
 
   async assign(id: string, data: AssignLeadInput, assignedBy: string) {
     return this.assignLead(id, data, assignedBy);
+  }
+
+  /**
+   * Convert lead to order (Sprint 5.7)
+   */
+  async convertLead(
+    id: string,
+    convertedBy: string
+  ): Promise<{ success: true; orderId: string } | { success: false; error: string }> {
+    // 1. Check lead exists
+    const existingLead = await leadRepository.findById(id);
+    if (!existingLead) {
+      return { success: false, error: "Lead không tồn tại" };
+    }
+
+    // 2. Check lead is active
+    if (!existingLead.isActive) {
+      return { success: false, error: "Lead không hoạt động" };
+    }
+
+    // 3. Check lead has sale employee
+    if (!existingLead.saleEmployeeId) {
+      return { success: false, error: "Lead chưa được phân công Sale" };
+    }
+
+    // 4. Check lead status is QUALIFIED
+    if (existingLead.status !== LeadStatus.QUALIFIED) {
+      return { success: false, error: "Lead phải ở trạng thái QUALIFIED để convert" };
+    }
+
+    // 5. Check lead is not already converted
+    if (existingLead.isConverted) {
+      return { success: false, error: "Lead đã được convert trước đó" };
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      // Determine customerId: use existing or auto-create from lead
+      let customerId = existingLead.customerId?.toString();
+
+      if (!customerId) {
+        // Auto-create Customer from Lead
+        const created = await orderService.createCustomerFromLead(
+          {
+            customerName: existingLead.customerName,
+            phone: existingLead.phone ?? "",
+            email: existingLead.email,
+            address: existingLead.address,
+            marketingEmployeeId: existingLead.marketingEmployeeId?.toString(),
+          },
+          session
+        );
+        customerId = created._id.toString();
+      }
+
+      // Create order from lead
+      const order = await orderService.createFromLead(
+        {
+          leadId: id,
+          customerId,
+          customerName: existingLead.customerName,
+          customerPhone: existingLead.phone,
+          productId: existingLead.productId?.toString(),
+          comboId: existingLead.comboId?.toString(),
+          productSnapshot: undefined,
+          comboSnapshot: undefined,
+          quantity: existingLead.quantity ?? 1,
+          unitPrice: existingLead.unitPriceVND ?? 0,
+          totalAmount: (existingLead.quantity ?? 1) * (existingLead.unitPriceVND ?? 0),
+          currency: "VND",
+          estimatedWeight: existingLead.estimatedWeight,
+          marketingEmployeeId: existingLead.marketingEmployeeId?.toString(),
+          saleEmployeeId: existingLead.saleEmployeeId?.toString(),
+          note: existingLead.note,
+        },
+        session
+      );
+
+      // Update lead with conversion info
+      await Lead.findByIdAndUpdate(
+        id,
+        {
+          isConverted: true,
+          orderId: order._id,
+          convertedAt: new Date(),
+          updatedAt: new Date(),
+        },
+        { session }
+      );
+
+      // Create LeadHistory record
+      await LeadHistory.create(
+        [
+          {
+            leadId: new mongoose.Types.ObjectId(id),
+            employeeId: new mongoose.Types.ObjectId(convertedBy),
+            action: LeadAction.CONVERT,
+            oldValue: undefined,
+            newValue: order._id.toString(),
+            note: "Lead converted to Order",
+          },
+        ],
+        { session }
+      );
+
+      await session.commitTransaction();
+
+      return { success: true, orderId: order._id.toString() };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   async search(params: LeadSearchParams) {
