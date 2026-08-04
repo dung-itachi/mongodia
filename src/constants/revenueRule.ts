@@ -134,7 +134,7 @@ export const REVENUE_ACTIVE_STATUSES: ReadonlySet<OrderStatus> = new Set([
   OrderStatus.CONFIRMED,
   OrderStatus.PREPAID,
   OrderStatus.SHIPPING,
-  OrderStatus.COMPLETED,
+  OrderStatus.DELIVERED,
 ]);
 
 /**

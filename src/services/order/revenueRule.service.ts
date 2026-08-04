@@ -117,7 +117,7 @@ function isNonRevenueType(t: OrderType): boolean {
 
 function getPriority(input: OrderRuleInput): RevenuePriority {
   if (isNonRevenueType(input.orderType)) return RevenuePriority.NONE;
-  if (input.status === OrderStatus.COMPLETED) return RevenuePriority.COMPLETED;
+  if (input.status === OrderStatus.DELIVERED) return RevenuePriority.COMPLETED;
   if (input.isPrepaid) return RevenuePriority.PREPAID;
   return RevenuePriority.NORMAL;
 }
@@ -371,7 +371,7 @@ export function decideForOrder(
 
   if (
     subject.isPrepaid &&
-    earlierTop.status !== OrderStatus.COMPLETED &&
+    earlierTop.status !== OrderStatus.DELIVERED &&
     earlierTop.isPrepaid === false
   ) {
     return {

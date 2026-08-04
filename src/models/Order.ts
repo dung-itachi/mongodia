@@ -23,6 +23,10 @@
  *   - Shipping (address, trackingNumber, carrier, estimatedDelivery, actualDelivery, shippingFee)
  *   - Warehouse (warehouseId)
  *   - Revenue Lock: revenueLocked, revenueOwnerOrderId
+ *
+ * Sprint 6.1 extensions:
+ *   - orderItems[]: Danh sách sản phẩm trong đơn hàng
+ *   - summary: Tổng tiền (subtotal, discount, shippingFee, grandTotal)
  */
 
 import mongoose, { Schema, type Document, Types } from "mongoose";
@@ -40,7 +44,7 @@ export const REVENUE_LOCKING_STATUSES: ReadonlySet<OrderStatus> = new Set([
   OrderStatus.CONFIRMED,
   OrderStatus.PREPAID,
   OrderStatus.SHIPPING,
-  OrderStatus.COMPLETED,
+  OrderStatus.DELIVERED,
 ]);
 
 export { REVENUE_UNLOCK_STATUSES };
@@ -48,6 +52,24 @@ export { REVENUE_UNLOCK_STATUSES };
 // ==================================================
 // Sub-document types
 // ==================================================
+
+/** Order Item - sản phẩm trong đơn hàng (Sprint 6.1) */
+export interface IOrderItem {
+  /** Product ID - key để Revenue Lock Engine so khớp */
+  productId?: Types.ObjectId;
+  /** SKU sản phẩm */
+  sku?: string;
+  /** Tên sản phẩm */
+  productName: string;
+  /** Số lượng */
+  quantity: number;
+  /** Đơn giá */
+  unitPrice: number;
+  /** Giảm giá (số tiền) */
+  discount: number;
+  /** Thành tiền = (unitPrice * quantity) - discount */
+  subtotal: number;
+}
 
 /** Payment details attached to an Order. */
 export interface IOrderPayment {
@@ -73,6 +95,20 @@ export interface IOrderShipping {
   actualDelivery?: Date;
   shippingFee: number;
   shippingFeeCurrency: "VND" | "MNT" | "USD";
+}
+
+/** Order Summary - tổng tiền (Sprint 6.1) */
+export interface IOrderSummary {
+  /** Tạm tính = sum(orderItems[].subtotal) */
+  subtotal: number;
+  /** Giảm giá tổng (trên toàn đơn) */
+  discount: number;
+  /** Phí ship */
+  shippingFee: number;
+  /** Tổng cộng = subtotal - discount + shippingFee */
+  grandTotal: number;
+  /** Loại tiền tệ */
+  currency: "VND" | "MNT" | "USD";
 }
 
 // ==================================================
@@ -158,6 +194,12 @@ export interface IOrder extends Document {
    * KHÁC `Lead.sourceType` (nguồn khách). Default MANUAL.
    */
   orderSource: OrderSource;
+
+  // ---- Order Items (Sprint 6.1) ----------------------------------------
+  /** Danh sách sản phẩm trong đơn hàng */
+  orderItems: IOrderItem[];
+  /** Tổng tiền (subtotal, discount, shippingFee, grandTotal) */
+  summary: IOrderSummary;
 
   // ---- Payment -------------------------------------------------------
   payments: IOrderPayment[];
@@ -318,6 +360,36 @@ const OrderSchema = new Schema<IOrder>(
       enum: Object.values(OrderSource),
       default: OrderSource.MANUAL,
       index: true,
+    },
+
+    // ---- Order Items (Sprint 6.1) ----------------------------------------
+    orderItems: {
+      type: [
+        new Schema<IOrderItem>(
+          {
+            productId: { type: Schema.Types.ObjectId, ref: "Product" },
+            sku: { type: String, default: "" },
+            productName: { type: String, required: true },
+            quantity: { type: Number, required: true, min: 1, default: 1 },
+            unitPrice: { type: Number, required: true, min: 0, default: 0 },
+            discount: { type: Number, default: 0, min: 0 },
+            subtotal: { type: Number, required: true, min: 0, default: 0 },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
+    summary: {
+      subtotal: { type: Number, default: 0, min: 0 },
+      discount: { type: Number, default: 0, min: 0 },
+      shippingFee: { type: Number, default: 0, min: 0 },
+      grandTotal: { type: Number, default: 0, min: 0 },
+      currency: {
+        type: String,
+        enum: ["VND", "MNT", "USD"],
+        default: "VND",
+      },
     },
 
     // ---- Payment ------------------------------------------------------

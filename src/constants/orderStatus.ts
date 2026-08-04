@@ -5,35 +5,46 @@
  *
  * Centralised enums for Order lifecycle and the Revenue Lock Engine.
  * The Order Model and the orderRevenue service both consume from here.
+ *
+ * Sprint 6.2: Order Workflow
+ * - PENDING → CONFIRMED → PACKING → SHIPPING → DELIVERED
+ * - DELIVERED → RETURNED
+ * - PENDING/CONFIRMED/PACKING → CANCELLED
  */
 
 /** Status values used by an Order throughout its lifecycle. */
 export enum OrderStatus {
   /** Customer đã đặt, chưa chốt. */
   PENDING = "PENDING",
-  /** Đã xác nhận / chốt đơn, chờ thanh toán hoặc vận chuyển. */
+  /** Đã xác nhận / chốt đơn. */
   CONFIRMED = "CONFIRMED",
-  /** Khách đã thanh toán một phần hoặc toàn bộ trước khi giao. */
-  PREPAID = "PREPAID",
+  /** Đang đóng gói. */
+  PACKING = "PACKING",
   /** Đang vận chuyển. */
   SHIPPING = "SHIPPING",
-  /** Giao thành công - revenue finalised. */
-  COMPLETED = "COMPLETED",
-  /** Đã hủy - revenue bị mở khóa cho đơn sau. */
+  /** Giao thành công. */
+  DELIVERED = "DELIVERED",
+  /** Đã hoàn trả. */
+  RETURNED = "RETURNED",
+  /** Đã hủy. */
   CANCELLED = "CANCELLED",
-  /** Bị từ chối (giống CANCELLED về revenue). */
+  /** Khách đã thanh toán một phần hoặc toàn bộ trước khi giao. */
+  PREPAID = "PREPAID",
+  /** Bị từ chối. */
   REJECTED = "REJECTED",
-  /** Giao thất bại - revenue bị mở khóa cho đơn sau. */
+  /** Giao thất bại. */
   FAILED = "FAILED",
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   [OrderStatus.PENDING]: "Chờ xử lý",
   [OrderStatus.CONFIRMED]: "Đã xác nhận",
-  [OrderStatus.PREPAID]: "Đã cọc / Trả trước",
+  [OrderStatus.PACKING]: "Đang đóng gói",
   [OrderStatus.SHIPPING]: "Đang giao",
-  [OrderStatus.COMPLETED]: "Hoàn tất",
+  [OrderStatus.DELIVERED]: "Đã giao",
+  [OrderStatus.RETURNED]: "Đã hoàn trả",
   [OrderStatus.CANCELLED]: "Đã hủy",
+  [OrderStatus.PREPAID]: "Đã cọc / Trả trước",
   [OrderStatus.REJECTED]: "Bị từ chối",
   [OrderStatus.FAILED]: "Giao thất bại",
 };
@@ -75,17 +86,28 @@ export const REVENUE_LOCK_LABELS: Record<RevenueLockReason, string> = {
 /**
  * Action types recorded in OrderHistory audit log.
  * Mirrors the LeadHistory pattern for consistency across the system.
+ *
+ * Sprint 6.2: Added status-specific actions for better Timeline display.
  */
 export enum OrderAction {
   CREATED = "CREATED",
   UPDATED = "UPDATED",
+  // Status change actions (Sprint 6.2)
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  PACKING = "PACKING",
+  SHIPPING = "SHIPPING",
+  DELIVERED = "DELIVERED",
+  RETURNED = "RETURNED",
+  CANCELLED = "CANCELLED",
+  PREPAID = "PREPAID",
+  // Legacy status change (kept for backward compatibility)
   STATUS_CHANGED = "STATUS_CHANGED",
   PAYMENT_ADDED = "PAYMENT_ADDED",
   PAYMENT_REMOVED = "PAYMENT_REMOVED",
   SHIPPING_UPDATED = "SHIPPING_UPDATED",
-  DELIVERED = "DELIVERED",
-  CANCELLED = "CANCELLED",
   REJECTED = "REJECTED",
+  FAILED = "FAILED",
   REVENUE_LOCKED = "REVENUE_LOCKED",
   REVENUE_UNLOCKED = "REVENUE_UNLOCKED",
   REVENUE_RECALCULATED = "REVENUE_RECALCULATED",
@@ -100,13 +122,22 @@ export enum OrderAction {
 export const ORDER_ACTION_LABELS: Record<OrderAction, string> = {
   [OrderAction.CREATED]: "Tạo đơn",
   [OrderAction.UPDATED]: "Cập nhật",
+  // Status-specific actions (Sprint 6.2)
+  [OrderAction.PENDING]: "Chuyển chờ xử lý",
+  [OrderAction.CONFIRMED]: "Xác nhận đơn",
+  [OrderAction.PACKING]: "Đóng gói",
+  [OrderAction.SHIPPING]: "Giao hàng",
+  [OrderAction.DELIVERED]: "Đã giao",
+  [OrderAction.RETURNED]: "Hoàn trả",
+  [OrderAction.CANCELLED]: "Hủy đơn",
+  [OrderAction.PREPAID]: "Đã cọc / Trả trước",
+  // Legacy
   [OrderAction.STATUS_CHANGED]: "Đổi trạng thái",
   [OrderAction.PAYMENT_ADDED]: "Thêm thanh toán",
   [OrderAction.PAYMENT_REMOVED]: "Xóa thanh toán",
   [OrderAction.SHIPPING_UPDATED]: "Cập nhật vận chuyển",
-  [OrderAction.DELIVERED]: "Giao hàng",
-  [OrderAction.CANCELLED]: "Hủy đơn",
   [OrderAction.REJECTED]: "Từ chối đơn",
+  [OrderAction.FAILED]: "Giao thất bại",
   [OrderAction.REVENUE_LOCKED]: "Khóa doanh thu",
   [OrderAction.REVENUE_UNLOCKED]: "Mở khóa doanh thu",
   [OrderAction.REVENUE_RECALCULATED]: "Tính lại doanh thu",

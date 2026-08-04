@@ -17,8 +17,8 @@ export const PERMISSIONS = {
   PRODUCT_UPDATE: "product.update",
   PRODUCT_DELETE: "product.delete",
 
-  // Order
-  ORDER_READ: "order.read",
+  // Order (Sprint 6.0)
+  ORDER_VIEW: "order.view",
   ORDER_CREATE: "order.create",
   ORDER_UPDATE: "order.update",
   ORDER_DELETE: "order.delete",

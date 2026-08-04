@@ -23,6 +23,8 @@ import {
   IOrder,
   IOrderPayment,
   IOrderShipping,
+  IOrderItem,
+  IOrderSummary,
 } from "@/models/Order";
 import { IOrderHistory } from "@/models/OrderHistory";
 import {
@@ -37,6 +39,32 @@ import {
   OrderAction,
   ORDER_ACTION_LABELS,
 } from "@/constants/orderStatus";
+
+// ==================================================
+// Order Item (Sprint 6.1)
+// ==================================================
+
+export interface OrderItemResponse {
+  productId?: string;
+  sku?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  subtotal: number;
+}
+
+// ==================================================
+// Order Summary (Sprint 6.1)
+// ==================================================
+
+export interface OrderSummaryResponse {
+  subtotal: number;
+  discount: number;
+  shippingFee: number;
+  grandTotal: number;
+  currency: string;
+}
 
 // ==================================================
 // Payment
@@ -127,6 +155,10 @@ export interface OrderResponse {
   orderTypeLabel: string;
   orderSource: OrderSource;
   orderSourceLabel: string;
+
+  // ---- Order Items (Sprint 6.1) ------------------------------------
+  orderItems: OrderItemResponse[];
+  summary: OrderSummaryResponse;
 
   // ---- Payment ------------------------------------------------------
   payments: OrderPaymentResponse[];
@@ -233,6 +265,37 @@ function mapShipping(s: IOrderShipping | undefined): OrderShippingResponse | und
   };
 }
 
+function mapOrderItem(item: IOrderItem): OrderItemResponse {
+  return {
+    productId: item.productId?.toString(),
+    sku: item.sku,
+    productName: item.productName,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    discount: item.discount,
+    subtotal: item.subtotal,
+  };
+}
+
+function mapOrderSummary(summary: IOrderSummary | undefined): OrderSummaryResponse {
+  if (!summary) {
+    return {
+      subtotal: 0,
+      discount: 0,
+      shippingFee: 0,
+      grandTotal: 0,
+      currency: "VND",
+    };
+  }
+  return {
+    subtotal: summary.subtotal,
+    discount: summary.discount,
+    shippingFee: summary.shippingFee,
+    grandTotal: summary.grandTotal,
+    currency: summary.currency,
+  };
+}
+
 export function mapOrder(order: IOrder): OrderResponse {
   return {
     _id: order._id.toString(),
@@ -263,6 +326,9 @@ export function mapOrder(order: IOrder): OrderResponse {
     orderTypeLabel: ORDER_TYPE_LABELS[order.orderType as OrderType],
     orderSource: order.orderSource as OrderSource,
     orderSourceLabel: ORDER_SOURCE_LABELS[order.orderSource as OrderSource],
+    // Sprint 6.1: Order items and summary
+    orderItems: (order.orderItems ?? []).map(mapOrderItem),
+    summary: mapOrderSummary(order.summary),
     payments: (order.payments ?? []).map(mapPayment),
     totalPaid: order.totalPaid,
     shipping: mapShipping(order.shipping),

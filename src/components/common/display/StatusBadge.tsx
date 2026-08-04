@@ -1,24 +1,59 @@
 /**
  * StatusBadge Component (Sprint 3.1 - Complete UI Kit)
+ * Sprint 6.2 - Order Workflow: Added icon support
  *
- * Display status with standardized colors.
+ * Display status with standardized colors and optional icons.
  */
 
 import { Tag } from "antd";
+import type { ReactNode } from "react";
+import {
+  ClockCircleOutlined,
+  CheckOutlined,
+  InboxOutlined,
+  CarOutlined,
+  CheckCircleOutlined,
+  UndoOutlined,
+  CloseCircleOutlined,
+  WalletOutlined,
+  StopOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
+
+/**
+ * Icon mapping for status badges (Sprint 6.2)
+ * Maps icon name to React component
+ */
+const ICON_MAP: Record<string, ReactNode> = {
+  ClockCircleOutlined: <ClockCircleOutlined />,
+  CheckOutlined: <CheckOutlined />,
+  InboxOutlined: <InboxOutlined />,
+  CarOutlined: <CarOutlined />,
+  CheckCircleOutlined: <CheckCircleOutlined />,
+  UndoOutlined: <UndoOutlined />,
+  CloseCircleOutlined: <CloseCircleOutlined />,
+  WalletOutlined: <WalletOutlined />,
+  StopOutlined: <StopOutlined />,
+  WarningOutlined: <WarningOutlined />,
+};
 
 export type StatusConfig = {
   color: string;
   backgroundColor: string;
   label: string;
+  icon?: ReactNode;
 };
 
 export type StatusBadgeProps = {
   status: string;
   mapping?: Record<string, StatusConfig>;
   size?: "small" | "default";
+  showIcon?: boolean;
+  iconMapping?: Record<string, ReactNode>;
 };
 
 // Standard status color mapping
+// Sprint 6.2: Added icons for Order statuses
 export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   // Active statuses
   active: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Hoạt động" },
@@ -34,7 +69,7 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
 
   // Pending statuses
   pending: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ duyệt" },
-  PENDING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ duyệt" },
+  PENDING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ xử lý", icon: ICON_MAP.ClockCircleOutlined },
   PROCESSING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Đang xử lý" },
   NEW: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Mới" },
   ASSIGNED: { color: "#722ed1", backgroundColor: "#f9f0ff", label: "Đã giao" },
@@ -42,45 +77,55 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   // Success statuses
   success: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Thành công" },
   SUCCESS: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Thành công" },
-  COMPLETED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Hoàn thành" },
-  CONFIRMED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã xác nhận" },
-  DELIVERED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao" },
+  CONFIRMED: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đã xác nhận", icon: ICON_MAP.CheckOutlined },
+  DELIVERED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao", icon: ICON_MAP.CheckCircleOutlined },
   SHIPPED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao hàng" },
+
+  // Order statuses (Sprint 6.2)
+  PACKING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Đang đóng gói", icon: ICON_MAP.InboxOutlined },
+  SHIPPING: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đang giao", icon: ICON_MAP.CarOutlined },
+  RETURNED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Đã hoàn trả", icon: ICON_MAP.UndoOutlined },
+  CANCELLED: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Đã hủy", icon: ICON_MAP.CloseCircleOutlined },
+  PREPAID: { color: "#722ed1", backgroundColor: "#f9f0ff", label: "Đã cọc / Trả trước", icon: ICON_MAP.WalletOutlined },
+  REJECTED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Bị từ chối", icon: ICON_MAP.StopOutlined },
+  FAILED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Giao thất bại", icon: ICON_MAP.WarningOutlined },
 
   // Error statuses
   error: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Lỗi" },
   ERROR: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Lỗi" },
-  FAILED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Thất bại" },
-  REJECTED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Từ chối" },
-  CANCELLED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Đã hủy" },
 
   // Warning/Cancelled
   WARNING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Cảnh báo" },
-  RETURNED: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Hoàn hàng" },
 
   // Other common statuses
   draft: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Bản nháp" },
   DRAFT: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Bản nháp" },
   CLOSED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã chốt" },
   PENDING_PAYMENT: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ thanh toán" },
-  PREPAID: { color: "#722ed1", backgroundColor: "#f9f0ff", label: "Đã trả trước" },
   NO_ANSWER: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Không nghe máy" },
   POTENTIAL: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Tiềm năng" },
   ORDER_CREATED: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đã tạo đơn" },
   RECONCILED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đối soát" },
-  SHIPPING: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đang giao" },
 };
 
 export default function StatusBadge({
   status,
   mapping = DEFAULT_STATUS_MAPPING,
   size = "default",
+  showIcon = false,
+  iconMapping,
 }: StatusBadgeProps) {
   const config = mapping[status] || {
     color: "#8c8c8c",
     backgroundColor: "#fafafa",
     label: status,
   };
+
+  // Get icon from mapping or custom iconMapping
+  let icon: ReactNode | undefined = config.icon;
+  if (iconMapping && iconMapping[status]) {
+    icon = iconMapping[status];
+  }
 
   return (
     <Tag
@@ -92,6 +137,9 @@ export default function StatusBadge({
         padding: size === "small" ? "0 6px" : "2px 8px",
       }}
     >
+      {showIcon && icon && (
+        <span style={{ marginRight: 6 }}>{icon}</span>
+      )}
       {config.label}
     </Tag>
   );

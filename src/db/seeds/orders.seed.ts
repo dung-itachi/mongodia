@@ -591,7 +591,7 @@ function buildOrderSpecs(args: {
     // ============================================================
     {
       seedCode: `${baseDateKey}0005`,
-      status: OrderStatus.COMPLETED,
+      status: OrderStatus.DELIVERED,
       orderType: OrderType.COMBO,
       orderSource: OrderSource.IMPORT,
       customerName: "Võ Quang Huy",
@@ -624,7 +624,7 @@ function buildOrderSpecs(args: {
           employeeCode: "EMP_SALE003",
           fieldName: "status",
           oldValue: OrderStatus.SHIPPING,
-          newValue: OrderStatus.COMPLETED,
+          newValue: OrderStatus.DELIVERED,
           note: "Hoàn tất đơn",
           createdAtOffsetDays: 1,
         },
@@ -645,7 +645,7 @@ function buildOrderSpecs(args: {
     // ============================================================
     {
       seedCode: `${baseDateKey}0006`,
-      status: OrderStatus.COMPLETED,
+      status: OrderStatus.DELIVERED,
       orderType: OrderType.NORMAL,
       orderSource: OrderSource.MANUAL,
       customerName: "Nguyễn Hải Đường",
@@ -696,7 +696,7 @@ function buildOrderSpecs(args: {
           employeeCode: "EMP_SALE002",
           fieldName: "status",
           oldValue: OrderStatus.SHIPPING,
-          newValue: OrderStatus.COMPLETED,
+          newValue: OrderStatus.DELIVERED,
           note: "Hoàn tất đơn",
           createdAtOffsetDays: 3,
         },
@@ -870,7 +870,7 @@ function buildOrderSpecs(args: {
     // ============================================================
     {
       seedCode: `${baseDateKey}0011`,
-      status: OrderStatus.COMPLETED,
+      status: OrderStatus.DELIVERED,
       orderType: OrderType.REPLACEMENT,
       orderSource: OrderSource.PHONE,
       customerName: "Phạm Bá Long",
@@ -1151,7 +1151,7 @@ function buildOrderSpecs(args: {
     // ============================================================
     {
       seedCode: `${baseDateKey}0017`,
-      status: OrderStatus.COMPLETED,
+      status: OrderStatus.DELIVERED,
       orderType: OrderType.EXCHANGE,
       orderSource: OrderSource.PHONE,
       customerName: "Phan Thanh Bình",

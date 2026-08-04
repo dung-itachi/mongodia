@@ -48,7 +48,7 @@ import { InventoryReferenceType } from "@/constants/inventoryStatus";
 
 /** Status sets that LOCK an order from updates / deletion. */
 const LOCKED_STATUSES: ReadonlySet<OrderStatus> = new Set([
-  OrderStatus.COMPLETED,
+  OrderStatus.DELIVERED,
   OrderStatus.CANCELLED,
   OrderStatus.REJECTED,
   OrderStatus.FAILED,
@@ -108,10 +108,10 @@ export async function GET(
 }
 
 // ==================================================
-// PUT /api/orders/:id - Update with change-tracking
+// PATCH /api/orders/:id - Update with change-tracking
 // ==================================================
 
-export async function PUT(
+export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -640,10 +640,10 @@ export async function DELETE(
       return errorResponse("Đơn hàng không tồn tại", 404);
     }
 
-    // Business Rule: không cho xóa khi COMPLETED
-    if (existedOrder.status === OrderStatus.COMPLETED) {
+    // Business Rule: không cho xóa khi DELIVERED
+    if (existedOrder.status === OrderStatus.DELIVERED) {
       return errorResponse(
-        "Không thể xóa đơn đã hoàn tất (COMPLETED).",
+        "Không thể xóa đơn đã giao (DELIVERED).",
         409
       );
     }

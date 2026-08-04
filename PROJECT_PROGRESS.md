@@ -3110,3 +3110,745 @@ Employee → Role → RolePermission → Permission → Response
 Reviewed by Cursor Agent
 
 Status: Ready for Sprint 2.4
+
+---
+
+## Sprint 6.0 — Order Module Foundation
+
+### Status
+
+✅ Completed
+
+### Mục tiêu
+
+Xây dựng nền tảng cho Order Module - quản lý toàn bộ đơn hàng sau khi Lead được Convert.
+
+### Kiến trúc
+
+```
+React Query
+    ↓
+API Route
+    ↓
+OrderService
+    ↓
+OrderRepository
+    ↓
+MongoDB
+```
+
+### Files tạo mới
+
+- `src/types/order.ts` — Order Domain Types
+  - OrderListItem, OrderDetail, OrderSummary, OrderStatus, OrderFilter, OrderResponse
+- `src/hooks/useOrders.ts` — React Query hooks
+  - useOrders, useOrder, useCreateOrder, useUpdateOrder, useDeleteOrder
+- `src/app/(protected)/orders/page.tsx` — Order List Page
+- `src/app/(protected)/orders/[id]/page.tsx` — Order Detail Page
+
+### Files chỉnh sửa
+
+- `src/repositories/order.repository.ts` — Mở rộng CRUD operations
+  - findAll(), findById(), findByIdWithPopulate(), update(), softDelete(), count(), exists(), isActive()
+  - Hỗ trợ filter: keyword, status, orderType, orderSource, saleEmployeeId, customerId, warehouseId, revenueLocked, dateFrom, dateTo
+  - Hỗ trợ sort: createdAt, updatedAt, orderCode, customerName, status, totalAmount (whitelist)
+- `src/services/order.service.ts` — Mở rộng business logic
+  - create(), update(), delete(), getById(), getList()
+  - createFromLead(), createCustomerFromLead() (Lead Convert flow)
+  - Status validation, soft delete logic
+- `src/types/permission.ts` — Thêm `ORDER_VIEW: "order.view"`
+- `src/hooks/useOrders.ts` — Sử dụng PATCH thay vì PUT
+
+### Backend API (Đã có từ Sprint 5.7)
+
+| Method | Endpoint | Permission |
+|--------|----------|------------|
+| GET | /api/orders | order.view |
+| GET | /api/orders/:id | order.view |
+| POST | /api/orders | order.create |
+| PATCH | /api/orders/:id | order.update |
+| DELETE | /api/orders/:id | order.delete |
+
+### Frontend Pages
+
+#### Order List Page (`/orders`)
+- PageContainer → PageHeader → OrderToolbar → OrderTable → Pagination
+- Search với debounce 500ms
+- Filter: Status, Date Range
+- Table columns: Mã đơn, Khách hàng, Sale, Trạng thái, Tổng tiền, Ngày tạo, Actions
+- Actions: View, Edit, Delete (theo permission)
+- Row click → Navigate to detail
+
+#### Order Detail Page (`/orders/[id]`)
+- Thông tin đơn (mã, trạng thái, loại, nguồn, số lượng, đơn giá, tổng tiền)
+- Khách hàng (tên, SĐT, mã KH)
+- Sale (tên, mã NV)
+- Sản phẩm (tên, mã SP hoặc combo)
+- Thanh toán (danh sách payments, tổng đã thanh toán)
+- Giao hàng (địa chỉ, phí ship, mã vận đơn)
+- Doanh thu (revenueLocked, revenueEligible, revenue thô và cuối)
+- Timeline (Coming Soon)
+
+### UI Kit sử dụng
+
+- PageContainer, PageHeader, DataTable, TableToolbar
+- StatusBadge, ActionButton, EmptyState, SkeletonTable
+- PermissionGate, ConfirmDialog, SectionTitle, LoadingOverlay
+- FilterBar, FilterSelect, FilterDateRange
+
+### Verification
+
+- [x] npx tsc --noEmit — 0 TypeScript Error
+- [x] CRUD Order chạy MongoDB (API đã có từ Sprint 5.7)
+- [x] Không mock
+- [x] Search với keyword (debounce 500ms)
+- [x] Filter: Status, Date Range
+- [x] Pagination
+- [x] Permission (order.view, order.create, order.update, order.delete)
+- [x] PROJECT_PROGRESS.md cập nhật Sprint 6.0
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
+
+---
+
+## Sprint 6.2 — Order Workflow
+
+### Status
+
+✅ Completed
+
+### Mục tiêu
+
+Hoàn thiện toàn bộ luồng trạng thái Order theo nghiệp vụ.
+
+### Kiến trúc
+
+```
+React Query
+    ↓
+API Route
+    ↓
+OrderService
+    ↓
+OrderRepository
+    ↓
+MongoDB
+    ↓
+OrderHistory
+```
+
+### Order Status Workflow
+
+```
+PENDING → CONFIRMED → PACKING → SHIPPING → DELIVERED
+                                        ↓
+                                    DELIVERED
+                                        ↓
+                                    RETURNED
+
+PENDING → CANCELLED
+CONFIRMED → CANCELLED
+PACKING → CANCELLED
+```
+
+### Order Status Enum
+
+| Status | Label |
+|--------|-------|
+| PENDING | Chờ xử lý |
+| CONFIRMED | Đã xác nhận |
+| PACKING | Đang đóng gói |
+| SHIPPING | Đang giao |
+| DELIVERED | Đã giao |
+| RETURNED | Đã hoàn trả |
+| CANCELLED | Đã hủy |
+| PREPAID | Đã cọc / Trả trước |
+| REJECTED | Bị từ chối |
+| FAILED | Giao thất bại |
+| COMPLETED | ~~Đã hoàn tất~~ — **Đã xóa, dùng DELIVERED** |
+
+### Files tạo mới (Sprint 6.2 Review)
+
+#### `src/configs/order-status.config.ts`
+
+Centralized config cho Order Status:
+
+```typescript
+// Status colors
+ORDER_STATUS_COLORS
+
+// Allowed transitions
+ALLOWED_STATUS_TRANSITIONS
+
+// Status actions (buttons/dropdown)
+STATUS_ACTIONS
+
+// Helper functions
+isStatusTransitionAllowed()
+getAllowedNextStatuses()
+getStatusActions()
+canCancelFromStatus()
+```
+
+#### `src/repositories/order-history.repository.ts`
+
+Repository cho OrderHistory:
+
+```typescript
+create()
+createMany()
+findByOrderId()
+findByOrderIdWithPopulate()
+countByOrderId()
+```
+
+#### `src/services/order-history.service.ts`
+
+Service cho OrderHistory:
+
+```typescript
+createStatusChangeHistory()
+createHistory()
+getHistoryByOrderId()
+```
+
+#### `src/app/api/orders/[id]/status/route.ts`
+
+PATCH `/api/orders/:id/status` - Đổi trạng thái đơn hàng
+
+### Files chỉnh sửa
+
+#### `src/constants/orderStatus.ts`
+
+- Thêm `PACKING`, `DELIVERED`, `RETURNED`
+- Cập nhật `ORDER_STATUS_LABELS`
+
+#### `src/services/order.service.ts`
+
+Thêm methods:
+
+```typescript
+// Sprint 6.2: Workflow
+validateStatusTransition()
+getAllowedTransitions()
+changeStatus()
+```
+
+#### `src/repositories/order.repository.ts`
+
+Thêm method:
+
+```typescript
+// Sprint 6.2
+changeStatus()
+```
+
+#### `src/hooks/useOrders.ts`
+
+Thêm hook:
+
+```typescript
+// Sprint 6.2
+useChangeOrderStatus()
+```
+
+#### `src/app/(protected)/orders/[id]/page.tsx`
+
+- Thêm Status Action Dropdown
+- Thêm ConfirmDialog cho đổi trạng thái
+- Xóa "Coming Soon" khỏi Timeline
+- Refetch sau khi đổi trạng thái
+
+### API Endpoint
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| PATCH | /api/orders/:id/status | order.update | Đổi trạng thái |
+
+**Request:**
+
+```json
+{
+  "status": "CONFIRMED"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Đổi trạng thái thành công",
+  "data": { ... }
+}
+```
+
+### Frontend Status Actions
+
+| Trạng thái | Actions |
+|-------------|---------|
+| PENDING | Xác nhận, Hủy đơn |
+| CONFIRMED | Đóng gói, Hủy đơn |
+| PACKING | Giao hàng, Hủy đơn |
+| SHIPPING | Đã giao |
+| DELIVERED | Hoàn trả |
+| RETURNED | - |
+| CANCELLED | - |
+| PREPAID | Đóng gói, Hủy đơn |
+
+### Business Rules
+
+- Chỉ cho phép chuyển trạng thái hợp lệ
+- Nếu sai workflow → throw Business Error
+- Mỗi lần đổi trạng thái → ghi 1 record vào OrderHistory
+- Timeline đọc từ MongoDB (OrderHistory collection)
+
+### UI Kit sử dụng
+
+- Dropdown (Ant Design) cho status actions
+- ConfirmDialog cho xác nhận
+- LoadingOverlay cho trạng thái loading
+- CardSection, StatusBadge, ActionButton
+
+### Verification
+
+- [x] npx tsc --noEmit — 0 TypeScript Error
+- [x] Workflow đúng (PENDING → CONFIRMED → PACKING → SHIPPING → DELIVERED → RETURNED)
+- [x] Không thể đổi sai trạng thái (validateStatusTransition)
+- [x] OrderHistory ghi đầy đủ khi đổi trạng thái
+- [x] Timeline đọc từ MongoDB
+- [x] React Query refetch sau khi đổi trạng thái
+- [x] Config-driven UI (không hardcode)
+- [x] PROJECT_PROGRESS.md cập nhật Sprint 6.2
+- [x] Xóa COMPLETED alias (chỉ dùng DELIVERED)
+- [x] Thêm icons vào order-status.config.ts
+- [x] Status-specific actions trong OrderHistory (PACKING, SHIPPING, DELIVERED, etc.)
+- [x] StatusBadge hỗ trợ icon (showIcon prop)
+
+### Review (Sprint 6.2 Review - 2026-08-04)
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
+
+---
+
+## Sprint 6.1 — Order Detail & Product Lines
+
+### Status
+
+✅ Completed
+
+### Mục tiêu
+
+Hoàn thiện Order Detail với danh sách sản phẩm và tính toán tiền.
+
+### Kiến trúc
+
+```
+React Query
+    ↓
+API Route
+    ↓
+OrderService
+    ↓
+OrderRepository
+    ↓
+MongoDB
+```
+
+### Backend Changes
+
+#### Order Model (`src/models/Order.ts`)
+
+Thêm Order Items và Order Summary:
+
+```typescript
+// Order Item interface
+interface IOrderItem {
+  productId?: Types.ObjectId;
+  sku?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  subtotal: number;
+}
+
+// Order Summary interface
+interface IOrderSummary {
+  subtotal: number;
+  discount: number;
+  shippingFee: number;
+  grandTotal: number;
+  currency: "VND" | "MNT" | "USD";
+}
+```
+
+#### Order Types (`src/types/order.ts`)
+
+Thêm interfaces:
+
+```typescript
+// OrderItem, OrderSummaryPrice (Sprint 6.1)
+interface OrderItem {
+  productId?: string;
+  sku?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  subtotal: number;
+}
+
+interface OrderSummaryPrice {
+  subtotal: number;
+  discount: number;
+  shippingFee: number;
+  grandTotal: number;
+  currency: "VND" | "MNT" | "USD";
+}
+
+// CreateOrderInput, UpdateOrderInput
+interface CreateOrderInput {
+  // ... existing fields
+  orderItems?: CreateOrderItemInput[];
+}
+
+interface UpdateOrderInput {
+  // ... existing fields
+  orderItems?: CreateOrderItemInput[];
+  summaryDiscount?: number;
+  summaryShippingFee?: number;
+}
+```
+
+#### Order Service (`src/services/order.service.ts`)
+
+Thêm calculation methods:
+
+```typescript
+// Sprint 6.1: Calculation Methods
+calculateSubtotal(orderItems): number
+calculateDiscount(orderItems): number
+calculateTotal(subtotal, itemDiscounts): number
+calculateGrandTotal(subtotal, orderDiscount, shippingFee): number
+buildOrderSummary(orderItems, orderDiscount, shippingFee, currency): OrderSummaryPrice
+processOrderItems(orderItems): Array<{...}>
+```
+
+### Order Detail Page Layout
+
+```
+PageHeader
+    ↓
+Thông tin đơn
+    ↓
+Khách hàng
+    ↓
+Sale
+    ↓
+Danh sách sản phẩm (Sprint 6.1)
+    ↓
+Tổng tiền (Sprint 6.1)
+    ↓
+Thanh toán
+    ↓
+Giao hàng
+    ↓
+Lịch sử (Coming Soon)
+```
+
+### Product Table (Sprint 6.1)
+
+| Column | Description |
+|--------|-------------|
+| SKU | Mã sản phẩm |
+| Tên sản phẩm | Tên sản phẩm |
+| SL | Số lượng |
+| Đơn giá | Giá 1 đơn vị |
+| Giảm giá | Giảm giá (nếu có) |
+| Thành tiền | quantity × unitPrice - discount |
+
+#### Table Footer
+
+| Label | Value |
+|-------|-------|
+| Tạm tính | sum(subtotal) |
+| Giảm giá | order-level discount |
+| Phí vận chuyển | shippingFee |
+| Tổng cộng | grandTotal |
+
+### Order Summary Card (Sprint 6.1)
+
+Hiển thị:
+- Tạm tính (subtotal)
+- Giảm giá (discount)
+- Phí vận chuyển (shippingFee)
+- **Tổng cộng** (grandTotal)
+- Đã thanh toán (totalPaid)
+- Còn lại (grandTotal - totalPaid)
+
+### API Response
+
+GET `/api/orders/:id` trả về thêm:
+
+```json
+{
+  "orderItems": [...],
+  "summary": {
+    "subtotal": 1000000,
+    "discount": 100000,
+    "shippingFee": 30000,
+    "grandTotal": 930000,
+    "currency": "VND"
+  }
+}
+```
+
+### UI Kit sử dụng
+
+- CardSection (thay Card)
+- Table (với Summary footer)
+- StatusBadge, ActionButton
+- PermissionGate, ConfirmDialog
+- LoadingOverlay, SkeletonCard
+- EmptyState
+
+### Verification
+
+- [x] npx tsc --noEmit — 0 TypeScript Error
+- [x] Không mock
+- [x] Order Detail đọc từ MongoDB
+- [x] Product Lines hiển thị (Table với footer)
+- [x] Tổng tiền tính từ Service
+- [x] Frontend không tự tính (chỉ hiển thị từ API)
+- [x] PROJECT_PROGRESS.md cập nhật Sprint 6.1
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
+
+---
+
+## Sprint 6.2 — Order Workflow
+
+### Status
+
+✅ Completed
+
+### Mục tiêu
+
+Hoàn thiện toàn bộ luồng trạng thái Order theo nghiệp vụ.
+
+### Kiến trúc
+
+```
+React Query
+    ↓
+API Route
+    ↓
+OrderService
+    ↓
+OrderRepository
+    ↓
+MongoDB
+    ↓
+OrderHistory
+```
+
+### Order Status Workflow
+
+```
+PENDING → CONFIRMED → PACKING → SHIPPING → DELIVERED
+                                        ↓
+                                    DELIVERED
+                                        ↓
+                                    RETURNED
+
+PENDING → CANCELLED
+CONFIRMED → CANCELLED
+PACKING → CANCELLED
+```
+
+### Order Status Enum
+
+| Status | Label |
+|--------|-------|
+| PENDING | Chờ xử lý |
+| CONFIRMED | Đã xác nhận |
+| PACKING | Đang đóng gói |
+| SHIPPING | Đang giao |
+| DELIVERED | Đã giao |
+| RETURNED | Đã hoàn trả |
+| CANCELLED | Đã hủy |
+| PREPAID | Đã cọc / Trả trước |
+| REJECTED | Bị từ chối |
+| FAILED | Giao thất bại |
+| COMPLETED | ~~Đã hoàn tất~~ — **Đã xóa, dùng DELIVERED** |
+
+### Files tạo mới (Sprint 6.2 Review)
+
+#### `src/configs/order-status.config.ts`
+
+Centralized config cho Order Status:
+
+```typescript
+// Status colors
+ORDER_STATUS_COLORS
+
+// Allowed transitions
+ALLOWED_STATUS_TRANSITIONS
+
+// Status actions (buttons/dropdown)
+STATUS_ACTIONS
+
+// Helper functions
+isStatusTransitionAllowed()
+getAllowedNextStatuses()
+getStatusActions()
+canCancelFromStatus()
+```
+
+#### `src/repositories/order-history.repository.ts`
+
+Repository cho OrderHistory:
+
+```typescript
+create()
+createMany()
+findByOrderId()
+findByOrderIdWithPopulate()
+countByOrderId()
+```
+
+#### `src/services/order-history.service.ts`
+
+Service cho OrderHistory:
+
+```typescript
+createStatusChangeHistory()
+createHistory()
+getHistoryByOrderId()
+```
+
+#### `src/app/api/orders/[id]/status/route.ts`
+
+PATCH `/api/orders/:id/status` - Đổi trạng thái đơn hàng
+
+### Files chỉnh sửa
+
+#### `src/constants/orderStatus.ts`
+
+- Thêm `PACKING`, `DELIVERED`, `RETURNED`
+- Cập nhật `ORDER_STATUS_LABELS`
+
+#### `src/services/order.service.ts`
+
+Thêm methods:
+
+```typescript
+// Sprint 6.2: Workflow
+validateStatusTransition()
+getAllowedTransitions()
+changeStatus()
+```
+
+#### `src/repositories/order.repository.ts`
+
+Thêm method:
+
+```typescript
+// Sprint 6.2
+changeStatus()
+```
+
+#### `src/hooks/useOrders.ts`
+
+Thêm hook:
+
+```typescript
+// Sprint 6.2
+useChangeOrderStatus()
+```
+
+#### `src/app/(protected)/orders/[id]/page.tsx`
+
+- Thêm Status Action Dropdown
+- Thêm ConfirmDialog cho đổi trạng thái
+- Xóa "Coming Soon" khỏi Timeline
+- Refetch sau khi đổi trạng thái
+
+### API Endpoint
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| PATCH | /api/orders/:id/status | order.update | Đổi trạng thái |
+
+**Request:**
+
+```json
+{
+  "status": "CONFIRMED"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Đổi trạng thái thành công",
+  "data": { ... }
+}
+```
+
+### Frontend Status Actions
+
+| Trạng thái | Actions |
+|-------------|---------|
+| PENDING | Xác nhận, Hủy đơn |
+| CONFIRMED | Đóng gói, Hủy đơn |
+| PACKING | Giao hàng, Hủy đơn |
+| SHIPPING | Đã giao |
+| DELIVERED | Hoàn trả |
+| RETURNED | - |
+| CANCELLED | - |
+| PREPAID | Đóng gói, Hủy đơn |
+
+### Business Rules
+
+- Chỉ cho phép chuyển trạng thái hợp lệ
+- Nếu sai workflow → throw Business Error
+- Mỗi lần đổi trạng thái → ghi 1 record vào OrderHistory
+- Timeline đọc từ MongoDB (OrderHistory collection)
+
+### UI Kit sử dụng
+
+- Dropdown (Ant Design) cho status actions
+- ConfirmDialog cho xác nhận
+- LoadingOverlay cho trạng thái loading
+- CardSection, StatusBadge, ActionButton
+
+### Verification
+
+- [x] npx tsc --noEmit — 0 TypeScript Error
+- [x] Workflow đúng (PENDING → CONFIRMED → PACKING → SHIPPING → DELIVERED → RETURNED)
+- [x] Không thể đổi sai trạng thái (validateStatusTransition)
+- [x] OrderHistory ghi đầy đủ khi đổi trạng thái
+- [x] Timeline đọc từ MongoDB
+- [x] React Query refetch sau khi đổi trạng thái
+- [x] Config-driven UI (không hardcode)
+- [x] PROJECT_PROGRESS.md cập nhật Sprint 6.2
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
