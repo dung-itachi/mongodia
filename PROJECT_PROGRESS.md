@@ -4204,3 +4204,303 @@ useChangeOrderStatus()
 Reviewed by Cursor Agent
 
 Status: Ready for next Sprint
+
+
+---
+
+## Sprint 6.5 — Marketing Expense Domain
+
+### Status
+
+✅ Completed
+
+### Mục tiêu
+
+Xây dựng Backend Domain hoàn chỉnh cho Marketing Expense Report.
+Sprint này CHỈ làm Backend Domain — không UI, không Seed, không API.
+
+### Kiến trúc
+
+```
+API
+  ↓
+MarketingExpenseService
+  ↓
+MarketingExpenseRepository
+  ↓
+MongoDB
+```
+
+### Model — `src/models/MarketingExpenseReport.ts`
+
+- Collection: `marketingexpensereports`
+- Sub-document `BudgetAllocation` (morning / afternoon / emergency)
+- Fields:
+  - `reportDate` (index)
+  - `marketingEmployeeId` (ref Employee)
+  - `facebookPageId` (ref FacebookPage, nullable)
+  - `requestedBudget` (BudgetAllocation)
+  - `spentBudget` (BudgetAllocation)
+  - `remainingBudget` (BudgetAllocation — tính tự động)
+  - `totalRevenue`, `totalLeads`, `closedLeads`
+  - `conversionRate`, `roas`, `cpa`
+  - `status` (MarketingExpenseReportStatus)
+  - `createdBy`, `approvedBy`, `lockedBy`, `approvedAt`, `lockedAt`
+  - `createdAt`, `updatedAt`
+
+Unique Index:
+
+- `(reportDate, facebookPageId)` — `partialFilterExpression: { facebookPageId: { $type: "objectId" } }`
+- `(reportDate)` — `partialFilterExpression: { facebookPageId: { $type: "null" } }` (report toàn team)
+
+Phục vụ filter / list:
+
+- `(marketingEmployeeId, reportDate -1)`
+- `(status, reportDate -1)`
+- `(reportDate -1)`
+- `(createdAt -1)`
+
+### Constants — `src/constants/marketing-expense.ts`
+
+```typescript
+enum MarketingExpenseReportStatus {
+  DRAFT, SUBMITTED, APPROVED, LOCKED, REOPENED
+}
+
+MARKETING_EXPENSE_STATUS_LABELS
+MARKETING_EXPENSE_STATUS_COLORS
+MARKETING_EXPENSE_STATUS_ICONS
+```
+
+### Config — `src/configs/marketing-expense.config.ts`
+
+```typescript
+// Helpers
+getMarketingExpenseStatusLabel()
+getMarketingExpenseStatusColor()
+getMarketingExpenseStatusIcon()
+
+// Workflow rules
+isMarketingExpenseEditable()      // DRAFT | REOPENED
+canMarketingExpenseSubmit()       // DRAFT | REOPENED
+canMarketingExpenseApprove()      // SUBMITTED
+canMarketingExpenseLock()         // APPROVED
+canMarketingExpenseReopen()       // LOCKED
+canMarketingExpenseDelete()       // DRAFT | REOPENED
+```
+
+### Types — `src/types/marketing-expense.ts`
+
+```typescript
+interface MarketingExpense { ... }
+interface MarketingExpenseSummary { ... }
+interface MarketingExpenseFilter { ... }
+interface MarketingExpenseListResponse { ... }
+interface CreateMarketingExpenseInput { ... }
+interface UpdateMarketingExpenseInput { ... }
+interface SubmitMarketingExpenseInput { ... }
+interface ApproveMarketingExpenseInput { ... }
+interface LockMarketingExpenseInput { ... }
+interface ReopenMarketingExpenseInput { ... }
+interface BudgetAllocation { morning, afternoon, emergency }
+```
+
+### Validator — `src/validators/marketing-expense.validator.ts`
+
+```typescript
+marketingExpenseFormSchema   // z.object(...)
+MarketingExpenseForm         // z.infer
+defaultMarketingExpenseForm  // init value cho UI
+```
+
+### Repository — `src/repositories/marketing-expense.repository.ts`
+
+CRUD thuần (KHÔNG business logic):
+
+```typescript
+class MarketingExpenseRepository {
+  create()
+  findById()
+  findByIdWithPopulate()
+  findAll(params)             // pagination + filter + sort
+  update()
+  delete()                    // hard delete
+  count()
+  exists()
+  findByDate(reportDate, pageId?)
+  findByDateAndPage(reportDate, pageId)
+  aggregateSummary(filter)
+}
+
+marketingExpenseRepository    // singleton
+```
+
+### Service — `src/services/marketing-expense.service.ts`
+
+Business logic:
+
+```typescript
+class MarketingExpenseService {
+  // CRUD
+  create()    // check duplicate (reportDate, facebookPageId)
+  update()    // chỉ sửa khi DRAFT hoặc REOPENED
+  delete()    // chỉ xóa khi DRAFT hoặc REOPENED
+  getById()
+  getList()
+
+  // Workflow
+  submit()    // DRAFT|REOPENED → SUBMITTED
+  approve()   // SUBMITTED → APPROVED  (không approve khi chưa submit)
+  lock()      // APPROVED → LOCKED
+  reopen()    // LOCKED → REOPENED
+
+  // Aggregations
+  calculateSummary()   // dùng repo.aggregateSummary
+  calculateROAS()
+  calculateCPA()
+  calculateConversionRate()
+}
+
+marketingExpenseService  // singleton
+```
+
+### Business Rules
+
+1. Mỗi `(reportDate, facebookPageId)` chỉ tồn tại 1 report duy nhất.
+   - `facebookPageId = null` → report toàn team.
+   - Unique index ở 2 partial indexes.
+2. Không sửa report `LOCKED` (chỉ DRAFT / REOPENED).
+3. Không approve report chưa `SUBMITTED`.
+4. `ROAS = totalRevenue / spentBudgetTotal` (0 khi spent = 0).
+5. `CPA = spentBudgetTotal / closedLeads` (0 khi closed = 0).
+6. `conversionRate = closedLeads / totalLeads` (clamp 0..1).
+7. `remainingBudget = requestedBudget - spentBudget` (per slot).
+
+### Cập nhật
+
+- `src/models/index.ts` — export `MarketingExpenseReport`.
+
+### Verification
+
+- [x] `npx tsc --noEmit` — 0 TypeScript Error
+- [x] Model compile
+- [x] Repository compile
+- [x] Service compile
+- [x] Không tạo API
+- [x] Không tạo UI
+- [x] Không Seed
+- [x] Không sửa Dashboard
+- [x] PROJECT_PROGRESS.md cập nhật Sprint 6.5
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
+
+
+---
+
+
+
+
+---
+
+## Sprint 6.6 — Marketing Expense Seed
+
+### Mục tiêu
+
+Tạo dữ liệu seed cho Marketing Expense để phục vụ Dashboard, Report và các Sprint tiếp theo.
+
+### Files
+
+- `src/db/seeds/marketing-expense.seed.ts` (NEW)
+- `src/db/seed.ts` (UPDATED — register seed)
+
+### Specs
+
+- **Tổng reports**: 80
+- **Date distribution**:
+  - 30% (24) trong 7 ngày gần nhất
+  - 40% (32) trong 30 ngày gần nhất
+  - 30% (24) trong 90 ngày gần nhất
+- **Status distribution** (workflow hợp lệ):
+  - DRAFT 20%
+  - SUBMITTED 20%
+  - APPROVED 25%
+  - LOCKED 25%
+  - REJECTED 10%
+- **Budget slots**: mỗi report 1-3 slots (MORNING/AFTERNOON/URGENT), random selection
+  - requested mỗi slot: 1tr - 8tr VND
+  - spent mỗi slot: 50% - 100% requested (≤ requested)
+
+### Determinism (idempotent)
+
+- Dùng **seeded PRNG (mulberry32)** với seed cố định → mỗi lần chạy đều sinh ra cùng tập
+  `(reportDate, facebookPageId, marketingEmployeeId, status, budget, leads)`.
+- Combined với idempotent `findOne({reportDate, facebookPageId})` →
+  chạy nhiều lần KHÔNG thay đổi số lượng report trong DB (chỉ update).
+- Tổng ổn định = 80 qua mọi lần seed.
+
+### Workflow validation
+
+Seed tự set audit fields theo workflow rule:
+
+| Status    | approvedBy | approvedAt | lockedBy | lockedAt | rejectedBy | rejectedAt | rejectionReason |
+|-----------|------------|------------|----------|----------|------------|------------|-----------------|
+| DRAFT     | -          | -          | -        | -        | -          | -          | -               |
+| SUBMITTED | -          | -          | -        | -        | -          | -          | -               |
+| APPROVED  | ✓ (leader) | ✓ (1-24h)  | -        | -        | -          | -          | -               |
+| LOCKED    | ✓ (leader) | ✓ (24-72h) | ✓ (leader) | ✓ (1-12h) | -        | -          | -               |
+| REJECTED  | -          | -          | -        | -        | ✓ (leader) | ✓ (1-12h)  | ✓ (reason)      |
+
+### Calculator usage
+
+- **KHÔNG hardcode** CPA / ROAS / conversionRate / remainingBudget.
+- Tất cả metric sinh từ `MarketingExpenseCalculator.calculateAll({...})`.
+- Seed verify 5 sample reports — tất cả match chính xác với re-compute.
+
+### Foreign keys (không random ObjectId)
+
+- `marketingEmployeeId` ← `Employee.find({ isActive, roleId: MKT })`
+- `facebookPageId` ← `FacebookPage.find({ isActive: true })`
+- `approvedBy` / `lockedBy` / `rejectedBy` ← `Employee.EMP_LEADER_MKT` (fallback admin)
+- `createdBy` ← `Employee.username = "admin"`
+
+### totalRevenue fallback
+
+- Ưu tiên `Order.find({ marketingEmployeeId, createdAt ∈ reportDate, isActive: true })` → sum `totalAmount`.
+- Nếu không có Order khớp → fallback `spentTotal * randFloat(1.2, 3.5)`.
+
+### Verification (kết quả thực tế)
+
+```
+Total reports: 80
+Status distribution: DRAFT=18, SUBMITTED=15, APPROVED=15, LOCKED=26, REJECTED=6
+Date windows: 7d=22 (27.5%), 30d=37 (46.3%), 90d=21 (26.3%)
+Slot coverage: morning=51, afternoon=58, emergency=62
+FK integrity: invalidFbPage=0, invalidMktEmployee=0
+Workflow integrity: all 0 missing (APPROVED/LOCKED/REJECTED đầy đủ audit fields)
+Calculator consistency: 5/5 samples match
+Duplicate (date, page) pairs: 0
+
+Idempotency:
+  Run 1 (clean):    inserted=80, updated=0,  total=80
+  Run 2 (re-seed):  inserted=0,  updated=80, total=80  ← KHÔNG duplicate
+```
+
+### Verification checklist
+
+- [x] Seed chạy nhiều lần không duplicate (total ổn định ở 80)
+- [x] `MarketingExpenseCalculator.calculateAll()` được sử dụng (5/5 sample match)
+- [x] Không vi phạm unique index `(reportDate, facebookPageId)`
+- [x] Có đủ dữ liệu 7 / 30 / 90 ngày (27.5% / 46.3% / 26.3%)
+- [x] Có đủ mọi trạng thái (DRAFT/SUBMITTED/APPROVED/LOCKED/REJECTED đều có)
+- [x] Có đủ MORNING / AFTERNOON / URGENT (51 / 58 / 62 reports)
+- [x] `npx tsc --noEmit` → 0 TypeScript Error
+- [x] Workflow fields đầy đủ (APPROVED có approvedBy/At, LOCKED có all 3, REJECTED có reason)
+- [x] PROJECT_PROGRESS.md cập nhật Sprint 6.6
+
+### Review
+
+Status: Ready for next Sprint

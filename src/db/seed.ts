@@ -16,6 +16,7 @@ import { seedFacebookPages } from "./seeds/facebook-pages.seed";
 import { seedCombos } from "./seeds/combos.seed";
 import { seedLeads } from "./seeds/leads.seed";
 import { seedOrders } from "./seeds/orders.seed";
+import { seedMarketingExpenseReports } from "./seeds/marketing-expense.seed";
 
 async function seed() {
   try {
@@ -40,6 +41,7 @@ async function seed() {
     await seedCombos();
     await seedLeads();
     await seedOrders();
+    await seedMarketingExpenseReports();
     console.log("[DONE] Seed completed");
 
     process.exit(0);

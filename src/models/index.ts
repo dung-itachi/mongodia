@@ -42,6 +42,8 @@ export { LeadHistory } from "./LeadHistory";
 
 export { default as LoginHistory } from "./LoginHistory";
 
+export { default as MarketingExpenseReport } from "./MarketingExpenseReport";
+
 export { default as Notification } from "./Notification";
 
 export { default as Order } from "./Order";
