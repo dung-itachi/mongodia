@@ -14,7 +14,7 @@ export type BreadcrumbItem = {
 
 export type PageHeaderProps = {
   /** Page title */
-  title: string;
+  title: ReactNode;
   /** Optional subtitle */
   subtitle?: string;
   /** Breadcrumb items */

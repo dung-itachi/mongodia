@@ -11,6 +11,8 @@ import { LeadStatus } from "@/constants/leadStatus";
 import { LeadHistory } from "@/models/LeadHistory";
 import { LeadAction } from "@/constants/leadAction";
 import { leadRepository } from "@/repositories/lead.repository";
+import Employee from "@/models/Employee";
+import Role from "@/models/Role";
 import type {
   Lead as LeadDomain,
   LeadSearchParams,
@@ -138,52 +140,83 @@ export class LeadService {
   }
 
   /**
-   * Assign lead to a sale employee
+   * Assign lead to a sale employee (Sprint 5.5.2)
    */
   async assignLead(
     id: string,
     data: AssignLeadInput,
     assignedBy: string
-  ): Promise<LeadDomain | null> {
+  ): Promise<{ success: true; lead: LeadDomain } | { success: false; error: string }> {
+    // 1. Check lead exists
     const existingLead = await leadRepository.findById(id);
     if (!existingLead) {
-      return null;
+      return { success: false, error: "Lead không tồn tại" };
     }
 
-    const updatedLead = await leadRepository.update(id, {
-      saleEmployeeId: data.saleEmployeeId,
-      assignmentType: data.assignmentType,
-      assignedAt: new Date(),
-      status: LeadStatus.ASSIGNED,
-    });
+    // 2. Check lead is active
+    if (!existingLead.isActive) {
+      return { success: false, error: "Lead không hoạt động" };
+    }
 
-    if (updatedLead) {
-      const session = await mongoose.startSession();
-      try {
-        session.startTransaction();
+    // 3. Check sale employee exists
+    const saleEmployee = await Employee.findById(data.saleEmployeeId);
+    if (!saleEmployee) {
+      return { success: false, error: "Nhân viên Sale không tồn tại" };
+    }
 
-        await LeadHistory.create(
-          [
-            {
-              leadId: id,
-              employeeId: assignedBy,
-              action: LeadAction.ASSIGNED,
-              note: `Phân công cho sale: ${data.saleEmployeeId}`,
-            },
-          ],
-          { session }
-        );
+    // 4. Check sale employee is active
+    if (!saleEmployee.isActive) {
+      return { success: false, error: "Nhân viên Sale không hoạt động" };
+    }
 
-        await session.commitTransaction();
-      } catch (error) {
+    // 5. Check sale employee has SALE role
+    const role = await Role.findById(saleEmployee.roleId).lean();
+    if (!role || role.code !== "SALE") {
+      return { success: false, error: "Người được phân công phải có vai trò Sale" };
+    }
+
+    // 6. Check if assigning to same sale
+    if (existingLead.saleEmployeeId === data.saleEmployeeId) {
+      return { success: false, error: "Lead đã được phân công cho nhân viên Sale này" };
+    }
+
+    const oldSaleEmployeeId = existingLead.saleEmployeeId ?? null;
+
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      const updatedLead = await leadRepository.assignSale(id, data.saleEmployeeId);
+
+      if (!updatedLead) {
         await session.abortTransaction();
-        console.error("Failed to create lead history:", error);
-      } finally {
-        session.endSession();
+        return { success: false, error: "Không thể cập nhật lead" };
       }
-    }
 
-    return updatedLead;
+      await LeadHistory.create(
+        [
+          {
+            leadId: new mongoose.Types.ObjectId(id),
+            employeeId: new mongoose.Types.ObjectId(assignedBy),
+            action: LeadAction.ASSIGNED,
+            oldValue: oldSaleEmployeeId ?? undefined,
+            newValue: data.saleEmployeeId,
+            note: `saleEmployeeId: ${oldSaleEmployeeId ?? "(null)"} → ${saleEmployee.fullName} (${data.saleEmployeeId})`,
+          },
+        ],
+        { session }
+      );
+
+      await session.commitTransaction();
+
+      return { success: true, lead: updatedLead };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   /**
@@ -277,6 +310,10 @@ export class LeadService {
 
   async delete(id: string, deletedBy: string) {
     return this.deleteLead(id, deletedBy);
+  }
+
+  async assign(id: string, data: AssignLeadInput, assignedBy: string) {
+    return this.assignLead(id, data, assignedBy);
   }
 
   async search(params: LeadSearchParams) {

@@ -13,6 +13,22 @@ import type { LeadSource } from "@/constants/leadSource";
 // Types
 // ============================================================================
 
+export interface LeadTimelineItem {
+  id: string;
+  leadId: string;
+  action: string;
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+  note?: string;
+  employee: {
+    id: string;
+    name: string;
+    employeeCode: string;
+  } | null;
+  createdAt: string;
+}
+
 export type MarketingLeadFilters = {
   keyword?: string;
   status?: string;
@@ -259,4 +275,54 @@ export function useDeleteLead() {
       void queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
     },
   });
+}
+
+// ============================================================================
+// Timeline
+// ============================================================================
+
+async function fetchLeadTimeline(leadId: string): Promise<LeadTimelineItem[]> {
+  const response = await fetch(`/api/marketing/leads/${leadId}/timeline`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.message || "Failed to fetch timeline");
+  }
+
+  return result.data ?? [];
+}
+
+/**
+ * Hook to fetch timeline for a lead (Sprint 5.6)
+ */
+export function useLeadTimeline(leadId: string | null) {
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<LeadTimelineItem[], Error>({
+    queryKey: ["lead-timeline", leadId],
+    queryFn: () => fetchLeadTimeline(leadId!),
+    enabled: !!leadId,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  return {
+    data: data ?? [],
+    items: data ?? [],
+    loading: isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }

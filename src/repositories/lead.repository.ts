@@ -3,15 +3,25 @@
  *
  * Clean Architecture: Repository layer cho Lead.
  * Chỉ làm việc với MongoDB - không có business logic.
+ *
+ * Sprint 5.4A: Chứa toàn bộ Mongo Aggregation cho Dashboard.
  */
 
 import mongoose, { type SortOrder } from "mongoose";
 import { Lead, type ILead } from "@/models/Lead";
+import { LeadStatus } from "@/constants/leadStatus";
 import type {
   LeadSearchParams,
   CreateLeadInput,
   UpdateLeadInput,
 } from "@/types/lead";
+import type {
+  MarketingSummary,
+  DailyLeadChartItem,
+  LeadSourceChartItem,
+  TopMarketingItem,
+} from "@/types/marketing-dashboard";
+import { LeadSource, LEAD_SOURCE_LABELS } from "@/constants/leadSource";
 
 /**
  * Map MongoDB document to Lead domain type
@@ -195,6 +205,26 @@ export class LeadRepository {
   }
 
   /**
+   * Assign sale employee to a lead
+   */
+  async assignSale(id: string, saleEmployeeId: string) {
+    const doc = await Lead.findByIdAndUpdate(
+      id,
+      {
+        saleEmployeeId: new mongoose.Types.ObjectId(saleEmployeeId),
+        assignedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      { new: true }
+    )
+      .populate("marketingEmployeeId", "_id employeeCode name")
+      .populate("saleEmployeeId", "_id employeeCode name")
+      .lean();
+    if (!doc) return null;
+    return mapToLead(doc as ILead);
+  }
+
+  /**
    * Find lead by ID
    */
   async findById(id: string) {
@@ -275,6 +305,224 @@ export class LeadRepository {
       isActive: true,
     });
     return count > 0;
+  }
+
+  // =========================================================================
+  // Dashboard Aggregation Methods (Sprint 5.4A)
+  // =========================================================================
+
+  /**
+   * Aggregate summary counts using $facet — runs all 6 counts in one round-trip.
+   *
+   * todayLead  = count leads with createdAt = today (start → end of today)
+   * weekLead   = count leads with createdAt in last 7 days
+   * monthLead  = count leads with createdAt from start of current month
+   * totalLead  = count all active leads
+   * assignedLead = count leads with saleEmployeeId assigned
+   * closedLead = count leads with status = CLOSED
+   * conversionRate = closedLead / totalLead * 100
+   */
+  async aggregateSummary(): Promise<MarketingSummary> {
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+    const weekStart = new Date(todayStart);
+    weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+
+    const results = await Lead.aggregate([
+      { $match: { isActive: true } },
+      {
+        $facet: {
+          todayLead: [
+            { $match: { createdAt: { $gte: todayStart, $lte: todayEnd } } },
+            { $count: "count" },
+          ],
+          weekLead: [
+            { $match: { createdAt: { $gte: weekStart } } },
+            { $count: "count" },
+          ],
+          monthLead: [
+            { $match: { createdAt: { $gte: monthStart } } },
+            { $count: "count" },
+          ],
+          totalLead: [{ $count: "count" }],
+          assignedLead: [
+            { $match: { saleEmployeeId: { $exists: true, $ne: null } } },
+            { $count: "count" },
+          ],
+          closedLead: [
+            { $match: { status: LeadStatus.CLOSED } },
+            { $count: "count" },
+          ],
+        },
+      },
+    ]).exec();
+
+    const facet = results[0] ?? {};
+    const todayResult = (facet.todayLead?.[0]?.count as number) ?? 0;
+    const weekResult = (facet.weekLead?.[0]?.count as number) ?? 0;
+    const monthResult = (facet.monthLead?.[0]?.count as number) ?? 0;
+    const totalResult = (facet.totalLead?.[0]?.count as number) ?? 0;
+    const assignedResult = (facet.assignedLead?.[0]?.count as number) ?? 0;
+    const closedResult = (facet.closedLead?.[0]?.count as number) ?? 0;
+
+    const conversionRate = totalResult > 0
+      ? Math.round((closedResult / totalResult) * 1000) / 10
+      : 0;
+
+    return {
+      todayLead: todayResult,
+      weekLead: weekResult,
+      monthLead: monthResult,
+      totalLead: totalResult,
+      assignedLead: assignedResult,
+      closedLead: closedResult,
+      conversionRate,
+    };
+  }
+
+  /**
+   * Aggregate daily lead counts for the last 7 days.
+   *
+   * Groups by date (YYYY-MM-DD), sorts ascending, fills missing dates with 0
+   * so the chart always shows 7 consecutive days.
+   */
+  async aggregateDailyLead(): Promise<DailyLeadChartItem[]> {
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const weekStart = new Date(todayStart);
+    weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+
+    const pipeline = [
+      {
+        $match: {
+          createdAt: { $gte: weekStart },
+          isActive: true,
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 as const } },
+      { $project: { _id: 0, date: "$_id", count: 1 } },
+    ];
+
+    const results = await Lead.aggregate(pipeline).exec();
+
+    const dateMap = new Map<string, number>();
+    for (const r of results) {
+      dateMap.set(r.date, r.count);
+    }
+
+    const items: DailyLeadChartItem[] = [];
+    const cursor = new Date(weekStart);
+    while (cursor <= now) {
+      const dateStr = cursor.toISOString().slice(0, 10);
+      items.push({ date: dateStr, count: dateMap.get(dateStr) ?? 0 });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    return items;
+  }
+
+  /**
+   * Aggregate lead counts grouped by sourceType.
+   *
+   * Maps sourceType enum to human-readable label via LEAD_SOURCE_LABELS.
+   * Falls back to raw sourceType if label not found.
+   */
+  async aggregateLeadSource(): Promise<LeadSourceChartItem[]> {
+    const pipeline = [
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: "$sourceType",
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 as const } },
+      { $project: { _id: 0, source: "$_id", count: 1 } },
+    ];
+
+    const results = await Lead.aggregate(pipeline).exec();
+
+    return results.map((r) => ({
+      source: LEAD_SOURCE_LABELS[r.source as LeadSource] ?? r.source,
+      count: r.count,
+    }));
+  }
+
+  /**
+   * Aggregate top marketing employees by lead performance.
+   *
+   * Groups by marketingEmployeeId (already exists in Lead schema).
+   * Counts total leads and closed leads per employee, calculates conversionRate.
+   * Uses $lookup to fetch employee name from employees collection.
+   * Returns top N sorted by totalLead descending.
+   *
+   * NOTE: Leads without marketingEmployeeId are excluded — expected behaviour.
+   */
+  async aggregateTopMarketing(limit = 5): Promise<TopMarketingItem[]> {
+    const pipeline = [
+      {
+        $match: {
+          marketingEmployeeId: { $exists: true, $ne: null },
+          isActive: true,
+        },
+      },
+      {
+        $group: {
+          _id: "$marketingEmployeeId",
+          totalLead: { $sum: 1 },
+          closedLead: {
+            $sum: { $cond: [{ $eq: ["$status", LeadStatus.CLOSED] }, 1, 0] },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "_id",
+          foreignField: "_id",
+          as: "employee",
+        },
+      },
+      { $unwind: { path: "$employee", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 0,
+          employeeId: { $toString: "$_id" },
+          employeeName: { $ifNull: ["$employee.name", "Unknown"] },
+          avatar: { $ifNull: ["$employee.avatar", null] },
+          totalLead: 1,
+          closedLead: 1,
+          conversionRate: {
+            $cond: [
+              { $gt: ["$totalLead", 0] },
+              { $round: [{ $multiply: [{ $divide: ["$closedLead", "$totalLead"] }, 100] }, 1] },
+              0,
+            ],
+          },
+        },
+      },
+      { $sort: { totalLead: -1 as const } },
+      { $limit: limit },
+    ];
+
+    const results = await Lead.aggregate(pipeline).exec();
+
+    return results.map((r) => ({
+      employeeId: r.employeeId,
+      employeeName: r.employeeName,
+      avatar: r.avatar,
+      totalLead: r.totalLead,
+      closedLead: r.closedLead,
+      conversionRate: r.conversionRate,
+    }));
   }
 }
 

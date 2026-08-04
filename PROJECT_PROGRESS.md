@@ -388,6 +388,375 @@ Status: 🟢 Dashboard COMPLETE — Sẵn sàng cho Sprint 5 — Marketing Modul
 
 ### Sprint 5.3 — Marketing CRUD Mongo Migration
 
+### Sprint 5.4 — Marketing Dashboard Mongo Aggregation
+
+### Status
+
+✅ Completed (2026-08-04)
+
+### Mục tiêu
+
+Chuyển Marketing Dashboard từ Mock sang MongoDB Aggregation thật, giữ nguyên UI và React Query API.
+
+### Files tạo mới
+
+| File | Mô tả |
+|------|--------|
+| `src/services/marketing-dashboard.service.ts` | Service chứa logic aggregation cho Summary, DailyLead, LeadSource, TopMarketing |
+
+### Files sửa
+
+| File | Thay đổi |
+|------|----------|
+| `src/app/api/marketing/dashboard/route.ts` | Bỏ mockData, gọi MarketingDashboardService |
+
+### Summary — cách tính
+
+| Field | Cách tính |
+|-------|-----------|
+| `todayLead` | `createdAt` = hôm nay (start → end of today) |
+| `weekLead` | `createdAt` trong 7 ngày gần nhất (rolling window) |
+| `monthLead` | `createdAt` từ đầu tháng hiện tại → hôm nay |
+| `totalLead` | Tất cả lead active |
+| `assignedLead` | Lead có `saleEmployeeId` đã gán |
+| `closedLead` | Lead có `status = CLOSED` |
+| `conversionRate` | `closedLead / totalLead * 100` |
+
+### Aggregations sử dụng
+
+| Phương thức | Aggregation stages |
+|-------------|-------------------|
+| `getSummary()` | `$match`, `$facet` (chạy 6 count trong 1 round-trip) |
+| `getDailyLead()` | `$match`, `$group` (theo ngày), `$sort`, `$project` |
+| `getLeadSource()` | `$match`, `$group` (theo sourceType), `$sort`, `$project` |
+| `getTopMarketing()` | `$match`, `$group` (theo `marketingEmployeeId` — field đã tồn tại trong Lead schema), `$lookup` (employees), `$unwind`, `$project`, `$sort`, `$limit` |
+
+### Repository methods thêm
+
+Không — aggregation viết trong service, dùng trực tiếp `Lead.aggregate()`.
+Không sửa CRUD đã production ở Sprint 5.3.
+Không phá backward compatibility.
+
+### Service methods thêm
+
+| Method | Mô tả |
+|--------|--------|
+| `getSummary()` | `$facet`: đếm today/week/month/total/assigned/closed, tính conversionRate |
+| `getDailyLead()` | Group theo ngày (7 ngày), lấp đầy ngày không có data = 0 |
+| `getLeadSource()` | Group theo sourceType, map label |
+| `getTopMarketing()` | Group theo `marketingEmployeeId` (Lead schema), lookup name, tính conversionRate |
+| `getDashboard()` | Gọi song song 4 method trên bằng Promise.all |
+
+### API đã bỏ mock
+
+| Endpoint | Trước | Sau |
+|---------|-------|-----|
+| `GET /api/marketing/dashboard` | mockData hardcode | `MarketingDashboardService.getDashboard()` |
+
+### Schema
+
+- Không thay đổi Lead schema.
+- Không thêm field mới vào Lead model.
+- `marketingEmployeeId` đã tồn tại trong Lead schema — dùng trực tiếp.
+- Nếu Lead không có `marketingEmployeeId` → excluded khỏi Top Marketing (expected behaviour).
+
+### Verification
+
+- `npm run lint` — 0 ESLint Error trong các file Sprint 5.4
+- `npx tsc --noEmit` — 0 TypeScript Error
+- Không còn hardcode số liệu trong `/api/marketing/dashboard`
+- Không còn object mock
+- Không còn TODO "Replace mock" trong route
+
+### Review
+
+Status: 🟢 Dashboard COMPLETE — MongoDB Aggregation
+
+### Sprint 5.5.1 — Marketing Lead Detail
+
+### Status
+
+✅ Completed (2026-08-04)
+
+### Mục tiêu
+
+Hoàn thiện trang Lead Detail để Marketing xem toàn bộ thông tin của một Lead.
+
+### Files tạo mới
+
+| File | Mô tả |
+|------|--------|
+| `src/app/(protected)/marketing/input/[id]/page.tsx` | Lead Detail page — hiển thị thông tin Lead, Khách hàng, Marketing, Sale, Notes |
+| `src/app/(protected)/marketing/input/[id]/lead-detail.module.css` | CSS cho Lead Detail page |
+
+### Files sửa
+
+| File | Thay đổi |
+|------|----------|
+| `src/app/(protected)/marketing/input/page.tsx` | Wire `onView` → navigate đến `/marketing/input/:id` |
+
+### Backend
+
+- `GET /api/marketing/leads/:id` đã có từ Sprint 5.3 — không cần tạo mới.
+- API dùng `LeadService → LeadRepository → MongoDB` (không mock).
+
+### Frontend Layout
+
+```
+PageHeader (breadcrumb + back button)
+    ↓
+Thông tin Lead (mã, trạng thái, nguồn, ngày tạo, cập nhật, trùng lặp)
+    ↓
+Thông tin Khách hàng (tên, điện thoại, email, facebook)
+    ↓
+Thông tin Marketing (nhân viên, mã)
+    ↓
+Thông tin Sale (nhân viên, mã)
+    ↓
+Ghi chú
+    ↓
+Lịch sử (Coming Soon)
+```
+
+### UI Kit sử dụng
+
+- `PageContainer`, `PageHeader`, `CardSection`, `DescriptionList`, `InfoItem`, `StatusBadge`, `Spin`
+- Không tạo UI component mới.
+
+### Routing
+
+- `LeadTable` → click View (Eye icon) → `/marketing/input/:id`
+- `LeadDetailPage` → click Quay lại → `router.back()`
+
+### Verification
+
+- `npx tsc --noEmit` — 0 TypeScript Error
+- Lead Detail đọc MongoDB (qua API Sprint 5.3)
+- View từ LeadTable hoạt động
+
+### Review
+
+Status: 🟢 Marketing Lead Detail COMPLETE
+
+### Sprint 5.5.2 — Lead Assignment (Production)
+
+### Status
+
+✅ Completed (2026-08-04)
+
+### Mục tiêu
+
+Hoàn thiện chức năng Assign Lead từ Marketing sang Sale.
+
+### Business Flow
+
+```
+API Route → LeadService.assignLead() → LeadRepository.assignSale() → MongoDB → LeadHistory
+```
+
+### Files tạo mới
+
+| File | Mô tả |
+|------|--------|
+| `src/app/api/marketing/leads/[id]/assign/route.ts` | PATCH endpoint phân công Sale |
+| `src/components/marketing/leads/AssignSaleDrawer.tsx` | Drawer chọn Sale với AsyncSelect + debounce |
+
+### Files sửa
+
+| File | Thay đổi |
+|------|----------|
+| `src/repositories/lead.repository.ts` | Thêm `assignSale()` — chỉ update MongoDB, không chứa business logic |
+| `src/services/lead.service.ts` | Thêm `assignLead()` với đầy đủ business checks: lead tồn tại, active, sale tồn tại, active, có role SALE, không assign trùng |
+| `src/app/(protected)/marketing/input/[id]/page.tsx` | Wire Assign Sale button → Drawer → invalidateQueries |
+| `src/constants/permissions.ts` | Thêm `lead.convert` permission |
+
+### Backend — Business Logic (LeadService.assignLead)
+
+- Kiểm tra Lead tồn tại
+- Kiểm tra Lead active
+- Kiểm tra Employee tồn tại
+- Kiểm tra Employee active
+- Kiểm tra Employee có role SALE
+- Kiểm tra không assign cùng Sale hiện tại
+- Cập nhật `saleEmployeeId`, `assignedAt`, `status = ASSIGNED`, `updatedAt`
+- Ghi `LeadHistory` với `oldValue`/`newValue`
+
+### Backend — LeadHistory
+
+```ts
+{
+  leadId: id,
+  employeeId: assignedBy,
+  action: LeadAction.ASSIGNED,
+  oldValue: oldSaleEmployeeId ?? undefined,
+  newValue: saleEmployeeId,
+  note: `Phân công cho sale: ${saleEmployee.fullName}`,
+}
+```
+
+### Frontend — AssignSaleDrawer
+
+- `DrawerForm` wrapper
+- `AsyncSelect` với search debounce (gọi `/api/employees?role=SALE&isActive=true`)
+- Hiển thị: Tên + Mã nhân viên Sale
+- Sau assign thành công: `invalidateQueries` cho:
+  - `["marketing-lead", lead._id]` — Lead Detail
+  - `["marketing-leads"]` — Marketing Lead List
+  - `["marketing-dashboard"]` — Marketing Dashboard
+
+### UI Kit sử dụng
+
+- `DrawerForm`, `AsyncSelect`
+- Không tạo UI component mới
+
+### Permissions
+
+- Assign Sale button ẩn hoàn toàn nếu không có `lead.assign` permission
+- Convert button dùng `lead.convert` (tách riêng khỏi `lead.update`)
+
+### Verification
+
+- `npx tsc --noEmit` — 0 TypeScript Error
+- Assign thành công
+- MongoDB cập nhật `saleEmployeeId`, `assignedAt`, `updatedAt` (không đổi status)
+- `LeadHistory` có record `ASSIGNED` với `oldValue`/`newValue`/`note`
+- React Query refetch đúng sau assign
+- Không còn mock cho Assign
+
+### Review
+
+Status: 🟢 Lead Assignment COMPLETE — Production Ready
+
+### Sprint 5.6 — Lead Timeline (Production)
+
+### Status
+
+✅ Completed (2026-08-04)
+
+### Mục tiêu
+
+Hoàn thiện tab Timeline của Lead Detail bằng dữ liệu thật từ MongoDB (LeadHistory).
+
+### Business Flow
+
+```
+LeadRoute → LeadHistoryService.getTimeline() → LeadHistoryRepository.findTimelineByLead() → MongoDB
+```
+
+### Files tạo mới
+
+| File | Mô tả |
+|------|--------|
+| `src/repositories/leadHistory.repository.ts` | LeadHistoryRepository với `findTimelineByLead()` |
+| `src/services/leadHistory.service.ts` | LeadHistoryService với `getTimeline()` |
+| `src/app/api/marketing/leads/[id]/timeline/route.ts` | GET endpoint timeline |
+
+### Files sửa
+
+| File | Thay đổi |
+|------|----------|
+| `src/hooks/useMarketingLeads.ts` | Thêm `LeadTimelineItem` type và `useLeadTimeline()` hook |
+| `src/app/(protected)/marketing/input/[id]/page.tsx` | TimelineTab dùng Ant Design Timeline, real data, không mock |
+
+### Frontend — TimelineTab
+
+- `useLeadTimeline(leadId)` — React Query với `staleTime: 60s`, `gcTime: 5m`, `refetchOnWindowFocus: false`
+- Ant Design `Timeline` component với:
+  - `aria-label` cho accessibility
+  - Action label (CREATED, ASSIGNED, STATUS_CHANGED...)
+  - Description với oldValue → newValue
+  - Employee name + relative time (`dayjs.fromNow()`)
+  - Color theo action type
+
+### API Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "...",
+      "action": "ASSIGNED",
+      "note": "saleEmployeeId: (null) → Nguyễn Văn B (abc123)",
+      "oldValue": null,
+      "newValue": "abc123",
+      "employee": { "id": "...", "name": "Marketing A", "employeeCode": "NV001" },
+      "createdAt": "2026-08-04T10:00:00Z"
+    }
+  ]
+}
+```
+
+### UI Kit sử dụng
+
+- `CardSection`, `Spin`, `EmptyState`, `Tag`, Ant Design `Timeline`
+- Không tạo Timeline component mới
+
+### Verification
+
+- `npx tsc --noEmit` — 0 TypeScript Error
+- Timeline đọc MongoDB (LeadHistory)
+- Không còn "Coming Soon"
+- Không còn dữ liệu giả
+- LeadHistory được render đúng thứ tự (createdAt DESC)
+
+### Review
+
+Status: 🟢 Lead Timeline COMPLETE — Production Ready
+
+### Sprint 5.4A — Dashboard Repository Refactor
+
+### Status
+
+✅ Completed (2026-08-04)
+
+### Mục tiêu
+
+Refactor kiến trúc: chuyển Mongo Aggregation từ Service xuống Repository để chuẩn bị cho các Dashboard khác (Admin, Sales, Warehouse).
+
+### Files sửa
+
+| File | Thay đổi |
+|------|----------|
+| `src/repositories/lead.repository.ts` | Thêm 4 method aggregation: `aggregateSummary`, `aggregateDailyLead`, `aggregateLeadSource`, `aggregateTopMarketing` |
+| `src/services/marketing-dashboard.service.ts` | Bỏ pipeline Mongo, chỉ orchestration — gọi repository rồi ghép response shape |
+
+### Repository methods thêm
+
+| Method | Mô tả |
+|--------|--------|
+| `aggregateSummary()` | `$match` + `$facet` — chạy 6 count trong 1 round-trip |
+| `aggregateDailyLead()` | `$match` + `$group` (theo ngày) + `$sort` + `$project` |
+| `aggregateLeadSource()` | `$match` + `$group` (theo sourceType) + `$sort` + `$project` |
+| `aggregateTopMarketing(limit)` | `$match` + `$group` + `$lookup` (employees) + `$unwind` + `$project` + `$sort` + `$limit` |
+
+### Kiến trúc sau refactor
+
+```
+API Route
+    ↓
+MarketingDashboardService (orchestration only)
+    ↓
+LeadRepository
+    ├── aggregateSummary()
+    ├── aggregateDailyLead()
+    ├── aggregateLeadSource()
+    └── aggregateTopMarketing()
+```
+
+### Verification
+
+- `npx tsc --noEmit` — 0 TypeScript Error
+- Không thay đổi API response
+- Không còn `aggregate()` trong `MarketingDashboardService`
+- Tất cả `aggregate()` nằm trong `LeadRepository`
+
+### Review
+
+Status: 🟢 Dashboard Repository Refactor COMPLETE
+
+### Sprint 5.3 — Marketing CRUD Mongo Migration
+
 ### Status
 
 ✅ Completed (2026-08-04)

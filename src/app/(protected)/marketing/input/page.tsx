@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { message } from "antd";
 import {
   PageContainer,
@@ -31,6 +32,7 @@ import LeadDrawer, { type LeadFormData } from "./LeadDrawer";
 import type { MarketingLead } from "@/types/marketing-lead";
 
 export default function MarketingInputPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState<MarketingLeadFilters>({
     page: 1,
     limit: 20,
@@ -130,6 +132,13 @@ export default function MarketingInputPage() {
     setEditingLead(null);
   }, []);
 
+  const handleViewLead = useCallback(
+    (lead: MarketingLead) => {
+      void router.push(`/marketing/input/${lead._id}`);
+    },
+    [router]
+  );
+
   return (
     <PageContainer>
       <PageHeader
@@ -170,6 +179,7 @@ export default function MarketingInputPage() {
           <>
             <LeadTable
               data={leads}
+              onView={handleViewLead}
               onEdit={handleEditLead}
               onDelete={handleDeleteClick}
               loading={loading}
