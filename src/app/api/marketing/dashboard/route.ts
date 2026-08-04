@@ -4,18 +4,30 @@
  * GET /api/marketing/dashboard
  *
  * Returns marketing dashboard summary, charts and top performers.
- * Currently uses mock data — replace with real queries in future sprints.
+ *
+ * IMPORTANT: Currently uses mock data.
+ * TODO: Replace with Mongo aggregation queries:
+ *   - Use lead collection with date filters
+ *   - Aggregate by source, date, assignee
+ *   - Calculate conversion rate from orders collection
  */
 
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  // TODO: Replace with Mongo aggregation
+  // const leads = await db.collection('leads').aggregate([
+  //   { $match: { createdAt: { $gte: startOfWeek } } },
+  //   { $group: { _id: '$source', count: { $sum: 1 } } }
+  // ]).toArray();
+
   const mockData = {
     summary: {
-      totalLead: 1248,
       todayLead: 42,
+      weekLead: 287,
+      monthLead: 1248,
+      totalLead: 1248,
       assignedLead: 1180,
-      unassignedLead: 68,
       closedLead: 312,
       conversionRate: 25.0,
     },
@@ -38,11 +50,11 @@ export async function GET() {
       ],
     },
     topMarketing: [
-      { name: "Nguyễn Văn M1", count: 142 },
-      { name: "Trần Thị M2", count: 128 },
-      { name: "Lê Văn M3", count: 110 },
-      { name: "Phạm Thị M4", count: 95 },
-      { name: "Hoàng Văn M5", count: 82 },
+      { employeeId: "mk001", employeeName: "Nguyễn Văn M1", avatar: null, totalLead: 142, closedLead: 38, conversionRate: 26.8 },
+      { employeeId: "mk002", employeeName: "Trần Thị M2", avatar: null, totalLead: 128, closedLead: 35, conversionRate: 27.3 },
+      { employeeId: "mk003", employeeName: "Lê Văn M3", avatar: null, totalLead: 110, closedLead: 28, conversionRate: 25.5 },
+      { employeeId: "mk004", employeeName: "Phạm Thị M4", avatar: null, totalLead: 95, closedLead: 22, conversionRate: 23.2 },
+      { employeeId: "mk005", employeeName: "Hoàng Văn M5", avatar: null, totalLead: 82, closedLead: 18, conversionRate: 22.0 },
     ],
   };
 

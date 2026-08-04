@@ -8,7 +8,6 @@ import {
   TeamOutlined,
   ThunderboltOutlined,
   UsergroupAddOutlined,
-  UserSwitchOutlined,
   CheckCircleOutlined,
   RiseOutlined,
 } from "@ant-design/icons";
@@ -29,13 +28,6 @@ export function buildMarketingStats(
 ): MarketingStatItem[] {
   return [
     {
-      title: "Tổng Leads",
-      value: formatNumber(summary.totalLead),
-      icon: <TeamOutlined />,
-      color: "blue",
-      trend: { value: "+12.5%", direction: "up" },
-    },
-    {
       title: "Hôm nay",
       value: formatNumber(summary.todayLead),
       icon: <ThunderboltOutlined />,
@@ -43,18 +35,32 @@ export function buildMarketingStats(
       trend: { value: "+5.2%", direction: "up" },
     },
     {
+      title: "Tuần này",
+      value: formatNumber(summary.weekLead),
+      icon: <TeamOutlined />,
+      color: "blue",
+      trend: { value: "+12.5%", direction: "up" },
+    },
+    {
+      title: "Tháng này",
+      value: formatNumber(summary.monthLead),
+      icon: <TeamOutlined />,
+      color: "purple",
+      trend: { value: "+18.3%", direction: "up" },
+    },
+    {
+      title: "Tổng Leads",
+      value: formatNumber(summary.totalLead),
+      icon: <TeamOutlined />,
+      color: "blue",
+      trend: { value: "+12.5%", direction: "up" },
+    },
+    {
       title: "Đã phân công",
       value: formatNumber(summary.assignedLead),
       icon: <UsergroupAddOutlined />,
       color: "purple",
       trend: { value: "+3.1%", direction: "up" },
-    },
-    {
-      title: "Chưa phân công",
-      value: formatNumber(summary.unassignedLead),
-      icon: <UserSwitchOutlined />,
-      color: "red",
-      trend: { value: "-1.4%", direction: "down" },
     },
     {
       title: "Chốt",

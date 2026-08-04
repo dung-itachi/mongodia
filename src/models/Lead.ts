@@ -32,6 +32,7 @@ export interface ILead extends Document {
   facebookLink?: string;
   phone?: string;
   phone2?: string;
+  email?: string;
   address?: string;
   province?: string;
   district?: string;
@@ -69,6 +70,7 @@ const LeadSchema = new Schema<ILead>(
     facebookLink: { type: String },
     phone: { type: String },
     phone2: { type: String },
+    email: { type: String },
     address: { type: String },
     province: { type: String },
     district: { type: String },

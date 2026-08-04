@@ -39,6 +39,127 @@
   min-width: 0;
 }
 
+/* Filter bar */
+.mk-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+/* Coming Soon placeholder for charts */
+.mk-coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: #8c8c8c;
+}
+
+.mk-coming-soon span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #595959;
+}
+
+.mk-coming-soon small {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* Facebook Pages widget */
+.mk-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mk-page-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.mk-page-row:last-child {
+  border-bottom: none;
+}
+
+.mk-page-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #262626;
+  flex: 1;
+}
+
+.mk-page-followers {
+  font-size: 12px;
+  color: #8c8c8c;
+  min-width: 120px;
+  text-align: right;
+}
+
+.mk-page-engagement {
+  font-size: 12px;
+  color: #52c41a;
+  min-width: 100px;
+  text-align: right;
+}
+
+/* Campaign Status widget */
+.mk-campaigns {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mk-campaign-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mk-campaign-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mk-campaign-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #262626;
+}
+
+.mk-campaign-budget {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.mk-campaign-track {
+  height: 6px;
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.mk-campaign-fill {
+  height: 100%;
+  background-color: #1890ff;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
 /* Daily lead chart (line/bar placeholder) */
 .mk-daily {
   display: flex;

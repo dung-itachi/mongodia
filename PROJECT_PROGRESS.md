@@ -386,6 +386,53 @@ Reviewed by Cursor Agent
 
 Status: 🟢 Dashboard COMPLETE — Sẵn sàng cho Sprint 5 — Marketing Module.
 
+### Sprint 5.3 — Marketing CRUD Mongo Migration
+
+### Status
+
+✅ Completed (2026-08-04)
+
+### Mục tiêu
+
+Chuyển toàn bộ Marketing Lead CRUD từ mock sang MongoDB thật, giữ nguyên UI và React Query API.
+
+### Files cập nhật
+
+| File | Thay đổi |
+|------|----------|
+| `src/models/Lead.ts` | Bổ sung `email` cho Lead schema |
+| `src/types/lead.ts` | Bổ sung `email`, `marketingEmployee`, `saleEmployee`, `sort`, `order` |
+| `src/repositories/lead.repository.ts` | Dùng Mongo filter/search/pagination/sort và populate employee ids |
+| `src/services/lead.service.ts` | Thêm alias `getById`, `create`, `update`, `delete`, `search` |
+| `src/app/api/marketing/leads/route.ts` | GET/POST chuyển sang LeadService + MongoDB |
+| `src/app/api/marketing/leads/[id]/route.ts` | GET/PATCH/DELETE chuyển sang LeadService + MongoDB |
+
+### Files bỏ mock
+
+| File | Thay đổi |
+|------|----------|
+| `src/mocks/marketing/leads.ts` | Không còn được route marketing CRUD import |
+
+### Service / Repository
+
+- `LeadService` được sử dụng cho create, update, delete, search, getById.
+- `LeadRepository` được sử dụng cho Mongo filter, regex search, pagination, countDocuments, sort, populate.
+- `Counter` tiếp tục được dùng để generate lead code.
+- `LeadHistory` tiếp tục được ghi cho create, update, delete.
+
+### API Endpoints
+
+- `GET /api/marketing/leads` → MongoDB
+- `POST /api/marketing/leads` → MongoDB
+- `GET /api/marketing/leads/:id` → MongoDB
+- `PATCH /api/marketing/leads/:id` → MongoDB
+- `DELETE /api/marketing/leads/:id` → MongoDB
+
+### Verification
+
+- `npm run lint`
+- `npx tsc --noEmit`
+
 ### Sprint 5.1 — Marketing Dashboard
 
 ### Status

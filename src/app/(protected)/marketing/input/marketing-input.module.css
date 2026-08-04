@@ -1,0 +1,71 @@
+/* Marketing Input layout (Sprint 5.2 — Marketing Input) */
+
+.mi-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mi-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.mi-primary-text {
+  font-weight: 500;
+}
+
+.mi-muted-text {
+  color: #8c8c8c;
+}
+
+.mi-action-group {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.mi-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.mi-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mi-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 1024px) {
+  .mi-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mi-toolbar-left,
+  .mi-toolbar-right {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .mi-toolbar {
+    gap: 8px;
+  }
+}

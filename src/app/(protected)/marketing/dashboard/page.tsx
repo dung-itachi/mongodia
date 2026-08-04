@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Marketing Dashboard Page (Sprint 5.1 — Marketing Dashboard)
+ * Marketing Dashboard Page (Sprint 5.1A — Marketing Dashboard)
  *
- * Composition: PageContainer + PageHeader + MarketingStatsGrid + MarketingCharts.
+ * Composition: PageContainer + PageHeader + FilterBar + MarketingStatsGrid + MarketingCharts + TopMarketingTable + MarketingWidgets.
  * - No fetch (handled by useMarketingDashboard hook inside children).
  * - No format (handled by lib/format inside children).
  * - No business logic (config delegated to marketing.config.tsx).
@@ -17,8 +17,11 @@ import {
 } from "@/components/common";
 import { useMarketingDashboard } from "@/hooks/useMarketingDashboard";
 import { buildMarketingStats } from "./marketing.config";
+import MarketingFilterBar from "./MarketingFilterBar";
 import MarketingStatsGrid from "./MarketingStatsGrid";
 import MarketingCharts from "./MarketingCharts";
+import MarketingWidgets from "./widgets/MarketingWidgets";
+import TopMarketingTable from "./TopMarketingTable";
 import MarketingErrorState from "./MarketingErrorState";
 import { TeamOutlined } from "@ant-design/icons";
 import styles from "./marketing.module.css";
@@ -59,8 +62,11 @@ export default function MarketingDashboardPage() {
       />
 
       <div className={styles["mk-page"]}>
+        <MarketingFilterBar />
         <MarketingStatsGrid stats={stats} />
         <MarketingCharts />
+        <TopMarketingTable data={data.topMarketing} />
+        <MarketingWidgets />
       </div>
     </PageContainer>
   );
