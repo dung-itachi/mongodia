@@ -3907,3 +3907,41 @@ Verification:
 - Charts config-driven
 - React Query hooks integrated
 - TypeScript 0 errors
+
+
+===========================================
+
+Sprint 8.4 - Tách Lead và Order (2026-08-05)
+
+Business Workflow:
+- Marketing chỉ tạo Lead (không tạo Order)
+- Sale gọi Lead nhiều lần
+- Lead chỉ được convert thành Order khi Sale bấm Chốt
+- Order bắt buộc có leadId ref tới Lead
+
+Lead Model Updates:
+- convertedOrderId (thay thế orderId)
+- isConverted (đánh dấu đã convert)
+
+Business Rules:
+- Lead không được convert nếu: Không nhu cầu, Sai số, Không nghe, Máy bận
+- Chỉ trạng thái QUALIFIED hoặc POTENTIAL mới được convert
+- Lead đã convert rồi → không cho convert lần nữa
+
+API:
+- POST /api/leads/:id/convert: Chốt đơn từ Lead
+
+Repository Updates:
+- markAsConverted(): Đánh dấu lead đã convert
+- findUnconverted(): Tìm lead chưa convert
+- findConverted(): Tìm lead đã convert
+
+Hook:
+- useConvertLead(): Mutation hook để convert lead
+
+Verification:
+- Lead chưa convert → tạo Order thành công
+- Lead đã convert → báo lỗi
+- Order có leadId
+- Lead có convertedOrderId
+- TypeScript 0 errors

@@ -55,9 +55,9 @@ export interface Lead {
   note?: string;
   isDuplicate: boolean;
   isActive: boolean;
-  // Sprint 5.7 — Lead Convert
+  // Sprint 5.7, 8.4 — Lead Convert (8.4: renamed orderId to convertedOrderId)
   isConverted: boolean;
-  orderId?: string;
+  convertedOrderId?: string;
   convertedAt?: Date;
   createdAt: Date;
   updatedAt: Date;

@@ -319,7 +319,13 @@ export class LeadService {
   }
 
   /**
-   * Convert lead to order (Sprint 5.7)
+   * Convert lead to order (Sprint 5.7, 8.4 — Lead Convert to Order)
+   *
+   * Business Rules (Sprint 8.4):
+   * - Lead phải ở trạng thái QUALIFIED hoặc POTENTIAL
+   * - Lead KHÔNG được convert nếu: Không nhu cầu, Sai số, Không nghe, Máy bận
+   * - Lead đã convert rồi → không cho convert lần nữa
+   * - Sau khi convert: Lead.isConverted = true, Lead.convertedOrderId = orderId
    */
   async convertLead(
     id: string,
@@ -341,14 +347,19 @@ export class LeadService {
       return { success: false, error: "Lead chưa được phân công Sale" };
     }
 
-    // 4. Check lead status is QUALIFIED
-    if (existingLead.status !== LeadStatus.QUALIFIED) {
-      return { success: false, error: "Lead phải ở trạng thái QUALIFIED để convert" };
-    }
-
-    // 5. Check lead is not already converted
+    // 4. Check lead is not already converted (Sprint 8.4)
     if (existingLead.isConverted) {
       return { success: false, error: "Lead đã được convert trước đó" };
+    }
+
+    // 5. Check lead status is QUALIFIED hoặc POTENTIAL (Sprint 8.4)
+    // Chỉ những lead có nhu cầu mới được convert
+    const convertibleStatuses = [LeadStatus.QUALIFIED, LeadStatus.POTENTIAL];
+    if (!convertibleStatuses.includes(existingLead.status as LeadStatus)) {
+      return {
+        success: false,
+        error: "Lead phải ở trạng thái Tiềm năng hoặc Đủ điều kiện để chốt đơn"
+      };
     }
 
     const session = await mongoose.startSession();
@@ -397,12 +408,12 @@ export class LeadService {
         session
       );
 
-      // Update lead with conversion info
+      // Update lead with conversion info (Sprint 8.4: use convertedOrderId)
       await Lead.findByIdAndUpdate(
         id,
         {
           isConverted: true,
-          orderId: order._id,
+          convertedOrderId: order._id,
           convertedAt: new Date(),
           updatedAt: new Date(),
         },

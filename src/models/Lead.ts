@@ -59,8 +59,8 @@ export interface ILead extends Document {
   isActive: boolean;
   /** Lead đã được convert thành Order chưa (Sprint 5.7). */
   isConverted: boolean;
-  /** Order ID nếu lead đã convert (Sprint 5.7). */
-  orderId?: mongoose.Types.ObjectId;
+  /** Order ID nếu lead đã convert (Sprint 5.7, 8.4). */
+  convertedOrderId?: mongoose.Types.ObjectId;
   /** Thời điểm convert thành Order (Sprint 5.7). */
   convertedAt?: Date;
   createdAt: Date;
@@ -116,9 +116,9 @@ const LeadSchema = new Schema<ILead>(
     note: { type: String },
     isDuplicate: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
-    // Sprint 5.7 — Lead Convert
+    // Sprint 5.7 — Lead Convert (Sprint 8.4 — renamed orderId to convertedOrderId)
     isConverted: { type: Boolean, default: false },
-    orderId: { type: Schema.Types.ObjectId, ref: "Order" },
+    convertedOrderId: { type: Schema.Types.ObjectId, ref: "Order" },
     convertedAt: { type: Date },
   },
   {
@@ -137,7 +137,7 @@ LeadSchema.index({ assignmentType: 1 });
 LeadSchema.index({ assignedAt: 1 });
 LeadSchema.index({ isActive: 1 });
 LeadSchema.index({ isConverted: 1 });
-LeadSchema.index({ orderId: 1 });
+LeadSchema.index({ convertedOrderId: 1 });
 LeadSchema.index({ createdAt: -1 });
 LeadSchema.index({ categoryId: 1, productId: 1, comboId: 1 });
 

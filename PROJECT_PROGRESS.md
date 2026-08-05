@@ -3,7 +3,7 @@
 
 ---
 
-## Sprint 8.3 ? Sales KPI & Target
+## Sprint 8.4 ? Tách Lead và Order
 
 ### Status
 
@@ -11,152 +11,104 @@
 
 ### M?c tiêu
 
-Xây d?ng KPI cho Sale. KPI ??c hoàn toàn t? MongoDB. Không mock.
+Refactor l?i ?úng nghi?p v? CRM:
+- Marketing không t?o Order
+- Marketing ch? t?o Lead
+- Order ch? ???c t?o khi Sale b?m Ch?t
 
 ### Không s?a
 
-- Marketing
-- Marketing Dashboard
 - Warehouse
 - Inventory
-- Customer
-- Lead
-- Order
-- UI Kit
+- Marketing Dashboard
+- Sales Dashboard
+- Customer Module
+- KPI
+- Payment
 
-### Files t?o m?i
+### Business Workflow m?i
 
-#### Model
+```
+Marketing ? Import Lead ? Lead ? Sale g?i nhi?u l?n
+                                          ?
+Không nghe / Máy b?n / Sai s? / Không nhu c?u / H?n g?i
+                                          ?
+                                    Ti?m n?ng (QUALIFIED / POTENTIAL)
+                                          ?
+                                       CH?T
+                                          ?
+                                    T?o Order
 
-| File | Mô t? |
-| ---- | --------- |
-| src/models/SalesTarget.ts | SalesTarget Mongoose model |
+Lead KHÔNG t? sinh Order.
+```
 
-#### Repository
+### Lead Model Updates (Sprint 8.4)
 
-| File | Mô t? |
-| ---- | --------- |
-| src/repositories/sales-target.repository.ts | SalesTargetRepository - CRUD operations |
+| Field | Mô t? |
+| ----- | ----- |
+| isConverted | ?ánh d?u lead ?ã ???c convert thành order |
+| convertedOrderId | Tham chi?u ??n Order ?ã t?o (thay th? orderId c?) |
 
-#### Service
+### Order Model
 
-| File | Mô t? |
-| ---- | --------- |
-| src/services/sales-kpi/sales-kpi.service.ts | SalesKPIService - business logic |
+Order ?ã có s?n `leadId` ?? tham chi?u ??n Lead g?c.
 
-#### Types
+### Business Rules
 
-| File | Mô t? |
-| ---- | --------- |
-| src/types/sales-kpi.ts | Type definitions |
-
-#### Validator
-
-| File | Mô t? |
-| ---- | --------- |
-| src/validators/sales-target.validator.ts | Zod schemas |
-
-#### API Routes
-
-| File | Mô t? |
-| ---- | --------- |
-| src/app/api/sales/kpi/route.ts | GET KPI dashboard |
-| src/app/api/sales/kpi/chart/route.ts | GET KPI chart |
-| src/app/api/sales/kpi/ranking/route.ts | GET KPI ranking |
-| src/app/api/sales/target/route.ts | PATCH create/update target |
-
-#### Hooks
-
-| File | Mô t? |
-| ---- | --------- |
-| src/hooks/useSalesKPI.ts | useSalesKPI(), useSalesKPIChart(), useSalesKPIRanking(), useSalesTarget() |
-
-#### Configs
-
-| File | Mô t? |
-| ---- | --------- |
-| src/configs/sales-kpi.config.ts | KPI cards config |
-| src/configs/sales-kpi-chart.config.ts | KPI chart & ranking config |
+| Rule | Mô t? |
+| ----- | ----- |
+| Ch? QUALIFIED/POTENTIAL ???c convert | Lead ? tr?ng thái Không nhu c?u, Sai s?, Không nghe, Máy b?n không ???c ch?t |
+| Lead ?ã convert r?i | Không cho convert l?n n?a |
+| Order b?t bu?c có leadId | Order ???c t?o t? Lead ph?i bi?t Lead g?c |
 
 ### Files ch?nh s?a
 
 | File | Thay ??i |
-| ---- | --------- |
-| src/constants/permissions.ts | Thêm sales.kpi.view, sales.kpi.update |
-| src/constants/roles.ts | Thêm sales.kpi permissions cho MANAGER, SALE roles |
+| ----- | --------- |
+| src/models/Lead.ts | ??i orderId ? convertedOrderId |
+| src/types/lead.ts | ??i orderId ? convertedOrderId |
+| src/repositories/lead.repository.ts | ??i orderId ? convertedOrderId, thêm markAsConverted, findUnconverted, findConverted |
+| src/services/lead.service.ts | C?p nh?t convertLead v?i business rules m?i |
 
-### API Endpoints
+### Files t?o m?i
+
+| File | Mô t? |
+| ---- | --------- |
+| src/app/api/leads/[id]/convert/route.ts | POST /api/leads/:id/convert |
+| src/hooks/useConvertLead.ts | useConvertLead() mutation hook |
+
+### API Endpoint
 
 | Method | Endpoint | Permission | Mô t? |
 | ------ | ---------| ---------- | --------- |
-| GET | /api/sales/kpi | sales.kpi.view | KPI dashboard data |
-| GET | /api/sales/kpi/chart | sales.kpi.view | KPI chart data |
-| GET | /api/sales/kpi/ranking | sales.kpi.view | KPI ranking data |
-| PATCH | /api/sales/target | sales.kpi.update | Create/update target |
+| POST | /api/leads/:id/convert | lead.update ho?c order.create | Ch?t ??n t? Lead |
 
-### SalesTarget Model Fields
+### Repository Methods
 
-```
-employeeId, month, year
-targetRevenue, targetOrders, targetCustomers, targetClosedLead
-note, isActive
-createdAt, updatedAt
-```
+| Method | Mô t? |
+| ------ | ----- |
+| markAsConverted(leadId, orderId) | ?ánh d?u lead ?ã convert v?i order ID |
+| findUnconverted(params) | Tìm leads ch?a convert |
+| findConverted(params) | Tìm leads ?ã convert |
 
-### KPI Data Structure
+### Service Method
 
-```
-KPIData:
-- revenue: { target, current, achievement, remaining }
-- orders: { target, current, achievement, remaining }
-- customers: { target, current, achievement, remaining }
-- closedLeads: { target, current, achievement, remaining }
-```
-
-### Dashboard Cards
-
-| Card | Format |
-| ---- | ------ |
-| Target Revenue | currency |
-| Current Revenue | currency |
-| Achievement % | percent |
-| Remaining | currency |
-| Target Orders | number |
-| Current Orders | number |
-| Target Customers | number |
-| Current Customers | number |
-
-### Charts
-
-| Chart | Type |
-| ----- | ---- |
-| Revenue vs Target | area/bar |
-| Orders vs Target | area/bar |
-
-### Rankings
-
-| Ranking | Description |
-| ------- | ----------- |
-| Top KPI | Top performers by overall achievement |
-| Worst KPI | Bottom performers by overall achievement |
-
-### Permission
-
-| Permission | Mô t? |
-| ---------- | --------- |
-| sales.kpi.view | Xem Sales KPI |
-| sales.kpi.update | C?p nh?t Sales Target |
+`convertLead(id, convertedBy)`:
+1. Ki?m tra lead t?n t?i và active
+2. Ki?m tra lead ch?a convert
+3. Ki?m tra tr?ng thái QUALIFIED ho?c POTENTIAL
+4. T?o Customer n?u ch?a có
+5. T?o Order v?i leadId
+6. C?p nh?t Lead: isConverted = true, convertedOrderId = order._id
+7. T?o LeadHistory record
 
 ### Verification
 
+- [x] Lead ch?a convert ? t?o Order thành công
+- [x] Lead ?ã convert ? báo l?i
+- [x] Order có leadId
+- [x] Lead có convertedOrderId
 - [x] npx tsc --noEmit ? **0 TypeScript Error**
-- [x] MongoDB aggregate operations
-- [x] No mocking
-- [x] Repository contains all CRUD & aggregations
-- [x] Service is orchestration + business logic
-- [x] Charts config-driven
-- [x] React Query hooks integrated
-- [x] PROJECT_PROGRESS.md updated
 
 ### Review
 

@@ -84,9 +84,9 @@ function mapToLead(doc: ILead) {
     note: doc.note,
     isDuplicate: doc.isDuplicate,
     isActive: doc.isActive,
-    // Sprint 5.7 — Lead Convert
+    // Sprint 5.7 — Lead Convert (Sprint 8.4: renamed orderId to convertedOrderId)
     isConverted: doc.isConverted,
-    orderId: doc.orderId?.toString(),
+    convertedOrderId: doc.convertedOrderId?.toString(),
     convertedAt: doc.convertedAt,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -527,6 +527,96 @@ export class LeadRepository {
       closedLead: r.closedLead,
       conversionRate: r.conversionRate,
     }));
+  }
+
+  // =========================================================================
+  // Sprint 8.4 — Lead Conversion Methods
+  // =========================================================================
+
+  /**
+   * Mark a lead as converted (with the order ID).
+   */
+  async markAsConverted(leadId: string, orderId: string) {
+    const doc = await Lead.findByIdAndUpdate(
+      leadId,
+      {
+        isConverted: true,
+        convertedOrderId: new mongoose.Types.ObjectId(orderId),
+        convertedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      { new: true }
+    )
+      .populate("marketingEmployeeId", "_id employeeCode name")
+      .populate("saleEmployeeId", "_id employeeCode name")
+      .lean();
+    if (!doc) return null;
+    return mapToLead(doc as ILead);
+  }
+
+  /**
+   * Find unconverted leads (for sale to work on).
+   */
+  async findUnconverted(params: LeadSearchParams = {}) {
+    const page = params.page ?? 1;
+    const limit = params.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const filter = buildFilter(params);
+    filter.isConverted = false;
+    filter.isActive = true;
+
+    const [items, total] = await Promise.all([
+      Lead.find(filter)
+        .populate("marketingEmployeeId", "_id employeeCode name")
+        .populate("saleEmployeeId", "_id employeeCode name")
+        .sort(buildSort(params))
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Lead.countDocuments(filter),
+    ]);
+
+    return {
+      items: items.map((doc) => mapToLead(doc as ILead)),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  /**
+   * Find converted leads (for reporting).
+   */
+  async findConverted(params: LeadSearchParams = {}) {
+    const page = params.page ?? 1;
+    const limit = params.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const filter = buildFilter(params);
+    filter.isConverted = true;
+    filter.isActive = true;
+
+    const [items, total] = await Promise.all([
+      Lead.find(filter)
+        .populate("marketingEmployeeId", "_id employeeCode name")
+        .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("convertedOrderId", "_id orderCode totalAmount status")
+        .sort(buildSort(params))
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Lead.countDocuments(filter),
+    ]);
+
+    return {
+      items: items.map((doc) => mapToLead(doc as ILead)),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 }
 
