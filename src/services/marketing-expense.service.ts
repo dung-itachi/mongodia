@@ -3,22 +3,20 @@
  * MARKETING EXPENSE SERVICE
  * ==================================================
  *
- * Sprint 6.5 — Marketing Expense Domain
+ * Workflow Simplification Refactor (Aug 2026)
  *
  * Clean Architecture: Service layer cho MarketingExpenseReport.
  * Chứa business logic - được gọi bởi API Routes.
  *
- * Business rules:
- *   1. Mỗi (reportDate, facebookPageId) chỉ có 1 report duy nhất.
+ * Business rules mới:
+ *   1. Mỗi ngày chỉ có 1 report cho mỗi marketingEmployeeId.
  *      facebookPageId = null → report toàn team.
- *   2. Không thể sửa report LOCKED / SUBMITTED / APPROVED.
- *      Chỉ DRAFT / REOPENED / REJECTED mới edit được.
- *   3. Chỉ SUBMITTED mới có thể APPROVED.
- *   4. Chỉ SUBMITTED mới có thể REJECTED.
- *   5. Chỉ APPROVED mới có thể LOCKED.
- *   6. Chỉ LOCKED mới có thể REOPENED.
- *   7. Tính toán (ROAS/CPA/ConversionRate/remainingBudget) dùng
- *      MarketingExpenseCalculator (pure functions, dùng chung).
+ *   2. Không thể sửa report LOCKED.
+ *      Chỉ DRAFT / REOPENED mới edit được.
+ *   3. Chỉ DRAFT / REOPENED mới có thể LOCK.
+ *   4. Chỉ LOCKED mới có thể REOPENED.
+ *   5. Marketing tự LOCK khi hoàn thành báo cáo.
+ *   6. Admin REOPEN khi có sai sót → Marketing sửa → LOCK lại.
  */
 
 import mongoose from "mongoose";
@@ -29,12 +27,9 @@ import {
 } from "@/repositories/marketing-expense.repository";
 import { MarketingExpenseReportStatus } from "@/constants/marketing-expense";
 import {
-  canMarketingExpenseApprove,
   canMarketingExpenseDelete,
   canMarketingExpenseLock,
-  canMarketingExpenseReject,
   canMarketingExpenseReopen,
-  canMarketingExpenseSubmit,
   isMarketingExpenseEditable,
 } from "@/configs/marketing-expense.config";
 import { MarketingExpenseCalculator } from "@/utils/marketing-expense-calculator";
@@ -100,7 +95,7 @@ export class MarketingExpenseService {
    * Create a new marketing expense report (DRAFT).
    *
    * Business rules:
-   *   - Không tạo report trùng (reportDate, facebookPageId).
+   *   - Không tạo report trùng (reportDate, marketingEmployeeId, facebookPageId).
    */
   async create(
     input: CreateMarketingExpenseInput
@@ -110,10 +105,13 @@ export class MarketingExpenseService {
       return { success: false, error: "Ngày báo cáo không hợp lệ" };
     }
 
-    const facebookPageId = coerceFacebookPageId(input.facebookPageId);
+    const facebookPageId = input.facebookPageId
+      ? new mongoose.Types.ObjectId(input.facebookPageId)
+      : null;
 
     const existing = await marketingExpenseRepository.findByDateAndPage(
       reportDate,
+      input.marketingEmployeeId,
       input.facebookPageId ?? null
     );
 
@@ -133,7 +131,6 @@ export class MarketingExpenseService {
     const totalLeads = Math.max(0, input.totalLeads ?? 0);
     const closedLeads = Math.max(0, input.closedLeads ?? 0);
 
-    // Sprint 6.7: dùng `calculateAll()` để không duplicate công thức.
     const { remainingBudget, conversionRate, roas, cpa } =
       MarketingExpenseCalculator.calculateAll({
         requestedBudget,
@@ -148,7 +145,9 @@ export class MarketingExpenseService {
       marketingEmployeeId: new mongoose.Types.ObjectId(
         input.marketingEmployeeId
       ),
-      facebookPageId,
+      facebookPageId: input.facebookPageId
+        ? new mongoose.Types.ObjectId(input.facebookPageId)
+        : null,
       requestedBudget,
       spentBudget,
       remainingBudget,
@@ -169,7 +168,7 @@ export class MarketingExpenseService {
    * Update an existing report.
    *
    * Business rules:
-   *   - Chỉ sửa được khi status = DRAFT / REOPENED / REJECTED.
+   *   - Chỉ sửa được khi status = DRAFT / REOPENED.
    */
   async update(
     id: string,
@@ -187,7 +186,11 @@ export class MarketingExpenseService {
       };
     }
 
-    const data: UpdateMarketingExpenseReportData = {};
+    const data: UpdateMarketingExpenseReportData = {
+      updatedBy: input.updatedBy
+        ? new mongoose.Types.ObjectId(input.updatedBy)
+        : undefined,
+    };
 
     if (input.marketingEmployeeId) {
       data.marketingEmployeeId = new mongoose.Types.ObjectId(
@@ -199,7 +202,6 @@ export class MarketingExpenseService {
       data.facebookPageId = coerceFacebookPageId(input.facebookPageId);
     }
 
-    // note — không validate, chỉ clamp độ dài.
     if (input.note !== undefined) {
       data.note = (input.note ?? "").toString().slice(0, 2000);
     }
@@ -238,7 +240,6 @@ export class MarketingExpenseService {
         data.spentBudget = nextSpent;
       }
 
-      // Sprint 6.7: dùng `calculateAll()` để không duplicate công thức.
       const metrics = MarketingExpenseCalculator.calculateAll({
         requestedBudget: nextRequested,
         spentBudget: nextSpent,
@@ -264,11 +265,10 @@ export class MarketingExpenseService {
   }
 
   /**
-   * Soft delete a report (Sprint 6.7).
+   * Soft delete a report.
    *
    * Business rules:
-   *   - Chỉ xóa được khi status = DRAFT / REOPENED / REJECTED.
-   *   - Submitted / Approved / Locked → KHÔNG được xóa.
+   *   - Chỉ xóa được khi status = DRAFT / REOPENED.
    *   - Set `isActive = false` (giữ document để audit).
    */
   async delete(id: string): Promise<MarketingExpenseResult<boolean>> {
@@ -291,138 +291,21 @@ export class MarketingExpenseService {
     return { success: true, data: true };
   }
 
-  /**
-   * Get report by ID (with populated refs — used by GET detail API).
-   *
-   * Trả về raw lean document kèm populate. Caller map sang DTO qua
-   * `marketing-expense.mapper.ts`.
-   */
   async getById(id: string) {
     return marketingExpenseRepository.findByIdWithPopulate(id);
   }
 
-  /**
-   * Get list of reports with pagination & filters.
-   */
   async getList(filter: MarketingExpenseFilter) {
     return marketingExpenseRepository.findAll(filter);
   }
 
   // --------------------------------------------------------------------------
-  // Workflow
+  // Workflow (LOCK / REOPEN)
   // --------------------------------------------------------------------------
 
   /**
-   * Submit report (DRAFT / REOPENED / REJECTED → SUBMITTED).
-   *
-   * Khi submit lại từ REJECTED → clear rejection metadata.
-   */
-  async submit(
-    id: string,
-    _employeeId: string
-  ): Promise<MarketingExpenseResult<unknown>> {
-    const existing = await marketingExpenseRepository.findById(id);
-    if (!existing) {
-      return { success: false, error: "Báo cáo không tồn tại" };
-    }
-
-    if (!canMarketingExpenseSubmit(existing.status)) {
-      return {
-        success: false,
-        error: `Không thể nộp báo cáo ở trạng thái ${existing.status}`,
-      };
-    }
-
-    const updated = await marketingExpenseRepository.update(id, {
-      status: MarketingExpenseReportStatus.SUBMITTED,
-      rejectedBy: null,
-      rejectedAt: null,
-      rejectionReason: "",
-    });
-    if (!updated) {
-      return { success: false, error: "Không thể nộp báo cáo" };
-    }
-    return { success: true, data: updated };
-  }
-
-  /**
-   * Approve report (SUBMITTED → APPROVED).
-   *
-   * Business rules:
-   *   - Không approve report chưa SUBMITTED.
-   */
-  async approve(
-    id: string,
-    approverId: string
-  ): Promise<MarketingExpenseResult<unknown>> {
-    const existing = await marketingExpenseRepository.findById(id);
-    if (!existing) {
-      return { success: false, error: "Báo cáo không tồn tại" };
-    }
-
-    if (!canMarketingExpenseApprove(existing.status)) {
-      return {
-        success: false,
-        error: "Không thể duyệt báo cáo chưa được nộp",
-      };
-    }
-
-    const updated = await marketingExpenseRepository.update(id, {
-      status: MarketingExpenseReportStatus.APPROVED,
-      approvedBy: new mongoose.Types.ObjectId(approverId),
-      approvedAt: new Date(),
-    });
-    if (!updated) {
-      return { success: false, error: "Không thể duyệt báo cáo" };
-    }
-    return { success: true, data: updated };
-  }
-
-  /**
-   * Reject report (SUBMITTED → REJECTED).
-   *
-   * Leader từ chối — nhân viên cần sửa và submit lại.
-   * `rejectionReason` là bắt buộc.
-   */
-  async reject(
-    id: string,
-    rejecterId: string,
-    rejectionReason: string
-  ): Promise<MarketingExpenseResult<unknown>> {
-    const existing = await marketingExpenseRepository.findById(id);
-    if (!existing) {
-      return { success: false, error: "Báo cáo không tồn tại" };
-    }
-
-    if (!canMarketingExpenseReject(existing.status)) {
-      return {
-        success: false,
-        error: `Không thể từ chối báo cáo ở trạng thái ${existing.status}`,
-      };
-    }
-
-    const trimmedReason = (rejectionReason ?? "").trim();
-    if (!trimmedReason) {
-      return {
-        success: false,
-        error: "Lý do từ chối là bắt buộc",
-      };
-    }
-
-    const updated = await marketingExpenseRepository.update(id, {
-      status: MarketingExpenseReportStatus.REJECTED,
-      rejectedBy: new mongoose.Types.ObjectId(rejecterId),
-      rejectedAt: new Date(),
-      rejectionReason: trimmedReason,
-    });
-    if (!updated) {
-      return { success: false, error: "Không thể từ chối báo cáo" };
-    }
-    return { success: true, data: updated };
-  }
-
-  /**
-   * Lock report (APPROVED → LOCKED).
+   * Lock report (DRAFT / REOPENED → LOCKED).
+   * Marketing tự lock khi hoàn thành báo cáo ngày.
    */
   async lock(
     id: string,
@@ -453,10 +336,11 @@ export class MarketingExpenseService {
 
   /**
    * Reopen report (LOCKED → REOPENED).
+   * Admin mở lại khi có sai sót để Marketing sửa.
    */
   async reopen(
     id: string,
-    _employeeId: string
+    employeeId: string
   ): Promise<MarketingExpenseResult<unknown>> {
     const existing = await marketingExpenseRepository.findById(id);
     if (!existing) {
@@ -474,6 +358,8 @@ export class MarketingExpenseService {
       status: MarketingExpenseReportStatus.REOPENED,
       lockedBy: null,
       lockedAt: null,
+      reopenedBy: new mongoose.Types.ObjectId(employeeId),
+      reopenedAt: new Date(),
     });
     if (!updated) {
       return { success: false, error: "Không thể mở lại báo cáo" };
@@ -485,20 +371,6 @@ export class MarketingExpenseService {
   // Aggregations / calculations
   // --------------------------------------------------------------------------
 
-  /**
-   * Dashboard summary — orchestration: chỉ lấy, không tính.
-   *
-   * Flow:
-   *   1. Repository chiếu raw rows từ MongoDB → `aggregateDashboardRows(filter)`
-   *   2. Calculator nhận rows → `aggregateMetrics(rows)` → `MarketingExpenseSummary`
-   *
-   * Sau này sẽ có thêm:
-   *   - getMonthlySummary()
-   *   - getYearSummary()
-   *   - getEmployeeSummary()
-   *   - getPageSummary()
-   *   - getCampaignSummary()
-   */
   async getDashboardSummary(
     filter: MarketingExpenseFilter
   ): Promise<MarketingExpenseSummary> {
@@ -516,7 +388,7 @@ export class MarketingExpenseService {
 export const marketingExpenseService = new MarketingExpenseService();
 
 // ============================================================================
-// Pure helpers — re-export từ Calculator (cho code ở UI / Report / Export Excel)
+// Pure helpers — re-export từ Calculator
 // ============================================================================
 
 export const calculateROAS = MarketingExpenseCalculator.calculateROAS;

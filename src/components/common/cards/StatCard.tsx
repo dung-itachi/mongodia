@@ -37,6 +37,8 @@ export type StatCardProps = {
   suffix?: string;
   /** Optional prefix */
   prefix?: string;
+  /** Optional click handler for drill-down */
+  onClick?: () => void;
 };
 
 const colorMap: Record<StatColor, { bg: string; text: string; border: string }> = {
@@ -57,6 +59,7 @@ export default function StatCard({
   trend,
   suffix,
   prefix,
+  onClick,
 }: StatCardProps) {
   const colors = colorMap[color];
 
@@ -93,6 +96,19 @@ export default function StatCard({
       style={{
         borderLeft: `4px solid ${colors.border}`,
         minHeight: 140,
+        cursor: onClick ? "pointer" : "default",
+        transition: "box-shadow 0.2s ease",
+      }}
+      onClick={onClick}
+      onMouseEnter={(e) => {
+        if (onClick) {
+          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onClick) {
+          (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+        }
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between" }}>

@@ -32,7 +32,7 @@ export default function LoadingOverlay({
           zIndex: 9999,
         }}
       >
-        <Spin tip={text} size="large" />
+        <Spin description={text} size="large" />
       </div>
     );
   }
@@ -54,7 +54,7 @@ export default function LoadingOverlay({
             backgroundColor: "rgba(255, 255, 255, 0.8)",
           }}
         >
-          <Spin tip={text} />
+          <Spin description={text} />
         </div>
       </div>
     );
@@ -69,7 +69,7 @@ export default function LoadingOverlay({
         padding: 48,
       }}
     >
-      <Spin tip={text} size="large" />
+      <Spin description={text} size="large" />
     </div>
   );
 }

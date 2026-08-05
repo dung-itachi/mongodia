@@ -1,0 +1,59 @@
+/**
+ * ==================================================
+ * MARKETING EXPENSE DETAIL STYLES
+ * ==================================================
+ *
+ * Sprint 6.12 — Marketing Expense Detail
+ */
+
+.container {
+  padding: 16px;
+}
+
+.headerCard {
+  margin-bottom: 16px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.backLink {
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tabs {
+  margin-top: 16px;
+}
+
+.infoCard {
+  margin-bottom: 0;
+}
+
+.auditSection {
+  margin-top: 16px;
+}
+
+.budgetTab {
+  margin-bottom: 0;
+}
+
+.budgetCard {
+  height: 100%;
+}
+
+.summaryTab {
+  margin-bottom: 0;
+}

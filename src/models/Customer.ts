@@ -1,102 +1,176 @@
-import mongoose, { Model, Schema, Types } from "mongoose";
+/**
+ * ==================================================
+ * CUSTOMER MODEL
+ * ==================================================
+ *
+ * Sprint 8.0 — Customer Module Foundation
+ *
+ * Customer là dữ liệu sinh ra sau khi Convert Lead.
+ */
 
-export interface ICustomer {
-  code: string;
+import mongoose, { Schema, type Document } from "mongoose";
 
-  name: string;
+// ============================================================================
+// Sub-document interfaces
+// ============================================================================
 
+export interface IAddress {
+  street?: string;
+  province?: string;
+  district?: string;
+  ward?: string;
+}
+
+// ============================================================================
+// Customer Status
+// ============================================================================
+
+export enum CustomerStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  BLOCKED = "BLOCKED",
+}
+
+// ============================================================================
+// Main interface
+// ============================================================================
+
+export interface ICustomer extends Document {
+  customerCode: string;
+  fullName: string;
   phone: string;
-
   email?: string;
+  gender?: "male" | "female" | "other";
+  birthday?: Date;
+  address?: IAddress;
 
-  gender: "MALE" | "FEMALE" | "OTHER";
-
-  birthday?: Date | null;
-
-  address?: string;
-
-  areaId: Types.ObjectId;
-
-  teamId: Types.ObjectId;
-
-  marketingEmployeeId: Types.ObjectId;
-
+  facebook?: string;
+  zalo?: string;
   note?: string;
 
+  marketingEmployeeId?: mongoose.Types.ObjectId;
+  saleEmployeeId?: mongoose.Types.ObjectId;
+  facebookPageId?: mongoose.Types.ObjectId;
+  campaignId?: mongoose.Types.ObjectId;
+  leadId?: mongoose.Types.ObjectId;
+
+  status: CustomerStatus;
+
+  createdBy?: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
   isActive: boolean;
 }
 
+// ============================================================================
+// Schema
+// ============================================================================
+
+const AddressSchema = new Schema<IAddress>(
+  {
+    street: { type: String, default: "" },
+    province: { type: String, default: "" },
+    district: { type: String, default: "" },
+    ward: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const CustomerSchema = new Schema<ICustomer>(
   {
-    code: {
+    customerCode: {
       type: String,
       required: true,
       unique: true,
-      uppercase: true,
-      trim: true,
+      index: true,
     },
-
-    name: {
+    fullName: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 200,
     },
-
     phone: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
+      maxlength: 20,
     },
-
     email: {
       type: String,
       trim: true,
-      default: "",
+      lowercase: true,
+      maxlength: 200,
     },
-
     gender: {
       type: String,
-      enum: ["MALE", "FEMALE", "OTHER"],
-      default: "OTHER",
+      enum: ["male", "female", "other"],
     },
-
     birthday: {
       type: Date,
-      default: null,
+    },
+    address: {
+      type: AddressSchema,
+      default: () => ({}),
     },
 
-    address: {
+    facebook: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
+    zalo: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+    note: {
       type: String,
       default: "",
-    },
-
-    areaId: {
-      type: Schema.Types.ObjectId,
-      ref: "Area",
-      required: true,
-    },
-
-    teamId: {
-      type: Schema.Types.ObjectId,
-      ref: "Team",
-      required: true,
+      maxlength: 2000,
     },
 
     marketingEmployeeId: {
       type: Schema.Types.ObjectId,
       ref: "Employee",
-      required: true,
+      default: null,
+    },
+    saleEmployeeId: {
+      type: Schema.Types.ObjectId,
+      ref: "Employee",
+      default: null,
+    },
+    facebookPageId: {
+      type: Schema.Types.ObjectId,
+      ref: "FacebookPage",
+      default: null,
+    },
+    campaignId: {
+      type: Schema.Types.ObjectId,
+      ref: "Campaign",
+      default: null,
+    },
+    leadId: {
+      type: Schema.Types.ObjectId,
+      ref: "Lead",
+      default: null,
     },
 
-    note: {
+    status: {
       type: String,
-      default: "",
+      enum: Object.values(CustomerStatus),
+      default: CustomerStatus.ACTIVE,
+      index: true,
     },
 
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "Employee",
+    },
     isActive: {
       type: Boolean,
       default: true,
+      index: true,
     },
   },
   {
@@ -104,12 +178,26 @@ const CustomerSchema = new Schema<ICustomer>(
   }
 );
 
-CustomerSchema.index({ teamId: 1 });
-CustomerSchema.index({ marketingEmployeeId: 1 });
-CustomerSchema.index({ areaId: 1 });
+// ============================================================================
+// Indexes
+// ============================================================================
 
-const Customer: Model<ICustomer> =
-  mongoose.models.Customer ||
+CustomerSchema.index({ phone: 1 }, { unique: true });
+CustomerSchema.index({ email: 1 }, { sparse: true });
+CustomerSchema.index({ fullName: "text", phone: "text", email: "text" });
+CustomerSchema.index({ saleEmployeeId: 1 });
+CustomerSchema.index({ marketingEmployeeId: 1 });
+CustomerSchema.index({ facebookPageId: 1 });
+CustomerSchema.index({ campaignId: 1 });
+CustomerSchema.index({ leadId: 1 });
+CustomerSchema.index({ status: 1, createdAt: -1 });
+
+// ============================================================================
+// Model
+// ============================================================================
+
+export const Customer =
+  (mongoose.models.Customer as mongoose.Model<ICustomer>) ||
   mongoose.model<ICustomer>("Customer", CustomerSchema);
 
 export default Customer;

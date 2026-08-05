@@ -3,7 +3,7 @@
  * MARKETING EXPENSE REPOSITORY
  * ==================================================
  *
- * Sprint 6.5 — Marketing Expense Domain
+ * Workflow Simplification Refactor (Aug 2026)
  *
  * Clean Architecture: Repository layer cho MarketingExpenseReport.
  * CHỈ truy cập MongoDB - KHÔNG có business logic.
@@ -51,13 +51,11 @@ export interface UpdateMarketingExpenseReportData {
   roas?: number;
   cpa?: number;
   status?: string;
-  approvedBy?: Types.ObjectId | null;
+  updatedBy?: Types.ObjectId | null;
   lockedBy?: Types.ObjectId | null;
-  rejectedBy?: Types.ObjectId | null;
-  approvedAt?: Date | null;
   lockedAt?: Date | null;
-  rejectedAt?: Date | null;
-  rejectionReason?: string;
+  reopenedBy?: Types.ObjectId | null;
+  reopenedAt?: Date | null;
   note?: string;
   isActive?: boolean;
 }
@@ -83,13 +81,10 @@ function mapToReport(doc: IMarketingExpenseReport) {
     cpa: doc.cpa,
     status: doc.status,
     createdBy: doc.createdBy.toString(),
-    approvedBy: doc.approvedBy ? doc.approvedBy.toString() : null,
     lockedBy: doc.lockedBy ? doc.lockedBy.toString() : null,
-    rejectedBy: doc.rejectedBy ? doc.rejectedBy.toString() : null,
-    approvedAt: doc.approvedAt ? doc.approvedAt.toISOString() : null,
     lockedAt: doc.lockedAt ? doc.lockedAt.toISOString() : null,
-    rejectedAt: doc.rejectedAt ? doc.rejectedAt.toISOString() : null,
-    rejectionReason: doc.rejectionReason ?? "",
+    reopenedBy: doc.reopenedBy ? doc.reopenedBy.toString() : null,
+    reopenedAt: doc.reopenedAt ? doc.reopenedAt.toISOString() : null,
     note: doc.note ?? "",
     isActive: doc.isActive ?? true,
     createdAt: doc.createdAt.toISOString(),
@@ -105,12 +100,6 @@ function buildFilter(params: MarketingExpenseFilter): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
 
   // isActive — soft-delete semantics.
-  //
-  //   - Client truyền `isActive=false` → chỉ lấy report đã soft-delete.
-  //   - Client KHÔNG truyền           → mặc định lấy report CHƯA soft-delete.
-  //
-  // "Chưa soft-delete" = `isActive !== false` (match cả doc `true`,
-  // `null`, hoặc missing field). Lý do: doc seed cũ chưa set field này.
   if (params.isActive === false) {
     filter.isActive = false;
   } else if (params.isActive === true) {
@@ -155,26 +144,13 @@ function buildFilter(params: MarketingExpenseFilter): Record<string, unknown> {
   return filter;
 }
 
-/**
- * Escape regex meta-characters trong `keyword` để tránh
- * người dùng inject regex pattern vào `$regex`.
- */
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/**
- * Sprint 6.7 — Sort whitelist.
- *
- * Cố ý KHÔNG cho sort theo các sub-doc field (e.g. `remainingBudget`,
- * `requestedBudget.morning`...) để giữ sort đơn giản và dùng index được.
- *
- * Nếu client gửi field ngoài whitelist → fallback về `reportDate`.
- */
 const SORT_FIELDS = new Set([
   "reportDate",
   "requestedBudget",
-  "approvedBudget",
   "spentBudget",
   "totalRevenue",
   "cpa",
@@ -197,9 +173,6 @@ function buildSort(params: MarketingExpenseFilter): Record<string, SortOrder> {
 // ============================================================================
 
 export class MarketingExpenseRepository {
-  /**
-   * Create a new report.
-   */
   async create(
     data: CreateMarketingExpenseReportData,
     session?: mongoose.ClientSession
@@ -212,9 +185,6 @@ export class MarketingExpenseRepository {
     return mapToReport(saved);
   }
 
-  /**
-   * Find report by ID (skip soft-deleted).
-   */
   async findById(id: string): Promise<ReturnType<typeof mapToReport> | null> {
     const doc = await MarketingExpenseReport.findOne({
       _id: id,
@@ -224,12 +194,6 @@ export class MarketingExpenseRepository {
     return mapToReport(doc as IMarketingExpenseReport);
   }
 
-  /**
-   * Find report by ID with populated refs.
-   *
-   * Trả về raw lean document — caller chịu trách nhiệm mapping sang DTO
-   * (xem `marketing-expense.mapper.ts`).
-   */
   async findByIdWithPopulate(
     id: string
   ): Promise<IMarketingExpenseReport | null> {
@@ -240,15 +204,11 @@ export class MarketingExpenseRepository {
       .populate("marketingEmployeeId", "_id employeeCode fullName")
       .populate("facebookPageId", "_id code name")
       .populate("createdBy", "_id employeeCode fullName")
-      .populate("approvedBy", "_id employeeCode fullName")
       .populate("lockedBy", "_id employeeCode fullName")
-      .populate("rejectedBy", "_id employeeCode fullName")
+      .populate("reopenedBy", "_id employeeCode fullName")
       .lean();
   }
 
-  /**
-   * Find all reports with pagination & filters.
-   */
   async findAll(params: MarketingExpenseFilter) {
     const page = params.page ?? 1;
     const pageSize = params.pageSize ?? 20;
@@ -275,9 +235,6 @@ export class MarketingExpenseRepository {
     };
   }
 
-  /**
-   * Update a report by ID.
-   */
   async update(
     id: string,
     data: UpdateMarketingExpenseReportData,
@@ -291,12 +248,6 @@ export class MarketingExpenseRepository {
     return mapToReport(doc as IMarketingExpenseReport);
   }
 
-  /**
-   * Soft delete a report by ID (set `isActive = false`).
-   *
-   * Sprint 6.7 — chuyển từ hard delete (Sprint 6.5) sang soft delete.
-   * Service sẽ kiểm tra status trước khi cho phép xóa.
-   */
   async softDelete(
     id: string,
     session?: mongoose.ClientSession
@@ -309,10 +260,6 @@ export class MarketingExpenseRepository {
     return result !== null;
   }
 
-  /**
-   * Hard delete (giữ lại để tương thích ngược với code cũ — KHÔNG dùng
-   * trong luồng CRUD chính của Sprint 6.7).
-   */
   async delete(id: string, session?: mongoose.ClientSession): Promise<boolean> {
     const result = await MarketingExpenseReport.findByIdAndDelete(id, {
       session,
@@ -320,9 +267,6 @@ export class MarketingExpenseRepository {
     return result !== null;
   }
 
-  /**
-   * Count reports matching filter.
-   */
   async count(
     params: Partial<MarketingExpenseFilter> = {}
   ): Promise<number> {
@@ -330,17 +274,11 @@ export class MarketingExpenseRepository {
     return MarketingExpenseReport.countDocuments(filter);
   }
 
-  /**
-   * Check if a report exists.
-   */
   async exists(id: string): Promise<boolean> {
     const count = await MarketingExpenseReport.countDocuments({ _id: id });
     return count > 0;
   }
 
-  /**
-   * Find report by exact reportDate (00:00 → 23:59 cùng ngày).
-   */
   async findByDate(
     reportDate: Date,
     facebookPageId?: string | null
@@ -366,12 +304,9 @@ export class MarketingExpenseRepository {
     return mapToReport(doc as IMarketingExpenseReport);
   }
 
-  /**
-   * Find report by exact date AND specific facebookPageId.
-   * Dùng cho check duplicate khi tạo report mới.
-   */
   async findByDateAndPage(
     reportDate: Date,
+    marketingEmployeeId: string,
     facebookPageId: string | null
   ): Promise<ReturnType<typeof mapToReport> | null> {
     const startOfDay = new Date(reportDate);
@@ -382,6 +317,7 @@ export class MarketingExpenseRepository {
 
     const filter: Record<string, unknown> = {
       reportDate: { $gte: startOfDay, $lte: endOfDay },
+      marketingEmployeeId: new mongoose.Types.ObjectId(marketingEmployeeId),
     };
 
     if (facebookPageId) {
@@ -395,19 +331,6 @@ export class MarketingExpenseRepository {
     return mapToReport(doc as IMarketingExpenseReport);
   }
 
-  /**
-   * Dashboard-level raw rows từ MongoDB.
-   *
-   * Repository chỉ chiếu field từ MongoDB — KHÔNG tính sum/avg.
-   * Service sẽ pass rows này cho `MarketingExpenseCalculator.aggregateMetrics()`.
-   *
-   * Đặt tên `aggregateDashboardRows` để chừa chỗ cho:
-   *   - aggregateMonthlyRows()
-   *   - aggregateYearRows()
-   *   - aggregateEmployeeRows()
-   *   - aggregatePageRows()
-   *   - aggregateCampaignRows()
-   */
   async aggregateDashboardRows(filter: MarketingExpenseFilter) {
     const match = buildFilter(filter);
 
@@ -442,9 +365,5 @@ export class MarketingExpenseRepository {
     return rows ?? [];
   }
 }
-
-// ============================================================================
-// Singleton
-// ============================================================================
 
 export const marketingExpenseRepository = new MarketingExpenseRepository();

@@ -28,6 +28,7 @@ export type DataTableProps = {
   emptyText?: string;
   scroll?: { x?: number | string; y?: number | string };
   size?: "small" | "middle" | "large";
+  onRow?: TableProps<Record<string, unknown>>["onRow"];
 };
 
 export default function DataTable({
@@ -41,6 +42,7 @@ export default function DataTable({
   emptyText = "Không có dữ liệu",
   scroll,
   size = "middle",
+  onRow,
 }: DataTableProps) {
   // Default pagination config
   const defaultPagination: TablePaginationConfig | false =
@@ -64,6 +66,7 @@ export default function DataTable({
       rowSelection={rowSelection}
       scroll={scroll}
       size={size}
+      onRow={onRow}
       locale={{
         emptyText: (
           <Empty

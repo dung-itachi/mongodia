@@ -3,7 +3,7 @@
  * MARKETING EXPENSE DOMAIN TYPES
  * ==================================================
  *
- * Sprint 6.5 — Marketing Expense Domain
+ * Workflow Simplification Refactor (Aug 2026)
  *
  * Clean Architecture: Domain types cho MarketingExpenseReport.
  *
@@ -62,20 +62,17 @@ export interface MarketingExpense {
   statusColor?: string;
 
   createdBy: string;
-  approvedBy?: string | null;
   lockedBy?: string | null;
-  rejectedBy?: string | null;
-  approvedAt?: string | null;
   lockedAt?: string | null;
-  rejectedAt?: string | null;
-  rejectionReason?: string | null;
+  reopenedBy?: string | null;
+  reopenedAt?: string | null;
 
-  /** Ghi chú tự do của nhân viên marketing (Sprint 6.7). */
+  /** Ghi chú tự do của nhân viên marketing. */
   note?: string;
 
   /**
-   * Soft-delete flag (Sprint 6.7).
-   * `false` nghĩa là report đã bị xóa mềm, query mặc định sẽ loại trừ.
+   * Soft-delete flag.
+   * `false` nghĩa là report đã bị xóa mềm.
    */
   isActive?: boolean;
 
@@ -107,7 +104,6 @@ export interface MarketingExpenseSummary {
 export interface MarketingExpenseFilter {
   /**
    * Search theo `note` (case-insensitive substring).
-   * Có thể mở rộng thêm (employeeCode, fullName) ở tầng Service sau này.
    */
   keyword?: string;
   status?: MarketingExpenseReportStatus;
@@ -166,23 +162,12 @@ export interface UpdateMarketingExpenseInput {
   totalLeads?: number;
   closedLeads?: number;
   note?: string;
+  updatedBy?: string;
 }
 
 // ============================================================================
 // Workflow transition inputs
 // ============================================================================
-
-export interface SubmitMarketingExpenseInput {
-  reportId: string;
-  employeeId: string;
-  note?: string;
-}
-
-export interface ApproveMarketingExpenseInput {
-  reportId: string;
-  approverId: string;
-  note?: string;
-}
 
 export interface LockMarketingExpenseInput {
   reportId: string;
@@ -194,10 +179,4 @@ export interface ReopenMarketingExpenseInput {
   reportId: string;
   employeeId: string;
   note?: string;
-}
-
-export interface RejectMarketingExpenseInput {
-  reportId: string;
-  rejecterId: string;
-  rejectionReason: string;
 }

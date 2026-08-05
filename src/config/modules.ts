@@ -15,6 +15,7 @@ export type NavGroupKey =
   | "DASHBOARD"
   | "MKT"
   | "SALE"
+  | "CUSTOMERS"
   | "ORDERS"
   | "PRODUCTS"
   | "ACCOUNTS"
@@ -88,6 +89,22 @@ export const MODULES: ModuleDefinition[] = [
     group: "MKT",
     icon: `<path d="M9 11l3 3L22 4"/>`,
   },
+  {
+    id: "facebook-pages",
+    title: "Facebook Pages",
+    route: "/facebook-pages",
+    permission: "facebook-page.view",
+    group: "MKT",
+    icon: `<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>`,
+  },
+  {
+    id: "campaigns",
+    title: "Campaigns",
+    route: "/campaigns",
+    permission: "campaign.view",
+    group: "MKT",
+    icon: `<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>`,
+  },
 
   // Sale Group
   {
@@ -98,6 +115,14 @@ export const MODULES: ModuleDefinition[] = [
     group: "SALE",
     icon: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>`,
     pill: 0,
+  },
+  {
+    id: "customers",
+    title: "Khách hàng",
+    route: "/customers",
+    permission: "customer.view",
+    group: "SALE",
+    icon: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
   },
   {
     id: "orders-closed",
@@ -205,6 +230,11 @@ export const NAV_GROUPS: NavGroupDefinition[] = [
     key: "SALE",
     label: "Sale",
     icon: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>`,
+  },
+  {
+    key: "CUSTOMERS",
+    label: "Khách hàng",
+    icon: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
   },
   {
     key: "ORDERS",

@@ -1,0 +1,39 @@
+/**
+ * Marketing Expense Workflow Bar Styles
+ * Workflow Simplification Refactor (Aug 2026)
+ */
+
+.workflowBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 16px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.actionButton {
+  min-width: 100px;
+}
+
+.lockButton {
+  background: #722ed1;
+  border-color: #722ed1;
+}
+
+.lockButton:hover {
+  background: #9254de;
+  border-color: #9254de;
+}
+
+.reopenButton {
+  background: #fa8c16;
+  border-color: #fa8c16;
+}
+
+.reopenButton:hover {
+  background: #ffa940;
+  border-color: #ffa940;
+}

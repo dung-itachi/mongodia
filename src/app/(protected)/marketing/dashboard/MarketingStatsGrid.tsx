@@ -11,13 +11,14 @@ import styles from "./marketing.module.css";
 
 export type MarketingStatsGridProps = {
   stats: MarketingStatItem[];
+  onCardClick?: (key: string, label: string) => void;
 };
 
-function MarketingStatsGridInner({ stats }: MarketingStatsGridProps) {
+function MarketingStatsGridInner({ stats, onCardClick }: MarketingStatsGridProps) {
   return (
     <div className={styles["mk-fill"]} aria-label="Thống kê marketing">
       <StatGrid columns={3}>
-        {stats.map((stat) => (
+        {stats.map((stat, index) => (
           <StatCard
             key={stat.title}
             title={stat.title}
@@ -25,6 +26,7 @@ function MarketingStatsGridInner({ stats }: MarketingStatsGridProps) {
             icon={stat.icon}
             color={stat.color}
             trend={stat.trend}
+            onClick={onCardClick ? () => onCardClick(`card-${index}`, stat.title) : undefined}
           />
         ))}
       </StatGrid>

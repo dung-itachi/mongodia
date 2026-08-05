@@ -73,14 +73,6 @@ export interface FacebookPageRef {
   isActive: boolean;
 }
 
-export interface CustomerRef {
-  id: string;
-  code: string;
-  name: string;
-  phone: string;
-  isActive: boolean;
-}
-
 export interface EmployeeRef {
   id: string;
   employeeCode: string;
@@ -91,8 +83,7 @@ export interface EmployeeRef {
 
 /**
  * Minimal Customer projection used for duplicate detection.
- * `facebookLink` is intentionally absent — Customer model has no such field;
- * fallback to Lead map for Facebook-level duplicate detection.
+ * Uses customerCode and fullName from Sprint 8.0 Customer model.
  */
 export interface CustomerRef {
   id: string;
@@ -129,7 +120,9 @@ export interface LeadImportContext {
   employeesByCode: Map<string, EmployeeRef>;
 
   // Phase 3.4 - Duplicate Detection
-  customersByFacebookLink: Map<string, CustomerRef>; // empty unless Customer model grows facebookLink
+  // Note: customersByFacebookLink is not populated as Customer model
+  // does not have facebookLink - fallback to Lead map for Facebook-level duplicate detection.
+  customersByFacebookLink: Map<string, CustomerRef>;
   leadsByPhone: Map<string, LeadRef>;
   leadsByFacebookLink: Map<string, LeadRef>;
 
@@ -228,23 +221,23 @@ async function loadFacebookPages(): Promise<Map<string, FacebookPageRef>> {
 async function loadCustomers(): Promise<Map<string, CustomerRef>> {
   // Indexed by phone (the only stable identifier across re-imports).
   const docs = await Customer.find({})
-    .select("_id code name phone isActive")
+    .select("_id customerCode fullName phone isActive")
     .lean()
     .exec();
 
   const map = new Map<string, CustomerRef>();
   for (const d of docs as Array<{
     _id: { toString: () => string };
-    code: string;
-    name: string;
+    customerCode: string;
+    fullName: string;
     phone: string;
     isActive?: boolean;
   }>) {
     if (!d.phone) continue;
     map.set(d.phone.trim(), {
       id: d._id.toString(),
-      code: d.code,
-      name: d.name,
+      code: d.customerCode,
+      name: d.fullName,
       phone: d.phone,
       isActive: d.isActive ?? true,
     });

@@ -1,0 +1,156 @@
+/**
+ * Marketing Expense Drawer & Form Styles
+ * Sprint 6.10 — Marketing Expense Drawer + Form
+ */
+
+.drawer {
+  /* Custom drawer styles if needed */
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formSection {
+  margin-bottom: 24px;
+}
+
+.summaryCard {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.summaryTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: #262626;
+  margin-bottom: 12px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.summaryValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+}
+
+.summaryValue.positive {
+  color: #52c41a;
+}
+
+.summaryValue.negative {
+  color: #ff4d4f;
+}
+
+/* Budget Allocation Table */
+.budgetTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.budgetTable th,
+.budgetTable td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.budgetTable th {
+  font-weight: 600;
+  font-size: 12px;
+  color: #8c8c8c;
+  background: #fafafa;
+}
+
+.budgetTable th:nth-child(n+2),
+.budgetTable td:nth-child(n+2) {
+  text-align: right;
+}
+
+.budgetTable td {
+  font-size: 14px;
+}
+
+.budgetRowLabel {
+  font-weight: 500;
+  color: #262626;
+}
+
+.budgetInput {
+  width: 100%;
+  text-align: right;
+}
+
+.budgetRemaining {
+  font-weight: 500;
+  color: #52c41a;
+}
+
+/* Footer Actions */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.performanceSection {
+  margin-top: 24px;
+}
+
+.performanceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.performanceItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.performanceLabel {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.performanceValue {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.performanceValue.roas {
+  color: #1890ff;
+}
+
+.performanceValue.cpa {
+  color: #722ed1;
+}
+
+.performanceValue.conversion {
+  color: #52c41a;
+}

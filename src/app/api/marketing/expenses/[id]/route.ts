@@ -10,7 +10,7 @@
  * Architecture:
  *   Route  →  MarketingExpenseService  →  MarketingExpenseRepository  →  MongoDB
  *
- * Update / Delete business rules (chỉ DRAFT / REJECTED) đặt trong Service —
+ * Update / Delete business rules (chỉ DRAFT / REOPENED) đặt trong Service —
  * chỉ truyền status code lỗi cho Route khi không thỏa.
  */
 
@@ -220,6 +220,9 @@ export async function PATCH(
     }
     if (data.note !== undefined) {
       updateInput.note = data.note;
+    }
+    if (data.updatedBy !== undefined) {
+      updateInput.updatedBy = data.updatedBy;
     }
 
     const result = await marketingExpenseService.update(

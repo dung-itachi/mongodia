@@ -3,19 +3,9 @@
  * MARKETING EXPENSE MAPPER
  * ==================================================
  *
- * Sprint 6.7 — Marketing Expense CRUD (Backend)
+ * Workflow Simplification Refactor (Aug 2026)
  *
  * Map raw Mongoose document (lean + populated) → API response shape.
- *
- * Conventions:
- *   - `mapMarketingExpense()`      : single → response
- *   - `mapMarketingExpenseList()`  : array  → response[]
- *   - All ObjectIds converted sang string.
- *   - Populated nested objects được gom lại thành `{ _id, employeeCode, fullName }`
- *     / `{ _id, code, name }`.
- *   - Status có thêm `statusLabel` / `statusColor` để FE đỡ phải lookup lại.
- *
- * KHÔNG truy cập DB. Chỉ transform data.
  */
 
 import type { IMarketingExpenseReport } from "@/models/MarketingExpenseReport";
@@ -33,9 +23,6 @@ import type {
 // Response types
 // ============================================================================
 
-/**
- * Audit fields của report — phục vụ cho UI "Ai duyệt / khóa / từ chối".
- */
 export interface EmployeeRef {
   _id: string;
   employeeCode: string;
@@ -75,16 +62,12 @@ export interface MarketingExpenseResponse {
 
   createdBy: string;
   createdByEmployee?: EmployeeRef;
-  approvedBy?: string | null;
-  approvedByEmployee?: EmployeeRef | null;
   lockedBy?: string | null;
   lockedByEmployee?: EmployeeRef | null;
-  rejectedBy?: string | null;
-  rejectedByEmployee?: EmployeeRef | null;
-  approvedAt?: string | null;
   lockedAt?: string | null;
-  rejectedAt?: string | null;
-  rejectionReason?: string | null;
+  reopenedBy?: string | null;
+  reopenedByEmployee?: EmployeeRef | null;
+  reopenedAt?: string | null;
 
   note: string;
   isActive: boolean;
@@ -123,12 +106,6 @@ function mapFacebookPageRef(raw: unknown): FacebookPageRef | null {
 // Mappers
 // ============================================================================
 
-/**
- * Map raw lean document → response DTO.
- *
- * Accept cả populated lẫn không-populated document — các field populate
- * sẽ tự skip nếu không có.
- */
 export function mapMarketingExpense(
   doc: IMarketingExpenseReport
 ): MarketingExpenseResponse {
@@ -171,22 +148,16 @@ export function mapMarketingExpense(
     createdByEmployee: mapEmployeeRef(
       (doc as unknown as { createdBy?: unknown }).createdBy
     ),
-    approvedBy: doc.approvedBy ? doc.approvedBy.toString() : null,
-    approvedByEmployee: mapEmployeeRef(
-      (doc as unknown as { approvedBy?: unknown }).approvedBy
-    ),
     lockedBy: doc.lockedBy ? doc.lockedBy.toString() : null,
     lockedByEmployee: mapEmployeeRef(
       (doc as unknown as { lockedBy?: unknown }).lockedBy
     ),
-    rejectedBy: doc.rejectedBy ? doc.rejectedBy.toString() : null,
-    rejectedByEmployee: mapEmployeeRef(
-      (doc as unknown as { rejectedBy?: unknown }).rejectedBy
-    ),
-    approvedAt: doc.approvedAt ? doc.approvedAt.toISOString() : null,
     lockedAt: doc.lockedAt ? doc.lockedAt.toISOString() : null,
-    rejectedAt: doc.rejectedAt ? doc.rejectedAt.toISOString() : null,
-    rejectionReason: doc.rejectionReason ?? "",
+    reopenedBy: doc.reopenedBy ? doc.reopenedBy.toString() : null,
+    reopenedByEmployee: mapEmployeeRef(
+      (doc as unknown as { reopenedBy?: unknown }).reopenedBy
+    ),
+    reopenedAt: doc.reopenedAt ? doc.reopenedAt.toISOString() : null,
 
     note: doc.note ?? "",
     isActive: doc.isActive ?? true,
@@ -202,12 +173,6 @@ export function mapMarketingExpenseList(
   return docs.map(mapMarketingExpense);
 }
 
-/**
- * Adapter: convert từ `MarketingExpense` (Service-level DTO) → response.
- *
- * Service trả về DTO đã-stringified (xem `marketing-expense.repository.ts#mapToReport`).
- * Mapper này chỉ enrich thêm `statusLabel` / `statusColor`.
- */
 export function mapMarketingExpenseFromDto(
   dto: MarketingExpense
 ): MarketingExpenseResponse {
@@ -251,13 +216,10 @@ export function mapMarketingExpenseFromDto(
     statusColor: MARKETING_EXPENSE_STATUS_COLORS[status] ?? "default",
 
     createdBy: dto.createdBy,
-    approvedBy: dto.approvedBy ?? null,
     lockedBy: dto.lockedBy ?? null,
-    rejectedBy: dto.rejectedBy ?? null,
-    approvedAt: dto.approvedAt ?? null,
     lockedAt: dto.lockedAt ?? null,
-    rejectedAt: dto.rejectedAt ?? null,
-    rejectionReason: dto.rejectionReason ?? "",
+    reopenedBy: dto.reopenedBy ?? null,
+    reopenedAt: dto.reopenedAt ?? null,
 
     note: dto.note ?? "",
     isActive: dto.isActive ?? true,

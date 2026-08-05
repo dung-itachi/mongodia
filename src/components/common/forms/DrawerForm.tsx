@@ -2,6 +2,9 @@
  * DrawerForm Component (Sprint 3.1 - Complete UI Kit)
  *
  * Wrapper for Ant Design Drawer with form footer.
+ *
+ * Ant Design v5+ deprecates `width` in favor of `size` ("default" | "large").
+ * Use `size` prop for standard sizes, or `width` for custom dimensions.
  */
 
 import { Drawer, Button, Space } from "antd";
@@ -10,6 +13,9 @@ import { ReactNode } from "react";
 export type DrawerFormProps = {
   open: boolean;
   title: string;
+  /** Ant Design drawer size: "default" (378px) or "large" (736px) */
+  size?: "default" | "large";
+  /** Custom width in pixels. Use `size` for standard sizes instead. */
   width?: number | string;
   loading?: boolean;
   onClose: () => void;
@@ -23,7 +29,8 @@ export type DrawerFormProps = {
 export default function DrawerForm({
   open,
   title,
-  width = 600,
+  size,
+  width,
   loading,
   onClose,
   onSubmit,
@@ -36,7 +43,8 @@ export default function DrawerForm({
     <Drawer
       title={title}
       placement="right"
-      width={width}
+      size={size}
+      width={size ? undefined : (width ?? 600)}
       open={open}
       onClose={onClose}
       destroyOnClose

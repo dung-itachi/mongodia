@@ -49,7 +49,7 @@ const budgetAllocationSchema = z.object({
 // ============================================================================
 
 export const marketingExpenseFormSchema = z.object({
-  reportDate: dateString,
+  reportDate: z.string().min(1, "Ngày báo cáo là bắt buộc"),
 
   marketingEmployeeId: z
     .string()
@@ -57,22 +57,27 @@ export const marketingExpenseFormSchema = z.object({
     .min(1, "Nhân viên marketing là bắt buộc"),
 
   /**
-   * `facebookPageId` = null / undefined → báo cáo toàn team.
+   * `facebookPageId` = null / undefined / "" → báo cáo toàn team.
    */
-  facebookPageId: z
-    .string()
-    .trim()
-    .min(1, "Facebook page không hợp lệ")
-    .nullable()
-    .optional()
-    .or(z.literal("")),
+  facebookPageId: z.string().nullable().default(null),
 
-  requestedBudget: budgetAllocationSchema,
-  spentBudget: budgetAllocationSchema,
+  requestedBudget: z.object({
+    morning: z.number().min(0).default(0),
+    afternoon: z.number().min(0).default(0),
+    emergency: z.number().min(0).default(0),
+  }),
 
-  totalRevenue: nonNegativeNumber.default(0),
-  totalLeads: nonNegativeNumber.default(0),
-  closedLeads: nonNegativeNumber.default(0),
+  spentBudget: z.object({
+    morning: z.number().min(0).default(0),
+    afternoon: z.number().min(0).default(0),
+    emergency: z.number().min(0).default(0),
+  }),
+
+  totalRevenue: z.number().min(0).default(0),
+  totalLeads: z.number().min(0).default(0),
+  closedLeads: z.number().min(0).default(0),
+
+  note: z.string().trim().max(2000).default(""),
 });
 
 export type MarketingExpenseForm = z.infer<typeof marketingExpenseFormSchema>;
@@ -90,6 +95,7 @@ export const defaultMarketingExpenseForm: MarketingExpenseForm = {
   totalRevenue: 0,
   totalLeads: 0,
   closedLeads: 0,
+  note: "",
 };
 
 // ============================================================================
@@ -144,8 +150,7 @@ export type CreateMarketingExpensePayload = z.infer<
  * Body cho PATCH /api/marketing/expenses/:id.
  *
  * Mọi field đều optional (partial update). Status KHÔNG cho phép thay đổi
- * qua API thường — chỉ thay đổi qua workflow endpoints (submit / approve /
- * reject / lock / reopen) ở Sprint sau.
+ * qua API thường — chỉ thay đổi qua workflow endpoints (lock / reopen).
  */
 export const updateMarketingExpenseSchema = z
   .object({
@@ -157,6 +162,7 @@ export const updateMarketingExpenseSchema = z
     totalLeads: nonNegativeNumber.optional(),
     closedLeads: nonNegativeNumber.optional(),
     note: z.string().trim().max(2000).optional(),
+    updatedBy: objectIdString.optional(),
   })
   .strict();
 

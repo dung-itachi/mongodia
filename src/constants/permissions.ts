@@ -388,20 +388,8 @@ export const PERMISSIONS = [
   name: "Delete Marketing Expense",
 },
 {
-  code: "marketing-expense.submit",
-  name: "Submit Marketing Expense",
-},
-{
-  code: "marketing-expense.approve",
-  name: "Approve Marketing Expense",
-},
-{
   code: "marketing-expense.lock",
   name: "Lock Marketing Expense",
-},
-{
-  code: "marketing-expense.reject",
-  name: "Reject Marketing Expense",
 },
 {
   code: "marketing-expense.reopen",

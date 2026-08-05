@@ -1,0 +1,148 @@
+/**
+ * Facebook Pages Table Component (Sprint 7.4)
+ */
+
+import { memo } from "react";
+import { Table, Tag, Button, Space, Dropdown } from "antd";
+import type { TablePaginationConfig } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
+import type { FacebookPage } from "@/hooks/useFacebookPages";
+import styles from "./facebook-pages.module.css";
+
+const STATUS_COLORS: Record<string, string> = {
+  ACTIVE: "green",
+  INACTIVE: "default",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Hoạt động",
+  INACTIVE: "Không hoạt động",
+};
+
+export type FacebookPagesTableProps = {
+  data: FacebookPage[];
+  total: number;
+  page: number;
+  pageSize: number;
+  sortField?: string;
+  sortOrder?: "asc" | "desc";
+  onPageChange: (page: number, pageSize: number) => void;
+  onSortChange: (field: string, order: "asc" | "desc" | undefined) => void;
+  onEdit: (id: string) => void;
+};
+
+function FacebookPagesTableInner({
+  data,
+  total,
+  page,
+  pageSize,
+  sortField,
+  sortOrder,
+  onPageChange,
+  onSortChange,
+  onEdit,
+}: FacebookPagesTableProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleTableChange = (pagination: TablePaginationConfig, _filters: any, sorter: any) => {
+    onPageChange(pagination.current ?? 1, pagination.pageSize ?? 20);
+    if (sorter?.field && sorter?.order) {
+      const order = sorter.order === "ascend" ? "asc" : "desc";
+      onSortChange(String(sorter.field), order);
+    } else {
+      onSortChange(sortField ?? "", undefined);
+    }
+  };
+
+  const columns: ColumnsType<FacebookPage> = [
+    {
+      title: "Mã",
+      dataIndex: "code",
+      key: "code",
+      width: 120,
+      sorter: true,
+      sortOrder: sortField === "code" ? (sortOrder === "asc" ? "ascend" : "descend") as "ascend" | "descend" : undefined,
+    },
+    {
+      title: "Tên Page",
+      dataIndex: "name",
+      key: "name",
+      width: 200,
+      sorter: true,
+      sortOrder: sortField === "name" ? (sortOrder === "asc" ? "ascend" : "descend") as "ascend" | "descend" : undefined,
+      render: (name: string) => <span style={{ fontWeight: 500 }}>{name}</span>,
+    },
+    {
+      title: "URL",
+      dataIndex: "pageUrl",
+      key: "pageUrl",
+      width: 200,
+      ellipsis: true,
+      render: (url: string) => url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+      ) : "-",
+    },
+    {
+      title: "Facebook ID",
+      dataIndex: "facebookPageId",
+      key: "facebookPageId",
+      width: 150,
+      ellipsis: true,
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 130,
+      render: (status: "ACTIVE" | "INACTIVE") => (
+        <Tag color={STATUS_COLORS[status]}>
+          {STATUS_LABELS[status]}
+        </Tag>
+      ),
+    },
+    {
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
+      ellipsis: true,
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 60,
+      fixed: "right",
+      render: (_: unknown, record: FacebookPage) => (
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => onEdit(record._id)}
+          />
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <Table
+      columns={columns}
+      dataSource={data}
+      rowKey="_id"
+      onChange={handleTableChange}
+      pagination={{
+        current: page,
+        pageSize: pageSize,
+        total: total,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        showTotal: (t: number) => `Tổng: ${t}`,
+      }}
+      scroll={{ x: 900 }}
+      size="middle"
+    />
+  );
+}
+
+const FacebookPagesTable = memo(FacebookPagesTableInner);
+export default FacebookPagesTable;

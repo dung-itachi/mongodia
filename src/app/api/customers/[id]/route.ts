@@ -1,24 +1,39 @@
+/**
+ * ==================================================
+ * CUSTOMER API ROUTES
+ * ==================================================
+ *
+ * Sprint 8.0 — Customer Module Foundation
+ *
+ * GET  /api/customers/:id     - Get customer detail
+ * PATCH /api/customers/:id   - Update customer
+ * DELETE /api/customers/:id  - Soft delete customer
+ */
+
+import mongoose from "mongoose";
+
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 
-import Customer from "@/models/Customer";
-import Area from "@/models/Area";
-import Team from "@/models/Team";
-import Employee from "@/models/Employee";
-import mongoose from "mongoose";
+import { success, error as errorResponse } from "@/utils/response";
+import { customerService } from "@/services/customer/customer.service";
+import { mapCustomer } from "@/mappers/customer.mapper";
 
-import {
-  mapCustomer,
-} from "@/mappers/customer.mapper";
+function badRequest(message: string) {
+  return errorResponse(message, 400);
+}
 
-import {
-  success,
-  error as errorResponse,
-} from "@/utils/response";
+function notFound(message: string) {
+  return errorResponse(message, 404);
+}
 
-import {
-  updateCustomerSchema,
-} from "@/utils/validator";
+function forbidden(message: string) {
+  return errorResponse(message, 403);
+}
+
+function serverError(message: string) {
+  return errorResponse(message, 500);
+}
 
 export async function GET(
   request: Request,
@@ -27,15 +42,8 @@ export async function GET(
   try {
     const currentUser = await getCurrentUser(request);
 
-    if (
-      !currentUser.permissions.includes(
-        "customer.view"
-      )
-    ) {
-      return errorResponse(
-        "Bạn không có quyền xem khách hàng",
-        403
-      );
+    if (!currentUser.permissions.includes("customer.view")) {
+      return forbidden("Bạn không có quyền xem khách hàng");
     }
 
     await connectDB();
@@ -43,56 +51,31 @@ export async function GET(
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return errorResponse(
-        "ID không hợp lệ",
-        400
-      );
+      return badRequest("ID không hợp lệ");
     }
 
-    const customer = await Customer.findById(id)
-      .populate("areaId", "_id code name")
-      .populate("teamId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode fullName")
-      .lean();
+    const customer = await customerService.getById(id);
 
     if (!customer) {
-      return errorResponse(
-        "Khách hàng không tồn tại",
-        404
-      );
+      return notFound("Khách hàng không tồn tại");
     }
 
-    return success(mapCustomer(customer));
-
+    return success(mapCustomer(customer as unknown as Record<string, unknown>));
   } catch (error) {
-    console.error(
-      "Customer Detail Error:",
-      error
-    );
-
-    return errorResponse(
-      "Không thể lấy khách hàng",
-      500
-    );
+    console.error("Customer Detail Error:", error);
+    return serverError("Không thể lấy khách hàng");
   }
 }
 
-export async function PUT(
+export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser(request);
 
-    if (
-      !currentUser.permissions.includes(
-        "customer.update"
-      )
-    ) {
-      return errorResponse(
-        "Bạn không có quyền cập nhật khách hàng",
-        403
-      );
+    if (!currentUser.permissions.includes("customer.update")) {
+      return forbidden("Bạn không có quyền cập nhật khách hàng");
     }
 
     await connectDB();
@@ -100,146 +83,26 @@ export async function PUT(
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return errorResponse(
-        "ID không hợp lệ",
-        400
-      );
+      return badRequest("ID không hợp lệ");
     }
 
-    const existedCustomer =
-      await Customer.findById(id);
-
-    if (!existedCustomer) {
-      return errorResponse(
-        "Khách hàng không tồn tại",
-        404
-      );
-    }
-
-    let body: unknown;
-
+    let body: Record<string, unknown>;
     try {
       body = await request.json();
     } catch {
-      return errorResponse(
-        "Dữ liệu không hợp lệ",
-        400
-      );
+      return badRequest("Dữ liệu không hợp lệ");
     }
 
-    const parsedBody =
-      updateCustomerSchema.safeParse(body);
+    const result = await customerService.update(id, body as never);
 
-    if (!parsedBody.success) {
-      return errorResponse(
-        parsedBody.error.issues[0]?.message ??
-          "Dữ liệu không hợp lệ",
-        400
-      );
+    if (!result.success) {
+      return badRequest(result.error);
     }
 
-    const data = parsedBody.data;
-
-    const existedCode = await Customer.findOne({
-      code: data.code.toUpperCase(),
-      _id: { $ne: id },
-    });
-
-    if (existedCode) {
-      return errorResponse(
-        "Mã khách hàng đã tồn tại",
-        400
-      );
-    }
-
-    const existedPhone = await Customer.findOne({
-      phone: data.phone,
-      _id: { $ne: id },
-    });
-
-    if (existedPhone) {
-      return errorResponse(
-        "Số điện thoại đã tồn tại",
-        400
-      );
-    }
-
-    const existedArea = await Area.exists({
-      _id: data.areaId,
-    });
-
-    if (!existedArea) {
-      return errorResponse(
-        "Khu vực không tồn tại",
-        400
-      );
-    }
-
-    const existedTeam = await Team.exists({
-      _id: data.teamId,
-    });
-
-    if (!existedTeam) {
-      return errorResponse(
-        "Nhóm không tồn tại",
-        400
-      );
-    }
-
-    const existedMarketingEmployee = await Employee.exists({
-      _id: data.marketingEmployeeId,
-    });
-
-    if (!existedMarketingEmployee) {
-      return errorResponse(
-        "Nhân viên marketing không tồn tại",
-        400
-      );
-    }
-
-    await Customer.updateOne(
-      { _id: id },
-      {
-        $set: {
-          code: data.code.toUpperCase(),
-          name: data.name,
-          phone: data.phone,
-          email: data.email ?? "",
-          gender: data.gender,
-          birthday: data.birthday
-            ? new Date(data.birthday)
-            : null,
-          address: data.address ?? "",
-          areaId: data.areaId,
-          teamId: data.teamId,
-          marketingEmployeeId: data.marketingEmployeeId,
-          note: data.note ?? "",
-          isActive: data.isActive,
-        },
-      }
-    );
-
-    const updatedCustomer = await Customer.findById(id)
-      .populate("areaId", "_id code name")
-      .populate("teamId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode fullName")
-      .lean();
-
-    return success(
-      mapCustomer(updatedCustomer!),
-      "Cập nhật khách hàng thành công"
-    );
-
+    return success(result.data, "Cập nhật khách hàng thành công");
   } catch (error) {
-    console.error(
-      "Update Customer Error:",
-      error
-    );
-
-    return errorResponse(
-      "Không thể cập nhật khách hàng",
-      500
-    );
+    console.error("Update Customer Error:", error);
+    return serverError("Không thể cập nhật khách hàng");
   }
 }
 
@@ -250,15 +113,8 @@ export async function DELETE(
   try {
     const currentUser = await getCurrentUser(request);
 
-    if (
-      !currentUser.permissions.includes(
-        "customer.delete"
-      )
-    ) {
-      return errorResponse(
-        "Bạn không có quyền xóa khách hàng",
-        403
-      );
+    if (!currentUser.permissions.includes("customer.delete")) {
+      return forbidden("Bạn không có quyền xóa khách hàng");
     }
 
     await connectDB();
@@ -266,37 +122,18 @@ export async function DELETE(
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return errorResponse(
-        "ID không hợp lệ",
-        400
-      );
+      return badRequest("ID không hợp lệ");
     }
 
-    const customer = await Customer.findById(id);
+    const result = await customerService.delete(id);
 
-    if (!customer) {
-      return errorResponse(
-        "Khách hàng không tồn tại",
-        404
-      );
+    if (!result.success) {
+      return badRequest(result.error);
     }
 
-    await Customer.deleteOne({ _id: id });
-
-    return success(
-      null,
-      "Xóa khách hàng thành công"
-    );
-
+    return success(null, "Xóa khách hàng thành công");
   } catch (error) {
-    console.error(
-      "Delete Customer Error:",
-      error
-    );
-
-    return errorResponse(
-      "Không thể xóa khách hàng",
-      500
-    );
+    console.error("Delete Customer Error:", error);
+    return serverError("Không thể xóa khách hàng");
   }
 }

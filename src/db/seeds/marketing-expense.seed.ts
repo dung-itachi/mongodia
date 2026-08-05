@@ -3,7 +3,7 @@
  * MARKETING EXPENSE REPORT SEED
  * ==================================================
  *
- * Sprint 6.6 — Marketing Expense Seed
+ * Workflow Simplification Refactor (Aug 2026)
  *
  * Mục tiêu:
  *   - Seed ~80 MarketingExpenseReport để phục vụ Dashboard, Report.
@@ -12,31 +12,13 @@
  *       40% (32) trong 30 ngày gần nhất
  *       30% (24) trong 90 ngày gần nhất
  *   - Status distribution (workflow hợp lệ):
- *       DRAFT     20%
- *       SUBMITTED 20%
- *       APPROVED  25%
- *       LOCKED    25%
- *       REJECTED  10%
+ *       DRAFT     40%
+ *       LOCKED    40%
+ *       REOPENED  20%
  *   - Mỗi report có 1~3 budget slots (MORNING/AFTERNOON/URGENT).
  *   - Tất cả metric (CPA/ROAS/conversionRate/remainingBudget) đều
- *     dùng MarketingExpenseCalculator.calculateAll — KHÔNG hardcode.
- *   - totalRevenue: ưu tiên lookup Order theo marketingEmployeeId + reportDate;
- *     nếu không có thì fallback sinh tạm.
- *   - Idempotent theo (reportDate, facebookPageId):
- *       - Tồn tại → UPDATE (không insert mới).
- *       - Chưa có → INSERT.
- *
- * DETERMINISM:
- *   - Dùng seeded PRNG (mulberry32) để mỗi lần chạy đều sinh ra đúng cùng
- *     tập (date, page, employee, status, budget, leads, revenue fallback).
- *   - Combined với idempotent lookup → chạy nhiều lần KHÔNG thay đổi số
- *     lượng report trong DB, chỉ update nếu logic sinh thay đổi.
- *   - Tổng = TOTAL_REPORTS (=80) ổn định qua mọi lần seed.
- *
- * PHỤ THUỘC (phải seed trước):
- *   - Permissions / Roles / Employees
- *   - FacebookPages
- *   - Orders (optional — chỉ để lookup totalRevenue)
+ *     dùng MarketingExpenseCalculator.calculateAll.
+ *   - Idempotent theo (reportDate, marketingEmployeeId, facebookPageId).
  */
 
 import Employee from "@/models/Employee";
@@ -55,26 +37,17 @@ import { MarketingExpenseCalculator } from "@/utils/marketing-expense-calculator
 
 const TOTAL_REPORTS = 80;
 
-/** Seed cố định cho PRNG → mỗi lần seed đều cho cùng output.
- *  Dùng number (không BigInt) để tương thích TS target hiện tại. */
-const PRNG_SEED = 0x4d45_525f >>> 0; // "MER_EXP" prefix
+const PRNG_SEED = 0x4d45_525f >>> 0;
 
-/**
- * Status distribution — chỉ các status có thể sinh trực tiếp từ seed.
- * REOPENED là kết quả từ việc user mở lại LOCKED → không seed.
- */
 const STATUS_DISTRIBUTION: Array<{
   status: MarketingExpenseReportStatus;
   weight: number;
 }> = [
-  { status: MarketingExpenseReportStatus.DRAFT, weight: 0.2 },
-  { status: MarketingExpenseReportStatus.SUBMITTED, weight: 0.2 },
-  { status: MarketingExpenseReportStatus.APPROVED, weight: 0.25 },
-  { status: MarketingExpenseReportStatus.LOCKED, weight: 0.25 },
-  { status: MarketingExpenseReportStatus.REJECTED, weight: 0.1 },
+  { status: MarketingExpenseReportStatus.DRAFT, weight: 0.4 },
+  { status: MarketingExpenseReportStatus.LOCKED, weight: 0.4 },
+  { status: MarketingExpenseReportStatus.REOPENED, weight: 0.2 },
 ];
 
-// Date windows — mỗi window có target % của tổng report.
 const DATE_WINDOWS: Array<{
   label: string;
   daysBack: number;
@@ -88,14 +61,6 @@ const DATE_WINDOWS: Array<{
 const SLOT_TYPES = ["MORNING", "AFTERNOON", "URGENT"] as const;
 type SlotType = (typeof SLOT_TYPES)[number];
 
-const REJECTION_REASONS = [
-  "Số liệu chưa khớp với Order",
-  "Thiếu phân bổ URGENT",
-  "Conversion rate bất thường",
-  "ROAS quá thấp — cần xem lại budget",
-  "Note chưa rõ ràng",
-];
-
 const NOTE_TEMPLATES = [
   "Hoạt động Ads bình thường",
   "Có 1 đợt scale-up budget buổi tối",
@@ -107,7 +72,7 @@ const NOTE_TEMPLATES = [
 ];
 
 // ============================================================================
-// Seeded PRNG (mulberry32) — deterministic output, no external dep
+// Seeded PRNG (mulberry32)
 // ============================================================================
 
 function mulberry32(seed: number): () => number {
@@ -120,10 +85,6 @@ function mulberry32(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-
-// ============================================================================
-// Random helpers (dùng PRNG instance)
-// ============================================================================
 
 interface Prng {
   nextInt(min: number, max: number): number;
@@ -162,9 +123,6 @@ function startOfDay(date: Date): Date {
   return d;
 }
 
-/**
- * Phân bổ target theo window, đảm bảo sum = TOTAL_REPORTS.
- */
 function distributeCounts(): Array<{ daysBack: number; count: number }> {
   const raw = DATE_WINDOWS.map((w) => ({
     daysBack: w.daysBack,
@@ -187,9 +145,6 @@ function distributeCounts(): Array<{ daysBack: number; count: number }> {
   return raw.map((c, i) => ({ daysBack: c.daysBack, count: counts[i] }));
 }
 
-/**
- * Pick 1 status dựa trên distribution.
- */
 function pickStatus(prng: Prng): MarketingExpenseReportStatus {
   const r = prng.nextFloat(0, 1, 6);
   let cumulative = 0;
@@ -200,11 +155,6 @@ function pickStatus(prng: Prng): MarketingExpenseReportStatus {
   return STATUS_DISTRIBUTION[STATUS_DISTRIBUTION.length - 1].status;
 }
 
-/**
- * Sinh 3-slot budget từ danh sách allocation đã chọn.
- * - requested mỗi slot: 1tr - 8tr VND
- * - spent mỗi slot: 50% - 100% requested
- */
 function generateBudgets(prng: Prng): {
   requested: IBudgetAllocation;
   spent: IBudgetAllocation;
@@ -241,9 +191,6 @@ function generateBudgets(prng: Prng): {
   return { requested, spent };
 }
 
-/**
- * Lookup tổng revenue từ Order theo marketingEmployeeId + reportDate.
- */
 async function lookupRevenueFromOrders(args: {
   marketingEmployeeId: string;
   reportDate: Date;
@@ -274,7 +221,6 @@ async function lookupRevenueFromOrders(args: {
 // ============================================================================
 
 export async function seedMarketingExpenseReports() {
-  // ---- Resolve refs (throw nếu thiếu) ----------------------------------
   const employees = await Employee.find({ isActive: true })
     .populate({
       path: "roleId",
@@ -298,15 +244,10 @@ export async function seedMarketingExpenseReports() {
   }
 
   const adminEmp = await Employee.findOne({ username: "admin" });
-  const leaderMkt = await Employee.findOne({
-    employeeCode: "EMP_LEADER_MKT",
-  });
   if (!adminEmp) throw new Error("Seed MarketingExpense: missing admin");
 
-  // ---- PRNG deterministic (mỗi lần seed đều cho cùng sequence) --------
   const prng = makePrng(PRNG_SEED);
 
-  // ---- Phân bổ report theo date window ----------------------------------
   const today = startOfDay(new Date());
   const counts = distributeCounts();
 
@@ -320,14 +261,13 @@ export async function seedMarketingExpenseReports() {
   const plan: PlanEntry[] = [];
 
   const tryPush = (entry: PlanEntry): boolean => {
-    const key = `${entry.reportDate.toISOString()}|${entry.facebookPageId ?? "null"}`;
+    const key = `${entry.reportDate.toISOString()}|${entry.marketingEmployeeId}|${entry.facebookPageId ?? "null"}`;
     if (seen.has(key)) return false;
     seen.add(key);
     plan.push(entry);
     return true;
   };
 
-  // Pass 1: phân bổ theo window (deterministic với PRNG)
   for (const { daysBack, count } of counts) {
     let added = 0;
     let attempts = 0;
@@ -337,7 +277,6 @@ export async function seedMarketingExpenseReports() {
       const date = new Date(today);
       date.setDate(date.getDate() - daysAgo);
 
-      // 10% chance null (report toàn team)
       const useNull = prng.nextFloat(0, 1, 4) < 0.1;
       const fbDoc = useNull
         ? null
@@ -360,7 +299,6 @@ export async function seedMarketingExpenseReports() {
     }
   }
 
-  // Pass 2: bù lại nếu thiếu (deterministic — dùng PRNG cũ)
   let toGenerate = TOTAL_REPORTS - plan.length;
   let safety = 0;
   while (toGenerate > 0 && safety < 1000) {
@@ -391,7 +329,6 @@ export async function seedMarketingExpenseReports() {
     }
   }
 
-  // ---- Loop insert / update --------------------------------------------
   let inserted = 0;
   let updated = 0;
 
@@ -402,9 +339,9 @@ export async function seedMarketingExpenseReports() {
     const reportDate = startOfDay(entry.reportDate);
     const facebookPageId = entry.facebookPageId;
 
-    // Idempotent lookup theo (reportDate, facebookPageId)
     const existing = await MarketingExpenseReport.findOne({
       reportDate,
+      marketingEmployeeId: entry.marketingEmployeeId,
       ...(facebookPageId
         ? { facebookPageId }
         : { facebookPageId: null }),
@@ -429,7 +366,6 @@ export async function seedMarketingExpenseReports() {
       );
     }
 
-    // === Dùng Calculator — KHÔNG tự ghi công thức ===
     const calc = MarketingExpenseCalculator.calculateAll({
       requestedBudget: requested,
       spentBudget: spent,
@@ -438,31 +374,19 @@ export async function seedMarketingExpenseReports() {
       closedLeads,
     });
 
-    // Workflow audit fields
     const now = new Date();
-    const approvedBy = leaderMkt ? leaderMkt._id : adminEmp._id;
     const audit: Record<string, unknown> = {};
 
-    if (status === MarketingExpenseReportStatus.APPROVED) {
-      audit.approvedBy = approvedBy;
-      audit.approvedAt = new Date(
-        now.getTime() - prng.nextInt(1, 24) * 3600 * 1000
-      );
-    } else if (status === MarketingExpenseReportStatus.LOCKED) {
-      audit.approvedBy = approvedBy;
-      audit.approvedAt = new Date(
-        now.getTime() - prng.nextInt(24, 72) * 3600 * 1000
-      );
-      audit.lockedBy = approvedBy;
+    if (status === MarketingExpenseReportStatus.LOCKED) {
+      audit.lockedBy = adminEmp._id;
       audit.lockedAt = new Date(
         now.getTime() - prng.nextInt(1, 12) * 3600 * 1000
       );
-    } else if (status === MarketingExpenseReportStatus.REJECTED) {
-      audit.rejectedBy = approvedBy;
-      audit.rejectedAt = new Date(
-        now.getTime() - prng.nextInt(1, 12) * 3600 * 1000
+    } else if (status === MarketingExpenseReportStatus.REOPENED) {
+      audit.reopenedBy = adminEmp._id;
+      audit.reopenedAt = new Date(
+        now.getTime() - prng.nextInt(1, 6) * 3600 * 1000
       );
-      audit.rejectionReason = prng.pick(REJECTION_REASONS);
     }
 
     const note = prng.pick(NOTE_TEMPLATES);
@@ -493,7 +417,6 @@ export async function seedMarketingExpenseReports() {
       );
       updated += 1;
     } else {
-      // Mongoose strict TS rejects `null` cho `ObjectId`; cast qua unknown.
       await MarketingExpenseReport.create(
         payload as unknown as Parameters<
           typeof MarketingExpenseReport.create
@@ -503,7 +426,6 @@ export async function seedMarketingExpenseReports() {
     }
   }
 
-  // ---- Stats log --------------------------------------------------------
   const stats = await MarketingExpenseReport.aggregate<{
     _id: string;
     n: number;

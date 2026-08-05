@@ -108,10 +108,7 @@ const MODULE_MAP: Record<string, string> = {
   "marketing-expense.create": "MarketingExpense",
   "marketing-expense.update": "MarketingExpense",
   "marketing-expense.delete": "MarketingExpense",
-  "marketing-expense.submit": "MarketingExpense",
-  "marketing-expense.approve": "MarketingExpense",
   "marketing-expense.lock": "MarketingExpense",
-  "marketing-expense.reject": "MarketingExpense",
   "marketing-expense.reopen": "MarketingExpense",
 
   "report.view": "Report",

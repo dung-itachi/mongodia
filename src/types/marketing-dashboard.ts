@@ -1,7 +1,8 @@
 /**
- * Marketing Dashboard Types (Sprint 5.1 — Marketing Dashboard)
+ * Marketing Dashboard Types (Sprint 7.0 — Marketing Dashboard MongoDB)
  *
  * Type definitions for the marketing dashboard.
+ * All data from MongoDB - no mock data.
  */
 
 export type MarketingSummary = {
@@ -55,14 +56,292 @@ export type MarketingChartData = {
   source: LeadSourceChartItem[];
 };
 
+// ============================================================================
+// Expense & Revenue Types (Sprint 7.0)
+// ============================================================================
+
+export type MarketingExpenseSummary = {
+  /** Total spent budget this month */
+  totalSpent: number;
+  /** Total revenue this month */
+  totalRevenue: number;
+  /** Total leads this month */
+  totalLeads: number;
+  /** Total closed leads this month */
+  totalClosedLeads: number;
+  /** Return on Ad Spend (Revenue / Spent) */
+  roas: number;
+  /** Cost Per Acquisition (Spent / ClosedLeads) */
+  cpa: number;
+  /** Average conversion rate */
+  averageConversionRate: number;
+};
+
+export type MarketingRevenueSummary = {
+  /** Today's revenue */
+  todayRevenue: number;
+  /** This month's revenue */
+  monthRevenue: number;
+  /** Total accumulated revenue */
+  totalRevenue: number;
+  /** Total order count */
+  orderCount: number;
+};
+
+export type MarketingROASSummary = {
+  /** ROAS for this month */
+  roas: number;
+  /** Total spent this month */
+  totalSpent: number;
+  /** Total revenue this month */
+  totalRevenue: number;
+};
+
+export type MarketingConversionSummary = {
+  /** Total leads this month */
+  totalLeads: number;
+  /** Closed leads this month */
+  closedLeads: number;
+  /** Conversion rate percentage */
+  conversionRate: number;
+};
+
+// ============================================================================
+// Chart Types (Sprint 7.0)
+// ============================================================================
+
+export type DailyChartItem = {
+  /** Date string (YYYY-MM-DD) */
+  date: string;
+  /** Number of leads on this day */
+  leads: number;
+  /** Revenue on this day */
+  revenue: number;
+  /** Spent on this day */
+  spent: number;
+};
+
+export type MonthlyChartItem = {
+  /** Month string (YYYY-MM) */
+  month: string;
+  /** Leads in this month */
+  leads: number;
+  /** Revenue in this month */
+  revenue: number;
+  /** Spent in this month */
+  spent: number;
+};
+
+export type MarketingChartDataV2 = {
+  /** Daily data for the last 7 days */
+  daily: DailyChartItem[];
+  /** Monthly data for the last 12 months */
+  monthly: MonthlyChartItem[];
+};
+
+// ============================================================================
+// Top Marketing Types (Sprint 7.0)
+// ============================================================================
+
+export type TopMarketingChannel = {
+  /** Marketing employee ID */
+  marketingEmployeeId: string;
+  /** Marketing employee name */
+  marketingEmployeeName: string;
+  /** Total spent by this channel */
+  totalSpent: number;
+  /** Total revenue from this channel */
+  totalRevenue: number;
+  /** ROAS for this channel */
+  roas: number;
+  /** Total leads from this channel */
+  totalLeads: number;
+  /** Total closed leads from this channel */
+  totalClosedLeads: number;
+};
+
+// ============================================================================
+// Full Dashboard Types
+// ============================================================================
+
 export type MarketingDashboardData = {
+  /** Lead summary stats */
   summary: MarketingSummary;
-  chart: MarketingChartData;
-  topMarketing: TopMarketingItem[];
+  /** Expense metrics */
+  expense: MarketingExpenseSummary;
+  /** Revenue metrics */
+  revenue: MarketingRevenueSummary;
+  /** Chart data */
+  chart: MarketingChartDataV2;
+  /** Lead source breakdown */
+  leadSource: LeadSourceChartItem[];
+  /** Top marketing channels by ROAS */
+  topMarketing: TopMarketingChannel[];
 };
 
 export type MarketingDashboardApiResponse = {
   success: boolean;
   data: MarketingDashboardData;
   message?: string;
+};
+
+// ============================================================================
+// Chart & Ranking Types (Sprint 7.2)
+// ============================================================================
+
+export type ChartPeriod = "7d" | "30d" | "90d";
+
+export type TrendDataPoint = {
+  date: string;
+  value: number;
+};
+
+export type LeadTrendData = TrendDataPoint[];
+export type ExpenseTrendData = TrendDataPoint[];
+export type RevenueTrendData = TrendDataPoint[];
+export type ROASTrendData = TrendDataPoint[];
+export type ConversionTrendData = TrendDataPoint[];
+
+export type ChartData = {
+  leadTrend: LeadTrendData;
+  expenseTrend: ExpenseTrendData;
+  revenueTrend: RevenueTrendData;
+  roasTrend: ROASTrendData;
+  conversionTrend: ConversionTrendData;
+};
+
+export type TopFacebookPageItem = {
+  pageId: string;
+  pageName: string;
+  totalLeads: number;
+  totalRevenue: number;
+  roas: number;
+};
+
+export type TopMarketingEmployeeItem = {
+  employeeId: string;
+  employeeName: string;
+  avatar?: string | null;
+  totalLeads: number;
+  qualifiedLeads: number;
+  closedLeads: number;
+  revenue: number;
+};
+
+export type TopCampaignItem = {
+  campaignId: string;
+  campaignName: string;
+  totalSpent: number;
+  totalRevenue: number;
+  roas: number;
+  totalLeads: number;
+};
+
+export type RankingData = {
+  topFacebookPages: TopFacebookPageItem[];
+  topMarketingEmployees: TopMarketingEmployeeItem[];
+  topCampaigns: TopCampaignItem[];
+};
+
+export type MarketingChartApiResponse = {
+  success: boolean;
+  data: ChartData;
+  message?: string;
+};
+
+export type MarketingRankingApiResponse = {
+  success: boolean;
+  data: RankingData;
+  message?: string;
+};
+
+// ============================================================================
+// Drill-down Types (Sprint 7.3)
+// ============================================================================
+
+export type DrillDownLead = {
+  _id: string;
+  leadCode: string;
+  customerName: string;
+  phone?: string;
+  sourceType: string;
+  status: string;
+  marketingEmployeeName?: string;
+  facebookPageName?: string;
+  createdAt: string;
+};
+
+export type DrillDownExpense = {
+  _id: string;
+  reportDate: string;
+  marketingEmployeeName?: string;
+  facebookPageName?: string;
+  totalSpent: number;
+  totalRevenue: number;
+  totalLeads: number;
+  roas: number;
+};
+
+export type DrillDownRevenue = {
+  _id: string;
+  orderCode: string;
+  customerName: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+};
+
+export type DrillDownData = {
+  leads: DrillDownLead[];
+  expenses: DrillDownExpense[];
+  revenues: DrillDownRevenue[];
+  summary: {
+    totalLeads: number;
+    totalExpense: number;
+    totalRevenue: number;
+    roas: number;
+    cpa: number;
+  };
+};
+
+// ============================================================================
+// Export Types (Sprint 7.3)
+// ============================================================================
+
+export type ExportData = {
+  summary: {
+    todayLead: number;
+    monthLead: number;
+    totalLead: number;
+    assignedLead: number;
+    closedLead: number;
+    totalSpent: number;
+    monthRevenue: number;
+    roas: number;
+    cpa: number;
+    conversionRate: number;
+  };
+  leads: {
+    date: string;
+    value: number;
+  }[];
+  expenses: {
+    date: string;
+    value: number;
+  }[];
+  revenues: {
+    date: string;
+    value: number;
+  }[];
+  roas: {
+    date: string;
+    value: number;
+  }[];
+  cpa: {
+    date: string;
+    value: number;
+  }[];
+  facebookPages: TopFacebookPageItem[];
+  marketingEmployees: TopMarketingEmployeeItem[];
+  campaigns: TopCampaignItem[];
 };

@@ -3,40 +3,32 @@
  * MARKETING EXPENSE REPORT STATUS CONSTANTS
  * ==================================================
  *
- * Sprint 6.5 — Marketing Expense Domain
+ * Workflow Simplification Refactor (Aug 2026)
  *
  * Status values dùng cho MarketingExpenseReport.
  *
- * Workflow:
- *   DRAFT → SUBMITTED → APPROVED → LOCKED
- *     ↑          ↓
- *     │       REJECTED → DRAFT (sửa và nộp lại)
- *     │
- *  REOPENED (từ LOCKED) → có thể tiếp tục chỉnh sửa
+ * Workflow mới:
+ *   DRAFT → LOCKED → REOPENED → LOCKED
+ *
+ * Business Rules:
+ *   - Marketing tự lock khi hoàn thành báo cáo ngày.
+ *   - Marketing không cần Approval.
+ *   - Nếu có sai sót → Admin mở lại (REOPENED) → Marketing sửa → LOCK lại.
  */
 
 export enum MarketingExpenseReportStatus {
   /** Báo cáo đang được nhân viên marketing soạn. */
   DRAFT = "DRAFT",
-  /** Đã nộp, chờ leader/manager duyệt. */
-  SUBMITTED = "SUBMITTED",
-  /** Đã được duyệt. */
-  APPROVED = "APPROVED",
   /** Đã khóa - không thể sửa. */
   LOCKED = "LOCKED",
   /** Đã được mở lại (từ LOCKED) để chỉnh sửa. */
   REOPENED = "REOPENED",
-  /** Bị leader từ chối — nhân viên cần sửa và nộp lại. */
-  REJECTED = "REJECTED",
 }
 
 export const MARKETING_EXPENSE_STATUS_LABELS: Record<MarketingExpenseReportStatus, string> = {
   [MarketingExpenseReportStatus.DRAFT]: "Nháp",
-  [MarketingExpenseReportStatus.SUBMITTED]: "Đã nộp",
-  [MarketingExpenseReportStatus.APPROVED]: "Đã duyệt",
   [MarketingExpenseReportStatus.LOCKED]: "Đã khóa",
   [MarketingExpenseReportStatus.REOPENED]: "Đã mở lại",
-  [MarketingExpenseReportStatus.REJECTED]: "Bị từ chối",
 };
 
 /**
@@ -44,11 +36,8 @@ export const MARKETING_EXPENSE_STATUS_LABELS: Record<MarketingExpenseReportStatu
  */
 export const MARKETING_EXPENSE_STATUS_COLORS: Record<MarketingExpenseReportStatus, string> = {
   [MarketingExpenseReportStatus.DRAFT]: "default",
-  [MarketingExpenseReportStatus.SUBMITTED]: "processing",
-  [MarketingExpenseReportStatus.APPROVED]: "success",
   [MarketingExpenseReportStatus.LOCKED]: "error",
   [MarketingExpenseReportStatus.REOPENED]: "warning",
-  [MarketingExpenseReportStatus.REJECTED]: "error",
 };
 
 /**
@@ -56,9 +45,6 @@ export const MARKETING_EXPENSE_STATUS_COLORS: Record<MarketingExpenseReportStatu
  */
 export const MARKETING_EXPENSE_STATUS_ICONS: Record<MarketingExpenseReportStatus, string> = {
   [MarketingExpenseReportStatus.DRAFT]: "EditOutlined",
-  [MarketingExpenseReportStatus.SUBMITTED]: "UploadOutlined",
-  [MarketingExpenseReportStatus.APPROVED]: "CheckCircleOutlined",
   [MarketingExpenseReportStatus.LOCKED]: "LockOutlined",
   [MarketingExpenseReportStatus.REOPENED]: "UnlockOutlined",
-  [MarketingExpenseReportStatus.REJECTED]: "CloseCircleOutlined",
 };

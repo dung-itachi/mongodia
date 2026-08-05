@@ -3,26 +3,24 @@
  * MARKETING EXPENSE REPORT MODEL
  * ==================================================
  *
- * Sprint 6.5 — Marketing Expense Domain
+ * Workflow Simplification Refactor (Aug 2026)
  *
  * Báo cáo chi phí marketing theo ngày.
  *
- * Mỗi ngày cho mỗi FacebookPage chỉ tồn tại DUY NHẤT 1 report.
- * Nếu facebookPageId = null → report toàn team cho ngày đó.
+ * Business Rule:
+ *   Mỗi ngày chỉ có DUY NHẤT 1 report cho mỗi marketingEmployee.
+ *   Nếu facebookPageId = null → report toàn team cho ngày đó.
  *
  * Sub-document schemas:
  *   - BudgetAllocation:  requested/spent/remaining (morning / afternoon / emergency)
  *
- * Workflow:
+ * Workflow mới:
  *
- *   DRAFT  ──►  SUBMITTED  ──►  APPROVED  ──►  LOCKED
- *     ▲            │
- *     │            ▼
- *     │         REJECTED  ──►  DRAFT  (sửa + nộp lại)
- *     │
- *  REOPENED  ◄──  LOCKED  (mở lại để audit/điều chỉnh)
+ *   DRAFT  ──►  LOCKED
+ *     ▲          │
+ *     │          ▼
+ *  REOPENED ◄───┘  (Admin mở lại để sửa)
  */
-
 import mongoose, { Schema, type Document } from "mongoose";
 import { MarketingExpenseReportStatus } from "../constants/marketing-expense";
 
@@ -79,26 +77,26 @@ export interface IMarketingExpenseReport extends Document {
 
   /** Audit fields. */
   createdBy: mongoose.Types.ObjectId;
-  approvedBy?: mongoose.Types.ObjectId;
-  lockedBy?: mongoose.Types.ObjectId;
-  rejectedBy?: mongoose.Types.ObjectId;
-  approvedAt?: Date;
-  lockedAt?: Date;
-  rejectedAt?: Date;
-  /** Lý do leader từ chối (kèm khi status = REJECTED). */
-  rejectionReason?: string;
+  createdAt: Date;
+  updatedBy?: mongoose.Types.ObjectId;
+  updatedAt: Date;
 
-  /** Ghi chú tự do của nhân viên marketing (Sprint 6.7). */
+  /** Người khóa (Marketing tự khóa khi hoàn thành). */
+  lockedBy?: mongoose.Types.ObjectId;
+  lockedAt?: Date;
+
+  /** Người mở lại (Admin mở khi có sai sót). */
+  reopenedBy?: mongoose.Types.ObjectId;
+  reopenedAt?: Date;
+
+  /** Ghi chú tự do của nhân viên marketing. */
   note?: string;
 
   /**
-   * Soft-delete flag (Sprint 6.7).
+   * Soft-delete flag.
    * Mặc định `true`. Khi xóa → set `false` thay vì remove document.
    */
   isActive: boolean;
-
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 // ============================================================================
@@ -182,7 +180,7 @@ const MarketingExpenseReportSchema = new Schema<IMarketingExpenseReport>(
       required: true,
       index: true,
     },
-    approvedBy: {
+    updatedBy: {
       type: Schema.Types.ObjectId,
       ref: "Employee",
       default: null,
@@ -192,15 +190,13 @@ const MarketingExpenseReportSchema = new Schema<IMarketingExpenseReport>(
       ref: "Employee",
       default: null,
     },
-    rejectedBy: {
+    lockedAt: { type: Date },
+    reopenedBy: {
       type: Schema.Types.ObjectId,
       ref: "Employee",
       default: null,
     },
-    approvedAt: { type: Date },
-    lockedAt: { type: Date },
-    rejectedAt: { type: Date },
-    rejectionReason: { type: String, default: "" },
+    reopenedAt: { type: Date },
     note: { type: String, default: "" },
     isActive: { type: Boolean, default: true, index: true },
   },
@@ -215,41 +211,14 @@ const MarketingExpenseReportSchema = new Schema<IMarketingExpenseReport>(
 
 /**
  * UNIQUE constraint:
- *   Mỗi ngày cho mỗi FacebookPage chỉ tồn tại DUY NHẤT 1 report.
+ *   Mỗi ngày cho mỗi marketingEmployeeId chỉ tồn tại DUY NHẤT 1 report.
  *   Nếu facebookPageId = null → report toàn team cho ngày đó.
- *
- * Lưu ý: MongoDB coi giá trị `null` và missing field là distinct
- * (sparse partial index), nên ta dùng `partialFilterExpression` để
- * cho phép nhiều report có `facebookPageId = null` khác pageId.
- *
- * Tuy nhiên, yêu cầu nghiệp vụ: chỉ có 1 report cho mỗi (reportDate, facebookPageId).
- * Vì vậy ta dùng partial unique trên `facebookPageId: { $exists: true }`,
- * và đảm bảo bằng Service logic rằng chỉ 1 report có `facebookPageId = null`
- * cho mỗi reportDate.
  */
 MarketingExpenseReportSchema.index(
-  { reportDate: 1, facebookPageId: 1 },
+  { reportDate: 1, marketingEmployeeId: 1, facebookPageId: 1 },
   {
     unique: true,
-    partialFilterExpression: {
-      facebookPageId: { $type: "objectId" },
-    },
-    name: "uniq_reportDate_facebookPageId",
-  }
-);
-
-/**
- * UNIQUE constraint cho report toàn team (facebookPageId = null).
- *   Mỗi reportDate chỉ có 1 report có facebookPageId = null.
- */
-MarketingExpenseReportSchema.index(
-  { reportDate: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      facebookPageId: { $type: "null" },
-    },
-    name: "uniq_reportDate_team",
+    name: "uniq_reportDate_employee_facebookPageId",
   }
 );
 

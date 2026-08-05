@@ -4763,3 +4763,1265 @@ Khi chuáº©n hoÃ¡ dashboard hooks:
 1.  `useMarketingDashboard.ts` â†’ Ä‘á»•i `queryKey: ["marketing", "dashboard"]` thÃ nh `marketingDashboardKeys.summary()` (hoáº·c factory phÃ¹ há»£p).
 2.  CÃ¡c page/component khÃ¡c dÃ¹ng `["marketing-dashboard"]` literal â†’ Ä‘á»•i sang `marketingDashboardKeys.X`.
 3.  Sau migration, `marketingDashboardKeys.all` sáº½ match **táº¥t cáº£** dashboard queries trong project â†’ invalidate 1 láº§n lÃ  Ä‘á»§.
+
+
+## Sprint 6.9 â€” Marketing Expense List UI
+
+### Má»¥c tiÃªu
+
+HoÃ n thiá»‡n giao diá»‡n danh sÃ¡ch Marketing Expense táº¡i `/marketing/expense`.
+
+### Files táº¡o má»›i
+
+| File | Loáº¡i |
+| ---- | ---- |
+| `src/app/(protected)/marketing/expense/page.tsx` | New |
+| `src/app/(protected)/marketing/expense/MarketingExpenseToolbar.tsx` | New |
+| `src/app/(protected)/marketing/expense/MarketingExpenseTable.tsx` | New |
+| `src/app/(protected)/marketing/expense/marketing-expense.module.css` | New |
+
+### Page: `/marketing/expense`
+
+- **PageHeader**: tiÃªu Ä‘á» "Chi phÃ­ Marketing"
+- **MarketingExpenseToolbar**: SearchInput (debounce 500ms) + FilterBar + nÃºt Táº¡o má»›i (navigate `/marketing/expense/new`) + LÃ m má»›i
+- **MarketingExpenseTable**: DataTable vá»›i 13 columns + SkeletonTable khi loading
+- **EmptyState**: "KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u" (error) / "ChÆ°a cÃ³ bÃ¡o cÃ¡o" (empty)
+
+### Table columns
+
+| # | Column | Sort | Render |
+| - | ------ | ---- | ------ |
+| 1 | NgÃ y bÃ¡o cÃ¡o | âœ… (reportDate) | `toLocaleDateString` |
+| 2 | Facebook Page | â€” | `facebookPage.name` / `code` |
+| 3 | NhÃ¢n viÃªn Marketing | â€” | `fullName` + `employeeCode` |
+| 4 | NgÃ¢n sÃ¡ch yÃªu cáº§u | âœ… (requestedBudget) | Tá»•ng 3 slot (morning + afternoon + emergency) |
+| 5 | NgÃ¢n sÃ¡ch duyá»‡t | âœ… (approvedBudget) | Tá»•ng 3 slot (trong model hiá»‡n táº¡i = requested) |
+| 6 | NgÃ¢n sÃ¡ch thá»±c chi | âœ… (spentBudget) | Tá»•ng 3 slot |
+| 7 | NgÃ¢n sÃ¡ch cÃ²n láº¡i | âœ… (remainingBudget) | Green color |
+| 8 | ROAS | âœ… (roas) | `Nx` format |
+| 9 | CPA | âœ… (cpa) | VND format |
+| 10 | Tá»· lá»‡ chuyá»ƒn Ä‘á»•i | âœ… (conversionRate) | % format |
+| 11 | Tráº¡ng thÃ¡i | â€” | Custom Tag vá»›i colors tá»« `marketing-expense.config` |
+| 12 | NgÃ y táº¡o | âœ… (createdAt) | `toLocaleDateString` |
+| 13 | Thao tÃ¡c | â€” | Dropdown menu (chá»‰ render, chÆ°a xá»­ lÃ½ Drawer) |
+
+### Sort
+
+- DÃ¹ng `sortField` + `sortOrder` â†’ gá»­i lÃªn server (server-side sort).
+- Sort whitelist Ä‘Ã£ implement á»Ÿ repository Sprint 6.7.
+- Ant Design sort indicator trÃªn column header.
+
+### Filter
+
+- **Status**: FilterSelect vá»›i 6 giÃ¡ trá»‹ (DRAFT / SUBMITTED / APPROVED / REJECTED / LOCKED / REOPENED).
+- **Date Range**: FilterDateRange (reportDate).
+- **Search**: keyword â†’ debounce 500ms â†’ gá»­i lÃªn server (search theo `note`).
+- Filter thay Ä‘á»•i â†’ reset page vá» 1.
+
+### Pagination
+
+- Server-side pagination: `page` + `pageSize`.
+- Ant Design Pagination (showSizeChanger, showQuickJumper, showTotal).
+
+### Action menu
+
+Menu items: View / Sá»­a / Ná»™p bÃ¡o cÃ¡o / Duyá»‡t / Tá»« chá»‘i / KhÃ³a / Má»Ÿ láº¡i / XÃ³a.
+Má»—i item cÃ³ `disabled` theo workflow rule (DRAFT má»›i Ä‘Æ°á»£c sá»­a/xÃ³a, SUBMITTED má»›i Ä‘Æ°á»£c approve/reject, etc.)
+
+ChÆ°a xá»­ lÃ½ Drawer (Sprint tiáº¿p theo).
+
+### Permission
+
+- `PermissionGate("marketing-expense.view")` â†’ page cÃ³ thá»ƒ xem
+- `PermissionGate("marketing-expense.create")` â†’ nÃºt Táº¡o má»›i
+
+### Types
+
+- `MarketingExpenseResponse` â€” tá»« `@/mappers/marketing-expense.mapper`
+- `MarketingExpenseFilter` â€” tá»« `@/hooks/useMarketingExpenses`
+- `MarketingExpenseReportStatus` â€” tá»« `@/constants/marketing-expense`
+
+### CSS
+
+- CSS Module `marketing-expense.module.css` â€” class prefix `.me-`
+- Responsive: toolbar flex-wrap á»Ÿ 1024px / 768px
+
+### Verification
+
+- `npx tsc --noEmit` â†’ **0 TypeScript Error**
+- Lint â†’ **clean**
+- KhÃ´ng mock (dÃ¹ng `useMarketingExpenses` â€” Sprint 6.8)
+- KhÃ´ng fetch trá»±c tiáº¿p (chá»‰ qua hook)
+- KhÃ´ng táº¡o Drawer / Form / Workflow (Sprint sau)
+- `PROJECT_PROGRESS.md` â†’ Sprint 6.9 section
+
+
+## Sprint 6.10 â€” Marketing Expense Drawer + Form
+
+### Má»¥c tiÃªu
+
+HoÃ n thiá»‡n Drawer + Form cho Marketing Expense.
+
+### Files táº¡o má»›i
+
+- `src/components/marketing-expense/MarketingExpenseDrawer.tsx` â€” Drawer wrapper (create/edit mode)
+- `src/components/marketing-expense/MarketingExpenseForm.tsx` â€” Form component (reusable)
+- `src/components/marketing-expense/MarketingExpenseSummaryCard.tsx` â€” Summary card (reusable)
+- `src/components/marketing-expense/BudgetAllocationTable.tsx` â€” Budget table vá»›i debounce
+- `src/app/(protected)/marketing/expense/marketing-expense.module.css` â€” CSS Module
+- `src/configs/marketing-budget-slots.config.ts` â€” Config-driven budget slots
+
+### Files cáº­p nháº­t
+
+- `src/validators/marketing-expense.validator.ts` â€” ThÃªm `note` field, Ä‘á»“ng bá»™ schema
+- `src/app/(protected)/marketing/expense/page.tsx` â€” TÃ­ch há»£p Drawer
+- `src/app/(protected)/marketing/expense/MarketingExpenseToolbar.tsx` â€” ThÃªm `onCreate` prop
+- `src/app/(protected)/marketing/expense/MarketingExpenseTable.tsx` â€” ThÃªm `onEdit` prop
+
+### Architecture
+
+```
+Drawer (open/close, mutation)
+â†“
+Form (fields, validation)
+â†“
+useForm + zodResolver
+â†“
+React Query Mutation
+â†“
+API
+```
+
+### Features
+
+- **Config-driven budget slots**: `MARKETING_BUDGET_SLOTS` â€” thÃªm ca má»›i khÃ´ng cáº§n sá»­a component
+- **Reusable Summary Card**: DÃ¹ng cho Drawer, Detail, Approve, Dashboard
+- **Separated concerns**: Drawer chá»‰ open/close, Form chá»‰ form logic
+- **Debounced inputs**: 200ms debounce cho budget inputs
+- **Create mode**: POST `/api/marketing/expenses`
+- **Edit mode**: PATCH `/api/marketing/expenses/:id`
+- **Fields**: Report Date, Facebook Page, Marketing Employee, Note
+- **Budget Table**: Morning / Afternoon / Emergency vá»›i Requested, Approved, Spent, Remaining
+- **Summary Card**: Real-time budget summary + ROAS, CPA, Conversion Rate
+- **Calculator**: `sumBudgetAllocation()`, `calculateBudgetSummary()`
+- **Cancel confirm**: ConfirmDialog khi form dirty
+
+### Verification
+
+- `npx tsc --noEmit` â†’ **0 TypeScript Error**
+- Lint â†’ **clean**
+- DÃ¹ng `useCreateMarketingExpense()`, `useUpdateMarketingExpense()` hooks
+- KhÃ´ng mock, khÃ´ng tá»± tÃ­nh toÃ¡n trong component
+- `PROJECT_PROGRESS.md` â†’ Sprint 6.10 section
+
+## Sprint 6.11 — Marketing Expense Workflow UI
+
+### M?c tiêu
+
+Hoàn thi?n Workflow UI cho Marketing Expense.
+
+### Files t?o m?i
+
+- src/components/marketing-expense/MarketingExpenseWorkflowBar.tsx — Workflow action bar
+- src/components/marketing-expense/RejectDialog.tsx — Reject dialog v?i rejection reason
+- src/components/marketing-expense/marketing-expense-workflow.module.css — Workflow styles
+
+### Files c?p nh?t
+
+- src/configs/marketing-expense-actions.config.tsx — Thêm permissions cho m?i action
+- src/components/marketing-expense/MarketingExpenseDrawer.tsx — Thêm WorkflowBar + readonly khi locked
+- src/app/(protected)/marketing/expense/page.tsx — Update header comment
+
+### Workflow
+
+`
+DRAFT ? SUBMITTED ? APPROVED ? LOCKED
+  ?          ?
+  ¦       REJECTED
+  ¦
+REOPENED
+`
+
+### Features
+
+- **Action Bar**: Config-driven, l?y t? MARKETING_EXPENSE_ACTIONS
+- **Permission**: ?n button n?u không có quy?n
+- **Confirm Dialog**: Submit, Approve, Lock, Reopen d?u confirm
+- **Reject Dialog**: Textarea cho rejection reason (required)
+- **Readonly**: Khi LOCKED thì form readonly
+- **Timeline refresh**: Sau mutation thì refetch d? c?p nh?t timeline
+- **Toast**: Message t? backend, không hardcode
+
+### Permissions
+
+- marketing-expense.submit
+- marketing-expense.approve
+- marketing-expense.reject
+- marketing-expense.lock
+- marketing-expense.reopen
+
+### Verification
+
+- 
+px tsc --noEmit ? **0 TypeScript Error**
+- Lint ? **clean**
+- Dùng hooks có s?n (useSubmitMarketingExpense, etc.)
+- Không mock
+- PROJECT_PROGRESS.md ? Sprint 6.11 section
+
+---
+
+## Sprint 6.11 — Updates (Config-driven + Timeline + RejectionReason)
+
+### Improvements
+
+1. **Config-driven WorkflowBar**
+   - getMarketingExpenseActions(status, permissions) trong config
+   - WorkflowBar ch? render: ctions.map(...)
+   - Không có if/else trong component
+
+2. **Timeline Invalidate**
+   - Thêm marketingExpenseKeys.timeline(id) vào hooks
+   - Sau mutation invalidate c? timeline
+
+3. **RejectionReason Fields**
+   - Types dã có: ejectedBy, ejectedAt, ejectionReason
+   - Mapper dã map d?y d?
+   - Detail UI sau này hi?n th? lý do t? ch?i
+
+---
+
+## Sprint 6.12 — Marketing Expense Detail + Timeline
+
+### M?c tiêu
+
+Hoàn thi?n trang Detail cho Marketing Expense.
+
+### Files t?o m?i
+
+- src/app/(protected)/marketing/expense/[id]/page.tsx — Detail page
+- src/components/marketing-expense/MarketingExpenseDetail.tsx — Detail component
+- src/components/marketing-expense/MarketingExpenseTimeline.tsx — Timeline component
+- src/components/marketing-expense/MarketingExpenseAuditCard.tsx — Audit card component
+- src/components/marketing-expense/*.module.css — CSS modules
+- src/constants/marketing-expense-action.ts — History actions constant
+- src/models/MarketingExpenseHistory.ts — History model
+- src/services/marketing-expense-history.service.ts — History service
+- src/repositories/marketing-expense-history.repository.ts — History repository
+- src/app/api/marketing/expenses/[id]/timeline/route.ts — Timeline API
+
+### Files c?p nh?t
+
+- src/hooks/useMarketingExpenses.ts — Thêm useMarketingExpenseTimeline()
+
+### Layout
+
+`
+Header
+Action Bar (WorkflowBar) — reuse
+Summary Card
+Tabs (Thông tin, Budget, Summary, Timeline)
+`
+
+### Tabs
+
+- **Thông tin**: Report date, Facebook Page, Marketing Employee, Status, Note + Audit card
+- **Budget Allocation**: 3 cards (Requested, Spent, Remaining) v?i morning/afternoon/emergency
+- **Summary**: MarketingExpenseSummaryCard reuse
+- **Timeline**: Ant Design Timeline, d?c t? MarketingExpenseHistory
+
+### Audit Card
+
+- Created By / Created At
+- Updated By / Updated At
+- Approved By / Approved At
+- Rejected By / Rejected At / Rejection Reason
+- Locked By / Locked At
+
+### Timeline
+
+- Query riêng: marketingExpenseKeys.timeline(id)
+- Actions: CREATED, UPDATED, SUBMITTED, APPROVED, REJECTED, LOCKED, REOPENED
+- Icons và colors theo action type
+
+### Features
+
+- **WorkflowBar reuse** — không duplicate
+- **StatusBadge** — dùng marketingExpenseStatusConfig
+- **Skeletons** — SkeletonCard thay vì Spin
+- **EmptyState** — cho error/not found
+- **Permission gate** — marketing-expense.view
+- **403 fallback** — khi không có quy?n
+
+### Verification
+
+- 
+px tsc --noEmit ? **0 TypeScript Error**
+- Lint ? **clean**
+- Detail d?c MongoDB
+- Timeline d?c MongoDB
+- Audit hi?n th? d?y d?
+- RejectionReason hi?n th?
+- StatusBadge dúng config
+- WorkflowBar reuse
+- Không mock
+- Không duplicate logic
+- React Query
+- PROJECT_PROGRESS.md ? Sprint 6.12 section
+
+
+---\
+\
+## Sprint 7.0 — Marketing Dashboard MongoDB\
+\
+### Status\
+\
+? Completed (2026-08-05)\
+\
+### M?c tiêu\
+\
+Thay toàn b? Dashboard Marketing hi?n t?i sang d? li?u MongoDB th?t.\
+\
+### Architecture\
+\
+\\\\
+Marketing Dashboard Route\
+    ?\
+MarketingDashboardService\
+    ?\
+Repository Layer (MarketingDashboardRepository)\
+    ?\
+MongoDB\
+\\\\
+\
+### KHÔNG ÐU?C\
+\
+- Không s?a Sidebar\
+- Không s?a Header\
+- Không s?a UI Kit\
+- Không s?a Marketing Expense\
+- Không s?a Lead\
+- Không s?a Order\
+- Không s?a Warehouse\
+- Không s?a Inventory\
+- Không s?a Workflow\
+\
+### Files t?o m?i\
+\
+| File | M?c dích |\
+|------|----------|\
+| src/repositories/marketing-dashboard.repository.ts | Repository riêng cho Dashboard |\
+\
+### Files ch?nh s?a\
+\
+| File | Thay d?i |\
+|------|-----------|\
+| src/types/marketing-dashboard.ts | Thêm types cho Expense, Revenue, ROAS, Charts |\
+| src/services/marketing-dashboard.service.ts | G?i repository m?i, orchestration |\
+| src/hooks/useMarketingDashboard.ts | Dùng marketingDashboardKeys |\
+| src/app/(protected)/marketing/dashboard/marketing.config.tsx | 8 stat cards |\
+| src/app/(protected)/marketing/dashboard/page.tsx | Dùng FullMarketingStats |\
+| src/app/(protected)/marketing/dashboard/TopMarketingTable.tsx | Dùng TopMarketingChannel type |\
+\
+### Repository Methods\
+\
+\\\\
+aggregateLeadSummary()        // Lead counts\
+aggregateLeadSource()         // Lead by source\
+aggregateTopMarketingByLeads() // Top marketing by lead\
+aggregateExpenseSummary()      // Total spent, revenue, ROAS, CPA\
+aggregateTopMarketingChannels() // Top channels by ROAS\
+aggregateRevenueSummary()      // Today, month, total revenue\
+aggregateDailyChart()          // Last 7 days\
+aggregateMonthlyChart()        // Last 12 months\
+\\\\
+\
+### Dashboard Data\
+\
+| Card | Data |\
+|------|------|\
+| Lead hôm nay | summary.todayLead |\
+| Lead tháng | summary.monthLead |\
+| Lead dã giao Sale | summary.assignedLead |\
+| Lead ch?t | summary.closedLead |\
+| Chi phí qu?ng cáo | expense.totalSpent |\
+| Doanh thu | evenue.monthRevenue |\
+| ROAS | expense.roas |\
+| Conversion Rate | expense.averageConversionRate |\
+\
+### Hook Configuration\
+\
+\\\\
+queryKey: marketingDashboardKeys.all  // [marketing-dashboard]\
+staleTime: 60 * 1000                  // 60 seconds\
+gcTime: 5 * 60 * 1000                // 5 minutes\
+\\\\
+\
+### Verification\
+\
+- [x] Dashboard d?c MongoDB\
+- [x] Không còn mock\
+- [x] Lead dúng\
+- [x] Expense dúng\
+- [x] Revenue dúng\
+- [x] ROAS dúng\
+- [x] Conversion dúng\
+- [x] React Query\
+- [x] Repository riêng\
+- [x] Service ch? orchestration\
+- [x] npx tsc --noEmit — 0 TypeScript Error\
+- [x] PROJECT_PROGRESS.md c?p nh?t Sprint 7.0\
+\
+### Review\
+\
+Reviewed by Cursor Agent\
+\
+Status: Ready for next Sprint
+
+
+---
+
+## Sprint 7.1 — Dashboard Repository Refactor
+
+### Status
+
+? Completed (2026-08-05)
+
+### M?c tiêu
+
+Refactor Repository và Card Config theo yêu c?u.
+
+### Repository Refactor
+
+**Tru?c:**
+```
+MarketingDashboardRepository
+```
+
+**Sau:**
+```
+DashboardRepository
+  aggregateMarketingDashboard()
+```
+
+### Card Config Refactor
+
+Cards dùng selector + formatter + permission.
+
+```typescript
+{
+  key: "totalSpent",
+  title: "Chi phí qu?ng cáo",
+  selector: (data) => data.expense.totalSpent,
+  formatter: "currency",
+  permission: "marketing.dashboard.expense",
+}
+```
+
+### Formatter Types
+
+```typescript
+type CardFormatter = "number" | "currency" | "percent" | "roas" | "cpa";
+```
+
+### dashboardKeys per domain
+
+```typescript
+export const dashboardKeys = {
+  all: ["dashboard"] as const,
+  marketing: () => [...dashboardKeys.all, "marketing"] as const,
+  sales: () => [...dashboardKeys.all, "sales"] as const,
+};
+```
+
+### Files thay d?i
+
+| File | Thay d?i |
+|------|-----------|
+| `src/hooks/dashboardKeys.ts` | T?o m?i |
+| `src/hooks/useMarketingDashboard.ts` | Dùng `dashboardKeys.marketing()` |
+| `src/app/(protected)/marketing/dashboard/marketing.config.tsx` | selector + formatter + permission |
+
+### Verification
+
+- [x] TypeScript: 0 Error
+- [x] Repository tái s? d?ng cho các dashboard khác
+- [x] Cards d? m? r?ng
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for Sprint 7.2
+
+---
+
+## Sprint 7.2 — Marketing Dashboard Charts & Analytics
+
+### Status
+
+? Completed (2026-08-05)
+
+### M?c tiêu
+
+Hoàn thi?n Dashboard Marketing v?i bi?u d? th?ng kê s? d?ng d? li?u MongoDB th?t.
+
+### Repository Methods
+
+```typescript
+aggregateLeadTrend(period)
+aggregateExpenseTrend(period)
+aggregateRevenueTrend(period)
+aggregateROASTrend(period)
+aggregateConversionTrend(period)
+aggregateTopFacebookPages()
+aggregateTopMarketingEmployees()
+aggregateTopCampaigns()
+aggregateChartData(period)
+aggregateRankingData()
+```
+
+### Service Methods
+
+```typescript
+getChartData(period)  // CH? orchestration
+getRankingData()     // CH? orchestration
+```
+
+### Dashboard Sections
+
+1. Lead Trend — Line Chart
+2. Expense vs Revenue — Bar Chart
+3. ROAS Trend — Area Chart
+4. Conversion Trend — Line Chart
+5. Top Facebook Pages — Table
+6. Top Marketing Employees — Table
+7. Top Campaigns — Table
+
+### Files t?o m?i
+
+| File | M?c dích |
+|------|----------|
+| `src/app/(protected)/marketing/dashboard/marketing-dashboard-chart.config.ts` | Chart config |
+| `src/app/(protected)/marketing/dashboard/marketing-dashboard-ranking.config.tsx` | Ranking config |
+| `src/app/(protected)/marketing/dashboard/MarketingDashboardFilters.tsx` | Filter component |
+| `src/app/(protected)/marketing/dashboard/MarketingDashboardCharts.tsx` | Charts component |
+| `src/app/(protected)/marketing/dashboard/MarketingDashboardRanking.tsx` | Ranking component |
+| `src/hooks/useMarketingChartData.ts` | Chart data hook |
+| `src/hooks/useMarketingRankingData.ts` | Ranking data hook |
+| `src/app/api/marketing/dashboard/chart/route.ts` | Chart API |
+| `src/app/api/marketing/dashboard/ranking/route.ts` | Ranking API |
+
+### Config-driven
+
+Charts và Rankings du?c d?nh nghia trong config array, không hardcode.
+
+```typescript
+export const MARKETING_DASHBOARD_CHARTS = [
+  { id: "leadTrend", title: "Xu hu?ng Lead", type: "line", ... },
+  { id: "expenseRevenue", title: "Chi phí vs Doanh thu", type: "bar", ... },
+];
+```
+
+### React Query Keys
+
+```typescript
+dashboardKeys.marketing()           // ["dashboard", "marketing"]
+dashboardKeys.marketingCharts()    // ["dashboard", "marketing", "charts"]
+dashboardKeys.marketingRanking()  // ["dashboard", "marketing", "ranking"]
+```
+
+### Filters
+
+- Date Range: 7 Days, 30 Days, 90 Days
+- Period du?c truy?n qua query param
+
+### Verification
+
+- [x] Dashboard ch? d?c MongoDB
+- [x] Không mock
+- [x] Repository ch? aggregate
+- [x] Service ch? orchestration
+- [x] Charts dùng config
+- [x] Ranking dùng config
+- [x] React Query keys dúng
+- [x] npx tsc --noEmit — 0 TypeScript Error
+- [x] PROJECT_PROGRESS.md c?p nh?t Sprint 7.2
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
+
+
+## Sprint 7.3 — Marketing Dashboard Drill-down & Export
+
+### Status
+
+? Completed (2026-08-05)
+
+### M?c tiêu
+
+Hoàn thi?n Dashboard Marketing b?ng kh? nang drill-down, filter nâng cao và export.
+
+### KHÔNG ÐU?C
+
+- Không s?a Sprint tru?c
+- Không s?a UI Kit
+- Không s?a Sidebar
+- Không s?a Header
+- Không t?o mock data
+- Ch? dùng MongoDB
+
+### Files t?o m?i
+
+| File | Lo?i |
+| ---- | ---- |
+| src/app/(protected)/marketing/dashboard/MarketingDashboardAdvancedFilters.tsx | New |
+| src/app/(protected)/marketing/dashboard/MarketingDashboardDrillDownDrawer.tsx | New |
+| src/app/api/marketing/dashboard/export/route.ts | New |
+| src/app/api/marketing/dashboard/drill-down/route.ts | New |
+| src/hooks/useMarketingDashboardExport.ts | New |
+| src/hooks/useMarketingDashboardDrillDown.ts | New |
+| src/lib/export-utils.ts | New |
+| src/types/marketing-dashboard-filter.ts | New |
+
+### Files s?a
+
+| File | Thay d?i |
+| ---- | -------- |
+| src/app/(protected)/marketing/dashboard/page.tsx | Thêm filters, export buttons, drill-down drawer |
+| src/app/(protected)/marketing/dashboard/MarketingStatsGrid.tsx | Thêm onCardClick callback |
+| src/app/(protected)/marketing/dashboard/MarketingDashboardCharts.tsx | Thêm onChartClick callback |
+| src/app/(protected)/marketing/dashboard/MarketingDashboardRanking.tsx | Thêm onRowClick callback |
+| src/app/(protected)/marketing/dashboard/marketing.config.tsx | Thêm drillDown/exportable flags |
+| src/app/(protected)/marketing/dashboard/marketing-dashboard-chart.config.ts | Thêm drillDown/exportable flags |
+| src/app/(protected)/marketing/dashboard/marketing-dashboard-ranking.config.tsx | Thêm drillDown/exportable flags |
+| src/app/(protected)/marketing/dashboard/marketing.module.css | Thêm CSS cho advanced filters và drawer |
+| src/repositories/dashboard.repository.ts | Thêm aggregateExportData, aggregateDrillDown |
+| src/services/marketing-dashboard.service.ts | Thêm getExportData, getDrillDown |
+| src/components/common/cards/StatCard.tsx | Thêm onClick prop |
+| src/components/common/table/DataTable.tsx | Thêm onRow prop |
+| src/types/marketing-dashboard.ts | Thêm DrillDownData, ExportData types |
+
+### Dashboard Advanced Filters
+
+Component MarketingDashboardAdvancedFilters v?i các filter:
+- Date Range (kho?ng ngày)
+- Facebook Page
+- Marketing Employee
+- Campaign
+- Source
+- Status
+
+Filter dùng chung cho: Cards, Charts, Ranking
+
+React Query refetch toàn b? dashboard khi filter thay d?i.
+
+### Drill-down
+
+Click vào Card, Chart point, ho?c Ranking row ? m? Drawer
+
+Component MarketingDashboardDrillDownDrawer hi?n th?:
+- Danh sách Lead
+- Marketing Expense
+- Revenue
+- Order
+
+### Export
+
+Thêm nút Export Excel và Export PDF
+
+Export dúng filter hi?n t?i.
+
+Bao g?m:
+- Summary
+- Lead Trend
+- Expense Trend
+- Revenue Trend
+- ROAS Trend
+- CPA Trend
+- Facebook Pages Ranking
+- Marketing Employees Ranking
+- Campaigns Ranking
+
+### Repository Methods
+
+aggregateExportData(filter)  // CH? aggregate
+aggregateDrillDown(filter)    // CH? aggregate
+
+### Service Methods
+
+getExportData(filter)   // CH? orchestration
+getDrillDown(filter)     // CH? orchestration
+
+### API Routes
+
+- GET /api/marketing/dashboard/export
+- GET /api/marketing/dashboard/drill-down
+
+### Hooks
+
+useMarketingDashboardExport(filter)    // React Query
+useMarketingDashboardDrillDown(filter) // React Query
+
+### Config Extensions
+
+Thêm flags vào Card, Chart, Ranking configs:
+- drillDown: true   // Có th? drill-down
+- exportable: true  // Có th? export
+
+### Verification
+
+- [x] MongoDB only
+- [x] Không mock
+- [x] Repository ch? aggregate
+- [x] Service ch? orchestration
+- [x] React Query
+- [x] Config-driven
+- [x] npx tsc --noEmit ? 0 TypeScript Error
+- [x] PROJECT_PROGRESS.md c?p nh?t Sprint 7.3
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
+
+## Sprint 7.4 — Facebook Page & Campaign Management
+
+**Status**: ? COMPLETED
+**Completed**: Wednesday Aug 5, 2026
+
+### M?c tiêu
+
+Hoàn thi?n domain qu?n lý Facebook Page và Campaign.
+Ðây là d? li?u mà Marketing Expense và Dashboard dang s? d?ng.
+
+### Không s?a
+
+- Lead
+- Order
+- Warehouse
+- Inventory
+- Dashboard
+- Marketing Expense
+- UI Kit
+- Sidebar
+- Header
+
+---
+
+### FacebookPage
+
+#### Model
+
+Updated src/models/FacebookPage.ts v?i các fields m?i:
+
+- code (unique, uppercase)
+- 
+ame (required)
+- pageUrl
+- acebookPageId (Facebook Page ID)
+- description
+- usinessManager (Business Manager ID)
+- currency (VD: VND, USD)
+- 	imezone (VD: Asia/Ho_Chi_Minh)
+- status (ACTIVE | INACTIVE)
+- 
+ote
+- isActive (soft delete)
+
+#### Repository
+
+Created src/repositories/facebook-page.repository.ts:
+
+- create(data) - T?o m?i Facebook Page
+- indById(id) - Tìm theo ID
+- indByCode(code) - Tìm theo code
+- indAll(filter) - Danh sách có phân trang
+- update(id, data) - C?p nh?t
+- softDelete(id) - Soft delete
+- delete(id) - Hard delete
+- existsByCode(code) - Ki?m tra code t?n t?i
+
+Repository ch? CRUD - không business logic.
+
+#### Service
+
+Created src/services/facebook-page.service.ts:
+
+- create(input) - T?o m?i v?i validation
+- getById(id) - L?y chi ti?t
+- getList(filter) - Danh sách
+- update(id, input) - C?p nh?t v?i validation
+- delete(id) - Soft delete
+
+Service ch?a business logic: duplicate code check, validation.
+
+#### API Routes
+
+Created/Updated:
+
+- GET /api/facebook-pages - Danh sách
+- GET /api/facebook-pages/[id] - Chi ti?t
+- POST /api/facebook-pages - T?o m?i
+- PATCH /api/facebook-pages/[id] - C?p nh?t
+- DELETE /api/facebook-pages/[id] - Xóa
+
+#### React Query Hooks
+
+Created src/hooks/useFacebookPages.ts:
+
+- useFacebookPages(filters) - Danh sách
+- useFacebookPage(id) - Chi ti?t
+- useCreateFacebookPage() - T?o m?i
+- useUpdateFacebookPage() - C?p nh?t
+- useDeleteFacebookPage() - Xóa
+
+---
+
+### Campaign
+
+#### Model
+
+Created src/models/Campaign.ts:
+
+- code (unique, uppercase)
+- 
+ame (required)
+- acebookPageId (ref: FacebookPage, required)
+- objective (VD: CONVERSIONS, TRAFFIC)
+- startDate (required)
+- endDate (optional)
+- dailyBudget
+- lifetimeBudget
+- status (ACTIVE | PAUSED | COMPLETED | ARCHIVED)
+- marketingEmployeeId (ref: Employee)
+- 
+ote
+- isActive (soft delete)
+
+#### Repository
+
+Created src/repositories/campaign.repository.ts:
+
+- create(data) - T?o m?i Campaign
+- indById(id) - Tìm theo ID
+- indByIdWithPopulate(id) - Tìm v?i populate refs
+- indByCode(code) - Tìm theo code
+- indAll(filter) - Danh sách có phân trang
+- update(id, data) - C?p nh?t
+- softDelete(id) - Soft delete
+- delete(id) - Hard delete
+- existsByCode(code) - Ki?m tra code t?n t?i
+- existsByPageAndName(pageId, name) - Ki?m tra trùng theo page
+
+Repository ch? CRUD - không business logic.
+
+#### Service
+
+Created src/services/campaign.service.ts:
+
+- create(input) - T?o m?i v?i validation
+- getById(id) - L?y chi ti?t
+- getByIdWithPopulate(id) - L?y v?i populate
+- getList(filter) - Danh sách
+- update(id, input) - C?p nh?t v?i validation
+- delete(id) - Soft delete
+
+Service ch?a business logic: duplicate code check, page exists check, validation.
+
+#### API Routes
+
+Created:
+
+- GET /api/campaigns - Danh sách (filter by facebookPageId, status)
+- GET /api/campaigns/[id] - Chi ti?t
+- POST /api/campaigns - T?o m?i
+- PATCH /api/campaigns/[id] - C?p nh?t
+- DELETE /api/campaigns/[id] - Xóa
+
+#### React Query Hooks
+
+Created src/hooks/useCampaigns.ts:
+
+- useCampaigns(filters) - Danh sách
+- useCampaign(id) - Chi ti?t
+- useCreateCampaign() - T?o m?i
+- useUpdateCampaign() - C?p nh?t
+- useDeleteCampaign() - Xóa
+
+---
+
+### UI Pages
+
+#### Facebook Pages List
+
+Created src/app/(protected)/facebook-pages/:
+
+- page.tsx - Main list page
+- FacebookPagesToolbar.tsx - Search, filter by status
+- FacebookPagesTable.tsx - DataTable v?i sort, pagination
+- FacebookPageDrawer.tsx - Create/Edit drawer form
+- acebook-pages.module.css - Styles
+
+#### Campaigns List
+
+Created src/app/(protected)/campaigns/:
+
+- page.tsx - Main list page
+- CampaignsToolbar.tsx - Search, filter by Facebook Page, status
+- CampaignsTable.tsx - DataTable v?i sort, pagination
+- CampaignDrawer.tsx - Create/Edit drawer form
+- campaigns.module.css - Styles
+
+---
+
+### Sidebar Navigation
+
+Updated src/config/modules.ts - Added modules:
+
+- acebook-pages ? /facebook-pages (MKT group)
+- campaigns ? /campaigns (MKT group)
+
+Nav config auto-generated from modules.ts ? no manual sidebar changes needed.
+
+---
+
+### Verification
+
+- [x] npx tsc --noEmit ? 0 TypeScript Error
+- [x] MongoDB only
+- [x] Không mock
+- [x] Repository ch? CRUD
+- [x] Service ch?a business logic
+- [x] React Query hooks
+- [x] Sidebar t? d?ng update t? modules.ts
+- [x] PROJECT_PROGRESS.md c?p nh?t Sprint 7.4
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Ready for next Sprint
+
+---
+
+## Workflow Simplification Refactor (Aug 2026)
+
+### Status
+
+? Completed
+
+### M?c tiêu
+
+Refactor toàn b? Marketing Expense Workflow theo ?úng nghi?p v? th?c t?.
+
+### Business Workflow m?i
+
+Marketing không c?n Approval. Marketing ch? nh?p báo cáo h?ng ngày và t? LOCK.
+
+Workflow m?i:
+
+```
+DRAFT ? LOCKED ? REOPENED ? LOCKED
+```
+
+Ch? còn 3 tr?ng thái: DRAFT, LOCKED, REOPENED.
+
+### Files ?ã ch?nh s?a
+
+#### Constants
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/constants/marketing-expense.ts` | Xóa SUBMITTED, APPROVED, REJECTED |
+| `src/constants/marketing-expense-action.ts` | Xóa SUBMITTED, APPROVED, REJECTED |
+| `src/constants/permissions.ts` | Xóa submit, approve, reject permissions |
+| `src/constants/roles.ts` | C?p nh?t permissions cho MKT, LEADER, MANAGER |
+
+#### Model
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/models/MarketingExpenseReport.ts` | Xóa approvedBy, approvedAt, rejectedBy, rejectedAt, rejectionReason. Thêm reopenedBy, reopenedAt. ??i unique index thành (reportDate, marketingEmployeeId, facebookPageId) |
+
+#### Repository
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/repositories/marketing-expense.repository.ts` | C?p nh?t types và methods cho workflow m?i |
+
+#### Service
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/services/marketing-expense.service.ts` | Xóa submit(), approve(), reject(). Gi? lock(), reopen() |
+
+#### API Routes
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/app/api/marketing/expenses/[id]/route.ts` | C?p nh?t PATCH ?? truy?n updatedBy |
+| `src/app/api/marketing/expenses/[id]/lock/route.ts` | **T?o m?i** - Lock endpoint |
+| `src/app/api/marketing/expenses/[id]/reopen/route.ts` | **T?o m?i** - Reopen endpoint |
+
+#### Hooks
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/hooks/useMarketingExpenses.ts` | Xóa useSubmitMarketingExpense, useApproveMarketingExpense, useRejectMarketingExpense. Gi? useLockMarketingExpense, useReopenMarketingExpense |
+
+#### UI Components
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/components/marketing-expense/MarketingExpenseWorkflowBar.tsx` | Simplify - ch? còn Lock/Reopen |
+| `src/components/marketing-expense/MarketingExpenseAuditCard.tsx` | Xóa approved/rejected. Gi? locked/reopened |
+| `src/components/marketing-expense/RejectDialog.tsx` | **Xóa** - Không còn c?n |
+
+#### Configs
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/configs/marketing-expense.config.ts` | C?p nh?t workflow rules |
+| `src/configs/marketing-expense-actions.config.tsx` | Xóa submit/approve/reject actions |
+| `src/configs/marketing-expense-history.config.tsx` | Xóa SUBMITTED/APPROVED/REJECTED |
+| `src/configs/marketing-expense-status.config.ts` | C?p nh?t status config |
+| `src/configs/marketing-expense-detail-tabs.config.tsx` | C?p nh?t audit items |
+
+#### Seed
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/db/seeds/marketing-expense.seed.ts` | C?p nh?t status distribution (DRAFT 40%, LOCKED 40%, REOPENED 20%) |
+| `src/db/seeds/permissions.seed.ts` | Xóa submit/approve/reject permissions |
+
+#### Types & Mappers
+
+| File | Thay ??i |
+| ---- | --------- |
+| `src/types/marketing-expense.ts` | Xóa approval types, thêm reopen types |
+| `src/mappers/marketing-expense.mapper.ts` | C?p nh?t response interface |
+| `src/validators/marketing-expense.validator.ts` | C?p nh?t comments |
+
+### Workflow Rules m?i
+
+| Action | From | To | Role |
+| ------ | ---- | -- | ---- |
+| Lock | DRAFT, REOPENED | LOCKED | Marketing |
+| Reopen | LOCKED | REOPENED | Admin |
+
+### Permissions m?i
+
+**Marketing (MKT):**
+- `marketing-expense.view`
+- `marketing-expense.create`
+- `marketing-expense.update`
+- `marketing-expense.delete`
+- `marketing-expense.lock`
+
+**Admin:**
+- `marketing-expense.view`
+- `marketing-expense.create`
+- `marketing-expense.update`
+- `marketing-expense.delete`
+- `marketing-expense.lock`
+- `marketing-expense.reopen`
+
+**Leader:**
+- `marketing-expense.view`
+- `marketing-expense.create`
+- `marketing-expense.update`
+- `marketing-expense.delete`
+- `marketing-expense.lock`
+
+### Verification
+
+- [x] `npx tsc --noEmit` ? **0 TypeScript Error**
+- [x] Không còn dead code c?a Submit/Approve/Reject
+- [x] Workflow ch? còn DRAFT ? LOCKED ? REOPENED
+- [x] Permission ??ng b?
+- [x] UI ??ng b?
+- [x] API ??ng b?
+- [x] Service ??ng b?
+- [x] History ??ng b?
+- [x] Seed ??ng b?
+- [x] PROJECT_PROGRESS.md c?p nh?t
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Completed ?
+
+---
+
+## Sprint 8.0 — Customer Module Foundation
+
+### Status
+
+? Completed (2026-08-05)
+
+### M?c tiêu
+
+Xây d?ng Customer Module hoàn ch?nh. Customer là d? li?u sinh ra sau khi Convert Lead.
+
+### Không s?a
+
+- Marketing
+- Lead
+- Marketing Expense
+- Dashboard
+- Warehouse
+- Inventory
+- Order Workflow
+- UI Kit
+
+### Files t?o m?i
+
+#### Domain & Types
+
+| File | Mô t? |
+| ---- | --------- |
+| src/models/Customer.ts | Customer model v?i ICustomer interface, CustomerStatus enum |
+| src/types/customer.ts | Type definitions: Customer, CustomerResponse, CustomerStatistics, CustomerFilter, CreateCustomerInput, UpdateCustomerInput |
+
+#### Repository
+
+| File | Mô t? |
+| ---- | --------- |
+| src/repositories/customer.repository.ts | CustomerRepository v?i CRUD, pagination, search, duplicate checks |
+
+#### Service
+
+| File | Mô t? |
+| ---- | --------- |
+| src/services/customer/customer.service.ts | CustomerService v?i business rules (duplicate phone/email, soft delete, statistics) |
+
+#### API Routes
+
+| File | Mô t? |
+| ---- | --------- |
+| src/app/api/customers/route.ts | GET (list), POST (create) |
+| src/app/api/customers/[id]/route.ts | GET, PATCH, DELETE |
+| src/app/api/customers/[id]/statistics/route.ts | GET customer statistics |
+
+#### Validators & Mappers
+
+| File | Mô t? |
+| ---- | --------- |
+| src/validators/customer.validator.ts | Zod schemas: createCustomerSchema, updateCustomerSchema, listCustomerSchema |
+| src/mappers/customer.mapper.ts | mapCustomer() function |
+
+#### React Query Hooks
+
+| File | Mô t? |
+| ---- | --------- |
+| src/hooks/useCustomers.ts | useCustomers(), useCustomer(), useCustomerStatistics(), useCreateCustomer(), useUpdateCustomer(), useDeleteCustomer() |
+
+#### UI Components
+
+| File | Mô t? |
+| ---- | --------- |
+| src/app/(protected)/customers/page.tsx | Customer list v?i search, filter, pagination |
+| src/app/(protected)/customers/[id]/page.tsx | Customer detail v?i tabs: Info, Lead Source, Sale, Orders, Revenue, Timeline |
+
+### Files ch?nh s?a
+
+#### Navigation
+
+| File | Thay d?i |
+| ---- | --------- |
+| src/config/modules.ts | Thêm Customers group, customer module v?i permission customer.view |
+
+#### Permissions
+
+| File | Thay d?i |
+| ---- | --------- |
+| src/constants/permissions.ts | Customer permissions dã t?n t?i: customer.view, customer.create, customer.update, customer.delete |
+| src/constants/roles.ts | Ðã có customer permissions cho các roles |
+
+### Customer Model Fields
+
+`
+customerCode, fullName, phone, email, gender, birthday
+address (province, district, ward, street)
+facebook, zalo, note
+marketingEmployeeId, saleEmployeeId, facebookPageId, campaignId, leadId
+status (ACTIVE, INACTIVE, BLOCKED)
+createdAt, updatedAt, isActive
+`
+
+### API Endpoints
+
+| Method | Endpoint | Permission | Mô t? |
+| ------ | ---------| ---------- | --------- |
+| GET | /api/customers | customer.view | List customers v?i pagination |
+| POST | /api/customers | customer.create | Create customer |
+| GET | /api/customers/:id | customer.view | Get customer detail |
+| PATCH | /api/customers/:id | customer.update | Update customer |
+| DELETE | /api/customers/:id | customer.delete | Soft delete customer |
+| GET | /api/customers/:id/statistics | customer.view | Get customer statistics |
+
+### Customer Statistics Response
+
+`	ypescript
+{
+  totalOrders: number;
+  totalRevenue: number;
+  averageOrderValue: number;
+  lastOrderDate?: string;
+  firstOrderDate?: string;
+}
+`
+
+### Business Rules
+
+- **Duplicate phone** ? Error (block creation/update)
+- **Duplicate email** ? Warning nhung không block
+- **Soft delete** ? isActive = false, không xóa vinh vi?n
+- **Auto-generate customerCode** ? Format: CUS000001, CUS000002, ...
+- **Statistics** ? Read from OrderRepository (không duplicate data)
+
+### Permissions
+
+| Permission | Mô t? |
+| ---------- | --------- |
+| customer.view | Xem danh sách và chi ti?t khách hàng |
+| customer.create | T?o khách hàng m?i |
+| customer.update | C?p nh?t thông tin khách hàng |
+| customer.delete | Xóa khách hàng (soft delete) |
+
+### UI Features
+
+**Customer List:**
+- Search theo tên, s? di?n tho?i, email
+- Filter theo status
+- Pagination
+- DataTable v?i columns: Mã KH, Tên, Phone, Email, Sale, Marketing, Status, Ngày t?o, Actions
+
+**Customer Detail:**
+- Tabs: Thông tin chung, Ngu?n Lead, Sale, Ðon hàng, Doanh thu, L?ch s?
+- Revenue summary v?i totalOrders, totalRevenue, averageOrderValue
+- Actions: Edit, Delete
+
+### Verification
+
+- [x] 
+px tsc --noEmit ? **0 TypeScript Error**
+- [x] MongoDB CRUD operations working
+- [x] No mocking
+- [x] Search and Pagination functional
+- [x] PermissionGate implemented
+- [x] React Query hooks integrated
+- [x] Lead Import service compatibility maintained
+- [x] PROJECT_PROGRESS.md updated
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Completed ?

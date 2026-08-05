@@ -21,6 +21,8 @@
     "dayjs": "^1.11.21",
     "dotenv": "^17.4.2",
     "jsonwebtoken": "^9.0.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "mongodb": "^7.5.0",
     "mongoose": "^9.9.1",
     "next": "16.2.11",

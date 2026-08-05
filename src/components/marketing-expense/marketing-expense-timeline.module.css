@@ -1,0 +1,50 @@
+/**
+ * ==================================================
+ * MARKETING EXPENSE TIMELINE STYLES
+ * ==================================================
+ *
+ * Sprint 6.12 — Marketing Expense Detail
+ */
+
+.timelineCard {
+  margin-bottom: 16px;
+}
+
+.loading {
+  text-align: center;
+  padding: 24px;
+  color: #999;
+}
+
+.timelineItem {
+  padding-bottom: 8px;
+}
+
+.timelineHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.timelineAction {
+  font-weight: 500;
+  color: #333;
+}
+
+.timelineTime {
+  font-size: 12px;
+  color: #999;
+}
+
+.timelineEmployee {
+  font-size: 13px;
+  color: #666;
+}
+
+.timelineNote {
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+  margin-top: 4px;
+}

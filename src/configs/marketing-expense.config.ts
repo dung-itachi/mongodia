@@ -3,21 +3,19 @@
  * MARKETING EXPENSE REPORT CONFIG
  * ==================================================
  *
- * Sprint 6.5 — Marketing Expense Domain
+ * Workflow Simplification Refactor (Aug 2026)
  *
  * Centralised config cho MarketingExpenseReport:
  * - Status labels, colors, icons
  * - Editability rules (workflow)
  * - Helper functions
  *
- * Workflow:
+ * Workflow mới:
  *
- *   DRAFT  ──►  SUBMITTED  ──►  APPROVED  ──►  LOCKED
- *     ▲            │
- *     │            ▼
- *     │         REJECTED  ──►  DRAFT  (sửa + nộp lại)
- *     │
- *  REOPENED  ◄──  LOCKED  (mở lại để audit/điều chỉnh)
+ *   DRAFT  ──►  LOCKED
+ *     ▲          │
+ *     │          ▼
+ *  REOPENED ◄───┘  (Admin mở lại để sửa)
  */
 
 import {
@@ -87,68 +85,33 @@ export function getMarketingExpenseStatusIcon(
  * Status có thể edit được không.
  *   DRAFT  → được sửa
  *   REOPENED → được sửa (mở lại từ LOCKED)
- *   REJECTED → được sửa (leader từ chối → nhân viên sửa rồi submit lại)
- *   SUBMITTED / APPROVED / LOCKED → KHÔNG được sửa trực tiếp
+ *   LOCKED → KHÔNG được sửa
  */
 export function isMarketingExpenseEditable(
   status: MarketingExpenseReportStatus | string
 ): boolean {
   return (
     status === MarketingExpenseReportStatus.DRAFT ||
-    status === MarketingExpenseReportStatus.REOPENED ||
-    status === MarketingExpenseReportStatus.REJECTED
+    status === MarketingExpenseReportStatus.REOPENED
   );
-}
-
-/**
- * Có thể SUBMIT (nộp) báo cáo không.
- *   DRAFT / REOPENED / REJECTED → có thể submit.
- */
-export function canMarketingExpenseSubmit(
-  status: MarketingExpenseReportStatus | string
-): boolean {
-  return (
-    status === MarketingExpenseReportStatus.DRAFT ||
-    status === MarketingExpenseReportStatus.REOPENED ||
-    status === MarketingExpenseReportStatus.REJECTED
-  );
-}
-
-/**
- * Có thể APPROVE (duyệt) báo cáo không.
- *   Chỉ SUBMITTED mới có thể approve.
- */
-export function canMarketingExpenseApprove(
-  status: MarketingExpenseReportStatus | string
-): boolean {
-  return status === MarketingExpenseReportStatus.SUBMITTED;
-}
-
-/**
- * Có thể REJECT (từ chối) báo cáo không.
- *   Chỉ SUBMITTED mới có thể bị reject.
- *   Sau khi reject, status → REJECTED. Nhân viên sửa và submit lại.
- */
-export function canMarketingExpenseReject(
-  status: MarketingExpenseReportStatus | string
-): boolean {
-  return status === MarketingExpenseReportStatus.SUBMITTED;
 }
 
 /**
  * Có thể LOCK (khóa) báo cáo không.
- *   Chỉ APPROVED mới có thể LOCK.
+ *   DRAFT / REOPENED → có thể lock.
  */
 export function canMarketingExpenseLock(
   status: MarketingExpenseReportStatus | string
 ): boolean {
-  return status === MarketingExpenseReportStatus.APPROVED;
+  return (
+    status === MarketingExpenseReportStatus.DRAFT ||
+    status === MarketingExpenseReportStatus.REOPENED
+  );
 }
 
 /**
  * Có thể REOPEN (mở lại) báo cáo không.
  *   Chỉ LOCKED mới có thể REOPEN.
- *   Sau khi REOPEN, status chuyển về REOPENED để có thể sửa.
  */
 export function canMarketingExpenseReopen(
   status: MarketingExpenseReportStatus | string
@@ -158,15 +121,14 @@ export function canMarketingExpenseReopen(
 
 /**
  * Có thể DELETE báo cáo không.
- *   Chỉ DRAFT / REOPENED / REJECTED mới được xóa.
- *   SUBMITTED / APPROVED / LOCKED → KHÔNG được xóa.
+ *   Chỉ DRAFT / REOPENED mới được xóa.
+ *   LOCKED → KHÔNG được xóa.
  */
 export function canMarketingExpenseDelete(
   status: MarketingExpenseReportStatus | string
 ): boolean {
   return (
     status === MarketingExpenseReportStatus.DRAFT ||
-    status === MarketingExpenseReportStatus.REOPENED ||
-    status === MarketingExpenseReportStatus.REJECTED
+    status === MarketingExpenseReportStatus.REOPENED
   );
 }
