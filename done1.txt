@@ -3867,3 +3867,43 @@ Không ghi từng dòng code đã sửa.
 Chỉ ghi kết quả cuối cùng.
 
 Nếu task lớn, vẫn giữ đúng format này.
+
+
+===========================================
+
+Sprint 8.3 - Sales KPI & Target (2026-08-05)
+
+Model:
+- SalesTarget.ts: employeeId, month, year, targetRevenue, targetOrders, targetCustomers, targetClosedLead, note, isActive
+
+Repository:
+- SalesTargetRepository: CRUD, findCurrent(), findByEmployee(), findByMonth(), upsert()
+
+Service:
+- SalesKPIService: getEmployeeKPI(), getKPISummary(), getKPIChart(), getKPIRanking(), upsertTarget()
+
+API Routes:
+- GET /api/sales/kpi: KPI dashboard data
+- GET /api/sales/kpi/chart: KPI chart data
+- GET /api/sales/kpi/ranking: KPI ranking data
+- PATCH /api/sales/target: Create/update target
+
+Hooks:
+- useSalesKPI(), useSalesKPIChart(), useSalesKPIRanking(), useSalesTarget()
+
+Configs:
+- sales-kpi.config.ts: KPI cards config
+- sales-kpi-chart.config.ts: Chart & ranking config
+
+Permissions:
+- sales.kpi.view: View Sales KPI
+- sales.kpi.update: Update Sales Target
+
+Verification:
+- MongoDB aggregate operations
+- No mocking
+- Repository aggregate & CRUD
+- Service orchestration + business logic
+- Charts config-driven
+- React Query hooks integrated
+- TypeScript 0 errors

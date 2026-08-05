@@ -117,6 +117,10 @@ export const ROLES = [
       "marketing-expense.lock",
       "marketing-expense.reopen",
 
+      // ---- Sales KPI ---------------------------------------------
+      "sales.kpi.view",
+      "sales.kpi.update",
+
       "report.view",
     ],
   },
@@ -134,6 +138,9 @@ export const ROLES = [
 
       // ---- Sales Dashboard ----------------------------------------------
       "sales.dashboard.view",
+
+      // ---- Sales KPI ---------------------------------------------
+      "sales.kpi.view",
 
       "customer.view",
       "customer.create",

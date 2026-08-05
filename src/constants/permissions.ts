@@ -420,6 +420,16 @@ export const PERMISSIONS = [
   name: "View Sales Dashboard",
 },
 
+// Sales KPI
+{
+  code: "sales.kpi.view",
+  name: "View Sales KPI",
+},
+{
+  code: "sales.kpi.update",
+  name: "Update Sales KPI Target",
+},
+
 // Report
   {
     code: "report.view",
