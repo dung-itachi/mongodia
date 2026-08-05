@@ -6183,3 +6183,153 @@ px tsc --noEmit ? **0 TypeScript Error**
 Reviewed by Cursor Agent
 
 Status: Completed ?
+
+---
+
+## Sprint 8.2 — Sales Dashboard
+
+### Status
+
+? Completed (2026-08-05)
+
+### M?c tiêu
+
+Xây d?ng Sales Dashboard d?c hoàn toàn t? MongoDB.
+
+### Không s?a
+
+- Marketing
+- Marketing Dashboard
+- Warehouse
+- Inventory
+- Lead
+- Order
+- UI Kit
+
+### Files t?o m?i
+
+#### Repository
+
+| File | Mô t? |
+| ---- | --------- |
+| src/repositories/sales-dashboard.repository.ts | SalesDashboardRepository v?i các aggregation pipelines |
+
+#### Service
+
+| File | Mô t? |
+| ---- | --------- |
+| src/services/sales-dashboard/sales-dashboard.service.ts | SalesDashboardService - orchestration only |
+
+#### Types
+
+| File | Mô t? |
+| ---- | --------- |
+| src/types/sales-dashboard.ts | Type definitions |
+
+#### API Routes
+
+| File | Mô t? |
+| ---- | --------- |
+| src/app/api/sales/dashboard/route.ts | GET dashboard cards |
+| src/app/api/sales/dashboard/chart/route.ts | GET chart data |
+| src/app/api/sales/dashboard/ranking/route.ts | GET ranking data |
+
+#### Hooks
+
+| File | Mô t? |
+| ---- | --------- |
+| src/hooks/useSalesDashboard.ts | useSalesDashboard(), useSalesDashboardChart(), useSalesDashboardRanking() |
+
+#### Configs
+
+| File | Mô t? |
+| ---- | --------- |
+| src/configs/sales-dashboard.config.ts | Dashboard cards config |
+| src/configs/sales-dashboard-chart.config.ts | Chart config |
+| src/configs/sales-dashboard-ranking.config.ts | Ranking config |
+
+### Files ch?nh s?a
+
+| File | Thay d?i |
+| ---- | --------- |
+| src/constants/permissions.ts | Thêm sales.dashboard.view permission |
+| src/constants/roles.ts | Thêm sales.dashboard.view cho SALE role |
+
+### API Endpoints
+
+| Method | Endpoint | Permission | Mô t? |
+| ------ | ---------| ---------- | --------- |
+| GET | /api/sales/dashboard | sales.dashboard.view | Dashboard cards & follow-ups |
+| GET | /api/sales/dashboard/chart | sales.dashboard.view | Chart data (trends) |
+| GET | /api/sales/dashboard/ranking | sales.dashboard.view | Top sales rankings |
+
+### Dashboard Cards
+
+| Card | Icon | Format |
+| ---- | ---- | ------ |
+| Doanh thu hôm nay | ?? | currency |
+| Doanh thu tháng | ?? | currency |
+| Ðon hàng hôm nay | ?? | number |
+| Ðon hàng tháng | ?? | number |
+| Khách hàng m?i | ?? | number |
+| KH dang cham sóc | ?? | number |
+| Follow-up hôm nay | ?? | number |
+| Follow-up quá h?n | ?? | number |
+
+### Charts
+
+| Chart | Type |
+| ----- | ---- |
+| Revenue Trend | area |
+| Order Trend | bar |
+| Customer Trend | line |
+
+### Rankings
+
+| Ranking | Description |
+| ------- | ----------- |
+| Top doanh thu | Top sales by revenue |
+| Top s? don | Top sales by order count |
+| Top khách hàng | Top sales by customer count |
+
+### Follow-ups
+
+| Type | Description |
+| ---- | ----------- |
+| Today Follow-ups | Follow-ups scheduled for today |
+| Missed Follow-ups | Follow-ups before today that are not SUCCESS |
+
+### Aggregation Pipelines
+
+- aggregateDashboardCards()
+- aggregateRevenueTrend()
+- aggregateOrderTrend()
+- aggregateCustomerTrend()
+- aggregateTopSales()
+- aggregateTodayFollowUps()
+- aggregateMissedFollowUps()
+
+### Permission
+
+| Permission | Mô t? |
+| ---------- | --------- |
+| sales.dashboard.view | Xem Sales Dashboard |
+
+### Verification
+
+- [x] 
+px tsc --noEmit ? **0 TypeScript Error**
+- [x] MongoDB aggregate operations
+- [x] No mocking
+- [x] Repository contains all aggregations
+- [x] Service is orchestration only
+- [x] Charts config-driven
+- [x] Ranking config-driven
+- [x] React Query hooks integrated
+- [x] PROJECT_PROGRESS.md updated
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Completed ?

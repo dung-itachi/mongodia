@@ -414,6 +414,12 @@ export const PERMISSIONS = [
   name: "Reopen Marketing Expense",
 },
 
+// Sales Dashboard
+{
+  code: "sales.dashboard.view",
+  name: "View Sales Dashboard",
+},
+
 // Report
   {
     code: "report.view",

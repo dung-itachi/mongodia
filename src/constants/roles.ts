@@ -132,6 +132,9 @@ export const ROLES = [
     permissions: [
       "dashboard.view",
 
+      // ---- Sales Dashboard ----------------------------------------------
+      "sales.dashboard.view",
+
       "customer.view",
       "customer.create",
       "customer.update",
