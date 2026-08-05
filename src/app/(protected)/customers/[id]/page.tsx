@@ -5,7 +5,7 @@
  * CUSTOMER DETAIL PAGE
  * ==================================================
  *
- * Sprint 8.0 — Customer Module Foundation
+ * Sprint 8.1 — Customer Timeline & CRM Activities
  *
  * Display customer details with:
  * - General Information
@@ -13,7 +13,7 @@
  * - Marketing & Sale
  * - Orders (read from OrderRepository)
  * - Revenue Summary
- * - Timeline (placeholder)
+ * - Timeline (Customer Activities)
  */
 
 import { use, useState, useCallback } from "react";
@@ -37,6 +37,7 @@ import CardSection from "@/components/common/cards/CardSection";
 import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonCard from "@/components/common/overlay/SkeletonCard";
 import PermissionGate from "@/components/common/PermissionGate";
+import CustomerTimeline from "@/components/customer/CustomerTimeline";
 
 import {
   useCustomer,
@@ -392,9 +393,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
               label: "Lịch sử",
               children: (
                 <CardSection title="Lịch sử hoạt động">
-                  <p className="text-gray-500">
-                    Tính năng đang được phát triển...
-                  </p>
+                  <CustomerTimeline customerId={id} />
                 </CardSection>
               ),
             },

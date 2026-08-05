@@ -6025,3 +6025,161 @@ px tsc --noEmit ? **0 TypeScript Error**
 Reviewed by Cursor Agent
 
 Status: Completed ?
+
+---
+
+## Sprint 8.1 — Customer Timeline & CRM Activities
+
+### Status
+
+? Completed (2026-08-05)
+
+### M?c tiêu
+
+Xây d?ng Customer Timeline - trung tâm CRM c?a Sales.
+
+### Không s?a
+
+- Marketing
+- Lead
+- Marketing Expense
+- Dashboard
+- Warehouse
+- Inventory
+- Order
+- UI Kit
+
+### Files t?o m?i
+
+#### Domain & Types
+
+| File | Mô t? |
+| ---- | --------- |
+| src/models/CustomerActivity.ts | CustomerActivity model v?i ActivityType enum, ActivityResult enum |
+| src/types/customer-activity.ts | Type definitions: CustomerActivity, CustomerActivityResponse, FollowUpStats, CreateCustomerActivityInput, UpdateCustomerActivityInput |
+
+#### Repository
+
+| File | Mô t? |
+| ---- | --------- |
+| src/repositories/customer-activity.repository.ts | CustomerActivityRepository v?i CRUD, pagination, findByCustomer, findByEmployee, findToday, findUpcoming, findMissed |
+
+#### Service
+
+| File | Mô t? |
+| ---- | --------- |
+| src/services/customer-activity/customer-activity.service.ts | CustomerActivityService v?i business logic cho activities |
+
+#### API Routes
+
+| File | Mô t? |
+| ---- | --------- |
+| src/app/api/customers/[id]/activities/route.ts | GET (list), POST (create) |
+| src/app/api/customer-activities/[id]/route.ts | GET, PATCH, DELETE |
+| src/app/api/customer-activities/stats/route.ts | GET follow-up statistics |
+
+#### Validators & Mappers
+
+| File | Mô t? |
+| ---- | --------- |
+| src/validators/customer-activity.validator.ts | Zod schemas: createCustomerActivitySchema, updateCustomerActivitySchema |
+| src/mappers/customer-activity.mapper.ts | mapCustomerActivity(), getActivityTypeLabel(), getActivityResultLabel() |
+
+#### React Query Hooks
+
+| File | Mô t? |
+| ---- | --------- |
+| src/hooks/useCustomerActivities.ts | useCustomerActivities(), useCustomerActivity(), useFollowUpStats(), useCreateCustomerActivity(), useUpdateCustomerActivity(), useDeleteCustomerActivity() |
+
+#### UI Components
+
+| File | Mô t? |
+| ---- | --------- |
+| src/components/customer/ActivityDrawer.tsx | Drawer cho create/edit activity |
+| src/components/customer/CustomerTimeline.tsx | Timeline display cho customer activities |
+
+### Files ch?nh s?a
+
+| File | Thay d?i |
+| ---- | --------- |
+| src/constants/permissions.ts | Thêm customer-activity permissions |
+| src/constants/roles.ts | Thêm customer-activity permissions cho SALE role |
+| src/app/(protected)/customers/[id]/page.tsx | Thêm Timeline tab v?i CustomerTimeline component |
+
+### CustomerActivity Model Fields
+
+`
+customerId, employeeId
+activityType (CALL, MEETING, NOTE, FOLLOW_UP, EMAIL, SMS, OTHER)
+title, content
+nextFollowUpAt, result (SUCCESS, FAILED, NO_ANSWER, PENDING)
+createdAt, updatedAt
+`
+
+### API Endpoints
+
+| Method | Endpoint | Permission | Mô t? |
+| ------ | ---------| ---------- | --------- |
+| GET | /api/customers/:id/activities | customer-activity.view | List activities for customer |
+| POST | /api/customers/:id/activities | customer-activity.create | Create activity |
+| GET | /api/customer-activities/:id | customer-activity.view | Get activity detail |
+| PATCH | /api/customer-activities/:id | customer-activity.update | Update activity |
+| DELETE | /api/customer-activities/:id | customer-activity.delete | Delete activity |
+| GET | /api/customer-activities/stats | customer-activity.view | Get follow-up statistics |
+
+### Follow-up Statistics Response
+
+`	ypescript
+{
+  todayTotal: number;
+  todayCompleted: number;
+  todayPending: number;
+  upcomingTotal: number;
+  upcomingCount: number;
+  missedTotal: number;
+  missedCount: number;
+}
+`
+
+### Permissions
+
+| Permission | Mô t? |
+| ---------- | --------- |
+| customer-activity.view | Xem danh sách và chi ti?t ho?t d?ng |
+| customer-activity.create | T?o ho?t d?ng m?i |
+| customer-activity.update | C?p nh?t ho?t d?ng |
+| customer-activity.delete | Xóa ho?t d?ng |
+
+### UI Features
+
+**Customer Timeline:**
+- Timeline display v?i icons cho t?ng activity type
+- Filter theo activity type, result
+- Pagination cho activities
+- Create/Edit/Delete activities
+- "Xem thêm" button
+
+**Activity Drawer:**
+- Activity Type dropdown
+- Title input
+- Content textarea
+- Next Follow-up DateTime picker
+- Result dropdown
+
+### Verification
+
+- [x] 
+px tsc --noEmit ? **0 TypeScript Error**
+- [x] MongoDB CRUD operations working
+- [x] No mocking
+- [x] Timeline d?c t? MongoDB
+- [x] Customer Detail hi?n th? Timeline
+- [x] React Query hooks integrated
+- [x] PermissionGate implemented
+- [x] PROJECT_PROGRESS.md updated
+
+### Review
+
+Reviewed by Cursor Agent
+
+Status: Completed ?

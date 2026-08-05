@@ -204,6 +204,24 @@ export const PERMISSIONS = [
   name: "Delete Customer",
 },
 
+// Customer Activity
+{
+  code: "customer-activity.view",
+  name: "View Customer Activity",
+},
+{
+  code: "customer-activity.create",
+  name: "Create Customer Activity",
+},
+{
+  code: "customer-activity.update",
+  name: "Update Customer Activity",
+},
+{
+  code: "customer-activity.delete",
+  name: "Delete Customer Activity",
+},
+
 // Supplier
 {
   code: "supplier.view",

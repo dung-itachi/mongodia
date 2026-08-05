@@ -136,6 +136,12 @@ export const ROLES = [
       "customer.create",
       "customer.update",
 
+      // ---- Customer Activity (Timeline) -----------------------------------
+      "customer-activity.view",
+      "customer-activity.create",
+      "customer-activity.update",
+      "customer-activity.delete",
+
       "product.view",
       "product-variant.view",
       "combo.view",
