@@ -30,7 +30,7 @@ function mapToLead(doc: ILead) {
   const rawDoc = doc as ILead & {
     marketingEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
     saleEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
-    combo?: { _id: { toString(): string }; code: string; name: string };
+    comboId?: { _id: { toString(): string }; code: string; name: string };
   };
 
   return {
@@ -70,11 +70,11 @@ function mapToLead(doc: ILead) {
           name: rawDoc.saleEmployeeId.name,
         }
       : undefined,
-    combo: rawDoc.combo && typeof rawDoc.combo === "object" && "code" in rawDoc.combo
+    combo: rawDoc.comboId && typeof rawDoc.comboId === "object" && "code" in rawDoc.comboId
       ? {
-          _id: rawDoc.combo._id.toString(),
-          code: rawDoc.combo.code,
-          name: rawDoc.combo.name,
+          _id: rawDoc.comboId._id.toString(),
+          code: rawDoc.comboId.code,
+          name: rawDoc.comboId.name,
         }
       : undefined,
     assignmentType: doc.assignmentType,
@@ -200,7 +200,7 @@ export class LeadRepository {
    */
   async update(id: string, data: UpdateLeadInput) {
     const doc = await Lead.findByIdAndUpdate(id, data, { new: true })
-      .populate("combo", "_id code name")
+      .populate("comboId", "_id code name")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);
@@ -245,7 +245,7 @@ export class LeadRepository {
     const doc = await Lead.findById(id)
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
-      .populate("combo", "_id code name")
+      .populate("comboId", "_id code name")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);
@@ -262,7 +262,7 @@ export class LeadRepository {
       .populate("saleEmployee", "_id employeeCode name")
       .populate("category", "_id code name")
       .populate("product", "_id code name")
-      .populate("combo", "_id code name")
+      .populate("comboId", "_id code name")
       .lean();
   }
 
@@ -279,7 +279,7 @@ export class LeadRepository {
       Lead.find(filter)
         .populate("marketingEmployeeId", "_id employeeCode name")
         .populate("saleEmployeeId", "_id employeeCode name")
-        .populate("combo", "_id code name")
+        .populate("comboId", "_id code name")
         .sort(buildSort(params))
         .skip(skip)
         .limit(limit)
@@ -561,7 +561,7 @@ export class LeadRepository {
     )
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
-      .populate("combo", "_id code name")
+      .populate("comboId", "_id code name")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);

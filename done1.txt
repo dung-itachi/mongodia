@@ -1,3 +1,7 @@
+Cài dữ liệu
+npm install antd @ant-design/icons @tanstack/react-query @tanstack/react-query-devtools axios react-hook-form @hookform/resolvers zod 
+mongoose jsonwebtoken bcryptjs dotenv dayjs xlsx jspdf jspdf-autotable clsx uuid tsx
+---------
 Module Employee
 ✅ Login + JWT
 ✅ GET danh sách (search, filter, sort, pagination)

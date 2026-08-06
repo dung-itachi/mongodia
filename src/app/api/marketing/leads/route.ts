@@ -12,7 +12,7 @@ import type { CreateLeadInput, Lead } from "@/types/lead";
 import type { MarketingLead, MarketingLeadListResponse } from "@/types/marketing-lead";
 
 function mapMarketingLead(lead: Lead): MarketingLead {
-  const combo = (lead as Lead & { combo?: { _id: string; code: string; name: string } }).combo;
+  const combo = (lead as Lead & { comboId?: { _id: string; code: string; name: string } }).comboId;
   return {
     _id: lead._id,
     leadCode: lead.leadCode,
