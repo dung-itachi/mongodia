@@ -3,19 +3,20 @@
  * ORDER STATUS & REVENUE LOCK CONSTANTS
  * ==================================================
  *
- * Centralised enums for Order lifecycle and the Revenue Lock Engine.
- * The Order Model and the orderRevenue service both consume from here.
+ * Sprint 8.5: Refactor Order Workflow
  *
- * Sprint 6.2: Order Workflow
- * - PENDING → CONFIRMED → PACKING → SHIPPING → DELIVERED
- * - DELIVERED → RETURNED
- * - PENDING/CONFIRMED/PACKING → CANCELLED
+ * Workflow mới:
+ * WAIT_CONFIRM → CONFIRMED → PACKING → SHIPPING → DELIVERED → RECONCILED
+ *                                        ↓
+ *                                    RETURNED
+ *                                        ↓
+ *                                   RECONCILED
  */
 
 /** Status values used by an Order throughout its lifecycle. */
 export enum OrderStatus {
-  /** Customer đã đặt, chưa chốt. */
-  PENDING = "PENDING",
+  /** Sale vừa chốt, chưa xác nhận lại với khách. */
+  WAIT_CONFIRM = "WAIT_CONFIRM",
   /** Đã xác nhận / chốt đơn. */
   CONFIRMED = "CONFIRMED",
   /** Đang đóng gói. */
@@ -24,36 +25,42 @@ export enum OrderStatus {
   SHIPPING = "SHIPPING",
   /** Giao thành công. */
   DELIVERED = "DELIVERED",
-  /** Đã hoàn trả. */
+  /** Đơn hoàn. */
   RETURNED = "RETURNED",
+  /** Shipper trả tiền, đơn hoàn tất. Đây mới là doanh thu thực. */
+  RECONCILED = "RECONCILED",
   /** Đã hủy. */
   CANCELLED = "CANCELLED",
-  /** Khách đã thanh toán một phần hoặc toàn bộ trước khi giao. */
-  PREPAID = "PREPAID",
-  /** Bị từ chối. */
-  REJECTED = "REJECTED",
-  /** Giao thất bại. */
-  FAILED = "FAILED",
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  [OrderStatus.PENDING]: "Chờ xử lý",
+  [OrderStatus.WAIT_CONFIRM]: "Chờ xác nhận",
   [OrderStatus.CONFIRMED]: "Đã xác nhận",
   [OrderStatus.PACKING]: "Đang đóng gói",
   [OrderStatus.SHIPPING]: "Đang giao",
   [OrderStatus.DELIVERED]: "Đã giao",
   [OrderStatus.RETURNED]: "Đã hoàn trả",
+  [OrderStatus.RECONCILED]: "Đã đối soát",
   [OrderStatus.CANCELLED]: "Đã hủy",
-  [OrderStatus.PREPAID]: "Đã cọc / Trả trước",
-  [OrderStatus.REJECTED]: "Bị từ chối",
-  [OrderStatus.FAILED]: "Giao thất bại",
 };
+
+/** Valid order statuses for workflow (Sprint 8.5) */
+export const VALID_ORDER_STATUSES: ReadonlyArray<OrderStatus> = [
+  OrderStatus.WAIT_CONFIRM,
+  OrderStatus.CONFIRMED,
+  OrderStatus.PACKING,
+  OrderStatus.SHIPPING,
+  OrderStatus.DELIVERED,
+  OrderStatus.RETURNED,
+  OrderStatus.RECONCILED,
+  OrderStatus.CANCELLED,
+];
 
 /** Status set that frees revenue slot for the next Order of the same customer+product/combo. */
 export const REVENUE_UNLOCK_STATUSES: ReadonlySet<OrderStatus> = new Set([
   OrderStatus.CANCELLED,
-  OrderStatus.REJECTED,
-  OrderStatus.FAILED,
+  OrderStatus.RETURNED,
+  OrderStatus.RECONCILED,
 ]);
 
 /**
@@ -87,27 +94,26 @@ export const REVENUE_LOCK_LABELS: Record<RevenueLockReason, string> = {
  * Action types recorded in OrderHistory audit log.
  * Mirrors the LeadHistory pattern for consistency across the system.
  *
- * Sprint 6.2: Added status-specific actions for better Timeline display.
+ * Sprint 8.5: Updated to match new workflow
+ * - WAIT_CONFIRM, CONFIRMED, PACKING, SHIPPING, DELIVERED, RETURNED, RECONCILED
  */
 export enum OrderAction {
   CREATED = "CREATED",
   UPDATED = "UPDATED",
-  // Status change actions (Sprint 6.2)
-  PENDING = "PENDING",
+  // Status change actions (Sprint 8.5)
+  WAIT_CONFIRM = "WAIT_CONFIRM",
   CONFIRMED = "CONFIRMED",
   PACKING = "PACKING",
   SHIPPING = "SHIPPING",
   DELIVERED = "DELIVERED",
   RETURNED = "RETURNED",
+  RECONCILED = "RECONCILED",
   CANCELLED = "CANCELLED",
-  PREPAID = "PREPAID",
   // Legacy status change (kept for backward compatibility)
   STATUS_CHANGED = "STATUS_CHANGED",
   PAYMENT_ADDED = "PAYMENT_ADDED",
   PAYMENT_REMOVED = "PAYMENT_REMOVED",
   SHIPPING_UPDATED = "SHIPPING_UPDATED",
-  REJECTED = "REJECTED",
-  FAILED = "FAILED",
   REVENUE_LOCKED = "REVENUE_LOCKED",
   REVENUE_UNLOCKED = "REVENUE_UNLOCKED",
   REVENUE_RECALCULATED = "REVENUE_RECALCULATED",
@@ -122,22 +128,20 @@ export enum OrderAction {
 export const ORDER_ACTION_LABELS: Record<OrderAction, string> = {
   [OrderAction.CREATED]: "Tạo đơn",
   [OrderAction.UPDATED]: "Cập nhật",
-  // Status-specific actions (Sprint 6.2)
-  [OrderAction.PENDING]: "Chuyển chờ xử lý",
+  // Status-specific actions (Sprint 8.5)
+  [OrderAction.WAIT_CONFIRM]: "Chờ xác nhận",
   [OrderAction.CONFIRMED]: "Xác nhận đơn",
   [OrderAction.PACKING]: "Đóng gói",
   [OrderAction.SHIPPING]: "Giao hàng",
   [OrderAction.DELIVERED]: "Đã giao",
   [OrderAction.RETURNED]: "Hoàn trả",
+  [OrderAction.RECONCILED]: "Đối soát",
   [OrderAction.CANCELLED]: "Hủy đơn",
-  [OrderAction.PREPAID]: "Đã cọc / Trả trước",
   // Legacy
   [OrderAction.STATUS_CHANGED]: "Đổi trạng thái",
   [OrderAction.PAYMENT_ADDED]: "Thêm thanh toán",
   [OrderAction.PAYMENT_REMOVED]: "Xóa thanh toán",
   [OrderAction.SHIPPING_UPDATED]: "Cập nhật vận chuyển",
-  [OrderAction.REJECTED]: "Từ chối đơn",
-  [OrderAction.FAILED]: "Giao thất bại",
   [OrderAction.REVENUE_LOCKED]: "Khóa doanh thu",
   [OrderAction.REVENUE_UNLOCKED]: "Mở khóa doanh thu",
   [OrderAction.REVENUE_RECALCULATED]: "Tính lại doanh thu",

@@ -3,75 +3,69 @@
  * ORDER STATUS CONFIG
  * ==================================================
  *
- * Sprint 6.2 — Order Workflow
+ * Sprint 8.5: Refactor Order Workflow
  *
- * Centralised config for Order Status:
- * - Labels
- * - Colors (for StatusBadge)
- * - Icons (for Timeline, Dashboard, Warehouse)
- * - Allowed transitions (workflow rules)
- * - Action labels
+ * Workflow mới:
+ * WAIT_CONFIRM → CONFIRMED → PACKING → SHIPPING → DELIVERED → RECONCILED
+ *                                        ↓
+ *                                    RETURNED
+ *                                        ↓
+ *                                   RECONCILED
  *
- * Workflow:
- *   PENDING → CONFIRMED → PACKING → SHIPPING → DELIVERED
- *                                     ↓
- *                                 DELIVERED
- *                                     ↓
- *                                 RETURNED
- *
- *   PENDING → CANCELLED
- *   CONFIRMED → CANCELLED
- *   PACKING → CANCELLED
+ * Business Rules:
+ * - SHIPPING: Chỉ ở đây mới export Inventory
+ * - RETURNED: Rollback Inventory
+ * - RECONCILED: Doanh thu thực được ghi nhận
  */
 
 /**
  * Status colors for UI display
  */
 export const ORDER_STATUS_COLORS: Record<string, string> = {
-  PENDING: "default",
+  WAIT_CONFIRM: "warning",
   CONFIRMED: "processing",
-  PACKING: "warning",
+  PACKING: "orange",
   SHIPPING: "blue",
   DELIVERED: "success",
   RETURNED: "error",
+  RECONCILED: "purple",
   CANCELLED: "default",
-  PREPAID: "cyan",
-  REJECTED: "error",
-  FAILED: "error",
 };
 
 /**
  * Status icons for Timeline, Dashboard, Warehouse (Ant Design icons)
- * Sprint 6.2
+ * Sprint 8.5
  */
 export const ORDER_STATUS_ICONS: Record<string, string> = {
-  PENDING: "ClockCircleOutlined",
+  WAIT_CONFIRM: "ClockCircleOutlined",
   CONFIRMED: "CheckOutlined",
   PACKING: "InboxOutlined",
   SHIPPING: "CarOutlined",
   DELIVERED: "CheckCircleOutlined",
   RETURNED: "UndoOutlined",
+  RECONCILED: "DollarOutlined",
   CANCELLED: "CloseCircleOutlined",
-  PREPAID: "WalletOutlined",
-  REJECTED: "StopOutlined",
-  FAILED: "WarningOutlined",
 };
 
 /**
- * Allowed status transitions
+ * Allowed status transitions (Sprint 8.5)
  * Key = current status, Value = array of allowed next statuses
+ *
+ * WAIT_CONFIRM → CONFIRMED → PACKING → SHIPPING → DELIVERED → RECONCILED
+ *                                        ↓
+ *                                    RETURNED → RECONCILED
+ *
+ * CANCELLED có thể từ bất kỳ trạng thái nào trước SHIPPING
  */
 export const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
-  PENDING: ["CONFIRMED", "CANCELLED"],
+  WAIT_CONFIRM: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["PACKING", "CANCELLED"],
   PACKING: ["SHIPPING", "CANCELLED"],
-  SHIPPING: ["DELIVERED"],
-  DELIVERED: ["RETURNED"],
-  RETURNED: [],
+  SHIPPING: ["DELIVERED", "RETURNED"],
+  DELIVERED: ["RECONCILED"],
+  RETURNED: ["RECONCILED"],
+  RECONCILED: [],
   CANCELLED: [],
-  PREPAID: ["PACKING", "CANCELLED"],
-  REJECTED: [],
-  FAILED: [],
 };
 
 /**
@@ -85,7 +79,7 @@ export interface StatusAction {
 }
 
 export const STATUS_ACTIONS: Record<string, StatusAction[]> = {
-  PENDING: [
+  WAIT_CONFIRM: [
     { label: "Xác nhận", targetStatus: "CONFIRMED", color: "blue" },
     { label: "Hủy đơn", targetStatus: "CANCELLED", color: "red" },
   ],
@@ -99,18 +93,16 @@ export const STATUS_ACTIONS: Record<string, StatusAction[]> = {
   ],
   SHIPPING: [
     { label: "Đã giao", targetStatus: "DELIVERED", color: "green" },
-  ],
-  DELIVERED: [
     { label: "Hoàn trả", targetStatus: "RETURNED", color: "red" },
   ],
-  RETURNED: [],
-  CANCELLED: [],
-  PREPAID: [
-    { label: "Đóng gói", targetStatus: "PACKING", color: "orange" },
-    { label: "Hủy đơn", targetStatus: "CANCELLED", color: "red" },
+  DELIVERED: [
+    { label: "Đối soát", targetStatus: "RECONCILED", color: "purple" },
   ],
-  REJECTED: [],
-  FAILED: [],
+  RETURNED: [
+    { label: "Đối soát", targetStatus: "RECONCILED", color: "purple" },
+  ],
+  RECONCILED: [],
+  CANCELLED: [],
 };
 
 /**
@@ -144,4 +136,28 @@ export function getStatusActions(currentStatus: string): StatusAction[] {
  */
 export function canCancelFromStatus(currentStatus: string): boolean {
   return ALLOWED_STATUS_TRANSITIONS[currentStatus]?.includes("CANCELLED") ?? false;
+}
+
+/**
+ * Check if status requires inventory export (Sprint 8.5)
+ * Only SHIPPING status exports inventory
+ */
+export function requiresInventoryExport(status: string): boolean {
+  return status === "SHIPPING";
+}
+
+/**
+ * Check if status requires inventory rollback (Sprint 8.5)
+ * RETURNED status rolls back inventory
+ */
+export function requiresInventoryRollback(status: string): boolean {
+  return status === "RETURNED";
+}
+
+/**
+ * Check if status is a revenue milestone (Sprint 8.5)
+ * Only RECONCILED is the true revenue milestone
+ */
+export function isRevenueMilestone(status: string): boolean {
+  return status === "RECONCILED";
 }

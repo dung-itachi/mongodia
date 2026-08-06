@@ -33,8 +33,10 @@ async function generateLeadCode(): Promise<string> {
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
 
-  const counter = await Counter.findByIdAndUpdate(
-    `lead_${year}${month}${day}`,
+  const counterKey = `lead_${year}${month}${day}`;
+
+  const counter = await Counter.findOneAndUpdate(
+    { key: counterKey },
     { $inc: { seq: 1 } },
     { new: true, upsert: true }
   );

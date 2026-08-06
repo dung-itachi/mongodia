@@ -1,0 +1,284 @@
+/* Marketing Input Section Styles (Sprint 8.5 Extension) */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* Stats Row */
+.statsRow {
+  display: flex;
+  gap: 12px;
+}
+
+.statCard {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1890ff;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 4px;
+}
+
+/* Card */
+.card {
+  background: #fff;
+  border-radius: 8px;
+}
+
+.loading {
+  padding: 16px;
+  text-align: center;
+  color: #8c8c8c;
+}
+
+/* Product Selection */
+.productGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.productCategory {
+  margin-bottom: 8px;
+}
+
+.categoryName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #595959;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.productList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.productBtn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 2px solid #f0f0f0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.productBtn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.productBtn.selected {
+  border-color: #1890ff;
+  background: #1890ff;
+  color: #fff;
+}
+
+/* Combo Section */
+.comboSection {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.comboLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #595959;
+  margin-bottom: 8px;
+}
+
+.noCombo {
+  color: #fa8c16;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.comboList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comboBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1.5px solid #f0f0f0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.comboBtn:hover {
+  border-color: #52c41a;
+}
+
+.comboBtn.selected {
+  border-color: #52c41a;
+  background: #f6ffed;
+}
+
+.comboPrice {
+  font-weight: 700;
+  color: #52c41a;
+}
+
+/* Input Type Tabs */
+.inputTypeTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.inputTab {
+  flex: 1;
+  padding: 12px;
+  border-radius: 7px;
+  border: 2px solid #f0f0f0;
+  background: #fff;
+  cursor: pointer;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.inputTab:hover {
+  border-color: #1890ff;
+}
+
+.inputTab.active {
+  border-color: #fa8c16;
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.inputHint {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.textArea {
+  font-family: monospace;
+}
+
+/* Input Actions */
+.inputActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Staging Card */
+.stagingCard {
+  background: linear-gradient(135deg, #fafafa, #f5f5f5);
+  border: 1px solid #e8e8e8;
+}
+
+.stagingHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stagingCount {
+  background: #722ed1;
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.stagingStats {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 12px;
+  color: #595959;
+}
+
+.stagingActions {
+  display: flex;
+  gap: 8px;
+}
+
+.stagingTable {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.stagingTable table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stagingTable th {
+  background: #fafafa;
+  text-align: left;
+  padding: 8px;
+  font-weight: 600;
+  color: #595959;
+  font-size: 11px;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+}
+
+.stagingTable td {
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.sourceTag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sourceTag.comment {
+  background: #f0f0f0;
+  color: #595959;
+}
+
+.sourceTag.lading {
+  background: #e6fff9;
+  color: #52c41a;
+}
+
+.price {
+  font-weight: 700;
+  color: #52c41a;
+}

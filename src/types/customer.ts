@@ -6,7 +6,15 @@
  * Sprint 8.0 — Customer Module Foundation
  */
 
-import type { CustomerStatus } from "@/models/Customer";
+// ============================================================================
+// Customer Status
+// ============================================================================
+
+export enum CustomerStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  BLOCKED = "BLOCKED",
+}
 
 // ============================================================================
 // Address

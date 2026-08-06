@@ -7,6 +7,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/axios";
 import type {
   OrderListItem,
   OrderDetail,
@@ -41,100 +42,32 @@ async function fetchOrders(filters: OrderFilter): Promise<OrderListResponse> {
   const queryString = params.toString();
   const url = `/api/orders${queryString ? `?${queryString}` : ""}`;
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to fetch orders");
-  }
-
-  return result.data;
+  const response = await api.get(url);
+  return response.data.data;
 }
 
 async function fetchOrder(id: string): Promise<OrderDetail> {
-  const response = await fetch(`/api/orders/${id}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to fetch order");
-  }
-
-  return result.data;
+  const response = await api.get(`/api/orders/${id}`);
+  return response.data.data;
 }
 
 async function createOrder(data: CreateOrderInput): Promise<OrderListItem> {
-  const response = await fetch("/api/orders", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to create order");
-  }
-
-  return result.data;
+  const response = await api.post("/api/orders", data);
+  return response.data.data;
 }
 
 async function updateOrder(
   id: string,
   data: UpdateOrderInput
 ): Promise<OrderListItem> {
-  const response = await fetch(`/api/orders/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to update order");
-  }
-
-  return result.data;
+  const response = await api.patch(`/api/orders/${id}`, data);
+  return response.data.data;
 }
 
 async function deleteOrder(id: string): Promise<void> {
-  const response = await fetch(`/api/orders/${id}`, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success) {
-    throw new Error(result.message || "Failed to delete order");
+  const response = await api.delete(`/api/orders/${id}`);
+  if (!response.data.success) {
+    throw new Error(response.data.message || "Failed to delete order");
   }
 }
 
@@ -147,23 +80,8 @@ async function changeOrderStatus(
   id: string,
   data: ChangeStatusInput
 ): Promise<OrderListItem> {
-  const response = await fetch(`/api/orders/${id}/status`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to change order status");
-  }
-
-  return result.data;
+  const response = await api.patch(`/api/orders/${id}/status`, data);
+  return response.data.data;
 }
 
 // ============================================================================

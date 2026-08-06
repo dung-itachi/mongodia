@@ -6,6 +6,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/axios";
 import type { MarketingLead, MarketingLeadListResponse } from "@/types/marketing-lead";
 import type { LeadSource } from "@/constants/leadSource";
 
@@ -65,105 +66,33 @@ async function fetchMarketingLeads(
   const queryString = params.toString();
   const url = `/api/marketing/leads${queryString ? `?${queryString}` : ""}`;
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to fetch leads");
-  }
-
-  return result.data;
+  const response = await api.get(url);
+  return response.data.data;
 }
 
 async function fetchMarketingLead(id: string): Promise<MarketingLead> {
-  const response = await fetch(`/api/marketing/leads/${id}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to fetch lead");
-  }
-
-  return result.data;
+  const response = await api.get(`/api/marketing/leads/${id}`);
+  return response.data.data;
 }
 
 async function createMarketingLead(
   data: Record<string, unknown>
 ): Promise<MarketingLead> {
-  const response = await fetch("/api/marketing/leads", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to create lead");
-  }
-
-  return result.data;
+  const response = await api.post("/api/marketing/leads", data);
+  return response.data.data;
 }
 
 async function updateMarketingLead(
   id: string,
   data: Record<string, unknown>
 ): Promise<MarketingLead> {
-  const response = await fetch(`/api/marketing/leads/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to update lead");
-  }
-
-  return result.data;
+  const response = await api.patch(`/api/marketing/leads/${id}`, data);
+  return response.data.data;
 }
 
 async function deleteMarketingLead(id: string): Promise<MarketingLead> {
-  const response = await fetch(`/api/marketing/leads/${id}`, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success || !result.data) {
-    throw new Error(result.message || "Failed to delete lead");
-  }
-
-  return result.data;
+  const response = await api.delete(`/api/marketing/leads/${id}`);
+  return response.data.data;
 }
 
 // ============================================================================
@@ -282,22 +211,8 @@ export function useDeleteLead() {
 // ============================================================================
 
 async function fetchLeadTimeline(leadId: string): Promise<LeadTimelineItem[]> {
-  const response = await fetch(`/api/marketing/leads/${leadId}/timeline`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success) {
-    throw new Error(result.message || "Failed to fetch timeline");
-  }
-
-  return result.data ?? [];
+  const response = await api.get(`/api/marketing/leads/${leadId}/timeline`);
+  return response.data.data ?? [];
 }
 
 /**
@@ -332,22 +247,8 @@ export function useLeadTimeline(leadId: string | null) {
 // ============================================================================
 
 async function convertLead(leadId: string): Promise<{ orderId: string }> {
-  const response = await fetch(`/api/marketing/leads/${leadId}/convert`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-
-  if (!result.success) {
-    throw new Error(result.message || "Failed to convert lead");
-  }
-
-  return result.data;
+  const response = await api.post(`/api/marketing/leads/${leadId}/convert`);
+  return response.data.data;
 }
 
 /**

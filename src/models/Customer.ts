@@ -9,6 +9,10 @@
  */
 
 import mongoose, { Schema, type Document } from "mongoose";
+import { CustomerStatus } from "@/types/customer";
+
+// Re-export CustomerStatus for backwards compatibility
+export { CustomerStatus } from "@/types/customer";
 
 // ============================================================================
 // Sub-document interfaces
@@ -19,16 +23,6 @@ export interface IAddress {
   province?: string;
   district?: string;
   ward?: string;
-}
-
-// ============================================================================
-// Customer Status
-// ============================================================================
-
-export enum CustomerStatus {
-  ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
-  BLOCKED = "BLOCKED",
 }
 
 // ============================================================================

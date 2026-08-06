@@ -24,6 +24,16 @@
   color: #8c8c8c;
 }
 
+.mi-combo-text {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.mi-sale-assigned {
+  color: #52c41a;
+  font-weight: 500;
+}
+
 .mi-action-group {
   display: flex;
   justify-content: center;

@@ -42,7 +42,7 @@ function MarketingDashboardDrillDownDrawerInner({
     <Drawer
       title={title}
       placement="right"
-      width={800}
+      styles={{ wrapper: { width: 800 } }}
       open={open}
       onClose={onClose}
       destroyOnClose

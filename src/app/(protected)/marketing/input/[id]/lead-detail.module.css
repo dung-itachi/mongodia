@@ -75,6 +75,11 @@
   color: #262626;
 }
 
+.combo-text {
+  font-weight: 600;
+  color: #1890ff;
+}
+
 /* Coming soon */
 .coming-soon {
   font-size: 14px;

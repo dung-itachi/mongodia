@@ -30,7 +30,7 @@ import SkeletonCard from "@/components/common/overlay/SkeletonCard";
 import ActivityDrawer from "./ActivityDrawer";
 import { useCustomerActivities, useDeleteCustomerActivity } from "@/hooks/useCustomerActivities";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ActivityType, ActivityResult } from "@/models/CustomerActivity";
+import type { ActivityType, ActivityResult } from "@/types/customer-activity";
 
 interface CustomerTimelineProps {
   customerId: string;

@@ -13,7 +13,7 @@
 import { useEffect } from "react";
 import { Drawer, Form, Input, Select, DatePicker, Button, message } from "antd";
 import { useCreateCustomerActivity, useUpdateCustomerActivity } from "@/hooks/useCustomerActivities";
-import { ActivityType, ActivityResult } from "@/models/CustomerActivity";
+import { ActivityType, ActivityResult } from "@/types/customer-activity";
 
 const { TextArea } = Input;
 

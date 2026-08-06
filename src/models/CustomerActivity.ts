@@ -9,31 +9,10 @@
  */
 
 import mongoose, { Schema, type Document } from "mongoose";
+import { ActivityType, ActivityResult } from "@/types/customer-activity";
 
-// ============================================================================
-// Activity Types
-// ============================================================================
-
-export enum ActivityType {
-  CALL = "CALL",
-  MEETING = "MEETING",
-  NOTE = "NOTE",
-  FOLLOW_UP = "FOLLOW_UP",
-  EMAIL = "EMAIL",
-  SMS = "SMS",
-  OTHER = "OTHER",
-}
-
-// ============================================================================
-// Activity Result
-// ============================================================================
-
-export enum ActivityResult {
-  SUCCESS = "SUCCESS",
-  FAILED = "FAILED",
-  NO_ANSWER = "NO_ANSWER",
-  PENDING = "PENDING",
-}
+// Re-export for backwards compatibility
+export { ActivityType, ActivityResult } from "@/types/customer-activity";
 
 // ============================================================================
 // Interface

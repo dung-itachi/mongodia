@@ -744,6 +744,10 @@ const assignedAtSchema = z
   .nullable()
   .optional();
 
+// Phone field: optional
+const phoneOptionalSchema = z.string().trim().optional().nullable();
+const phone2OptionalSchema = z.string().trim().optional().nullable();
+
 export const createLeadSchema = z.object({
   customerId: z
     .string()
@@ -767,19 +771,9 @@ export const createLeadSchema = z.object({
     .optional()
     .or(z.literal("")),
 
-  phone: z
-    .string()
-    .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Sá»‘ Ä‘iá»‡n thoáº¡i khÃ´ng há»£p lá»‡")
-    .optional()
-    .or(z.literal("")),
+  phone: phoneOptionalSchema,
 
-  phone2: z
-    .string()
-    .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "Sá»‘ Ä‘iá»‡n thoáº¡i 2 khÃ´ng há»£p lá»‡")
-    .optional()
-    .or(z.literal("")),
+  phone2: phone2OptionalSchema,
 
   address: z
     .string()

@@ -1,12 +1,14 @@
 /**
- * Marketing Lead Toolbar Component (Sprint 5.2 — Marketing Input)
+ * Marketing Lead Toolbar Component (Sprint 5.2, 8.5)
  *
  * Toolbar for debounced search, filters, and actions.
+ * Sprint 8.5: Added "Đẩy sang Sale" button for bulk push.
  */
 
 import { memo, useEffect, useState } from "react";
+import { Button } from "antd";
 import { ActionButton, FilterBar, SearchInput } from "@/components/common";
-import { ReloadOutlined, PlusOutlined } from "@ant-design/icons";
+import { ReloadOutlined, PlusOutlined, SendOutlined } from "@ant-design/icons";
 import type { MarketingLeadFilters } from "@/hooks/useMarketingLeads";
 import { LEAD_SOURCE_OPTIONS, LEAD_STATUS_OPTIONS } from "@/constants/marketing";
 import styles from "./marketing-input.module.css";
@@ -16,6 +18,8 @@ export type MarketingLeadToolbarProps = {
   onFiltersChange: (filters: MarketingLeadFilters) => void;
   onRefresh: () => void;
   onCreate: () => void;
+  onPushToSale: () => void;
+  selectedCount: number;
   loading?: boolean;
 };
 
@@ -24,6 +28,8 @@ function MarketingLeadToolbarInner({
   onFiltersChange,
   onRefresh,
   onCreate,
+  onPushToSale,
+  selectedCount,
   loading,
 }: MarketingLeadToolbarProps) {
   const [searchValue, setSearchValue] = useState(filters.keyword ?? "");
@@ -100,6 +106,20 @@ function MarketingLeadToolbarInner({
           onClick={onRefresh}
           disabled={loading}
         />
+        
+        {/* Sprint 8.5: Push to Sale button */}
+        {selectedCount > 0 && (
+          <Button
+            type="primary"
+            icon={<SendOutlined />}
+            onClick={onPushToSale}
+            loading={loading}
+            style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
+          >
+            Đẩy sang Sale ({selectedCount})
+          </Button>
+        )}
+        
         <ActionButton
           type="primary"
           icon={<PlusOutlined />}

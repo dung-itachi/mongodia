@@ -12,6 +12,7 @@ import type { CreateLeadInput, Lead } from "@/types/lead";
 import type { MarketingLead, MarketingLeadListResponse } from "@/types/marketing-lead";
 
 function mapMarketingLead(lead: Lead): MarketingLead {
+  const combo = (lead as Lead & { combo?: { _id: string; code: string; name: string } }).combo;
   return {
     _id: lead._id,
     leadCode: lead.leadCode,
@@ -21,12 +22,14 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     phone2: lead.phone2,
     email: lead.email,
     facebookLink: lead.facebookLink,
+    address: lead.address,
     source: lead.sourceType as LeadSource,
     sourceLabel: LEAD_SOURCE_LABELS[lead.sourceType as LeadSource],
     status: lead.status,
     statusLabel: LEAD_STATUS_LABELS[lead.status],
     marketingEmployee: (lead as Lead & { marketingEmployee?: { _id: string; employeeCode: string; name: string } }).marketingEmployee,
     saleEmployee: (lead as Lead & { saleEmployee?: { _id: string; employeeCode: string; name: string } }).saleEmployee,
+    combo: combo ? { _id: combo._id, code: combo.code, name: combo.name } : undefined,
     note: lead.note,
     isDuplicate: lead.isDuplicate,
     // Sprint 5.7 — Lead Convert
@@ -116,6 +119,8 @@ export async function POST(request: Request) {
 
     const parsed = createLeadSchema.safeParse(normalizedBody);
     if (!parsed.success) {
+      console.error("Lead validation error - full details:", JSON.stringify(normalizedBody, null, 2));
+      console.error("Lead validation error - zod issues:", parsed.error.issues);
       return errorResponse(parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ", 400);
     }
 

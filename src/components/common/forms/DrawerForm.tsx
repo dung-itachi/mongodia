@@ -39,12 +39,17 @@ export default function DrawerForm({
   footer,
   children,
 }: DrawerFormProps) {
+  // Ant Design v5+ deprecates `width` in favor of `size` or `styles.wrapper.width`
+  const drawerStyles = size
+    ? undefined
+    : { wrapper: { width: width ?? 600 } };
+
   return (
     <Drawer
       title={title}
       placement="right"
       size={size}
-      width={size ? undefined : (width ?? 600)}
+      styles={drawerStyles}
       open={open}
       onClose={onClose}
       destroyOnClose

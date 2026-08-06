@@ -36,7 +36,7 @@ import {
 } from "@/hooks/useCustomers";
 import { useDebounce } from "@/hooks/useDebounce";
 import type { Customer, CustomerFilter } from "@/types/customer";
-import { CustomerStatus } from "@/models/Customer";
+import { CustomerStatus } from "@/types/customer";
 
 const STATUS_OPTIONS = [
   { label: "Tất cả trạng thái", value: "" },

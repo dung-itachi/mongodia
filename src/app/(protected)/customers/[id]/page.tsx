@@ -44,7 +44,7 @@ import {
   useCustomerStatistics,
   useDeleteCustomer,
 } from "@/hooks/useCustomers";
-import { CustomerStatus } from "@/models/Customer";
+import { CustomerStatus } from "@/types/customer";
 
 interface PageProps {
   params: Promise<{ id: string }>;

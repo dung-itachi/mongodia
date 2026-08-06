@@ -20,6 +20,7 @@ export interface MarketingLead {
   phone2?: string;
   email?: string;
   facebookLink?: string;
+  address?: string;
   source: LeadSource;
   sourceLabel: string;
   status: LeadStatus;
@@ -32,6 +33,11 @@ export interface MarketingLead {
   saleEmployee?: {
     _id: string;
     employeeCode: string;
+    name: string;
+  };
+  combo?: {
+    _id: string;
+    code: string;
     name: string;
   };
   note?: string;

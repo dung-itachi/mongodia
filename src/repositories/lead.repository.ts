@@ -30,6 +30,7 @@ function mapToLead(doc: ILead) {
   const rawDoc = doc as ILead & {
     marketingEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
     saleEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
+    combo?: { _id: { toString(): string }; code: string; name: string };
   };
 
   return {
@@ -67,6 +68,13 @@ function mapToLead(doc: ILead) {
           _id: rawDoc.saleEmployeeId._id.toString(),
           employeeCode: rawDoc.saleEmployeeId.employeeCode,
           name: rawDoc.saleEmployeeId.name,
+        }
+      : undefined,
+    combo: rawDoc.combo && typeof rawDoc.combo === "object" && "code" in rawDoc.combo
+      ? {
+          _id: rawDoc.combo._id.toString(),
+          code: rawDoc.combo.code,
+          name: rawDoc.combo.name,
         }
       : undefined,
     assignmentType: doc.assignmentType,
@@ -191,7 +199,9 @@ export class LeadRepository {
    * Update a lead by ID
    */
   async update(id: string, data: UpdateLeadInput) {
-    const doc = await Lead.findByIdAndUpdate(id, data, { new: true }).lean();
+    const doc = await Lead.findByIdAndUpdate(id, data, { new: true })
+      .populate("combo", "_id code name")
+      .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);
   }
@@ -235,6 +245,7 @@ export class LeadRepository {
     const doc = await Lead.findById(id)
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
+      .populate("combo", "_id code name")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);
@@ -268,6 +279,7 @@ export class LeadRepository {
       Lead.find(filter)
         .populate("marketingEmployeeId", "_id employeeCode name")
         .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("combo", "_id code name")
         .sort(buildSort(params))
         .skip(skip)
         .limit(limit)
@@ -549,6 +561,7 @@ export class LeadRepository {
     )
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
+      .populate("combo", "_id code name")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);

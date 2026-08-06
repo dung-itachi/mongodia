@@ -6,7 +6,30 @@
  * Sprint 8.1 — Customer Timeline & CRM Activities
  */
 
-import type { ActivityType, ActivityResult } from "@/models/CustomerActivity";
+// ============================================================================
+// Activity Types
+// ============================================================================
+
+export enum ActivityType {
+  CALL = "CALL",
+  MEETING = "MEETING",
+  NOTE = "NOTE",
+  FOLLOW_UP = "FOLLOW_UP",
+  EMAIL = "EMAIL",
+  SMS = "SMS",
+  OTHER = "OTHER",
+}
+
+// ============================================================================
+// Activity Result
+// ============================================================================
+
+export enum ActivityResult {
+  SUCCESS = "SUCCESS",
+  FAILED = "FAILED",
+  NO_ANSWER = "NO_ANSWER",
+  PENDING = "PENDING",
+}
 
 // ============================================================================
 // Customer Activity Entity

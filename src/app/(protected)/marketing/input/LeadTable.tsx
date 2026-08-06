@@ -1,14 +1,16 @@
 /**
- * Marketing Lead Table Component (Sprint 5.2 — Marketing Input)
+ * Marketing Lead Table Component (Sprint 5.2, 8.5)
  *
  * Uses the UI Kit DataTable contract, including scroll, sorting callbacks,
- * and row selection support for future bulk actions.
+ * and row selection support for bulk push to Sale.
+ * Sprint 8.5: Added row selection for "Đẩy sang Sale" functionality.
  */
 
 import { memo, useMemo } from "react";
 import { EyeOutlined, EditOutlined, DeleteOutlined, UserSwitchOutlined, SwapOutlined } from "@ant-design/icons";
 import { ActionButton, DataTable, StatusBadge } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
+import type { TableProps } from "antd";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LEAD_STATUS_LABELS, LeadStatus } from "@/constants/leadStatus";
 import { MARKETING_LEAD_ACTION_LABELS } from "@/constants/marketing";
@@ -22,6 +24,8 @@ export type MarketingLeadTableProps = {
   onDelete: (lead: MarketingLead) => void;
   onAssign?: (lead: MarketingLead) => void;
   onConvert?: (lead: MarketingLead) => void;
+  selectedRowKeys?: string[];
+  onSelectionChange?: (keys: string[]) => void;
   loading?: boolean;
 };
 
@@ -32,71 +36,73 @@ function MarketingLeadTableInner({
   onDelete,
   onAssign,
   onConvert,
+  selectedRowKeys = [],
+  onSelectionChange,
   loading,
 }: MarketingLeadTableProps) {
   const columns: Column[] = useMemo(
     () => [
       { key: "leadCode", title: "Mã", dataIndex: "leadCode", width: 120 },
       {
+        key: "createdAt",
+        title: "Thời gian",
+        dataIndex: "createdAt",
+        width: 150,
+        render: (value: unknown) => (value ? new Date(String(value)).toLocaleString("vi-VN") : "-"),
+      },
+      {
         key: "customerName",
         title: "Tên",
         dataIndex: "customerName",
-        width: 180,
+        width: 150,
         render: (value: unknown) => <span className={styles["mi-primary-text"]}>{String(value)}</span>,
       },
-      { key: "phone", title: "SĐT", dataIndex: "phone", width: 120 },
       {
-        key: "email",
-        title: "Email",
-        dataIndex: "email",
-        width: 180,
-        render: (value: unknown) => (value ? String(value) : <span className={styles["mi-muted-text"]}>-</span>),
+        key: "phone",
+        title: "SĐT",
+        dataIndex: "phone",
+        width: 110,
+      },
+      {
+        key: "address",
+        title: "Địa chỉ",
+        dataIndex: "address",
+        width: 130,
+        render: (value: unknown) => value ? String(value) : <span className={styles["mi-muted-text"]}>-</span>,
+      },
+      {
+        key: "combo",
+        title: "Combo",
+        width: 200,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const combo = (record as unknown as MarketingLead).combo;
+          return combo ? (
+            <span className={styles["mi-combo-text"]}>{combo.name}</span>
+          ) : (
+            <span className={styles["mi-muted-text"]}>-</span>
+          );
+        },
       },
       {
         key: "source",
         title: "Nguồn",
         dataIndex: "source",
-        width: 140,
+        width: 100,
         render: (value: unknown) => LEAD_SOURCE_LABELS[value as LeadSource] ?? String(value),
-      },
-      {
-        key: "marketingEmployee",
-        title: "Marketing",
-        width: 130,
-        render: (_value: unknown, record: Record<string, unknown>) => {
-          const employee = record.marketingEmployee as { name?: string } | null;
-          return employee?.name ?? <span className={styles["mi-muted-text"]}>-</span>;
-        },
-      },
-      {
-        key: "saleEmployee",
-        title: "Sale",
-        width: 130,
-        render: (_value: unknown, record: Record<string, unknown>) => {
-          const employee = record.saleEmployee as { name?: string } | null;
-          return employee?.name ?? <span className={styles["mi-muted-text"]}>-</span>;
-        },
       },
       {
         key: "status",
         title: "Trạng thái",
         dataIndex: "status",
-        width: 120,
+        width: 100,
         render: (value: unknown) => (
           <StatusBadge status={LEAD_STATUS_LABELS[value as LeadStatus] ?? String(value)} />
         ),
       },
       {
-        key: "createdAt",
-        title: "Ngày tạo",
-        dataIndex: "createdAt",
-        width: 110,
-        render: (value: unknown) => (value ? new Date(String(value)).toLocaleDateString("vi-VN") : "-"),
-      },
-      {
         key: "actions",
         title: "Thao tác",
-        width: 370,
+        width: 200,
         align: "center",
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLead;
@@ -105,15 +111,28 @@ function MarketingLeadTableInner({
               <ActionButton type="ghost" size="small" icon={<EyeOutlined />} label={MARKETING_LEAD_ACTION_LABELS.view} onClick={() => onView?.(lead)} disabled={!onView} />
               <ActionButton type="ghost" size="small" icon={<EditOutlined />} label={MARKETING_LEAD_ACTION_LABELS.edit} onClick={() => onEdit(lead)} />
               <ActionButton type="danger" size="small" icon={<DeleteOutlined />} label={MARKETING_LEAD_ACTION_LABELS.delete} onClick={() => onDelete(lead)} />
-              <ActionButton type="ghost" size="small" icon={<UserSwitchOutlined />} label={MARKETING_LEAD_ACTION_LABELS.assign} onClick={() => onAssign?.(lead)} disabled={!onAssign} />
-              <ActionButton type="ghost" size="small" icon={<SwapOutlined />} label={MARKETING_LEAD_ACTION_LABELS.convert} onClick={() => onConvert?.(lead)} disabled={!onConvert} />
             </div>
           );
         },
       },
     ],
-    [onAssign, onConvert, onDelete, onEdit, onView]
+    [onDelete, onEdit, onView]
   );
+
+  const rowSelection: TableProps<Record<string, unknown>>["rowSelection"] = onSelectionChange
+    ? {
+        selectedRowKeys,
+        onChange: (keys) => {
+          onSelectionChange(keys as string[]);
+        },
+        getCheckboxProps: (record) => {
+          const lead = record as unknown as MarketingLead;
+          return {
+            disabled: !!lead.saleEmployee,
+          };
+        },
+      }
+    : undefined;
 
   return (
     <DataTable
@@ -123,7 +142,8 @@ function MarketingLeadTableInner({
       pagination={false}
       rowKey="_id"
       size="small"
-      scroll={{ x: 1400 }}
+      scroll={{ x: 1200 }}
+      rowSelection={rowSelection}
     />
   );
 }

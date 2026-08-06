@@ -1,0 +1,117 @@
+/* Marketing Lead Tracking Page Styles (Sprint 8.5) */
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusFilters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.activeFilter {
+  font-weight: 600;
+}
+
+.totalCount {
+  font-size: 14px;
+  font-weight: 600;
+  color: #595959;
+}
+
+.primaryText {
+  font-weight: 600;
+  color: #262626;
+}
+
+.phoneText {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.priceText {
+  font-weight: 700;
+  color: #52c41a;
+}
+
+.mutedText {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.convertedBadge {
+  background-color: #f6ffed;
+  color: #52c41a;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.statItem {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* Empty State */
+.emptyContainer {
+  padding: 48px;
+  text-align: center;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.emptyText {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-top: 8px;
+}
+
+/* Pagination */
+.paginationContainer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

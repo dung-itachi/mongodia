@@ -1,117 +1,234 @@
 
 
-
 ---
 
-## Sprint 8.4 ? Tách Lead và Order
+## Sprint 8.5 — Lu?ng Marketing ? Sale
 
 ### Status
 
-? Completed (2026-08-05)
+? Completed (2026-08-06)
 
 ### M?c tiêu
 
-Refactor l?i ?úng nghi?p v? CRM:
-- Marketing không t?o Order
-- Marketing ch? t?o Lead
-- Order ch? ???c t?o khi Sale b?m Ch?t
+B? sung lu?ng nghi?p v? Marketing ? Sale theo giao di?n hi?n có:
+- KHÔNG t?o module m?i
+- KHÔNG làm l?i UI
+- KHÔNG thay ??i layout
+- KHÔNG thay ??i sidebar
 
-### Không s?a
-
-- Warehouse
-- Inventory
-- Marketing Dashboard
-- Sales Dashboard
-- Customer Module
-- KPI
-- Payment
-
-### Business Workflow m?i
+### Business Workflow
 
 ```
-Marketing ? Import Lead ? Lead ? Sale g?i nhi?u l?n
-                                          ?
-Không nghe / Máy b?n / Sai s? / Không nhu c?u / H?n g?i
-                                          ?
-                                    Ti?m n?ng (QUALIFIED / POTENTIAL)
-                                          ?
-                                       CH?T
-                                          ?
-                                    T?o Order
-
-Lead KHÔNG t? sinh Order.
+Marketing ? Nh?p s? ? Ch?n leads ? ??y sang Sale
+                                    ?
+                    Sale ? S? c?n g?i (x? lý)
+                                    ?
+                    Sale ? C?p nh?t tr?ng thái:
+                    - Ch?a g?i
+                    - Không nghe
+                    - ti?m n?ng
+                    - ?? ?i?u ki?n
+                    - M?t
+                                    ?
+                    Sale ? B?m CH?T ? T?o Order
+                                    ?
+                    Marketing ? QL ??n hàng (theo dõi)
 ```
 
-### Lead Model Updates (Sprint 8.4)
+### ??ng b? d? li?u
 
-| Field | Mô t? |
-| ----- | ----- |
-| isConverted | ?ánh d?u lead ?ã ???c convert thành order |
-| convertedOrderId | Tham chi?u ??n Order ?ã t?o (thay th? orderId c?) |
-
-### Order Model
-
-Order ?ã có s?n `leadId` ?? tham chi?u ??n Lead g?c.
-
-### Business Rules
-
-| Rule | Mô t? |
-| ----- | ----- |
-| Ch? QUALIFIED/POTENTIAL ???c convert | Lead ? tr?ng thái Không nhu c?u, Sai s?, Không nghe, Máy b?n không ???c ch?t |
-| Lead ?ã convert r?i | Không cho convert l?n n?a |
-| Order b?t bu?c có leadId | Order ???c t?o t? Lead ph?i bi?t Lead g?c |
-
-### Files ch?nh s?a
-
-| File | Thay ??i |
-| ----- | --------- |
-| src/models/Lead.ts | ??i orderId ? convertedOrderId |
-| src/types/lead.ts | ??i orderId ? convertedOrderId |
-| src/repositories/lead.repository.ts | ??i orderId ? convertedOrderId, thêm markAsConverted, findUnconverted, findConverted |
-| src/services/lead.service.ts | C?p nh?t convertLead v?i business rules m?i |
+- Marketing và Sale nhìn cùng m?t Lead
+- Khi Sale ??i tr?ng thái, Marketing th?y ngay
+- Không t?o d? li?u riêng cho m?i bên
 
 ### Files t?o m?i
 
 | File | Mô t? |
 | ---- | --------- |
-| src/app/api/leads/[id]/convert/route.ts | POST /api/leads/:id/convert |
-| src/hooks/useConvertLead.ts | useConvertLead() mutation hook |
+| src/services/marketing-dispatch.service.ts | Service x? lý push lead và ??ng b? |
+| src/app/api/marketing/leads/push/route.ts | POST /api/marketing/leads/push - ??y lead sang Sale |
+| src/app/api/sale/leads/route.ts | GET /api/sale/leads - L?y leads cho Sale |
+| src/app/api/sale/leads/counts/route.ts | GET /api/sale/leads/counts - Th?ng kê cho Sale |
+| src/app/api/sale/leads/[id]/status/route.ts | PATCH /api/sale/leads/:id/status - C?p nh?t tr?ng thái |
+| src/app/api/marketing/leads/tracking/route.ts | GET /api/marketing/leads/tracking - Theo dõi cho MKT |
+| src/app/api/marketing/leads/tracking/counts/route.ts | GET /api/marketing/leads/tracking/counts |
+| src/hooks/useSaleLeads.ts | Hooks cho Sale leads |
+| src/hooks/useMarketingLeadTracking.ts | Hooks cho Marketing tracking |
+| src/hooks/usePushLeadsToSale.ts | Hook push leads sang Sale |
+| src/components/sale/leads/SaleLeadsToolbar.tsx | Toolbar cho Sale |
+| src/components/sale/leads/SaleLeadTable.tsx | Table cho Sale |
+| src/components/sale/leads/sale-leads.module.css | Styles |
+| src/components/marketing/leads/MarketingLeadTrackingToolbar.tsx | Toolbar cho MKT |
+| src/components/marketing/leads/MarketingLeadTrackingTable.tsx | Table cho MKT |
+| src/components/marketing/leads/marketing-tracking.module.css | Styles |
 
-### API Endpoint
+### Files ch?nh s?a
 
-| Method | Endpoint | Permission | Mô t? |
-| ------ | ---------| ---------- | --------- |
-| POST | /api/leads/:id/convert | lead.update ho?c order.create | Ch?t ??n t? Lead |
+| File | Thay ??i |
+| ---- | --------- |
+| src/app/(protected)/leads/page.tsx | Implement Sale ? S? c?n g?i |
+| src/app/(protected)/marketing/orders/page.tsx | Implement Marketing ? QL ??n hàng |
+| src/app/(protected)/marketing/input/page.tsx | Thêm "??y sang Sale" |
+| src/app/(protected)/marketing/input/MarketingLeadToolbar.tsx | Thêm nút push to Sale |
+| src/app/(protected)/marketing/input/LeadTable.tsx | Thêm row selection |
 
-### Repository Methods
+### API Endpoints
 
-| Method | Mô t? |
-| ------ | ----- |
-| markAsConverted(leadId, orderId) | ?ánh d?u lead ?ã convert v?i order ID |
-| findUnconverted(params) | Tìm leads ch?a convert |
-| findConverted(params) | Tìm leads ?ã convert |
+| Method | Endpoint | Mô t? |
+| ------ | ---------| --------- |
+| POST | /api/marketing/leads/push | ??y leads sang Sale |
+| GET | /api/sale/leads | L?y danh sách leads cho Sale |
+| GET | /api/sale/leads/counts | L?y s? li?u th?ng kê Sale |
+| PATCH | /api/sale/leads/:id/status | C?p nh?t tr?ng thái lead |
+| GET | /api/marketing/leads/tracking | L?y danh sách theo dõi cho MKT |
+| GET | /api/marketing/leads/tracking/counts | L?y s? li?u th?ng kê MKT |
 
-### Service Method
+### Service Methods
 
-`convertLead(id, convertedBy)`:
-1. Ki?m tra lead t?n t?i và active
-2. Ki?m tra lead ch?a convert
-3. Ki?m tra tr?ng thái QUALIFIED ho?c POTENTIAL
-4. T?o Customer n?u ch?a có
-5. T?o Order v?i leadId
-6. C?p nh?t Lead: isConverted = true, convertedOrderId = order._id
-7. T?o LeadHistory record
+**MarketingDispatchService.pushLeadsToSale(input)**:
+1. Validate leads
+2. Check if lead ?ã convert (không cho push)
+3. Auto-assign cho Sale có ít leads nh?t (round-robin)
+4. C?p nh?t lead: saleEmployeeId + status = CONTACTED
+5. T?o LeadHistory record
+
+**MarketingDispatchService.updateLeadStatus(id, status, updatedBy)**:
+1. Validate lead
+2. C?p nh?t status
+3. T?o LeadHistory record
+
+### Business Rules
+
+| Rule | Mô t? |
+| ----- | ----- |
+| Lead ?ã convert | Không cho push sang Sale |
+| Lead ?ã có Sale | Không cho push l?i |
+| Ch? Sale ch?t ??n | Marketing ch? theo dõi |
+| ??ng b? th?i gian th?c | Cùng m?t Lead, cùng m?t d? li?u |
 
 ### Verification
 
-- [x] Lead ch?a convert ? t?o Order thành công
-- [x] Lead ?ã convert ? báo l?i
-- [x] Order có leadId
-- [x] Lead có convertedOrderId
-- [x] npx tsc --noEmit ? **0 TypeScript Error**
+- [x] Marketing b?m "??y sang Sale" ? Lead xu?t hi?n ? Sale ? S? c?n g?i
+- [x] Marketing b?m "??y sang Sale" ? Lead xu?t hi?n ? Marketing ? QL ??n hàng
+- [x] Hai màn hình dùng chung d? li?u (cùng Lead)
+- [x] Sale ??i tr?ng thái ? Marketing th?y ngay
+- [x] Ch? khi Sale b?m "Ch?t" ? m?i t?o Order
+- [x] Không thay ??i giao di?n hi?n có (tr? thêm button)
+- [x] Sprint 8.5 files: 0 TypeScript Error
 
 ### Review
 
 Reviewed by Cursor Agent
 
 Status: Completed ?
+
+---
+
+## Sprint 8.5 Extension - Marketing Input Enhancement
+
+### Status
+
+In Progress (2026-08-06)
+
+### Muc tieu
+
+Them chuc nang "Nhap so" nang cao theo HTML reference:
+- Chon san pham & combo
+- Nhap leads tu Comment/Landing page
+- Staging area truoc khi day sang Sale
+- Stats cards hien thi so lieu
+
+### Files tao moi
+
+| File | Mo ta |
+| ---- | --------- |
+| src/hooks/useProducts.ts | Hook fetch products va combos |
+| src/components/marketing/input/MarketingInputSection.tsx | Component nhap so nang cao |
+| src/components/marketing/input/MarketingInputSection.module.css | Styles |
+
+### Files chinh sua
+
+| File | Thay doi |
+| ---- | --------- |
+| src/app/(protected)/marketing/input/page.tsx | Them MarketingInputSection |
+
+### Component Features
+
+**MarketingInputSection:**
+1. Stats Cards - Hien thi so leads da day va staging
+2. Product Selection - Chon san pham theo category
+3. Combo Selection - Chon combo cua san pham
+4. Lead Input - 2 che do: Comment (Ten + SDT) va Landing (Date + Name + Phone + Address + Combo)
+5. Staging Area - Bang tam chua leads truoc khi day
+
+### Verification
+
+- [x] Product selection voi categories
+- [x] Combo selection theo product
+- [x] Input type tabs (Comment / Landing)
+- [x] Parse leads tu text input
+- [x] Staging table voi source tags
+- [x] Push to Sale button
+- [x] 0 TypeScript Error (new files)
+
+### Review
+
+Status: In Progress
+
+
+---
+
+## Sprint 8.5.2 - Ket noi Marketing Input voi Product Module
+
+### Status
+
+Completed (2026-08-06)
+
+### Muc tieu
+
+Ket noi MarketingInputSection voi Product Module hien co:
+- KHONG tao Product API moi
+- KHONG tao Combo API moi
+- SU DUNG truc tiep module hien co
+
+### Files da cap nhat
+
+| File | Thay doi |
+| ---- | --------- |
+| src/hooks/useProducts.ts | Mo rong voi category fetch, combo lookup, normalize |
+
+### Integration Details
+
+**1. Hien thi danh muc san pham**
+- useCategories() - Fetch tu /api/categories (isActive = true)
+- useProducts() - Fetch tu /api/products (isActive = true)
+- useProductsByCategory() - Group products theo category
+
+**2. Hien thi Combo**
+- useCombosByProduct(productId) - Fetch combos cua product
+- useCombosWithProduct(productId) - Normalize combos voi product info
+- Combos tu MongoDB (isActive = true)
+
+**3. Landing Parser**
+- useAllCombosNormalized() - Fetch ALL combos cho lookup
+- comboByNameMap - Lookup combo theo ten (case-insensitive)
+- Neu combo khong ton tai -> danh dau loi
+
+**4. Push to Sale**
+- Product info (productId) tu Product Module
+- Combo info (comboId, price) tu Combo Module
+- Lead tao ra luu productId, comboId
+- Khi Sale chot -> Order co productId, comboId
+
+### Verification
+
+- [x] Chon san pham -> hien dung category
+- [x] Chon product -> hien combo
+- [x] Combo lay tu MongoDB
+- [x] Gia lay tu combo
+- [x] Khong co du lieu hardcode
+- [x] 0 TypeScript Error (Sprint 8.5.2 files)
+
+### Review
+
+Status: Completed
