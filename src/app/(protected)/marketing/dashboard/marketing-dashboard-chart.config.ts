@@ -81,6 +81,28 @@ export const MARKETING_DASHBOARD_CHARTS: ChartDefinition[] = [
     drillDown: true,
     exportable: true,
   },
+  {
+    id: "revenueTrend",
+    title: "📈 Doanh số theo ngày",
+    type: "bar",
+    selector: (data) => data.revenueTrend,
+    permission: "marketing.dashboard.revenue",
+    color: "#13c2c2",
+    yAxisFormat: "currency",
+    drillDown: true,
+    exportable: true,
+  },
+  {
+    id: "adsExpenseTrend",
+    title: "📊 Báo cáo Ads theo ngày",
+    type: "bar",
+    selector: (data) => data.expenseTrend,
+    permission: "marketing.dashboard.expense",
+    color: "#fa8c16",
+    yAxisFormat: "currency",
+    drillDown: true,
+    exportable: true,
+  },
 ];
 
 export type { ChartData };

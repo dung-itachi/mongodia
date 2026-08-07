@@ -217,7 +217,7 @@ export function useCombosByProduct(productId: string | null) {
   return {
     combos: data ?? [],
     loading: isLoading,
-    error: error?.message ?? null,
+    error,
     refetch,
   };
 }
@@ -242,7 +242,7 @@ export function useAllCombos() {
   return {
     combos: data ?? [],
     loading: isLoading,
-    error: error?.message ?? null,
+    error,
     refetch,
   };
 }
@@ -301,7 +301,7 @@ export function useProductsByCategory() {
   return {
     categories: categoriesWithProducts,
     loading,
-    error: error ? `${error.message}` : null,
+    error: typeof error === "string" ? error : error ? String(error) : null,
     refetch,
   };
 }
@@ -330,7 +330,7 @@ export function useCombosWithProduct(productId: string | null) {
   return {
     combos: normalizedCombos,
     loading,
-    error: error?.message ?? null,
+    error: typeof error === "string" ? error : error?.message ?? null,
     refetch,
   };
 }

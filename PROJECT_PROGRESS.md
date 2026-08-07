@@ -204,3 +204,109 @@ Ket noi MarketingInputSection voi Product Module hien co:
 
 ### Review
 Status: Completed
+
+---
+
+## Sprint 8.4.1 – Hoàn thiện Product Module UI
+
+### Status
+Completed (2026-08-06)
+
+### Muc tieu
+Hoan thien Product Module UI (frontend):
+- KHONG tao Model/Repository/API moi
+- KHONG thay doi backend
+- Chi hoan thien giao dien va ket noi frontend
+
+### Cấu trúc Module
+```
+Sản phẩm
+├── Danh mục sản phẩm  (CRUD: Tên, Mã, Màu, Active)
+├── Sản phẩm           (CRUD: Tên, Category, Mô tả, Active)
+├── Biến thể          (Theo Product: 1pc, 2pc, 500ml, 1kg)
+└── Combo             (Theo Product: giá, combo items, tặng/không tặng)
+```
+
+### Files tạo mới
+#### Hooks
+| File | Mô tả |
+| ---- | --------- |
+| src/hooks/useCategories.ts | CRUD hooks cho Categories |
+| src/hooks/useProductCrud.ts | CRUD hooks cho Products |
+| src/hooks/useVariants.ts | CRUD hooks cho Variants (Option, Value, Product Variant) |
+| src/hooks/useCombos.ts | CRUD hooks cho Combos |
+
+#### UI Components
+| File | Mô tả |
+| ---- | --------- |
+| src/components/product/ProductModuleLayout.tsx | Layout với tab navigation |
+| src/components/product/category/CategoryPage.tsx | Trang Danh mục |
+| src/components/product/category/CategoryTable.tsx | Bảng danh mục |
+| src/components/product/category/CategoryForm.tsx | Form tạo/sửa danh mục |
+| src/components/product/product/ProductPage.tsx | Trang Sản phẩm |
+| src/components/product/product/ProductTable.tsx | Bảng sản phẩm |
+| src/components/product/product/ProductForm.tsx | Form tạo/sửa sản phẩm |
+| src/components/product/variant/VariantPage.tsx | Trang Biến thể (3 tabs) |
+| src/components/product/variant/VariantOptionTable.tsx | Bảng thuộc tính |
+| src/components/product/variant/VariantOptionForm.tsx | Form thuộc tính |
+| src/components/product/variant/VariantValueTable.tsx | Bảng giá trị |
+| src/components/product/variant/VariantValueForm.tsx | Form giá trị |
+| src/components/product/variant/ProductVariantTable.tsx | Bảng biến thể sản phẩm |
+| src/components/product/variant/ProductVariantForm.tsx | Form biến thể sản phẩm |
+| src/components/product/combo/ComboPage.tsx | Trang Combo |
+| src/components/product/combo/ComboTable.tsx | Bảng combo |
+| src/components/product/combo/ComboForm.tsx | Form tạo/sửa combo |
+
+#### Page Routes
+| File | Route |
+| ---- | --------- |
+| src/app/(protected)/products/page.tsx | /products (Product Module root) |
+| src/app/(protected)/products/categories/page.tsx | /products/categories |
+| src/app/(protected)/products/variants/page.tsx | /products/variants |
+| src/app/(protected)/products/combos/page.tsx | /products/combos |
+
+### Files chỉnh sửa
+| File | Thay đổi |
+| ---- | --------- |
+| src/app/(protected)/marketing/orders/page.tsx | Fix missing `onPushToSale` prop |
+| src/hooks/useProducts.ts | Fix error type mapping |
+| src/constants/orderStatus.ts | Add backward compat aliases (PENDING, PREPAID, REJECTED, FAILED) |
+| src/services/order-history.service.ts | Update statusActionMap |
+| src/models/Order.ts | Update REVENUE_LOCKING_STATUSES |
+
+### Marketing Input Integration
+Marketing Input đã được kết nối với Product Module:
+- `useProductsByCategory()` - Đọc Category → Product từ MongoDB
+- `useCombosByProduct(productId)` - Đọc Combos theo Product
+- `useAllCombosNormalized()` - Lookup combo theo tên cho Landing Parser
+
+### UI Features
+1. **Danh mục sản phẩm**
+   - CRUD đầy đủ
+   - Fields: Tên, Mã, Mô tả, Thứ tự, Active
+
+2. **Sản phẩm**
+   - CRUD đầy đủ
+   - Fields: Tên, Mã, Category (dropdown), Hình ảnh, Mô tả, Active
+
+3. **Biến thể** (3 tabs)
+   - Tab Thuộc tính: CRUD (VD: Size, Color)
+   - Tab Giá trị: CRUD (VD: 500ml, 1kg, Đỏ)
+   - Tab Biến thể: CRUD (SKU, Barcode, Price, Cost, Weight)
+
+4. **Combo**
+   - CRUD đầy đủ
+   - Fields: Tên, Code, Sản phẩm, Danh mục
+   - Combo Items: Chọn Product Variant + Số lượng + Tặng/Không
+   - Giá bán, Số lượng combo
+
+### Verification
+- [x] CRUD hoạt động (Category, Product, Variant, Combo)
+- [x] MongoDB connection (React Query)
+- [x] Không mock - dữ liệu thật từ MongoDB
+- [x] Marketing Input đọc được Product/Combo
+- [x] 0 TypeScript Error (toàn bộ project)
+
+### Review
+Status: Completed
+

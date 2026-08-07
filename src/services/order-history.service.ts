@@ -45,16 +45,14 @@ export interface CreateHistoryData {
  */
 function getStatusAction(status: string): OrderAction {
   const statusActionMap: Record<string, OrderAction> = {
-    [OrderStatus.PENDING]: OrderAction.PENDING,
+    [OrderStatus.WAIT_CONFIRM]: OrderAction.WAIT_CONFIRM,
     [OrderStatus.CONFIRMED]: OrderAction.CONFIRMED,
     [OrderStatus.PACKING]: OrderAction.PACKING,
     [OrderStatus.SHIPPING]: OrderAction.SHIPPING,
     [OrderStatus.DELIVERED]: OrderAction.DELIVERED,
     [OrderStatus.RETURNED]: OrderAction.RETURNED,
+    [OrderStatus.RECONCILED]: OrderAction.RECONCILED,
     [OrderStatus.CANCELLED]: OrderAction.CANCELLED,
-    [OrderStatus.PREPAID]: OrderAction.PREPAID,
-    [OrderStatus.REJECTED]: OrderAction.REJECTED,
-    [OrderStatus.FAILED]: OrderAction.FAILED,
   };
 
   return statusActionMap[status] || OrderAction.STATUS_CHANGED;

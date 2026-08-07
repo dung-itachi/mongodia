@@ -1175,7 +1175,9 @@ export const updateComboSchema = z
 
     comboItems: z
       .array(comboItemSchema)
-      .min(1, "Combo pháº£i cÃ³ Ã­t nháº¥t 1 sáº£n pháº©m"),
+      .min(0)
+      .optional()
+      .default([]),
 
     sellingPrice: z
       .number({

@@ -151,6 +151,7 @@ export default function MarketingOrdersPage() {
             void refetch();
           }}
           onCreate={() => setDrawerOpen(true)}
+          onPushToSale={() => {}}
           selectedCount={0}
           loading={loading}
         />

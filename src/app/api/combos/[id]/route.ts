@@ -241,19 +241,31 @@ export async function PUT(
       );
     }
 
-    // Rule: All variants must exist, active, and belong to this product
-    const variantIds = data.comboItems.map((item) => item.productVariantId);
-    const variants = await ProductVariant.find({
-      _id: { $in: variantIds },
-      isActive: true,
-      productId: product._id,
-    });
+    // If comboItems is provided and non-empty, validate variants
+    // Otherwise keep existing comboItems (for toggle active operations)
+    let comboItemsData;
+    if (data.comboItems && data.comboItems.length > 0) {
+      const variantIds = data.comboItems.map((item) => item.productVariantId);
+      const variants = await ProductVariant.find({
+        _id: { $in: variantIds },
+        isActive: true,
+        productId: product._id,
+      });
 
-    if (variants.length !== variantIds.length) {
-      return errorResponse(
-        "Biến thể không thuộc sản phẩm đã chọn",
-        400
-      );
+      if (variants.length !== variantIds.length) {
+        return errorResponse(
+          "Biến thể không thuộc sản phẩm đã chọn",
+          400
+        );
+      }
+      comboItemsData = data.comboItems.map((item) => ({
+        productVariantId: item.productVariantId,
+        quantity: item.quantity,
+        isGift: item.isGift,
+      }));
+    } else {
+      // Keep existing comboItems when not provided
+      comboItemsData = existedCombo.comboItems ?? [];
     }
 
     await Combo.updateOne(
@@ -264,11 +276,7 @@ export async function PUT(
           name: data.name,
           productId: product._id,
           categoryId: category._id,
-          comboItems: data.comboItems.map((item) => ({
-            productVariantId: item.productVariantId,
-            quantity: item.quantity,
-            isGift: item.isGift,
-          })),
+          comboItems: comboItemsData,
           sellingPrice: data.sellingPrice,
           packageSize: data.packageSize,
           displayOrder: data.displayOrder ?? 0,

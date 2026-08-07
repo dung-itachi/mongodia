@@ -20,6 +20,8 @@ import MarketingDashboardFilters from "./MarketingDashboardFilters";
 import MarketingDashboardAdvancedFilters from "./MarketingDashboardAdvancedFilters";
 import MarketingStatsGrid from "./MarketingStatsGrid";
 import MarketingDashboardCharts from "./MarketingDashboardCharts";
+import DailyRevenueReport from "./DailyRevenueReport";
+import DailyAdsReport from "./DailyAdsReport";
 import MarketingDashboardRanking from "./MarketingDashboardRanking";
 import MarketingDashboardDrillDownDrawer from "./MarketingDashboardDrillDownDrawer";
 import MarketingErrorState from "./MarketingErrorState";
@@ -182,6 +184,12 @@ export default function MarketingDashboardPage() {
             });
           }}
         />
+
+        {/* Daily Report - Doanh số theo ngày */}
+        <DailyRevenueReport period={period} />
+
+        {/* Daily Report - Báo cáo Ads theo ngày */}
+        <DailyAdsReport period={period} />
 
         {/* Ranking */}
         <MarketingDashboardRanking

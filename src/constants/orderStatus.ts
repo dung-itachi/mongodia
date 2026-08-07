@@ -31,6 +31,12 @@ export enum OrderStatus {
   RECONCILED = "RECONCILED",
   /** Đã hủy. */
   CANCELLED = "CANCELLED",
+
+  // Legacy aliases (same string values, for backward compatibility)
+  PENDING = "WAIT_CONFIRM",
+  PREPAID = "CONFIRMED",
+  REJECTED = "CANCELLED",
+  FAILED = "CANCELLED",
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {

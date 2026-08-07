@@ -491,6 +491,32 @@
   font-size: 12px;
 }
 
+/* Daily Report Table */
+.mk-daily-report-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.mk-daily-report-summary {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.mk-daily-report-table {
+  margin-top: 16px;
+}
+
+.mk-daily-report-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.mk-daily-report-table .ant-table-tbody > tr:hover > td {
+  background: #f5f5f5;
+}
+
 /* ─────────────── Responsive breakpoints ───────────────
    Tested: 1920, 1600, 1440, 1366, 1280, 1024, 768
 */
