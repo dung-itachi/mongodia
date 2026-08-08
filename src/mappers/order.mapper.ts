@@ -353,17 +353,17 @@ export function mapOrder(order: IOrder): OrderResponse {
 export function mapOrderList(
   orders: IOrder[],
   populateFields: string[] = [
-    "customer",
-    "marketingEmployee",
-    "saleEmployee",
-    "warehouse",
+    "customerId",
+    "marketingEmployeeId",
+    "saleEmployeeId",
+    "warehouseId",
   ]
 ): OrderListItem[] {
   return orders.map((order) => {
     const mapped = mapOrder(order) as OrderListItem;
 
-    if (populateFields.includes("customer") && order.customerId) {
-      const customer = (order as any).customer;
+    if (populateFields.includes("customerId") && order.customerId) {
+      const customer = (order as any).customerId;
       if (customer) {
         mapped.customer = {
           _id: customer._id.toString(),
@@ -375,10 +375,10 @@ export function mapOrderList(
     }
 
     if (
-      populateFields.includes("marketingEmployee") &&
+      populateFields.includes("marketingEmployeeId") &&
       order.marketingEmployeeId
     ) {
-      const emp = (order as any).marketingEmployee;
+      const emp = (order as any).marketingEmployeeId;
       if (emp) {
         mapped.marketingEmployee = {
           _id: emp._id.toString(),
@@ -388,8 +388,8 @@ export function mapOrderList(
       }
     }
 
-    if (populateFields.includes("saleEmployee") && order.saleEmployeeId) {
-      const emp = (order as any).saleEmployee;
+    if (populateFields.includes("saleEmployeeId") && order.saleEmployeeId) {
+      const emp = (order as any).saleEmployeeId;
       if (emp) {
         mapped.saleEmployee = {
           _id: emp._id.toString(),
@@ -399,8 +399,8 @@ export function mapOrderList(
       }
     }
 
-    if (populateFields.includes("warehouse") && order.warehouseId) {
-      const wh = (order as any).warehouse;
+    if (populateFields.includes("warehouseId") && order.warehouseId) {
+      const wh = (order as any).warehouseId;
       if (wh) {
         mapped.warehouse = {
           _id: wh._id.toString(),
@@ -437,7 +437,7 @@ export function mapOrderHistoryList(
     const mapped = mapOrderHistory(history);
 
     if (populateEmployee) {
-      const emp = (history as any).employee;
+      const emp = (history as any).employeeId;
       if (emp) {
         mapped.employee = {
           _id: emp._id.toString(),

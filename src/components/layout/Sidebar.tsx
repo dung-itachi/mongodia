@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 
 import {
@@ -160,14 +160,9 @@ export default function Sidebar({
 
       {/* Nav groups (filtered by permission) */}
       <nav className="nav">
-        {visibleGroups.map((group) => (
-          <NavGroupBlock
-            key={group.key}
-            group={group}
-            pathname={pathname}
-            standalone={group.items.length === 1 && !!group.items[0].standalone}
-          />
-        ))}
+        <Suspense fallback={null}>
+          <NavGroups visibleGroups={visibleGroups} />
+        </Suspense>
       </nav>
 
       {/* Footer (.sbf > .ver) */}
@@ -194,10 +189,12 @@ export default function Sidebar({
 function NavGroupBlock({
   group,
   pathname,
+  search,
   standalone,
 }: {
   group: NavGroup;
   pathname: string;
+  search: string;
   standalone: boolean;
 }) {
   const wrapperClass = standalone ? "ngs" : "ng open";
@@ -219,7 +216,7 @@ function NavGroupBlock({
           <NavItemLink
             key={item.key}
             item={item}
-            active={isActive(pathname, item.href)}
+            active={isActive(pathname, search, item.href)}
           />
         ))}
       </div>
@@ -239,11 +236,58 @@ function NavItemLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-function isActive(pathname: string, href: string): boolean {
+function isActive(pathname: string, search: string, href: string): boolean {
   if (!href) return false;
-  const [pathOnly] = href.split("?");
-  if (pathname === pathOnly) return true;
-  if (href.includes("?") && pathname === pathOnly) return true;
-  if (pathname.startsWith(pathOnly + "/")) return true;
-  return false;
+  const [pathOnly, queryString = ""] = href.split("?");
+
+  // Path mismatch → not active
+  if (pathname !== pathOnly && !pathname.startsWith(pathOnly + "/")) {
+    return false;
+  }
+
+  // Href has no query → match any pathname at this path
+  if (!queryString) {
+    return true;
+  }
+
+  // Href has query → must also match current search params exactly
+  // (compare key=value pairs; current `search` may include extra params
+  // we want to ignore, so check that every required key=value is present)
+  const required = new URLSearchParams(queryString);
+  const current = new URLSearchParams(search);
+
+  for (const [key, value] of required.entries()) {
+    if (current.get(key) !== value) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * NavGroups — isolated sub-tree that reads `useSearchParams`.
+ *
+ * Next.js App Router requires `useSearchParams()` to be wrapped in a
+ * Suspense boundary, otherwise the build will fail or the entire page
+ * tree will be marked dynamic. We isolate the call here so only this
+ * small subtree is suspended; the rest of the sidebar renders normally.
+ */
+function NavGroups({ visibleGroups }: { visibleGroups: NavGroup[] }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchString = searchParams.toString();
+
+  return (
+    <>
+      {visibleGroups.map((group) => (
+        <NavGroupBlock
+          key={group.key}
+          group={group}
+          pathname={pathname}
+          search={searchString}
+          standalone={group.items.length === 1 && !!group.items[0].standalone}
+        />
+      ))}
+    </>
+  );
 }

@@ -124,36 +124,43 @@ export interface ProductVariantSelection {
 }
 
 // ============================================================================
-// Order Gift Selection (Sprint 8.x)
+// Order Gift Mode (Sprint 8.x)
 // ============================================================================
 
 /**
- * Chi tiết quà tặng trong OrderItem.
- * Hỗ trợ 2 chế độ:
- * - Random: Shop tự chọn quà (isRandom = true)
- * - Customer chooses: Khách chọn cụ thể (isRandom = false)
+ * Chế độ quà tặng trong OrderItem.
  *
- * Ví dụ:
- * - Khách không chọn (để shop quyết định):
- *   [{ quantity: 2, isRandom: true }]
+ * - RANDOM: Khách để shop chọn ngẫu nhiên (Sale không cần chọn quà)
+ * - CUSTOMER_SELECTED: Khách đã chọn quà cụ thể, kho phải xuất đúng
+ */
+export type OrderGiftMode = "RANDOM" | "CUSTOMER_SELECTED";
+
+/**
+ * Chi tiết quà khách yêu cầu (khi CUSTOMER_SELECTED).
  *
- * - Khách chọn 1 dầu, 1 khăn:
- *   [
- *     { giftProductId: "oil_id", quantity: 1, isRandom: false },
- *     { giftProductId: "towel_id", quantity: 1, isRandom: false }
+ * Lưu ý:
+ * - Order chỉ lưu YÊU CẦU của khách
+ * - Kho mới là nơi quyết định quà thực tế xuất
+ * - Nếu kho hết hàng, kho xử lý vấn đề tồn kho/thay thế
+ *
+ * giftProductId tham chiếu Gift._id (xem src/models/Gift.ts).
+ *
+ * Ví dụ (CUSTOMER_SELECTED):
+ * - giftSelections: [
+ *     { giftProductId: "gift_id_1", giftProductName: "Dầu gội", quantity: 1 },
+ *     { giftProductId: "gift_id_2", giftProductName: "Lược", quantity: 1 }
  *   ]
  *
- * Validation: sum(gifts.quantity) == giftQuantity (từ combo)
+ * Ví dụ (RANDOM):
+ * - giftSelections: [] (Kho tự chọn)
  */
-export interface OrderGiftSelection {
-  /** Product ID của quà (null nếu random) */
-  giftProductId?: string;
+export interface GiftSelection {
+  /** Gift._id (tham chiếu đến collection gifts) */
+  giftProductId: string;
   /** Tên sản phẩm quà (snapshot) */
   giftProductName?: string;
   /** Số lượng quà */
   quantity: number;
-  /** Shop tự chọn ngẫu nhiên */
-  isRandom: boolean;
 }
 
 // ============================================================================
@@ -171,22 +178,29 @@ export interface OrderGiftSelection {
  * - totalProducts: 2 * 3 = 6 hộng
  * - totalGifts: 2 * 2 = 4 quà
  * - sellingPrice: 350000 (giá 1 combo)
+ *
+ * Variant Details:
  * - details: [
  *     { quantity: 4, variantId: "black_id", attributes: [] },
  *     { quantity: 2, variantId: "brown_id", attributes: [] }
  *   ]
- * - gifts: [
- *     { giftProductId: "oil_id", giftProductName: "Dầu Gội", quantity: 1, isRandom: false },
- *     { giftProductId: "towel_id", giftProductName: "Khăn", quantity: 1, isRandom: false }
- *   ]
- *   hoặc
- * - gifts: [
- *     { quantity: 2, isRandom: true }
- *   ]
  *
- * Validation:
+ * Gifts (tách bạch YÊU CẦU và THỰC TẾ):
+ * - giftMode: RANDOM (shop tự chọn)
+ *   - giftSelections: [] (không cần)
+ *
+ * - giftMode: CUSTOMER_SELECTED
+ *   - giftSelections: [
+ *       { giftProductId: "oil_id", giftProductName: "Dầu Gội", quantity: 1 },
+ *       { giftProductId: "comb_id", giftProductName: "Lược", quantity: 1 }
+ *     ]
+ *
+ * Validations:
  * - sum(details.quantity) == comboQuantity * packageQuantity
- * - sum(gifts.quantity) == comboQuantity * giftQuantity
+ * - RANDOM: giftSelections có thể rỗng
+ * - CUSTOMER_SELECTED: sum(giftSelections.quantity) == comboQuantity * giftQuantity
+ *
+ * Lưu ý: Kho mới là nơi quyết định quà thực tế xuất.
  */
 export interface OrderItem {
   /** ID tạm để identify row trong UI */
@@ -205,6 +219,10 @@ export interface OrderItem {
   packageQuantity: number;
   /** Số lượng quà trong 1 combo */
   giftQuantity: number;
+  /** Chế độ quà tặng */
+  giftMode: OrderGiftMode;
+  /** Yêu cầu quà của khách (chỉ dùng khi CUSTOMER_SELECTED) */
+  giftSelections: GiftSelection[];
   /** Giá bán 1 combo */
   sellingPrice: number;
   /** Giảm giá */
@@ -213,8 +231,6 @@ export interface OrderItem {
   subtotal: number;
   /** Chi tiết variant - luôn tồn tại */
   details: ProductVariantSelection[];
-  /** Chi tiết quà tặng - luôn tồn tại */
-  gifts: OrderGiftSelection[];
 }
 
 // ============================================================================
@@ -243,10 +259,50 @@ export function getTotalDetailsQuantity(details: ProductVariantSelection[]): num
 }
 
 /**
- * Tính tổng số lượng quà từ gifts
+ * Tính tổng số lượng quà từ selections
  */
-export function getTotalGiftsQuantity(gifts: OrderGiftSelection[]): number {
-  return gifts.reduce((sum, g) => sum + g.quantity, 0);
+export function getTotalGiftSelectionsQuantity(selections: GiftSelection[]): number {
+  return selections.reduce((sum, g) => sum + g.quantity, 0);
+}
+
+/**
+ * Validate OrderItem
+ *
+ * Rules:
+ * - sum(details.quantity) == comboQuantity * packageQuantity
+ * - RANDOM: giftSelections có thể rỗng
+ * - CUSTOMER_SELECTED: sum(giftSelections.quantity) == comboQuantity * giftQuantity
+ */
+export interface OrderItemValidation {
+  isValid: boolean;
+  detailsError?: string;
+  giftsError?: string;
+}
+
+export function validateOrderItem(item: OrderItem): OrderItemValidation {
+  const totalProductsRequired = item.comboQuantity * item.packageQuantity;
+  const totalGiftsRequired = item.comboQuantity * item.giftQuantity;
+
+  const totalDetails = getTotalDetailsQuantity(item.details);
+  const detailsError =
+    totalDetails !== totalProductsRequired
+      ? `Chi tiết SP (${totalDetails}) phải bằng tổng sản phẩm (${totalProductsRequired})`
+      : undefined;
+
+  let giftsError: string | undefined;
+
+  if (item.giftMode === "CUSTOMER_SELECTED" && totalGiftsRequired > 0) {
+    const totalSelections = getTotalGiftSelectionsQuantity(item.giftSelections);
+    if (totalSelections !== totalGiftsRequired) {
+      giftsError = `Yêu cầu quà (${totalSelections}) phải bằng tổng quà (${totalGiftsRequired})`;
+    }
+  }
+
+  return {
+    isValid: !detailsError && !giftsError,
+    detailsError,
+    giftsError,
+  };
 }
 
 // ============================================================================

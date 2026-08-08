@@ -262,13 +262,13 @@ export class OrderRepository {
    */
   async findByIdWithPopulate(id: string): Promise<IOrder | null> {
     return Order.findById(id)
-      .populate("customer", "_id code name phone")
-      .populate("lead", "_id leadCode")
-      .populate("product", "_id code name")
-      .populate("combo", "_id code name")
-      .populate("warehouse", "_id code name")
-      .populate("marketingEmployee", "_id employeeCode fullName")
-      .populate("saleEmployee", "_id employeeCode fullName")
+      .populate("customerId", "_id code name phone")
+      .populate("leadId", "_id leadCode")
+      .populate("productId", "_id code name")
+      .populate("comboId", "_id code name")
+      .populate("warehouseId", "_id code name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
       .lean();
   }
 
@@ -304,13 +304,13 @@ export class OrderRepository {
 
     const [items, total] = await Promise.all([
       Order.find(filter)
-        .populate("customer", "_id code name phone")
-        .populate("lead", "_id leadCode")
-        .populate("product", "_id code name")
-        .populate("combo", "_id code name")
-        .populate("warehouse", "_id code name")
-        .populate("marketingEmployee", "_id employeeCode fullName")
-        .populate("saleEmployee", "_id employeeCode fullName")
+        .populate("customerId", "_id code name phone")
+        .populate("leadId", "_id leadCode")
+        .populate("productId", "_id code name")
+        .populate("comboId", "_id code name")
+        .populate("warehouseId", "_id code name")
+        .populate("marketingEmployeeId", "_id employeeCode fullName")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
         .sort(buildSort(params))
         .skip(skip)
         .limit(limit)

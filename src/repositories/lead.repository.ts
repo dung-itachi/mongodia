@@ -256,12 +256,12 @@ export class LeadRepository {
    */
   async findByIdWithPopulate(id: string): Promise<ILead | null> {
     return Lead.findById(id)
-      .populate("customer", "_id code name phone")
-      .populate("facebookPage", "_id pageId pageName")
-      .populate("marketingEmployee", "_id employeeCode name")
-      .populate("saleEmployee", "_id employeeCode name")
-      .populate("category", "_id code name")
-      .populate("product", "_id code name")
+      .populate("customerId", "_id code name phone")
+      .populate("facebookPageId", "_id pageId pageName")
+      .populate("marketingEmployeeId", "_id employeeCode name")
+      .populate("saleEmployeeId", "_id employeeCode name")
+      .populate("categoryId", "_id code name")
+      .populate("productId", "_id code name")
       .populate("comboId", "_id code name")
       .lean();
   }

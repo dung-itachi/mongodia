@@ -157,21 +157,21 @@ export function mapLead(lead: ILead): LeadResponse {
 export function mapLeadList(
   leads: ILead[],
   populateFields: string[] = [
-    "customer",
-    "facebookPage",
-    "facebookPageAssignment.employee",
-    "marketingEmployee",
-    "saleEmployee",
-    "category",
-    "product",
-    "combo",
+    "customerId",
+    "facebookPageId",
+    "facebookPageAssignment",
+    "marketingEmployeeId",
+    "saleEmployeeId",
+    "categoryId",
+    "productId",
+    "comboId",
   ]
 ): LeadListItem[] {
   return leads.map((lead) => {
     const mapped = mapLead(lead) as LeadListItem;
 
-    if (populateFields.includes("customer") && lead.customerId) {
-      const customer = (lead as any).customer;
+    if (populateFields.includes("customerId") && lead.customerId) {
+      const customer = (lead as any).customerId;
       if (customer) {
         mapped.customer = {
           _id: customer._id.toString(),
@@ -182,8 +182,8 @@ export function mapLeadList(
       }
     }
 
-    if (populateFields.includes("facebookPage") && lead.facebookPageId) {
-      const fp = (lead as any).facebookPage;
+    if (populateFields.includes("facebookPageId") && lead.facebookPageId) {
+      const fp = (lead as any).facebookPageId;
       if (fp) {
         mapped.facebookPage = {
           _id: fp._id.toString(),
@@ -214,10 +214,10 @@ export function mapLeadList(
     }
 
     if (
-      populateFields.includes("marketingEmployee") &&
+      populateFields.includes("marketingEmployeeId") &&
       lead.marketingEmployeeId
     ) {
-      const me = (lead as any).marketingEmployee;
+      const me = (lead as any).marketingEmployeeId;
       if (me) {
         mapped.marketingEmployee = {
           _id: me._id.toString(),
@@ -227,8 +227,8 @@ export function mapLeadList(
       }
     }
 
-    if (populateFields.includes("saleEmployee") && lead.saleEmployeeId) {
-      const se = (lead as any).saleEmployee;
+    if (populateFields.includes("saleEmployeeId") && lead.saleEmployeeId) {
+      const se = (lead as any).saleEmployeeId;
       if (se) {
         mapped.saleEmployee = {
           _id: se._id.toString(),
@@ -238,8 +238,8 @@ export function mapLeadList(
       }
     }
 
-    if (populateFields.includes("category") && lead.categoryId) {
-      const cat = (lead as any).category;
+    if (populateFields.includes("categoryId") && lead.categoryId) {
+      const cat = (lead as any).categoryId;
       if (cat) {
         mapped.category = {
           _id: cat._id.toString(),
@@ -249,8 +249,8 @@ export function mapLeadList(
       }
     }
 
-    if (populateFields.includes("product") && lead.productId) {
-      const prod = (lead as any).product;
+    if (populateFields.includes("productId") && lead.productId) {
+      const prod = (lead as any).productId;
       if (prod) {
         mapped.product = {
           _id: prod._id.toString(),
@@ -260,8 +260,8 @@ export function mapLeadList(
       }
     }
 
-    if (populateFields.includes("combo") && lead.comboId) {
-      const combo = (lead as any).combo;
+    if (populateFields.includes("comboId") && lead.comboId) {
+      const combo = (lead as any).comboId;
       if (combo) {
         mapped.combo = {
           _id: combo._id.toString(),
@@ -297,7 +297,7 @@ export function mapLeadHistoryList(
     const mapped = mapLeadHistory(history);
 
     if (populateEmployee) {
-      const emp = (history as any).employee;
+      const emp = (history as any).employeeId;
       if (emp) {
         mapped.employee = {
           _id: emp._id.toString(),

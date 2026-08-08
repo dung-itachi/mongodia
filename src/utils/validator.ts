@@ -1679,3 +1679,49 @@ export const updateInventoryHistorySchema = z.object({
 export type UpdateInventoryHistoryForm = z.infer<
   typeof updateInventoryHistorySchema
 >;
+
+// ================================================================
+// Gift schemas (Sprint 8.x)
+// ================================================================
+
+export const createGiftSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên quà tặng phải có ít nhất 2 ký tự")
+    .max(100, "Tên quà tặng tối đa 100 ký tự"),
+
+  stockQuantity: z
+    .number({
+      message: "Số lượng tồn kho phải là số",
+    })
+    .int("Số lượng tồn kho phải là số nguyên")
+    .min(0, "Số lượng tồn kho không được âm")
+    .default(0),
+
+  isActive: z
+    .boolean()
+    .default(true),
+});
+
+export const updateGiftSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên quà tặng phải có ít nhất 2 ký tự")
+    .max(100, "Tên quà tặng tối đa 100 ký tự"),
+
+  stockQuantity: z
+    .number({
+      message: "Số lượng tồn kho phải là số",
+    })
+    .int("Số lượng tồn kho phải là số nguyên")
+    .min(0, "Số lượng tồn kho không được âm"),
+
+  isActive: z.boolean({
+    message: "Trạng thái không hợp lệ",
+  }),
+});
+
+export type CreateGiftForm = z.infer<typeof createGiftSchema>;
+export type UpdateGiftForm = z.infer<typeof updateGiftSchema>;

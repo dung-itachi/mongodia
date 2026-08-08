@@ -13,6 +13,7 @@ export async function GET(request: Request) {
       email: currentUser.employee.email,
       avatar: currentUser.employee.avatar,
       role: currentUser.role.code,
+      roleName: currentUser.role.name,
       permissions: currentUser.permissions,
     });
   } catch (error) {

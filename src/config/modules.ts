@@ -127,7 +127,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "orders-closed",
     title: "Chốt đơn",
-    route: "/orders?status=CLOSED",
+    route: "/orders?status=CONFIRMED",
     permission: "order.view",
     group: "SALE",
     icon: `<path d="M20 6 9 17l-5-5"/>`,
@@ -147,7 +147,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "orders-completed",
     title: "Giao TC",
-    route: "/orders?status=COMPLETED",
+    route: "/orders?status=DELIVERED",
     permission: "order.view",
     group: "ORDERS",
     icon: `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>`,
@@ -156,7 +156,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "orders-cancelled",
     title: "Hoàn hàng",
-    route: "/orders?status=CANCELLED",
+    route: "/orders?status=RETURNED",
     permission: "order.view",
     group: "ORDERS",
     icon: `<path d="M9 14 4 9l5-5"/>`,
@@ -180,6 +180,14 @@ export const MODULES: ModuleDefinition[] = [
     permission: "product.view",
     group: "PRODUCTS",
     icon: `<path d="M12 2L2 7l10 5 10-5-10-5z"/>`,
+  },
+  {
+    id: "gifts",
+    title: "Quà tặng",
+    route: "/gifts",
+    permission: "gift.view",
+    group: "PRODUCTS",
+    icon: `<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>`,
   },
 
   // Accounts Group

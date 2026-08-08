@@ -144,6 +144,7 @@ export async function POST(request: Request) {
           email: employee.email,
           avatar: employee.avatar,
           role: role.code,
+          roleName: role.name,
           permissions: permissionCodes,
         },
       },

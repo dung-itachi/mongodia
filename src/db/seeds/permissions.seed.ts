@@ -98,6 +98,11 @@ const MODULE_MAP: Record<string, string> = {
   "combo.update": "Combo",
   "combo.delete": "Combo",
 
+  "gift.view": "Gift",
+  "gift.create": "Gift",
+  "gift.update": "Gift",
+  "gift.delete": "Gift",
+
   "lead.view": "Lead",
   "lead.create": "Lead",
   "lead.update": "Lead",

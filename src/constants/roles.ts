@@ -104,6 +104,12 @@ export const ROLES = [
       "combo.create",
       "combo.update",
 
+      // ---- Gift (Sprint 8.x) -----------------------------------------
+      "gift.view",
+      "gift.create",
+      "gift.update",
+      "gift.delete",
+
       "lead.view",
       "lead.create",
       "lead.update",
@@ -156,6 +162,9 @@ export const ROLES = [
       "product-variant.view",
       "combo.view",
 
+      // ---- Gift (Sale cần xem để chọn quà cho khách) ----------------
+      "gift.view",
+
       // ---- Order --------------------------------------------------
       "order.view",
       "order.create",
@@ -185,6 +194,9 @@ export const ROLES = [
 
       "product.view",
       "product-variant.view",
+
+      // ---- Gift (Kho cần xem để xử lý xuất quà) -------------------
+      "gift.view",
 
       // ---- Order --------------------------------------------------
       "order.view",
@@ -239,6 +251,9 @@ export const ROLES = [
 
       "combo.view",
 
+      // ---- Gift (Leader cần xem quà) -------------------------------
+      "gift.view",
+
       "lead.view",
 
       // ---- Marketing Expense (Workflow Simplification) --------------------
@@ -274,6 +289,9 @@ export const ROLES = [
 
       "combo.view",
 
+      // ---- Gift (Employee cần xem quà) -----------------------------
+      "gift.view",
+
       "lead.view",
     ],
   },
@@ -308,6 +326,9 @@ export const ROLES = [
       "combo.view",
       "combo.create",
       "combo.update",
+
+      // ---- Gift (MKT cần xem quà) ----------------------------------
+      "gift.view",
 
       "lead.view",
       "lead.create",

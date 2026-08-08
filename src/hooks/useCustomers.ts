@@ -9,6 +9,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/axios";
 import type {
   CustomerFilter,
   CustomerListResponse,
@@ -40,80 +41,35 @@ async function fetchCustomerList(params: CustomerFilter): Promise<CustomerListRe
 
   const url = `/api/customers${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
-  const response = await fetch(url);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Không thể lấy danh sách khách hàng");
-  }
-
-  return data.data;
+  const response = await api.get(url);
+  return response.data.data;
 }
 
 async function fetchCustomer(id: string): Promise<CustomerResponse> {
-  const response = await fetch(`/api/customers/${id}`);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Không thể lấy thông tin khách hàng");
-  }
-
-  return data.data;
+  const response = await api.get(`/api/customers/${id}`);
+  return response.data.data;
 }
 
 async function fetchCustomerStatistics(id: string): Promise<CustomerStatistics> {
-  const response = await fetch(`/api/customers/${id}/statistics`);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Không thể lấy thống kê khách hàng");
-  }
-
-  return data.data;
+  const response = await api.get(`/api/customers/${id}/statistics`);
+  return response.data.data;
 }
 
 async function createCustomer(input: CreateCustomerInput): Promise<CustomerResponse> {
-  const response = await fetch("/api/customers", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Không thể tạo khách hàng");
-  }
-
-  return data.data;
+  const response = await api.post("/api/customers", input);
+  return response.data.data;
 }
 
 async function updateCustomer(
   id: string,
   input: UpdateCustomerInput
 ): Promise<CustomerResponse> {
-  const response = await fetch(`/api/customers/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Không thể cập nhật khách hàng");
-  }
-
-  return data.data;
+  const response = await api.patch(`/api/customers/${id}`, input);
+  return response.data.data;
 }
 
 async function deleteCustomer(id: string): Promise<void> {
-  const response = await fetch(`/api/customers/${id}`, {
-    method: "DELETE",
-  });
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || "Không thể xóa khách hàng");
-  }
+  await api.delete(`/api/customers/${id}`);
 }
 
 // ============================================================================

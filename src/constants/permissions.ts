@@ -366,6 +366,24 @@ export const PERMISSIONS = [
   name: "Delete Combo",
 },
 
+// Gift
+{
+  code: "gift.view",
+  name: "View Gift",
+},
+{
+  code: "gift.create",
+  name: "Create Gift",
+},
+{
+  code: "gift.update",
+  name: "Update Gift",
+},
+{
+  code: "gift.delete",
+  name: "Delete Gift",
+},
+
 // Lead
 {
   code: "lead.view",

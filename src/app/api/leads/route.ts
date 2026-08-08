@@ -116,13 +116,13 @@ export async function GET(request: Request) {
 
     const [items, total] = await Promise.all([
       Lead.find(filter)
-        .populate("customer", "_id code name phone")
-        .populate("facebookPage", "_id pageId pageName")
-        .populate("marketingEmployee", "_id employeeCode name")
-        .populate("saleEmployee", "_id employeeCode name")
-        .populate("category", "_id code name")
-        .populate("product", "_id code name")
-        .populate("combo", "_id code name")
+        .populate("customerId", "_id code name phone")
+        .populate("facebookPageId", "_id pageId pageName")
+        .populate("marketingEmployeeId", "_id employeeCode name")
+        .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("categoryId", "_id code name")
+        .populate("productId", "_id code name")
+        .populate("comboId", "_id code name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -267,13 +267,13 @@ export async function POST(request: Request) {
     await session.commitTransaction();
 
     const populatedLead = await Lead.findById(lead[0]._id)
-      .populate("customer", "_id code name phone")
-      .populate("facebookPage", "_id pageId pageName")
-      .populate("marketingEmployee", "_id employeeCode name")
-      .populate("saleEmployee", "_id employeeCode name")
-      .populate("category", "_id code name")
-      .populate("product", "_id code name")
-      .populate("combo", "_id code name")
+      .populate("customerId", "_id code name phone")
+      .populate("facebookPageId", "_id pageId pageName")
+      .populate("marketingEmployeeId", "_id employeeCode name")
+      .populate("saleEmployeeId", "_id employeeCode name")
+      .populate("categoryId", "_id code name")
+      .populate("productId", "_id code name")
+      .populate("comboId", "_id code name")
       .lean();
 
     return success(mapLeadList([populatedLead!])[0], "Tạo lead thành công");

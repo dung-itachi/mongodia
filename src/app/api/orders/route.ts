@@ -144,13 +144,13 @@ export async function GET(request: Request) {
 
     const [items, total] = await Promise.all([
       Order.find(filter)
-        .populate("customer", "_id code name phone")
-        .populate("lead", "_id leadCode")
-        .populate("product", "_id code name")
-        .populate("combo", "_id code name")
-        .populate("warehouse", "_id code name")
-        .populate("marketingEmployee", "_id employeeCode fullName")
-        .populate("saleEmployee", "_id employeeCode fullName")
+        .populate("customerId", "_id code name phone")
+        .populate("leadId", "_id leadCode")
+        .populate("productId", "_id code name")
+        .populate("comboId", "_id code name")
+        .populate("warehouseId", "_id code name")
+        .populate("marketingEmployeeId", "_id employeeCode fullName")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -399,14 +399,14 @@ export async function POST(request: Request) {
     await session.commitTransaction();
 
     const populatedOrder = await Order.findById(order._id)
-      .populate("customer", "_id code name phone")
-      .populate("lead", "_id leadCode")
-      .populate("product", "_id code name")
-      .populate("productVariant", "_id sku")
-      .populate("combo", "_id code name")
-      .populate("warehouse", "_id code name")
-      .populate("marketingEmployee", "_id employeeCode fullName")
-      .populate("saleEmployee", "_id employeeCode fullName")
+      .populate("customerId", "_id code name phone")
+      .populate("leadId", "_id leadCode")
+      .populate("productId", "_id code name")
+      .populate("productVariantId", "_id sku")
+      .populate("comboId", "_id code name")
+      .populate("warehouseId", "_id code name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
       .lean();
 
     return success(

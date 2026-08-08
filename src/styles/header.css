@@ -143,3 +143,22 @@
   align-items: center;
   gap: 5px;
 }
+
+.cnt {
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.cnt span {
+  color: var(--muted);
+  margin-right: 2px;
+}
+
+.cnt b {
+  font-weight: 700;
+  color: var(--ink);
+}

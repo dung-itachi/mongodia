@@ -150,7 +150,7 @@ function FacebookPageDrawerInner({
     <Drawer
       title={isEdit ? "Sửa Facebook Page" : "Tạo Facebook Page"}
       placement="right"
-      width={500}
+      size="large"
       open={open}
       onClose={onClose}
       footer={

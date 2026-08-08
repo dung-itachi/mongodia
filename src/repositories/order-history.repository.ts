@@ -89,7 +89,7 @@ export class OrderHistoryRepository {
    */
   async findByOrderIdWithPopulate(orderId: string): Promise<IOrderHistory[]> {
     return OrderHistory.find({ orderId: new mongoose.Types.ObjectId(orderId) })
-      .populate("employee", "_id employeeCode fullName")
+      .populate("employeeId", "_id employeeCode fullName")
       .sort({ createdAt: -1 })
       .lean();
   }

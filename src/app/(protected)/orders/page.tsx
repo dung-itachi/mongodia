@@ -4,10 +4,13 @@
  * Orders Page (Sprint 6.0 — Order Module Foundation)
  *
  * Main page for order management with search, filter, and table display.
+ *
+ * Filter theo status từ URL: /orders?status=SHIPPING
+ * Nếu không có status → hiển thị tất cả.
  */
 
-import { useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { message, Dropdown } from "antd";
 import {
   PlusOutlined,
@@ -36,17 +39,35 @@ import type { OrderStatus } from "@/constants/orderStatus";
 import type { OrderListItem } from "@/types/order";
 
 export default function OrdersPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrdersPageInner />
+    </Suspense>
+  );
+}
+
+function OrdersPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Read status từ URL (?status=SHIPPING, ?status=DELIVERED, ...)
+  const urlStatus = searchParams.get("status")?.toUpperCase() ?? undefined;
 
   // Search and filter state
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebounce(keyword, 500);
 
-  const [status, setStatus] = useState<string | undefined>(undefined);
+  const [status, setStatus] = useState<string | undefined>(urlStatus);
   const [dateRange, setDateRange] = useState<[string, string] | undefined>(undefined);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  // Đồng bộ status khi URL thay đổi (user click sidebar link khác)
+  useEffect(() => {
+    setStatus(urlStatus);
+    setPage(1); // reset page khi đổi filter
+  }, [urlStatus]);
 
   // Delete dialog state
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -272,10 +293,17 @@ export default function OrdersPage() {
     dateRange,
   }), [status, dateRange]);
 
+  // Title dynamic theo status filter (từ URL ?status=...)
+  const pageTitle = useMemo(() => {
+    if (!status) return "Đơn hàng";
+    const label = ORDER_STATUS_LABELS[status as OrderStatus];
+    return label ? `Đơn hàng · ${label}` : "Đơn hàng";
+  }, [status]);
+
   return (
     <PageContainer>
       <PageHeader
-        title="Đơn hàng"
+        title={pageTitle}
         subtitle={`${total} đơn hàng`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },

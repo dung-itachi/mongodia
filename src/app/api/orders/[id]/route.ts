@@ -78,14 +78,14 @@ export async function GET(
     }
 
     const order = await Order.findById(id)
-      .populate("customer", "_id code name phone")
-      .populate("lead", "_id leadCode")
-      .populate("product", "_id code name")
-      .populate("productVariant", "_id sku")
-      .populate("combo", "_id code name")
-      .populate("warehouse", "_id code name")
-      .populate("marketingEmployee", "_id employeeCode fullName")
-      .populate("saleEmployee", "_id employeeCode fullName")
+      .populate("customerId", "_id code name phone")
+      .populate("leadId", "_id leadCode")
+      .populate("productId", "_id code name")
+      .populate("productVariantId", "_id sku")
+      .populate("comboId", "_id code name")
+      .populate("warehouseId", "_id code name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
       .lean();
 
     if (!order) {
@@ -93,7 +93,7 @@ export async function GET(
     }
 
     const histories = await OrderHistory.find({ orderId: id })
-      .populate("employee", "_id employeeCode fullName")
+      .populate("employeeId", "_id employeeCode fullName")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -586,14 +586,14 @@ export async function PATCH(
     await session.commitTransaction();
 
     const updatedOrder = await Order.findById(id)
-      .populate("customer", "_id code name phone")
-      .populate("lead", "_id leadCode")
-      .populate("product", "_id code name")
-      .populate("productVariant", "_id sku")
-      .populate("combo", "_id code name")
-      .populate("warehouse", "_id code name")
-      .populate("marketingEmployee", "_id employeeCode fullName")
-      .populate("saleEmployee", "_id employeeCode fullName")
+      .populate("customerId", "_id code name phone")
+      .populate("leadId", "_id leadCode")
+      .populate("productId", "_id code name")
+      .populate("productVariantId", "_id sku")
+      .populate("comboId", "_id code name")
+      .populate("warehouseId", "_id code name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
       .lean();
 
     return success(

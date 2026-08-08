@@ -25,6 +25,8 @@ export { default as FacebookPageAssignment } from "./FacebookPageAssignment";
 
 export { default as File } from "./File";
 
+export { default as Gift } from "./Gift";
+
 export { default as Inventory } from "./Inventory";
 
 export { default as InventoryAdjustment } from "./InventoryAdjustment";

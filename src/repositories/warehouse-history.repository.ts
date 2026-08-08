@@ -78,7 +78,7 @@ export class WarehouseHistoryRepository {
     return WarehouseHistory.find({
       warehouseTaskId: new mongoose.Types.ObjectId(taskId)
     })
-      .populate("employee", "_id employeeCode fullName")
+      .populate("employeeId", "_id employeeCode fullName")
       .sort({ createdAt: -1 })
       .lean();
   }

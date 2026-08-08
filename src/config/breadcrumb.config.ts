@@ -13,6 +13,7 @@ const LABELS: Record<string, string> = {
   leads: "Số cần gọi",
   customers: "Khách hàng",
   products: "Sản phẩm",
+  gifts: "Quà tặng",
   warehouses: "Kho",
   employees: "Nhân viên",
   roles: "Vai trò",
