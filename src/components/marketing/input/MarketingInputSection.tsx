@@ -11,11 +11,12 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Card, Button, Input, message } from "antd";
+import { Card, Button, Input, Select, message } from "antd";
 import {
   SendOutlined,
   ClearOutlined,
   DeleteOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import {
   useProductsByCategory,
@@ -25,7 +26,9 @@ import {
 } from "@/hooks/useProducts";
 import { useCreateLead, useMarketingLeads } from "@/hooks/useMarketingLeads";
 import { usePushLeadsToSale } from "@/hooks/usePushLeadsToSale";
+import { useActiveFacebookPages } from "@/hooks/useFacebookPages";
 import { LeadSource } from "@/constants/leadSource";
+import FacebookPageDrawer from "@/app/(protected)/facebook-pages/FacebookPageDrawer";
 import styles from "./MarketingInputSection.module.css";
 
 const { TextArea } = Input;
@@ -40,6 +43,10 @@ export interface StagedLead {
   comboId: string;
   comboName: string;
   price: number;
+  /** Facebook Page ID assigned to this lead (Sprint 8.6). */
+  facebookPageId?: string;
+  /** Cached page name for display in the staging list. */
+  facebookPageName?: string;
   error?: string;
 }
 
@@ -53,6 +60,9 @@ export default function MarketingInputSection({
   // State
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedComboId, setSelectedComboId] = useState<string | null>(null);
+  /** Sprint 8.6: Facebook Page that all newly-staged leads will be tagged with. */
+  const [selectedFacebookPageId, setSelectedFacebookPageId] = useState<string | null>(null);
+  const [facebookPageDrawerOpen, setFacebookPageDrawerOpen] = useState(false);
   const [inputText, setInputText] = useState("");
   const [inputType, setInputType] = useState<"comment" | "ladi">("comment");
   const [stagedLeads, setStagedLeads] = useState<StagedLead[]>([]);
@@ -76,6 +86,9 @@ export default function MarketingInputSection({
     page: 1,
     limit: 1000,
   });
+
+  // Sprint 8.6: Load active Facebook Pages for the page selector
+  const { pages: facebookPages, loading: pagesLoading } = useActiveFacebookPages();
 
   // Mutations
   const createLeadMutation = useCreateLead();
@@ -124,10 +137,20 @@ export default function MarketingInputSection({
     setInputType(type);
   }, []);
 
+  const handleFacebookPageCreated = useCallback((page?: { _id: string }) => {
+    if (page) setSelectedFacebookPageId(page._id);
+    setFacebookPageDrawerOpen(false);
+  }, []);
+
   // Parse leads from input text - SPRINT 8.5.2 ENHANCED
   const handleParseLeads = useCallback(() => {
     if (!selectedProductId) {
       void message.warning("Vui lòng chọn sản phẩm trước");
+      return;
+    }
+
+    if (!selectedFacebookPageId) {
+      void message.warning("Vui lòng chọn trang Facebook trước");
       return;
     }
 
@@ -183,6 +206,10 @@ export default function MarketingInputSection({
             comboId: comboToUse?._id || "",
             comboName: comboToUse?.name || "",
             price: comboToUse?.sellingPrice || 0,
+            facebookPageId: selectedFacebookPageId ?? undefined,
+            facebookPageName:
+              facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
+              undefined,
           });
         }
       } else {
@@ -251,6 +278,10 @@ export default function MarketingInputSection({
             comboId: combo._id,
             comboName: combo.name,
             price: combo.sellingPrice,
+            facebookPageId: selectedFacebookPageId ?? undefined,
+            facebookPageName:
+              facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
+              undefined,
             error: comboError,
           });
         } else {
@@ -264,6 +295,10 @@ export default function MarketingInputSection({
             comboId: "",
             comboName: "",
             price: 0,
+            facebookPageId: selectedFacebookPageId ?? undefined,
+            facebookPageName:
+              facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
+              undefined,
             error: comboError || "Không tìm thấy combo",
           });
         }
@@ -282,7 +317,7 @@ export default function MarketingInputSection({
     } else {
       void message.success(`Đã thêm ${newLeads.length} lead vào staging`);
     }
-  }, [inputText, inputType, selectedCombo, selectedProductId, comboByNameMap]);
+  }, [inputText, inputType, selectedCombo, selectedProductId, comboByNameMap, selectedFacebookPageId, facebookPages]);
 
   // Handle remove staged lead
   const handleRemoveStagedLead = useCallback((id: string) => {
@@ -299,6 +334,12 @@ export default function MarketingInputSection({
   const handlePushToSale = useCallback(async () => {
     if (stagedLeads.length === 0) {
       void message.warning("Không có lead nào để đẩy");
+      return;
+    }
+
+    const leadsWithoutFacebookPage = stagedLeads.filter((lead) => !lead.facebookPageId);
+    if (leadsWithoutFacebookPage.length > 0) {
+      void message.error("Vui lòng chọn trang Facebook cho tất cả lead trước khi đẩy");
       return;
     }
 
@@ -327,6 +368,8 @@ export default function MarketingInputSection({
           // Sprint 8.5.2: Include product/combo info for Order
           productId: lead.productId,
           comboId: lead.comboId,
+          // Sprint 8.6: Tag lead with the Facebook Page it came from
+          facebookPageId: lead.facebookPageId,
         } as never);
         leadIds.push(result._id);
       } catch (err) {
@@ -453,6 +496,65 @@ export default function MarketingInputSection({
         )}
       </Card>
 
+      {/* Sprint 8.6: Facebook Page selection. Persists across batches
+          until the user changes it or clears it. */}
+      <Card
+        title="①·bis Chọn trang Facebook"
+        size="small"
+        className={styles.card}
+      >
+        <div className={styles.facebookPageRow}>
+          <div className={styles.facebookPageActions}>
+            <Select
+              style={{ width: "100%" }}
+              loading={pagesLoading}
+              value={selectedFacebookPageId ?? undefined}
+              onChange={(value: string | undefined) =>
+                setSelectedFacebookPageId(value ?? null)
+              }
+              placeholder={
+                pagesLoading
+                  ? "Đang tải danh sách trang..."
+                  : facebookPages.length === 0
+                    ? "Chưa có Facebook Page nào (liên hệ Admin)"
+                    : "Chọn trang Facebook để gắn cho các lead sắp tạo (bắt buộc)"
+              }
+              options={facebookPages.map((p) => ({
+                value: p._id,
+                label: `${p.name} (${p.code})`,
+              }))}
+              showSearch
+              optionFilterProp="label"
+              disabled={pagesLoading || facebookPages.length === 0}
+              notFoundContent={
+                pagesLoading ? null : "Không có trang nào đang hoạt động"
+              }
+            />
+            <Button
+              icon={<PlusOutlined />}
+              onClick={() => setFacebookPageDrawerOpen(true)}
+              aria-label="Tạo Facebook Page"
+              title="Tạo Facebook Page"
+            >
+              Tạo mới
+            </Button>
+          </div>
+          {selectedFacebookPageId && (
+            <div className={styles.facebookPageHint}>
+              Tất cả lead paste phía dưới sẽ được gắn với trang đã chọn cho đến
+              khi bạn đổi trang khác.
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <FacebookPageDrawer
+        mode="create"
+        open={facebookPageDrawerOpen}
+        onClose={() => setFacebookPageDrawerOpen(false)}
+        onSuccess={handleFacebookPageCreated}
+      />
+
       {/* Lead Input */}
       <Card title="② Dán số" size="small" className={styles.card}>
         <div className={styles.inputTypeTabs}>
@@ -486,14 +588,14 @@ export default function MarketingInputSection({
           onChange={(e) => setInputText(e.target.value)}
           rows={4}
           className={styles.textArea}
-          disabled={!selectedProductId}
+          disabled={!selectedProductId || !selectedFacebookPageId}
         />
 
         <div className={styles.inputActions}>
           <Button
             type="primary"
             onClick={handleParseLeads}
-            disabled={!selectedProductId || !inputText.trim()}
+            disabled={!selectedProductId || !selectedFacebookPageId || !inputText.trim()}
           >
             Phân loại
           </Button>

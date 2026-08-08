@@ -8,10 +8,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { message, Modal } from "antd";
+import { message } from "antd";
 import {
   PhoneOutlined,
-  SwapOutlined,
 } from "@ant-design/icons";
 import {
   PageContainer,
@@ -25,7 +24,9 @@ import {
   useUpdateLeadStatus,
   type SaleLead,
 } from "@/hooks/useSaleLeads";
-import { useConvertLead } from "@/hooks/useMarketingLeads";
+import { useConvertLead } from "@/hooks/useConvertLead";
+import SaleOrderModal from "@/components/sale/leads/SaleOrderModal";
+import type { OrderItem } from "@/types/variant";
 import { LeadStatus } from "@/constants/leadStatus";
 import SaleLeadsToolbar from "@/components/sale/leads/SaleLeadsToolbar";
 import SaleLeadTable from "@/components/sale/leads/SaleLeadTable";
@@ -90,20 +91,20 @@ export default function SaleLeadsPage() {
     []
   );
 
-  const handleConfirmConvert = useCallback(() => {
+  const handleConfirmConvert = useCallback((orderItem: OrderItem) => {
     if (!convertingLead) return;
 
-    convertMutation.mutate(convertingLead._id, {
-      onSuccess: (result) => {
+    convertMutation.mutate({ leadId: convertingLead._id, orderItem }, {
+      onSuccess: () => {
         void message.success("Đã tạo đơn hàng thành công");
         setConvertingLead(null);
+        void refetch();
       },
       onError: (err) => {
         void message.error(`Lỗi: ${err.message}`);
-        setConvertingLead(null);
       },
     });
-  }, [convertingLead, convertMutation]);
+  }, [convertingLead, convertMutation, refetch]);
 
   const handlePageChange = useCallback((newPage: number, newLimit: number) => {
     setPage(newPage);
@@ -195,40 +196,12 @@ export default function SaleLeadsPage() {
         )}
       </CardSection>
 
-      {/* Convert Confirmation Modal */}
-      <Modal
-        title={
-          <span>
-            <SwapOutlined style={{ marginRight: 8, color: "#52c41a" }} />
-            Xác nhận chốt đơn
-          </span>
-        }
-        open={!!convertingLead}
-        onOk={handleConfirmConvert}
-        onCancel={() => setConvertingLead(null)}
-        okText="Chốt đơn"
-        cancelText="Hủy"
-        okButtonProps={{
-          icon: <SwapOutlined />,
-          loading: convertMutation.isPending,
-        }}
-      >
-        {convertingLead && (
-          <div>
-            <p>
-              Bạn có chắc muốn chốt đơn cho khách hàng{" "}
-              <strong>{convertingLead.customerName}</strong>?
-            </p>
-            <p>
-              SĐT: <strong>{convertingLead.phone || "-"}</strong>
-            </p>
-            <p style={{ color: "#8c8c8c", marginTop: 8 }}>
-              Hệ thống sẽ tạo đơn hàng và Lead sẽ không xuất hiện trong danh
-              sách này nữa.
-            </p>
-          </div>
-        )}
-      </Modal>
+      <SaleOrderModal
+        lead={convertingLead}
+        loading={convertMutation.isPending}
+        onClose={() => setConvertingLead(null)}
+        onConfirm={handleConfirmConvert}
+      />
     </PageContainer>
   );
 }

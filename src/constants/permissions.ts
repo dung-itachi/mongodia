@@ -23,6 +23,17 @@ export const PERMISSIONS = [
     name: "Delete Employee",
   },
 
+  // Account management
+  { code: "account.view", name: "View Accounts" },
+  { code: "account.create", name: "Create Accounts" },
+  { code: "account.update", name: "Update Accounts" },
+  { code: "account.disable", name: "Disable Accounts" },
+  { code: "account.resetPassword", name: "Reset Account Password" },
+  { code: "account.manageAll", name: "Manage All Accounts" },
+  { code: "self-account.view", name: "View My Account" },
+  { code: "self-account.update", name: "Update My Account" },
+  { code: "self-account.changePassword", name: "Change My Password" },
+
   // Department
 {
   code: "department.view",
@@ -259,10 +270,16 @@ export const PERMISSIONS = [
 },
 
 // Inventory
-{
-  code: "inventory.view",
-  name: "View Inventory",
-},
+  {
+    code: "inventory.view",
+    name: "View Inventory",
+  },
+  { code: "warehouse.import", name: "Import Warehouse Stock" },
+  { code: "warehouse.transfer", name: "Transfer Warehouse Stock" },
+  { code: "warehouse.receive", name: "Receive Warehouse Transfer" },
+  { code: "warehouse.adjust", name: "Adjust Warehouse Stock" },
+  { code: "warehouse.ship", name: "Ship Order From Warehouse" },
+  { code: "warehouse.return", name: "Return Order To Warehouse" },
 
 // Inventory Adjustment
 {

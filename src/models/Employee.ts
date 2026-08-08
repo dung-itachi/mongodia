@@ -17,6 +17,12 @@ export interface IEmployee {
 
   teamId?: Types.ObjectId | null;
 
+  /** Direct manager relation used by hierarchical account authorization. */
+  leaderId?: Types.ObjectId | null;
+
+  /** Warehouse scope for warehouse operators; null means no warehouse assignment. */
+  warehouseId?: Types.ObjectId | null;
+
   bankName?: string;
   bankAccountNumber?: string;
   bankAccountHolder?: string;
@@ -84,6 +90,20 @@ const EmployeeSchema = new Schema<IEmployee>(
       type: Schema.Types.ObjectId,
       ref: "Team",
       default: null,
+    },
+
+    warehouseId: {
+      type: Schema.Types.ObjectId,
+      ref: "Warehouse",
+      default: null,
+      index: true,
+    },
+
+    leaderId: {
+      type: Schema.Types.ObjectId,
+      ref: "Employee",
+      default: null,
+      index: true,
     },
 
     bankName: {

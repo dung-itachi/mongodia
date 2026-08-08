@@ -5,7 +5,11 @@
  * Pattern giống các repository khác trong project.
  */
 
+import mongoose, { type ClientSession } from "mongoose";
 import Gift, { type IGift } from "@/models/Gift";
+import GiftInventoryHistory, {
+  type IGiftInventoryHistory,
+} from "@/models/GiftInventoryHistory";
 
 export interface GiftListFilter {
   isActive?: boolean | null;
@@ -62,8 +66,11 @@ const giftRepository = {
   /**
    * Lấy Gift theo id.
    */
-  async findById(id: string): Promise<IGift | null> {
-    return Gift.findById(id).lean<IGift | null>();
+  async findById(
+    id: string,
+    session?: ClientSession
+  ): Promise<IGift | null> {
+    return Gift.findById(id).session(session ?? null).lean<IGift | null>();
   },
 
   /**
@@ -87,21 +94,12 @@ const giftRepository = {
   /**
    * Tạo mới Gift.
    */
-  async create(data: Partial<IGift>): Promise<IGift> {
-    const doc = await Gift.create(data);
-    return doc.toObject() as IGift;
-  },
-
-  /**
-   * Update Gift theo id.
-   */
-  async update(id: string, data: Partial<IGift>): Promise<IGift | null> {
-    const updated = await Gift.findByIdAndUpdate(
-      id,
-      { $set: data },
-      { new: true, runValidators: true }
-    ).lean<IGift | null>();
-    return updated;
+  async create(
+    data: Partial<IGift>,
+    session?: ClientSession
+  ): Promise<IGift & { _id: mongoose.Types.ObjectId }> {
+    const [doc] = await Gift.create([data], { session });
+    return doc.toObject() as IGift & { _id: mongoose.Types.ObjectId };
   },
 
   /**
@@ -117,15 +115,62 @@ const giftRepository = {
   },
 
   /**
-   * Tăng/giảm tồn kho (delta âm = trừ, dương = cộng).
+   * Cập nhật metadata, không bao gồm tồn kho.
    */
-  async adjustStock(id: string, delta: number): Promise<IGift | null> {
-    const gift = await Gift.findById(id);
-    if (!gift) return null;
-    const newStock = Math.max(0, gift.stockQuantity + delta);
-    gift.stockQuantity = newStock;
-    await gift.save();
-    return gift.toObject() as IGift;
+  async updateMetadata(
+    id: string,
+    data: Pick<IGift, "name" | "isActive">
+  ): Promise<IGift | null> {
+    return Gift.findByIdAndUpdate(
+      id,
+      { $set: data },
+      { new: true, runValidators: true }
+    ).lean<IGift | null>();
+  },
+
+  /**
+   * Thay đổi tồn theo delta. Caller phải ghi history trong cùng transaction.
+   */
+  async adjustStock(
+    id: string,
+    delta: number,
+    session: ClientSession
+  ): Promise<IGift | null> {
+    return Gift.findOneAndUpdate(
+      {
+        _id: id,
+        stockQuantity: { $gte: Math.max(0, -delta) },
+      },
+      { $inc: { stockQuantity: delta } },
+      { new: true, session, runValidators: true }
+    ).lean<IGift | null>();
+  },
+
+  async createHistory(
+    data: Omit<IGiftInventoryHistory, "createdAt">,
+    session: ClientSession
+  ): Promise<IGiftInventoryHistory> {
+    const [history] = await GiftInventoryHistory.create([data], { session });
+    return history.toObject() as IGiftInventoryHistory;
+  },
+
+  async findHistoryByGiftId(
+    giftId: string,
+    options: { skip?: number; limit?: number } = {}
+  ): Promise<{ items: IGiftInventoryHistory[]; total: number }> {
+    const skip = options.skip ?? 0;
+    const limit = options.limit ?? 100;
+    const objectId = new mongoose.Types.ObjectId(giftId);
+    const [items, total] = await Promise.all([
+      GiftInventoryHistory.find({ giftId: objectId })
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("createdBy", "employeeCode fullName")
+        .lean<IGiftInventoryHistory[]>(),
+      GiftInventoryHistory.countDocuments({ giftId: objectId }),
+    ]);
+    return { items, total };
   },
 };
 

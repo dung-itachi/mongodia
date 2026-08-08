@@ -3,7 +3,7 @@
  */
 
 import { memo, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Drawer, Input, Select, Button, Space, Form, message } from "antd";
@@ -41,7 +41,7 @@ export interface FacebookPageDrawerProps {
   open: boolean;
   recordId?: string | null;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (page?: { _id: string; code: string; name: string }) => void;
 }
 
 function FacebookPageDrawerInner({
@@ -64,6 +64,7 @@ function FacebookPageDrawerInner({
 
   const {
     control,
+    register,
     handleSubmit,
     reset,
     formState: { errors },
@@ -134,9 +135,9 @@ function FacebookPageDrawerInner({
       );
     } else {
       createMutation.mutate(data, {
-        onSuccess: () => {
+        onSuccess: (page) => {
           message.success("Tạo thành công");
-          onSuccess?.();
+          onSuccess?.(page);
           onClose();
         },
         onError: (err: Error) => {
@@ -175,7 +176,7 @@ function FacebookPageDrawerInner({
         >
           <Input
             placeholder="Nhập mã page (VD: PAGE_001)"
-            {...control.register("code")}
+            {...register("code")}
             disabled={isEdit}
           />
         </Form.Item>
@@ -188,53 +189,69 @@ function FacebookPageDrawerInner({
         >
           <Input
             placeholder="Nhập tên page"
-            {...control.register("name")}
+            {...register("name")}
           />
         </Form.Item>
 
         <Form.Item label="URL Page">
           <Input
             placeholder="https://www.facebook.com/..."
-            {...control.register("pageUrl")}
+            {...register("pageUrl")}
           />
         </Form.Item>
 
         <Form.Item label="Facebook Page ID">
           <Input
             placeholder="Facebook Page ID"
-            {...control.register("facebookPageId")}
+            {...register("facebookPageId")}
           />
         </Form.Item>
 
         <Form.Item label="Business Manager">
           <Input
             placeholder="Business Manager ID"
-            {...control.register("businessManager")}
+            {...register("businessManager")}
           />
         </Form.Item>
 
         <Space style={{ width: "100%" }} size={16}>
           <Form.Item label="Currency" style={{ width: 120 }}>
-            <Select
-              options={CURRENCY_OPTIONS}
-              {...control.register("currency")}
-              style={{ width: "100%" }}
+            <Controller
+              name="currency"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  options={CURRENCY_OPTIONS}
+                  value={field.value ?? "VND"}
+                  onChange={(value) => field.onChange(value)}
+                  onBlur={field.onBlur}
+                  style={{ width: "100%" }}
+                />
+              )}
             />
           </Form.Item>
 
           <Form.Item label="Timezone" style={{ flex: 1 }}>
             <Input
               placeholder="Asia/Ho_Chi_Minh"
-              {...control.register("timezone")}
+              {...register("timezone")}
             />
           </Form.Item>
         </Space>
 
         <Form.Item label="Trạng thái">
-          <Select
-            options={FACEBOOK_PAGE_STATUS_OPTIONS}
-            {...control.register("status")}
-            style={{ width: "100%" }}
+          <Controller
+            name="status"
+            control={control}
+            render={({ field }) => (
+              <Select
+                options={FACEBOOK_PAGE_STATUS_OPTIONS}
+                value={field.value ?? "ACTIVE"}
+                onChange={(value) => field.onChange(value)}
+                onBlur={field.onBlur}
+                style={{ width: "100%" }}
+              />
+            )}
           />
         </Form.Item>
 
@@ -242,7 +259,7 @@ function FacebookPageDrawerInner({
           <TextArea
             rows={3}
             placeholder="Mô tả page..."
-            {...control.register("description")}
+            {...register("description")}
           />
         </Form.Item>
 
@@ -250,7 +267,7 @@ function FacebookPageDrawerInner({
           <TextArea
             rows={2}
             placeholder="Ghi chú..."
-            {...control.register("note")}
+            {...register("note")}
           />
         </Form.Item>
       </Form>

@@ -1,15 +1,22 @@
 /**
- * Product Management Table (Sprint 8.4.1)
+ * Product Management Table (Sprint 8.x)
  *
- * Table for displaying Products with Combo info, Inventory stats, and Order stats.
- * Columns: (stt) | Tên SP | Combo(số lượng combo) | Combos(hiển thị những combo hiện có của sản phẩm) | SL nhập | SL đáp kho | Ngày nhập | Ngày đáp kho | Đơn chốt | Thao tác
+ * Hiển thị sản phẩm với:
+ * - Combo count, danh sách combo
+ * - Tồn kho
+ * - Đơn chốt
+ * - Trạng thái
+ * - Thao tác: Sửa, Combo, Xóa
+ *
+ * Combo không còn được quản lý inline trong form sản phẩm. Nhấn nút "Combo" để
+ * mở trang /products/[productId]/combos.
  */
 
 "use client";
 
-import { useState, useCallback } from "react";
-import { Switch, Popconfirm, Tag, Tooltip, Select, Button, Space } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { useCallback } from "react";
+import { Switch, Popconfirm, Tag, Tooltip, Select } from "antd";
+import { EditOutlined, DeleteOutlined, GiftOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
 import type {
@@ -25,7 +32,7 @@ interface ProductManagementTableProps {
   onEdit: (item: ProductManagementItem) => void;
   onDelete: (item: ProductManagementItem) => void;
   onToggleActive?: (item: ProductManagementItem) => void;
-  onViewCombos?: (item: ProductManagementItem) => void;
+  onOpenCombos?: (item: ProductManagementItem) => void;
   selectedWarehouseId?: string;
   onWarehouseChange?: (warehouseId: string) => void;
 }
@@ -46,11 +53,8 @@ function formatNumber(num: number): string {
 
 function ComboTag({ combo }: { combo: ComboListItem }) {
   return (
-    <Tag
-      color={combo.isActive ? "blue" : "default"}
-      style={{ marginBottom: 2 }}
-    >
-      {combo.name} ({combo.packageSize})
+    <Tag color={combo.isActive ? "blue" : "default"} style={{ marginBottom: 2 }}>
+      {combo.name} ({combo.packageQuantity})
     </Tag>
   );
 }
@@ -62,24 +66,10 @@ export default function ProductManagementTable({
   onEdit,
   onDelete,
   onToggleActive,
-  onViewCombos,
+  onOpenCombos,
   selectedWarehouseId,
   onWarehouseChange,
 }: ProductManagementTableProps) {
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-
-  const toggleExpand = useCallback((id: string) => {
-    setExpandedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
-
   const getCategoryName = useCallback((category: ProductManagementItem["category"]) => {
     if (typeof category === "object" && category !== null) {
       return (category as { name: string }).name;
@@ -90,7 +80,6 @@ export default function ProductManagementTable({
   const getWarehouseStats = useCallback(
     (item: ProductManagementItem) => {
       if (!selectedWarehouseId) {
-        // Aggregate all warehouses
         let totalImported = 0;
         let totalCurrent = 0;
         let latestImportDate: string | null = null;
@@ -152,7 +141,7 @@ export default function ProductManagementTable({
       title: "Tên sản phẩm",
       dataIndex: "name",
       width: 200,
-      render: (value: unknown, record: Record<string, unknown>) => {
+      render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductManagementItem;
         return (
           <div>
@@ -185,12 +174,25 @@ export default function ProductManagementTable({
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductManagementItem;
         if (item.combos.length === 0) {
-          return <span style={{ color: "#999" }}>-</span>;
+          return (
+            <span style={{ color: "#999" }}>
+              -{" "}
+              {onOpenCombos && (
+                <a
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenCombos(item);
+                  }}
+                  style={{ marginLeft: 8 }}
+                >
+                  + Tạo combo
+                </a>
+              )}
+            </span>
+          );
         }
-
         const displayCombos = item.combos.slice(0, 3);
         const remaining = item.combos.length - 3;
-
         return (
           <div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
@@ -198,18 +200,16 @@ export default function ProductManagementTable({
                 <ComboTag key={combo._id} combo={combo} />
               ))}
             </div>
-            {remaining > 0 && (
-              <Button
-                type="link"
-                size="small"
+            {onOpenCombos && (
+              <a
                 onClick={(e) => {
                   e.stopPropagation();
-                  onViewCombos?.(item);
+                  onOpenCombos(item);
                 }}
-                style={{ padding: 0, height: "auto" }}
+                style={{ fontSize: 12 }}
               >
-                +{remaining} combo khác
-              </Button>
+                {remaining > 0 ? `+${remaining} khác · ` : ""}Quản lý
+              </a>
             )}
           </div>
         );
@@ -223,11 +223,7 @@ export default function ProductManagementTable({
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductManagementItem;
         const stats = getWarehouseStats(item);
-        return (
-          <span style={{ fontWeight: 500 }}>
-            {formatNumber(stats.imported)}
-          </span>
-        );
+        return <span style={{ fontWeight: 500 }}>{formatNumber(stats.imported)}</span>;
       },
     },
     {
@@ -294,7 +290,7 @@ export default function ProductManagementTable({
       dataIndex: "isActive",
       width: 90,
       align: "center",
-      render: (value: unknown, record: Record<string, unknown>) => {
+      render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductManagementItem;
         return (
           <Switch
@@ -308,16 +304,22 @@ export default function ProductManagementTable({
     {
       key: "actions",
       title: "Thao tác",
-      width: 100,
+      width: 140,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductManagementItem;
         return (
-          <Space size={4}>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", fontSize: 16 }}>
             <Tooltip title="Sửa">
               <EditOutlined
-                style={{ color: "#1890ff", cursor: "pointer", fontSize: 16 }}
+                style={{ color: "#1890ff", cursor: "pointer" }}
                 onClick={() => onEdit(item)}
+              />
+            </Tooltip>
+            <Tooltip title="Quản lý combo theo sản phẩm này">
+              <GiftOutlined
+                style={{ color: item.comboCount > 0 ? "#52c41a" : "#8c8c8c", cursor: "pointer" }}
+                onClick={() => onOpenCombos?.(item)}
               />
             </Tooltip>
             <Popconfirm
@@ -329,12 +331,10 @@ export default function ProductManagementTable({
               okButtonProps={{ danger: true }}
             >
               <Tooltip title="Xóa">
-                <DeleteOutlined
-                  style={{ color: "#ff4d4f", cursor: "pointer", fontSize: 16 }}
-                />
+                <DeleteOutlined style={{ color: "#ff4d4f", cursor: "pointer" }} />
               </Tooltip>
             </Popconfirm>
-          </Space>
+          </div>
         );
       },
     },
@@ -342,7 +342,6 @@ export default function ProductManagementTable({
 
   return (
     <div>
-      {/* Warehouse Filter */}
       <div style={{ marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
         <span style={{ fontWeight: 500 }}>Kho:</span>
         <Select
@@ -356,9 +355,7 @@ export default function ProductManagementTable({
             label: `${w.code} - ${w.name}`,
           }))}
         />
-        <span style={{ color: "#999", fontSize: 12 }}>
-          {data.length} sản phẩm
-        </span>
+        <span style={{ color: "#999", fontSize: 12 }}>{data.length} sản phẩm</span>
       </div>
 
       <DataTable

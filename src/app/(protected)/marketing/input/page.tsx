@@ -197,6 +197,8 @@ export default function MarketingInputPage() {
         <MarketingInputSection onLeadsCreated={handleLeadsCreated} />
       </CardSection>
 
+      {/* Lead list (table + pagination) moved to /marketing/orders — hidden here. */}
+      {false && (
       <CardSection>
         <MarketingLeadToolbar
           filters={filters}
@@ -215,7 +217,7 @@ export default function MarketingInputPage() {
         ) : error ? (
           <EmptyState
             title="Lỗi tải dữ liệu"
-            description={error}
+            description={error ?? undefined}
             action={
               <button onClick={() => { void refetch(); }}>Thử lại</button>
             }
@@ -252,6 +254,7 @@ export default function MarketingInputPage() {
           </>
         )}
       </CardSection>
+      )}
 
       <LeadDrawer
         open={drawerOpen}

@@ -1,17 +1,16 @@
 /**
- * Product Form Component (Sprint 8.4.1)
+ * Product Form Component (Sprint 8.x)
  *
- * Form for creating and editing Products.
+ * Form tạo/sửa sản phẩm.
+ * Combo giờ quản lý ở trang /products/[productId]/combos, không còn inline trong form.
  */
 
 "use client";
 
-import { Form, Input, Select, Switch, Card } from "antd";
+import { Form, Input, Select, Switch } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
 import type { ProductListItem, CreateProductInput, UpdateProductInput } from "@/hooks/useProductCrud";
 import type { CategoryListItem } from "@/hooks/useCategories";
-import { UploadOutlined } from "@ant-design/icons";
-import { Button } from "antd";
 
 const { TextArea } = Input;
 
@@ -131,11 +130,7 @@ export default function ProductForm({
         </Form.Item>
 
         {isEditing && (
-          <Form.Item
-            name="isActive"
-            label="Kích hoạt"
-            valuePropName="checked"
-          >
+          <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
             <Switch />
           </Form.Item>
         )}

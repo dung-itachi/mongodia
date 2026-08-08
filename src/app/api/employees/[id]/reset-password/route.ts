@@ -22,6 +22,9 @@ export async function PATCH(
                 403
             );
         }
+        if (currentUser.role.code === "LEADER" || currentUser.role.code === "EMPLOYEE") {
+            return errorResponse("Hãy sử dụng API quản lý tài khoản theo phạm vi", 403);
+        }
 
         await connectDB();
 

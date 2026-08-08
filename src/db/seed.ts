@@ -6,6 +6,7 @@ import { seedTeams } from "./seeds/teams.seed";
 import { seedPermissions } from "./seeds/permissions.seed";
 import { seedRoles } from "./seeds/roles.seed";
 import { seedEmployees } from "./seeds/employees.seed";
+import { seedHierarchy } from "./seeds/hierarchy.seed";
 import { seedCounters } from "./seeds/counters.seed";
 import { seedCategories } from "./seeds/categories.seed";
 import { seedProducts } from "./seeds/products.seed";
@@ -18,6 +19,8 @@ import { seedGifts } from "./seeds/gifts.seed";
 import { seedLeads } from "./seeds/leads.seed";
 import { seedOrders } from "./seeds/orders.seed";
 import { seedMarketingExpenseReports } from "./seeds/marketing-expense.seed";
+import { seedWarehouses } from "./seeds/warehouses.seed";
+import { seedWarehouseInventory } from "./seeds/warehouse-inventory.seed";
 
 async function seed() {
   try {
@@ -32,6 +35,7 @@ async function seed() {
     await seedPermissions();
     await seedRoles();
     await seedEmployees();
+    await seedHierarchy();
     await seedCounters();
     await seedCategories();
     await seedProducts();
@@ -39,11 +43,13 @@ async function seed() {
     await seedVariantValues();
     await seedProductVariants();
     await seedFacebookPages();
+    await seedWarehouses();
   await seedCombos();
   await seedGifts();
   await seedLeads();
     await seedOrders();
     await seedMarketingExpenseReports();
+    await seedWarehouseInventory();
     console.log("[DONE] Seed completed");
 
     process.exit(0);

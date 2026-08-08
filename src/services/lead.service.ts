@@ -15,6 +15,8 @@ import { Lead } from "@/models/Lead";
 import Employee from "@/models/Employee";
 import Role from "@/models/Role";
 import { orderService } from "@/services/order.service";
+import { saleOrderService } from "@/services/sale-order.service";
+import type { OrderItem } from "@/types/variant";
 import type {
   Lead as LeadDomain,
   LeadSearchParams,
@@ -331,7 +333,8 @@ export class LeadService {
    */
   async convertLead(
     id: string,
-    convertedBy: string
+    convertedBy: string,
+    orderItem?: OrderItem
   ): Promise<{ success: true; orderId: string } | { success: false; error: string }> {
     // 1. Check lead exists
     const existingLead = await leadRepository.findById(id);
@@ -344,9 +347,12 @@ export class LeadService {
       return { success: false, error: "Lead không hoạt động" };
     }
 
-    // 3. Check lead has sale employee
+    // 3. Check lead has sale employee and belongs to the Sale actor.
     if (!existingLead.saleEmployeeId) {
       return { success: false, error: "Lead chưa được phân công Sale" };
+    }
+    if (existingLead.saleEmployeeId.toString() !== convertedBy) {
+      return { success: false, error: "Bạn không được chốt đơn cho lead này" };
     }
 
     // 4. Check lead is not already converted (Sprint 8.4)
@@ -364,10 +370,32 @@ export class LeadService {
       };
     }
 
+    if (!orderItem) {
+      return { success: false, error: "Thiếu thông tin đơn hàng" };
+    }
+
+    let validatedOrderItem: OrderItem;
+    try {
+      validatedOrderItem = await saleOrderService.validateItem(orderItem);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Thông tin đơn hàng không hợp lệ" };
+    }
+
     const session = await mongoose.startSession();
 
     try {
       session.startTransaction();
+
+      // Claim the lead inside the transaction so concurrent chốt requests cannot both create an order.
+      const claimedLead = await Lead.findOneAndUpdate(
+        { _id: id, isConverted: false, convertedOrderId: { $exists: false } },
+        { $set: { isConverted: true, convertedAt: new Date(), updatedAt: new Date() } },
+        { new: true, session },
+      );
+      if (!claimedLead) {
+        await session.abortTransaction();
+        return { success: false, error: "Lead đã được convert trước đó" };
+      }
 
       // Determine customerId: use existing or auto-create from lead
       let customerId = existingLead.customerId?.toString();
@@ -394,13 +422,14 @@ export class LeadService {
           customerId,
           customerName: existingLead.customerName,
           customerPhone: existingLead.phone,
-          productId: existingLead.productId?.toString(),
-          comboId: existingLead.comboId?.toString(),
+          productId: validatedOrderItem.productId,
+          comboId: validatedOrderItem.comboId,
           productSnapshot: undefined,
           comboSnapshot: undefined,
-          quantity: existingLead.quantity ?? 1,
-          unitPrice: existingLead.unitPriceVND ?? 0,
-          totalAmount: (existingLead.quantity ?? 1) * (existingLead.unitPriceVND ?? 0),
+          quantity: validatedOrderItem.comboQuantity,
+          unitPrice: validatedOrderItem.sellingPrice,
+          totalAmount: validatedOrderItem.subtotal,
+          orderItem: validatedOrderItem,
           currency: "VND",
           estimatedWeight: existingLead.estimatedWeight,
           marketingEmployeeId: existingLead.marketingEmployeeId?.toString(),
@@ -413,12 +442,7 @@ export class LeadService {
       // Update lead with conversion info (Sprint 8.4: use convertedOrderId)
       await Lead.findByIdAndUpdate(
         id,
-        {
-          isConverted: true,
-          convertedOrderId: order._id,
-          convertedAt: new Date(),
-          updatedAt: new Date(),
-        },
+        { convertedOrderId: order._id, convertedAt: new Date(), updatedAt: new Date() },
         { session }
       );
 

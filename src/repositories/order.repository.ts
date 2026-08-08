@@ -35,15 +35,7 @@ export interface CreateOrderData {
   orderSource: string;
   note?: string;
   // Sprint 6.1: Order items and summary
-  orderItems?: Array<{
-    productId?: Types.ObjectId;
-    sku: string;
-    productName: string;
-    quantity: number;
-    unitPrice: number;
-    discount: number;
-    subtotal: number;
-  }>;
+  orderItems?: Array<Record<string, unknown>>;
   summary?: {
     subtotal: number;
     discount: number;
@@ -71,6 +63,14 @@ export interface UpdateOrderData {
   saleEmployeeId?: Types.ObjectId;
   status?: string;
   isPrepaid?: boolean;
+  orderItems?: Array<Record<string, unknown>>;
+  summary?: {
+    subtotal: number;
+    discount: number;
+    shippingFee: number;
+    grandTotal: number;
+    currency: string;
+  };
   orderType?: string;
   orderSource?: string;
   payments?: Array<{
@@ -266,6 +266,8 @@ export class OrderRepository {
       .populate("leadId", "_id leadCode")
       .populate("productId", "_id code name")
       .populate("comboId", "_id code name")
+      .populate("orderItems.details.attributes.optionId", "_id name")
+      .populate("orderItems.details.attributes.valueId", "_id name")
       .populate("warehouseId", "_id code name")
       .populate("marketingEmployeeId", "_id employeeCode fullName")
       .populate("saleEmployeeId", "_id employeeCode fullName")

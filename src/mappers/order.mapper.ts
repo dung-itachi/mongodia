@@ -27,6 +27,7 @@ import {
   IOrderSummary,
 } from "@/models/Order";
 import { IOrderHistory } from "@/models/OrderHistory";
+import type { GiftSelection, ProductVariantSelection } from "@/types/variant";
 import {
   OrderStatus,
   ORDER_STATUS_LABELS,
@@ -45,13 +46,23 @@ import {
 // ==================================================
 
 export interface OrderItemResponse {
+  comboId?: string;
   productId?: string;
+  comboName: string;
+  comboCode?: string;
+  comboQuantity: number;
+  packageQuantity: number;
+  giftQuantity: number;
+  sellingPrice: number;
+  discount: number;
+  subtotal: number;
+  details: ProductVariantSelection[];
+  giftMode: "RANDOM" | "CUSTOMER_SELECTED";
+  giftSelections: GiftSelection[];
   sku?: string;
   productName: string;
   quantity: number;
   unitPrice: number;
-  discount: number;
-  subtotal: number;
 }
 
 // ==================================================
@@ -267,13 +278,40 @@ function mapShipping(s: IOrderShipping | undefined): OrderShippingResponse | und
 
 function mapOrderItem(item: IOrderItem): OrderItemResponse {
   return {
+    comboId: item.comboId?.toString(),
     productId: item.productId?.toString(),
+    comboName: item.comboName || item.productName || "",
+    comboCode: item.comboCode,
+    comboQuantity: item.comboQuantity ?? item.quantity ?? 1,
+    packageQuantity: item.packageQuantity ?? 1,
+    giftQuantity: item.giftQuantity ?? 0,
+    sellingPrice: item.sellingPrice ?? item.unitPrice ?? 0,
+    discount: item.discount ?? 0,
+    subtotal: item.subtotal ?? 0,
+    details: (item.details ?? []).map((detail) => ({
+      variantId: detail.variantId?.toString(),
+      attributes: (detail.attributes ?? []).map((attribute) => {
+        const option = attribute.optionId as unknown as { _id?: { toString(): string }; name?: string };
+        const value = attribute.valueId as unknown as { _id?: { toString(): string }; name?: string };
+        return {
+          optionId: option._id?.toString() ?? attribute.optionId.toString(),
+          valueId: value._id?.toString() ?? attribute.valueId.toString(),
+          optionName: option.name,
+          valueName: value.name,
+        };
+      }),
+      quantity: detail.quantity,
+    })),
+    giftMode: item.giftMode ?? "RANDOM",
+    giftSelections: (item.giftSelections ?? []).map((gift) => ({
+      giftProductId: gift.giftProductId.toString(),
+      giftProductName: gift.giftProductName,
+      quantity: gift.quantity,
+    })),
     sku: item.sku,
-    productName: item.productName,
-    quantity: item.quantity,
-    unitPrice: item.unitPrice,
-    discount: item.discount,
-    subtotal: item.subtotal,
+    productName: item.productName || item.comboName || "",
+    quantity: item.quantity ?? item.comboQuantity ?? 1,
+    unitPrice: item.unitPrice ?? item.sellingPrice ?? 0,
   };
 }
 

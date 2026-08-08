@@ -1,0 +1,70 @@
+// Combo schemas (Sprint 8.x - Combo theo Product, không lưu variant)
+//
+// Combo chỉ cần:
+//   - productId (ObjectId) hoặc productCode (string) tuỳ client gửi
+//   - packageQuantity (số SP / combo)
+//   - sellingPrice
+//   - giftQuantity (số quà / combo)
+//
+// Category lấy từ Product, không cần truyền từ client.
+
+const productIdOrCodeSchema = z
+  .union([
+    z.string().regex(/^[a-fA-F0-9]{24}$/, "ProductId không hợp lệ"),
+    z.string().trim().min(1, "Sản phẩm là bắt buộc"),
+  ], { message: "Sản phẩm là bắt buộc" });
+
+const packageQuantitySchema = z
+  .number({ message: "Số lượng sản phẩm / combo không hợp lệ" })
+  .int("Số lượng sản phẩm / combo phải là số nguyên")
+  .min(1, "Số lượng sản phẩm / combo phải lớn hơn 0");
+
+const sellingPriceSchema = z
+  .number({ message: "Giá bán không hợp lệ" })
+  .min(0, "Giá bán phải lớn hơn hoặc bằng 0");
+
+const giftQuantitySchema = z
+  .number()
+  .int("Số quà / combo phải là số nguyên")
+  .min(0, "Số quà / combo không được âm");
+
+const displayOrderSchema = z
+  .number()
+  .int("Thứ tự hiển thị phải là số nguyên")
+  .min(0, "Thứ tự hiển thị không được âm");
+
+const comboCoreShape = {
+  code: z
+    .string()
+    .trim()
+    .min(1, "Mã combo là bắt buộc")
+    .max(50, "Mã combo tối đa 50 ký tự"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Tên combo là bắt buộc")
+    .max(200, "Tên combo tối đa 200 ký tự"),
+  productId: productIdOrCodeSchema.optional(),
+  productCode: z.string().trim().nonempty("Sản phẩm là bắt buộc").optional(),
+  packageQuantity: packageQuantitySchema,
+  sellingPrice: sellingPriceSchema,
+  giftQuantity: giftQuantitySchema.default(0),
+  displayOrder: displayOrderSchema.default(0),
+  image: z.string().optional(),
+  description: z.string().optional(),
+};
+
+export const createComboSchema = z.object({
+  ...comboCoreShape,
+}).refine(
+  (data) => Boolean(data.productId) || Boolean(data.productCode),
+  { message: "Sản phẩm là bắt buộc", path: ["productCode"] }
+);
+
+export const updateComboSchema = z.object({
+  ...comboCoreShape,
+  isActive: z.boolean(),
+}).refine(
+  (data) => Boolean(data.productId) || Boolean(data.productCode),
+  { message: "Sản phẩm là bắt buộc", path: ["productCode"] }
+);

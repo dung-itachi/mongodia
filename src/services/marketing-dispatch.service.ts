@@ -406,6 +406,7 @@ export class MarketingDispatchService {
         .populate("saleEmployeeId", "_id employeeCode name")
         .populate("productId", "_id code name")
         .populate("comboId", "_id code name")
+        .populate("facebookPageId", "_id code name")
         .sort({ assignedAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -432,6 +433,13 @@ export class MarketingDispatchService {
         saleEmployeeId: doc.saleEmployeeId,
         assignedAt: doc.assignedAt,
         isConverted: doc.isConverted,
+        facebookPage: doc.facebookPageId && typeof doc.facebookPageId === "object" && "name" in doc.facebookPageId
+          ? {
+              _id: (doc.facebookPageId as { _id: { toString(): string } })._id.toString(),
+              code: (doc.facebookPageId as { code: string }).code,
+              name: (doc.facebookPageId as { name: string }).name,
+            }
+          : undefined,
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
       })),
@@ -484,6 +492,7 @@ export class MarketingDispatchService {
         .populate("saleEmployeeId", "_id employeeCode name")
         .populate("productId", "_id code name")
         .populate("comboId", "_id code name")
+        .populate("facebookPageId", "_id code name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -509,6 +518,13 @@ export class MarketingDispatchService {
         saleEmployeeId: doc.saleEmployeeId,
         isConverted: doc.isConverted,
         convertedOrderId: doc.convertedOrderId?.toString(),
+        facebookPage: doc.facebookPageId && typeof doc.facebookPageId === "object" && "name" in doc.facebookPageId
+          ? {
+              _id: (doc.facebookPageId as { _id: { toString(): string } })._id.toString(),
+              code: (doc.facebookPageId as { code: string }).code,
+              name: (doc.facebookPageId as { name: string }).name,
+            }
+          : undefined,
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
       })),

@@ -198,18 +198,62 @@ function NavGroupBlock({
   standalone: boolean;
 }) {
   const wrapperClass = standalone ? "ngs" : "ng open";
+
+  // Sprint 8.6 — Hybrid group header:
+  //   - label (icon + text) becomes a Link to group.href (if any)
+  //   - chevron stays a button to toggle expand
+  // Active state (`.nh.on`) is applied only when the current URL matches the
+  // group root EXACTLY — i.e. pathname === group.href and the URL has no
+  // query string. This way `/orders?status=SHIPPING` highlights "Đang giao"
+  // (child item) instead of the group header, while a bare `/orders` link
+  // highlights "Đơn hàng" itself.
+  const isGroupActive = isExactRoot(pathname, search, group.href);
+
+  const headerIcon = (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <g dangerouslySetInnerHTML={{ __html: group.iconSvg }} />
+    </svg>
+  );
+  const headerLabel = (
+    <span className="nl">{group.label}</span>
+  );
+  const chevron = (
+    <svg className="na" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <g dangerouslySetInnerHTML={{ __html: ICON_ARROW_DOWN }} />
+    </svg>
+  );
+
   return (
     <div className={wrapperClass}>
       {!standalone && (
-        <button type="button" className="nh">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <g dangerouslySetInnerHTML={{ __html: group.iconSvg }} />
-          </svg>
-          <span className="nl">{group.label}</span>
-          <svg className="na" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <g dangerouslySetInnerHTML={{ __html: ICON_ARROW_DOWN }} />
-          </svg>
-        </button>
+        <div className={`nh ${isGroupActive ? "on" : ""}`}>
+          {group.href ? (
+            <>
+              <Link
+                href={group.href}
+                className={`nh-label ${isGroupActive ? "on" : ""}`}
+                aria-label={`Mở ${group.label}`}
+                aria-current={isGroupActive ? "page" : undefined}
+              >
+                {headerIcon}
+                {headerLabel}
+              </Link>
+              <button
+                type="button"
+                className="nh-toggle"
+                aria-label={`Mở rộng ${group.label}`}
+              >
+                {chevron}
+              </button>
+            </>
+          ) : (
+            <button type="button" className="nh">
+              {headerIcon}
+              {headerLabel}
+              {chevron}
+            </button>
+          )}
+        </div>
       )}
       <div className={standalone ? "" : "nb"}>
         {group.items.map((item) => (
@@ -262,6 +306,28 @@ function isActive(pathname: string, search: string, href: string): boolean {
     }
   }
   return true;
+}
+
+/**
+ * Sprint 8.6 — Exact-root match for group header active state.
+ *
+ * Unlike `isActive`, this returns true ONLY when:
+ *   - pathname equals the href's path component exactly (no prefix match), AND
+ *   - the current URL has no query string.
+ *
+ * Used so that `/orders?status=SHIPPING` does NOT highlight the "Đơn hàng"
+ * group header — that URL belongs to a child item ("Đang giao"). Only a
+ * bare `/orders` link highlights the group itself.
+ */
+function isExactRoot(pathname: string, search: string, href?: string): boolean {
+  if (!href) return false;
+  const [pathOnly, queryString = ""] = href.split("?");
+
+  // Group href shouldn't carry its own query — if it does, fall back to
+  // strict pathname equality to keep behavior predictable.
+  if (queryString) return pathname === pathOnly;
+
+  return pathname === pathOnly && search === "";
 }
 
 /**

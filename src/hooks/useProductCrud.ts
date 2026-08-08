@@ -56,7 +56,7 @@ export interface ComboListItem {
   code: string;
   name: string;
   sellingPrice: number;
-  packageSize: number;
+  packageQuantity: number;
   isActive: boolean;
 }
 

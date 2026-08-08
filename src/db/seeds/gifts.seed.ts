@@ -1,11 +1,19 @@
 /**
- * Gifts Seed (Sprint 8.x - Gift Management)
+ * Gifts Seed (Sprint 8.x - Gift Management + Parallel C Foundation)
  *
  * Seed dữ liệu QUÀ TẶNG riêng biệt với Product.
  * Idempotent: chạy nhiều lần không tạo duplicate (dùng name làm unique key).
+ *
+ * Foundation note: mọi tồn kho đều được back-fill một history `INITIAL`
+ * để đảm bảo ràng buộc "không thay đổi tồn mà không có history".
  */
 
+import mongoose from "mongoose";
+
 import Gift from "@/models/Gift";
+import GiftInventoryHistory, {
+  GiftInventoryHistoryType,
+} from "@/models/GiftInventoryHistory";
 
 const GIFTS = [
   { name: "Dầu gội", stockQuantity: 100 },
@@ -18,28 +26,52 @@ const GIFTS = [
   { name: "Băng đô", stockQuantity: 90 },
 ];
 
+const SYSTEM_CREATED_BY = new mongoose.Types.ObjectId();
+
 export async function seedGifts() {
   for (const gift of GIFTS) {
-    // Case-insensitive match để tránh duplicate "Dầu gội" vs "dầu gội"
     const existed = await Gift.findOne({
       name: { $regex: new RegExp(`^${escapeRegex(gift.name)}$`, "i") },
     });
 
     if (existed) {
-      // Update stock nếu cần, giữ nguyên isActive
-      existed.stockQuantity = gift.stockQuantity;
+      // Không sửa tồn cũ để tránh ghi đè lịch sử. Chỉ đảm bảo còn active.
       existed.isActive = true;
       await existed.save();
-    } else {
-      await Gift.create({
-        name: gift.name,
-        stockQuantity: gift.stockQuantity,
-        isActive: true,
-      });
+      await ensureInitialHistory(existed._id, existed.stockQuantity);
+      continue;
     }
+
+    const created = await Gift.create({
+      name: gift.name,
+      stockQuantity: gift.stockQuantity,
+      isActive: true,
+    });
+    await ensureInitialHistory(created._id, created.stockQuantity);
   }
 
   console.log("[OK] Gifts");
+}
+
+async function ensureInitialHistory(
+  giftId: mongoose.Types.ObjectId,
+  stockQuantity: number
+) {
+  const hasHistory = await GiftInventoryHistory.exists({
+    giftId,
+    type: GiftInventoryHistoryType.INITIAL,
+  });
+  if (hasHistory) return;
+
+  await GiftInventoryHistory.create({
+    giftId,
+    type: GiftInventoryHistoryType.INITIAL,
+    quantityBefore: 0,
+    quantityChange: stockQuantity,
+    quantityAfter: stockQuantity,
+    createdBy: SYSTEM_CREATED_BY,
+    note: "Backfill từ seed ban đầu",
+  });
 }
 
 function escapeRegex(str: string) {

@@ -84,6 +84,19 @@ function MarketingLeadTableInner({
         },
       },
       {
+        key: "facebookPage",
+        title: "Trang FB",
+        width: 140,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const page = (record as unknown as MarketingLead).facebookPage;
+          return page ? (
+            <span className={styles["mi-combo-text"]}>{page.name}</span>
+          ) : (
+            <span className={styles["mi-muted-text"]}>-</span>
+          );
+        },
+      },
+      {
         key: "source",
         title: "Nguồn",
         dataIndex: "source",

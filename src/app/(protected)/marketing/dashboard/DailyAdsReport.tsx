@@ -420,7 +420,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
                 <InputNumber
                   style={{ width: "100%" }}
                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(value) => Number(value!.replace(/,/g, "")) || 0}
+                  parser={(value) => (Number(value!.replace(/,/g, "")) || 0) as 0}
                   min={0}
                   placeholder="0"
                 />
@@ -431,7 +431,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
                 <InputNumber
                   style={{ width: "100%" }}
                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(value) => Number(value!.replace(/,/g, "")) || 0}
+                  parser={(value) => (Number(value!.replace(/,/g, "")) || 0) as 0}
                   min={0}
                   placeholder="0"
                 />
@@ -442,7 +442,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
                 <InputNumber
                   style={{ width: "100%" }}
                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(value) => Number(value!.replace(/,/g, "")) || 0}
+                  parser={(value) => (Number(value!.replace(/,/g, "")) || 0) as 0}
                   min={0}
                   placeholder="0"
                 />

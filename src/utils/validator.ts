@@ -1067,156 +1067,76 @@ export const updateLeadSchema = z.object({
 export type CreateLeadForm = z.infer<typeof createLeadSchema>;
 export type UpdateLeadForm = z.infer<typeof updateLeadSchema>;
 
-// Combo schemas
-const comboItemSchema = z.object({
-  productVariantId: z
-    .string({
-      message: "ProductVariant khÃ´ng há»£p lá»‡",
-    })
-    .min(1, "ProductVariant lÃ  báº¯t buá»™c"),
+// Combo schemas (Sprint 8.x - Combo theo Product, không lưu variant)
+//
+// Combo chỉ cần:
+//   - productId (ObjectId) hoặc productCode (string) tuỳ client gửi
+//   - packageQuantity (số SP / combo)
+//   - sellingPrice
+//   - giftQuantity (số quà / combo)
+//
+// Category lấy từ Product, không cần truyền từ client.
 
-  quantity: z
-    .number({
-      message: "Sá»‘ lÆ°á»£ng khÃ´ng há»£p lá»‡",
-    })
-    .int("Sá»‘ lÆ°á»£ng pháº£i lÃ  sá»‘ nguyÃªn")
-    .min(1, "Sá»‘ lÆ°á»£ng pháº£i lá»›n hÆ¡n 0"),
+const productIdOrCodeSchema = z
+  .union([
+    z.string().regex(/^[a-fA-F0-9]{24}$/, "ProductId không hợp lệ"),
+    z.string().trim().min(1, "Sản phẩm là bắt buộc"),
+  ], { message: "Sản phẩm là bắt buộc" });
 
-  isGift: z.boolean().default(false),
-});
+const packageQuantitySchema = z
+  .number({ message: "Số lượng sản phẩm / combo không hợp lệ" })
+  .int("Số lượng sản phẩm / combo phải là số nguyên")
+  .min(1, "Số lượng sản phẩm / combo phải lớn hơn 0");
 
-export const createComboSchema = z
-  .object({
-    code: z
-      .string()
-      .trim()
-      .min(1, "MÃ£ combo lÃ  báº¯t buá»™c")
-      .max(50, "MÃ£ combo tá»‘i Ä‘a 50 kÃ½ tá»±"),
+const sellingPriceSchema = z
+  .number({ message: "Giá bán không hợp lệ" })
+  .min(0, "Giá bán phải lớn hơn hoặc bằng 0");
 
-    name: z
-      .string()
-      .trim()
-      .min(1, "TÃªn combo lÃ  báº¯t buá»™c")
-      .max(200, "TÃªn combo tá»‘i Ä‘a 200 kÃ½ tá»±"),
+const giftQuantitySchema = z
+  .number()
+  .int("Số quà / combo phải là số nguyên")
+  .min(0, "Số quà / combo không được âm");
 
-    productCode: z
-      .string()
-      .trim()
-      .nonempty("Sáº£n pháº©m lÃ  báº¯t buá»™c"),
+const displayOrderSchema = z
+  .number()
+  .int("Thứ tự hiển thị phải là số nguyên")
+  .min(0, "Thứ tự hiển thị không được âm");
 
-    categoryCode: z
-      .string()
-      .trim()
-      .nonempty("Danh má»¥c lÃ  báº¯t buá»™c"),
+const comboCoreShape = {
+  code: z
+    .string()
+    .trim()
+    .min(1, "Mã combo là bắt buộc")
+    .max(50, "Mã combo tối đa 50 ký tự"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Tên combo là bắt buộc")
+    .max(200, "Tên combo tối đa 200 ký tự"),
+  productId: productIdOrCodeSchema.optional(),
+  productCode: z.string().trim().nonempty("Sản phẩm là bắt buộc").optional(),
+  packageQuantity: packageQuantitySchema,
+  sellingPrice: sellingPriceSchema,
+  giftQuantity: giftQuantitySchema.default(0),
+  displayOrder: displayOrderSchema.default(0),
+  image: z.string().optional(),
+  description: z.string().optional(),
+};
 
-    comboItems: z
-      .array(comboItemSchema)
-      .min(1, "Combo pháº£i cÃ³ Ã­t nháº¥t 1 sáº£n pháº©m"),
+export const createComboSchema = z.object({
+  ...comboCoreShape,
+}).refine(
+  (data) => Boolean(data.productId) || Boolean(data.productCode),
+  { message: "Sản phẩm là bắt buộc", path: ["productCode"] }
+);
 
-    sellingPrice: z
-      .number({
-        message: "GiÃ¡ bÃ¡n khÃ´ng há»£p lá»‡",
-      })
-      .min(0, "GiÃ¡ bÃ¡n pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0"),
-
-    packageSize: z
-      .number({
-        message: "Sá»‘ lÆ°á»£ng combo khÃ´ng há»£p lá»‡",
-      })
-      .int("Sá»‘ lÆ°á»£ng combo pháº£i lÃ  sá»‘ nguyÃªn")
-      .min(1, "Sá»‘ lÆ°á»£ng combo pháº£i lá»›n hÆ¡n 0"),
-
-    displayOrder: z
-      .number()
-      .int("Thá»© tá»± hiá»ƒn thá»‹ pháº£i lÃ  sá»‘ nguyÃªn")
-      .min(0, "Thá»© tá»± hiá»ƒn thá»‹ khÃ´ng Ä‘Æ°á»£c Ã¢m")
-      .optional()
-      .default(0),
-
-    image: z.string().optional(),
-
-    description: z.string().optional(),
-  })
-  .refine(
-    (data) => {
-      const variantIds = data.comboItems.map((item) => item.productVariantId);
-      const uniqueIds = new Set(variantIds);
-      return uniqueIds.size === variantIds.length;
-    },
-    {
-      message: "ProductVariant bá»‹ trÃ¹ng trong combo",
-      path: ["comboItems"],
-    }
-  );
-
-export const updateComboSchema = z
-  .object({
-    code: z
-      .string()
-      .trim()
-      .min(1, "MÃ£ combo lÃ  báº¯t buá»™c")
-      .max(50, "MÃ£ combo tá»‘i Ä‘a 50 kÃ½ tá»±"),
-
-    name: z
-      .string()
-      .trim()
-      .min(1, "TÃªn combo lÃ  báº¯t buá»™c")
-      .max(200, "TÃªn combo tá»‘i Ä‘a 200 kÃ½ tá»±"),
-
-    productCode: z
-      .string()
-      .trim()
-      .nonempty("Sáº£n pháº©m lÃ  báº¯t buá»™c"),
-
-    categoryCode: z
-      .string()
-      .trim()
-      .nonempty("Danh má»¥c lÃ  báº¯t buá»™c"),
-
-    comboItems: z
-      .array(comboItemSchema)
-      .min(0)
-      .optional()
-      .default([]),
-
-    sellingPrice: z
-      .number({
-        message: "GiÃ¡ bÃ¡n khÃ´ng há»£p lá»‡",
-      })
-      .min(0, "GiÃ¡ bÃ¡n pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0"),
-
-    packageSize: z
-      .number({
-        message: "Sá»‘ lÆ°á»£ng combo khÃ´ng há»£p lá»‡",
-      })
-      .int("Sá»‘ lÆ°á»£ng combo pháº£i lÃ  sá»‘ nguyÃªn")
-      .min(1, "Sá»‘ lÆ°á»£ng combo pháº£i lá»›n hÆ¡n 0"),
-
-    displayOrder: z
-      .number()
-      .int("Thá»© tá»± hiá»ƒn thá»‹ pháº£i lÃ  sá»‘ nguyÃªn")
-      .min(0, "Thá»© tá»± hiá»ƒn thá»‹ khÃ´ng Ä‘Æ°á»£c Ã¢m")
-      .optional()
-      .default(0),
-
-    image: z.string().optional(),
-
-    description: z.string().optional(),
-
-    isActive: z.boolean(),
-  })
-  .refine(
-    (data) => {
-      const variantIds = data.comboItems.map((item) => item.productVariantId);
-      const uniqueIds = new Set(variantIds);
-      return uniqueIds.size === variantIds.length;
-    },
-    {
-      message: "ProductVariant bá»‹ trÃ¹ng trong combo",
-      path: ["comboItems"],
-    }
-  );
-
+export const updateComboSchema = z.object({
+  ...comboCoreShape,
+  isActive: z.boolean(),
+}).refine(
+  (data) => Boolean(data.productId) || Boolean(data.productCode),
+  { message: "Sản phẩm là bắt buộc", path: ["productCode"] }
+);
 // ================================================================
 // Order schemas
 // ================================================================
@@ -1276,6 +1196,58 @@ const orderShippingSchema = z.object({
 });
 
 const OBJECT_ID_REGEX_ORDER = /^[a-f\d]{24}$/i;
+
+const orderAttributeSchema = z.object({
+  optionId: z.string().regex(OBJECT_ID_REGEX_ORDER, "VariantOption không hợp lệ"),
+  valueId: z.string().regex(OBJECT_ID_REGEX_ORDER, "VariantValue không hợp lệ"),
+});
+
+const orderDetailSchema = z.object({
+  variantId: z.string().regex(OBJECT_ID_REGEX_ORDER, "ProductVariant không hợp lệ").optional(),
+  attributes: z.array(orderAttributeSchema).default([]),
+  quantity: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
+});
+
+const giftSelectionSchema = z.object({
+  giftProductId: z.string().regex(OBJECT_ID_REGEX_ORDER, "Gift không hợp lệ"),
+  giftProductName: z.string().max(100).optional(),
+  quantity: z.number().int().min(1, "Số lượng quà phải lớn hơn 0"),
+});
+
+const orderItemSchema = z.object({
+  comboId: z.string().regex(OBJECT_ID_REGEX_ORDER).optional(),
+  productId: z.string().regex(OBJECT_ID_REGEX_ORDER).optional(),
+  comboName: z.string().max(200).optional(),
+  comboCode: z.string().max(50).optional(),
+  comboQuantity: z.number().int().min(1).default(1),
+  packageQuantity: z.number().int().min(1).default(1),
+  giftQuantity: z.number().int().min(0).default(0),
+  sellingPrice: z.number().min(0).default(0),
+  discount: z.number().min(0).default(0),
+  subtotal: z.number().min(0).optional(),
+  details: z.array(orderDetailSchema).default([]),
+  giftMode: z.enum(["RANDOM", "CUSTOMER_SELECTED"]).default("RANDOM"),
+  giftSelections: z.array(giftSelectionSchema).default([]),
+  sku: z.string().optional(),
+  productName: z.string().optional(),
+  quantity: z.number().int().min(1).optional(),
+  unitPrice: z.number().min(0).optional(),
+}).superRefine((item, ctx) => {
+  const requiredProducts = item.comboQuantity * item.packageQuantity;
+  const selectedProducts = item.details.reduce((sum, detail) => sum + detail.quantity, 0);
+  if (item.details.length > 0 && selectedProducts !== requiredProducts) {
+    ctx.addIssue({ code: "custom", path: ["details"], message: `Chi tiết sản phẩm phải đủ ${requiredProducts} sản phẩm.` });
+  }
+
+  const requiredGifts = item.comboQuantity * item.giftQuantity;
+  const selectedGifts = item.giftSelections.reduce((sum, gift) => sum + gift.quantity, 0);
+  if (item.giftMode === "CUSTOMER_SELECTED" && selectedGifts !== requiredGifts) {
+    ctx.addIssue({ code: "custom", path: ["giftSelections"], message: `Chi tiết quà phải đủ ${requiredGifts} quà.` });
+  }
+  if (item.giftMode === "RANDOM" && item.giftSelections.length > 0) {
+    ctx.addIssue({ code: "custom", path: ["giftSelections"], message: "Quà ngẫu nhiên không cần chọn quà cụ thể." });
+  }
+});
 
 export const createOrderSchema = z.object({
   customerId: z
@@ -1372,6 +1344,8 @@ export const createOrderSchema = z.object({
     .enum(ORDER_SOURCES, { message: "Nguá»“n Ä‘Æ¡n khÃ´ng há»£p lá»‡" })
     .default("MANUAL"),
 
+  orderItems: z.array(orderItemSchema).optional(),
+
   payments: z.array(orderPaymentSchema).default([]),
 
   totalPaid: z
@@ -1451,6 +1425,7 @@ export const updateOrderSchema = z.object({
   isPrepaid: z.boolean().optional(),
   orderType: z.enum(ORDER_TYPES).optional(),
   orderSource: z.enum(ORDER_SOURCES).optional(),
+  orderItems: z.array(orderItemSchema).optional(),
   payments: z.array(orderPaymentSchema).optional(),
   totalPaid: z.number().min(0).optional(),
   shipping: orderShippingSchema.optional().nullable(),
@@ -1711,17 +1686,32 @@ export const updateGiftSchema = z.object({
     .min(2, "Tên quà tặng phải có ít nhất 2 ký tự")
     .max(100, "Tên quà tặng tối đa 100 ký tự"),
 
-  stockQuantity: z
-    .number({
-      message: "Số lượng tồn kho phải là số",
-    })
-    .int("Số lượng tồn kho phải là số nguyên")
-    .min(0, "Số lượng tồn kho không được âm"),
-
   isActive: z.boolean({
     message: "Trạng thái không hợp lệ",
   }),
 });
 
+const giftInventoryChangeSchema = z.object({
+  quantity: z
+    .number({ message: "Số lượng phải là số" })
+    .int("Số lượng phải là số nguyên")
+    .positive("Số lượng phải lớn hơn 0"),
+  note: z
+    .string()
+    .trim()
+    .min(1, "Ghi chú là bắt buộc")
+    .max(1000, "Ghi chú tối đa 1000 ký tự"),
+});
+
+export const importGiftInventorySchema = giftInventoryChangeSchema;
+
+export const adjustGiftInventorySchema = giftInventoryChangeSchema.extend({
+  direction: z.enum(["INCREASE", "DECREASE"], {
+    message: "Loại điều chỉnh không hợp lệ",
+  }),
+});
+
 export type CreateGiftForm = z.infer<typeof createGiftSchema>;
 export type UpdateGiftForm = z.infer<typeof updateGiftSchema>;
+export type ImportGiftInventoryForm = z.infer<typeof importGiftInventorySchema>;
+export type AdjustGiftInventoryForm = z.infer<typeof adjustGiftInventorySchema>;

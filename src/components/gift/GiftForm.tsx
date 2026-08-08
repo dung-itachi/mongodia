@@ -53,7 +53,6 @@ export default function GiftForm({
           editingItem
             ? {
                 name: editingItem.name,
-                stockQuantity: editingItem.stockQuantity,
                 isActive: editingItem.isActive,
               }
             : {
@@ -74,19 +73,21 @@ export default function GiftForm({
           <Input placeholder="VD: Dầu gội, Khăn mặt" />
         </Form.Item>
 
-        <Form.Item
-          name="stockQuantity"
-          label="Số lượng tồn kho"
-          rules={[
-            { required: true, message: "Vui lòng nhập số lượng tồn kho" },
-          ]}
-        >
-          <InputNumber
-            min={0}
-            style={{ width: "100%" }}
-            placeholder="0"
-          />
-        </Form.Item>
+        {!isEditing && (
+          <Form.Item
+            name="stockQuantity"
+            label="Tồn kho ban đầu"
+            rules={[
+              { required: true, message: "Vui lòng nhập tồn kho ban đầu" },
+            ]}
+          >
+            <InputNumber
+              min={0}
+              style={{ width: "100%" }}
+              placeholder="0"
+            />
+          </Form.Item>
+        )}
 
         {isEditing && (
           <Form.Item

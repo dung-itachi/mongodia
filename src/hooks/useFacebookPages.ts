@@ -182,6 +182,35 @@ export function useFacebookPages(filters?: Record<string, unknown>) {
   });
 }
 
+/**
+ * Sprint 8.6 — Active Facebook Pages only.
+ *
+ * Returns all ACTIVE Facebook pages, sorted newest first.
+ * Use this when you need a "select page" dropdown (LeadDrawer, MarketingInputSection).
+ *
+ * NOTE: Backend `/api/facebook-pages` does not sort by createdAt desc yet,
+ * so we re-sort on the client to honor "mới nhất" requirement.
+ */
+export function useActiveFacebookPages() {
+  const { data, isLoading, error } = useFacebookPages({
+    status: "ACTIVE",
+    isActive: "true",
+    pageSize: 100,
+  });
+
+  const sortedItems = [...(data?.items ?? [])].sort((a, b) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return tb - ta;
+  });
+
+  return {
+    pages: sortedItems,
+    loading: isLoading,
+    error: error?.message ?? null,
+  };
+}
+
 export function useFacebookPage(id: string | null) {
   return useQuery<FacebookPage, Error>({
     queryKey: facebookPageKeys.detail(id ?? ""),

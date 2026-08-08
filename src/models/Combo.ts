@@ -1,44 +1,48 @@
 import mongoose, { Model, Schema, Types } from "mongoose";
 
-export interface IComboItem {
-  productVariantId: Types.ObjectId;
-  quantity: number;
-  isGift: boolean;
-}
+/**
+ * ==================================================
+ * COMBO MODEL
+ * ==================================================
+ *
+ * Sprint 8.x - Refactor: Combo theo Product
+ *
+ * Combo là cấu hình bán hàng của MỘT Product.
+ *
+ * Quan hệ:
+ *   Product 1 ── n Combo
+ *
+ * Combo chỉ lưu:
+ *   - productId
+ *   - packageQuantity (số SP / combo)
+ *   - sellingPrice
+ *   - giftQuantity (số quà / combo)
+ *
+ * Combo KHÔNG lưu:
+ *   - variantId / ProductVariant
+ *   - variantValues / COLOR / SIZE
+ *   - giftProductId (Gift collection)
+ *   - categoryId riêng (lấy từ Product.categoryId khi hiển thị)
+ *
+ * Variant và quà cụ thể sẽ được Sale tư vấn khách rồi ghi vào Order.
+ */
 
 export interface ICombo {
   code: string;
   name: string;
+  /** Sản phẩm mà combo này thuộc về (bắt buộc). */
   productId: Types.ObjectId;
-  categoryId: Types.ObjectId;
-  comboItems: IComboItem[];
+  /** Số sản phẩm có trong 1 combo (> 0). */
+  packageQuantity: number;
+  /** Giá bán combo (>= 0). */
   sellingPrice: number;
-  packageSize: number;
+  /** Số quà tặng cho mỗi combo (>= 0). */
+  giftQuantity: number;
   displayOrder: number;
   image?: string;
   description?: string;
   isActive: boolean;
 }
-
-const ComboItemSchema = new Schema<IComboItem>(
-  {
-    productVariantId: {
-      type: Schema.Types.ObjectId,
-      ref: "ProductVariant",
-      required: true,
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    isGift: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  { _id: false }
-);
 
 const ComboSchema = new Schema<ICombo>(
   {
@@ -60,35 +64,28 @@ const ComboSchema = new Schema<ICombo>(
       type: Schema.Types.ObjectId,
       ref: "Product",
       required: true,
+      index: true,
     },
 
-    categoryId: {
-      type: Schema.Types.ObjectId,
-      ref: "Category",
+    packageQuantity: {
+      type: Number,
       required: true,
-    },
-
-    comboItems: {
-      type: [ComboItemSchema],
-      required: true,
-      validate: {
-        validator: function (items: IComboItem[]) {
-          return items.length > 0;
-        },
-        message: "Combo phải có ít nhất 1 ComboItem",
-      },
+      min: 1,
+      default: 1,
     },
 
     sellingPrice: {
       type: Number,
       required: true,
       min: 0,
+      default: 0,
     },
 
-    packageSize: {
+    giftQuantity: {
       type: Number,
       required: true,
-      min: 1,
+      min: 0,
+      default: 0,
     },
 
     displayOrder: {
@@ -117,13 +114,12 @@ const ComboSchema = new Schema<ICombo>(
   }
 );
 
-// Unique indexes
+// Unique (productId, name) để không trùng tên combo trong cùng 1 product.
 ComboSchema.index({ productId: 1, name: 1 }, { unique: true });
 
 // Query indexes
-ComboSchema.index({ isActive: 1, categoryId: 1, displayOrder: 1 });
+ComboSchema.index({ isActive: 1, productId: 1, displayOrder: 1 });
 ComboSchema.index({ productId: 1, displayOrder: 1 });
-ComboSchema.index({ "comboItems.productVariantId": 1 });
 
 const Combo: Model<ICombo> =
   mongoose.models.Combo || mongoose.model<ICombo>("Combo", ComboSchema);

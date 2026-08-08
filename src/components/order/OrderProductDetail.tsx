@@ -34,13 +34,11 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Card, InputNumber, Button, Space, Tag, Select, Typography, Divider, Alert, Radio } from "antd";
+import { Card, InputNumber, Button, Space, Tag, Select, Typography, Divider, Alert, Radio, message } from "antd";
 import { PlusOutlined, DeleteOutlined, ShoppingOutlined, GiftOutlined, QuestionOutlined } from "@ant-design/icons";
-import type { SelectProps } from "antd";
+import type { RadioChangeEvent, SelectProps } from "antd";
 import type {
   ProductWithVariants,
-  ProductVariant,
-  VariantOptionWithValues,
   OrderItem,
   ProductVariantSelection,
   ProductAttribute,
@@ -93,7 +91,7 @@ function createOrderItemFromCombo(
     _id: string;
     code: string;
     name: string;
-    packageSize: number;
+    packageQuantity: number;
     giftQuantity: number;
     sellingPrice: number;
     productId: string;
@@ -101,7 +99,7 @@ function createOrderItemFromCombo(
 ): OrderItem {
   // Tạo details mặc định: 1 dòng với tất cả sản phẩm, không có variant
   const defaultDetail: ProductVariantSelection = {
-    quantity: combo.packageSize,
+    quantity: combo.packageQuantity,
     attributes: [],
   };
 
@@ -112,7 +110,7 @@ function createOrderItemFromCombo(
     comboName: combo.name,
     comboCode: combo.code,
     comboQuantity: 1,
-    packageQuantity: combo.packageSize,
+    packageQuantity: combo.packageQuantity,
     giftQuantity: combo.giftQuantity,
     giftMode: "RANDOM",
     giftSelections: [],
@@ -351,14 +349,15 @@ function GiftSelectionSection({
   const giftOptions = useMemo(
     () =>
       gifts.map((g) => ({
-        label: g.name,
+        label: `${g.name} - Tồn kho: ${g.stockQuantity}`,
         value: g._id,
+        giftName: g.name,
       })),
     [gifts]
   );
 
   const handleModeChange = useCallback(
-    (e: any) => {
+    (e: RadioChangeEvent) => {
       const mode = e.target.value as OrderGiftMode;
       onModeChange(mode);
 
@@ -426,7 +425,7 @@ function GiftSelectionSection({
       {giftMode === "CUSTOMER_SELECTED" && !isValidSelections && (
         <Alert
           type="warning"
-          message={`Yêu cầu quà (${currentTotal}) phải bằng ${totalGiftRequired}`}
+          message={`Chi tiết quà phải đủ ${totalGiftRequired} quà.`}
           style={{ marginBottom: 12 }}
           showIcon
         />
@@ -510,7 +509,7 @@ function GiftSelectionSection({
                     onChange={(value, option) => {
                       handleUpdateGift(index, {
                         giftProductId: value as string,
-                        giftProductName: (option as { label?: string })?.label,
+                        giftProductName: (option as { giftName?: string })?.giftName,
                         quantity: gift.quantity,
                       });
                     }}
@@ -611,6 +610,14 @@ function OrderItemRow({
 
   const handleUpdateDetail = useCallback(
     (index: number, detail: ProductVariantSelection) => {
+      const combinationKey = detail.attributes.map((attribute) => attribute.valueId).sort().join(":");
+      const duplicate = item.details.some((existing, existingIndex) =>
+        existingIndex !== index && existing.attributes.map((attribute) => attribute.valueId).sort().join(":") === combinationKey
+      );
+      if (combinationKey && duplicate) {
+        void message.warning("Biến thể này đã tồn tại.");
+        return;
+      }
       const newDetails = [...item.details];
       newDetails[index] = detail;
       onUpdate({ ...item, details: newDetails });

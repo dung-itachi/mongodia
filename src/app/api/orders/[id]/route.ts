@@ -23,6 +23,8 @@ import { mapOrder, mapOrderHistoryList } from "@/mappers/order.mapper";
 
 import { success, error as errorResponse } from "@/utils/response";
 import { updateOrderSchema } from "@/utils/validator";
+import { saleOrderService } from "@/services/sale-order.service";
+import type { OrderItem } from "@/types/variant";
 import {
   isPaymentChanged,
   isShippingChanged,
@@ -83,6 +85,8 @@ export async function GET(
       .populate("productId", "_id code name")
       .populate("productVariantId", "_id sku")
       .populate("comboId", "_id code name")
+      .populate("orderItems.details.attributes.optionId", "_id name")
+      .populate("orderItems.details.attributes.valueId", "_id name")
       .populate("warehouseId", "_id code name")
       .populate("marketingEmployeeId", "_id employeeCode fullName")
       .populate("saleEmployeeId", "_id employeeCode fullName")
@@ -163,6 +167,20 @@ export async function PATCH(
     }
 
     const data = parsedBody.data;
+
+    let validatedOrderItems: Awaited<ReturnType<typeof saleOrderService.validateItem>>[] | undefined;
+    if (data.orderItems !== undefined) {
+      try {
+        validatedOrderItems = await Promise.all(
+          data.orderItems.map((item) => saleOrderService.validateItem(item as OrderItem))
+        );
+      } catch (validationError) {
+        return errorResponse(
+          validationError instanceof Error ? validationError.message : "Thông tin combo không hợp lệ",
+          400
+        );
+      }
+    }
 
     // ---- Reference existence (only when provided) ----------------------
     const checks: Promise<unknown>[] = [];
@@ -419,6 +437,25 @@ export async function PATCH(
       updateData.shipping = newShipping;
     }
 
+    if (validatedOrderItems !== undefined) {
+      const subtotal = validatedOrderItems.reduce((sum, item) => sum + item.subtotal, 0);
+      const discount = validatedOrderItems.reduce((sum, item) => sum + item.discount, 0);
+      const shippingFee = data.shipping?.shippingFee ?? existedOrder.summary?.shippingFee ?? 0;
+      updateData.orderItems = validatedOrderItems;
+      updateData.summary = {
+        subtotal,
+        discount,
+        shippingFee,
+        grandTotal: subtotal + shippingFee,
+        currency: data.currency ?? existedOrder.currency,
+      };
+      updateData.totalAmount = subtotal + shippingFee;
+      updateData.comboId = validatedOrderItems[0]?.comboId;
+      updateData.productId = validatedOrderItems[0]?.productId;
+      updateData.quantity = validatedOrderItems[0]?.comboQuantity;
+      updateData.unitPrice = validatedOrderItems[0]?.sellingPrice;
+    }
+
     // Các field còn lại (numeric / simple)
     const passthrough: Array<keyof typeof data> = [
       "quantity",
@@ -591,6 +628,8 @@ export async function PATCH(
       .populate("productId", "_id code name")
       .populate("productVariantId", "_id sku")
       .populate("comboId", "_id code name")
+      .populate("orderItems.details.attributes.optionId", "_id name")
+      .populate("orderItems.details.attributes.valueId", "_id name")
       .populate("warehouseId", "_id code name")
       .populate("marketingEmployeeId", "_id employeeCode fullName")
       .populate("saleEmployeeId", "_id employeeCode fullName")

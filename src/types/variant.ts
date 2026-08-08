@@ -95,6 +95,9 @@ export interface ProductWithVariants {
 export interface ProductAttribute {
   optionId: string;
   valueId: string;
+  /** Order-time snapshots keep detail labels readable after catalog changes. */
+  optionName?: string;
+  valueName?: string;
 }
 
 // ============================================================================
@@ -286,7 +289,7 @@ export function validateOrderItem(item: OrderItem): OrderItemValidation {
   const totalDetails = getTotalDetailsQuantity(item.details);
   const detailsError =
     totalDetails !== totalProductsRequired
-      ? `Chi tiết SP (${totalDetails}) phải bằng tổng sản phẩm (${totalProductsRequired})`
+      ? `Chi tiết sản phẩm phải đủ ${totalProductsRequired} sản phẩm.`
       : undefined;
 
   let giftsError: string | undefined;
@@ -294,7 +297,7 @@ export function validateOrderItem(item: OrderItem): OrderItemValidation {
   if (item.giftMode === "CUSTOMER_SELECTED" && totalGiftsRequired > 0) {
     const totalSelections = getTotalGiftSelectionsQuantity(item.giftSelections);
     if (totalSelections !== totalGiftsRequired) {
-      giftsError = `Yêu cầu quà (${totalSelections}) phải bằng tổng quà (${totalGiftsRequired})`;
+      giftsError = `Chi tiết quà phải đủ ${totalGiftsRequired} quà.`;
     }
   }
 
@@ -319,13 +322,14 @@ export function resolveVariantId(
 ): string | null {
   if (attributes.length === 0 || !variants) return null;
 
-  const selectedValueIds = new Set(attributes.map((a) => a.valueId));
+  const selectedValueIds = attributes.map((attribute) => attribute.valueId);
 
   const matchedVariant = variants.find((variant) => {
     const variantValueIds = variant.variantValues.map((vv) =>
       typeof vv === "string" ? vv : vv._id
     );
-    return attributes.every((attr) => variantValueIds.includes(attr.valueId));
+    return variantValueIds.length === selectedValueIds.length &&
+      selectedValueIds.every((valueId) => variantValueIds.includes(valueId));
   });
 
   return matchedVariant?._id || null;

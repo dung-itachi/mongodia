@@ -77,7 +77,10 @@ export async function POST(request: Request) {
     }
 
     try {
-      const gift = await giftService.createGift(parsed.data);
+      const gift = await giftService.createGift({
+        ...parsed.data,
+        createdBy: String(currentUser.employee._id),
+      });
       return success(mapGift(gift), "Tạo quà tặng thành công");
     } catch (e) {
       if (e instanceof GiftServiceError) {

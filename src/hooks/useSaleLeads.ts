@@ -47,6 +47,12 @@ export interface SaleLead {
     employeeCode: string;
     name: string;
   };
+  /** Sprint 8.6: Facebook Page reference (read-only on /leads). */
+  facebookPage?: {
+    _id: string;
+    code: string;
+    name: string;
+  };
   assignedAt: string;
   isConverted: boolean;
   createdAt: string;

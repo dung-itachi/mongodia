@@ -14,6 +14,7 @@ import { LEAD_SOURCE_OPTIONS, LEAD_STATUS_OPTIONS } from "@/constants/marketing"
 import type { SelectProps } from "antd";
 import { defaultLeadForm, marketingLeadFormSchema, type MarketingLeadForm } from "@/validators/marketing-lead.validator";
 import type { MarketingLead } from "@/types/marketing-lead";
+import { useActiveFacebookPages } from "@/hooks/useFacebookPages";
 
 const { TextArea } = Input;
 
@@ -37,9 +38,17 @@ function LeadDrawerInner({
   const isEdit = !!lead;
   const { control, handleSubmit, reset, formState: { errors } } =
     useForm<LeadFormData>({
-      resolver: zodResolver(marketingLeadFormSchema),
-      defaultValues: defaultLeadForm,
-    });
+    resolver: zodResolver(marketingLeadFormSchema),
+    defaultValues: defaultLeadForm,
+  });
+
+  // Sprint 8.6: Load active Facebook Pages for the page dropdown
+  const { pages: facebookPages, loading: pagesLoading } = useActiveFacebookPages();
+
+  const facebookPageOptions: SelectProps["options"] = facebookPages.map((p) => ({
+    value: p._id,
+    label: `${p.name} (${p.code})`,
+  }));
 
   useEffect(() => {
     if (!open) {
@@ -56,6 +65,7 @@ function LeadDrawerInner({
             source: lead.source,
             status: lead.status,
             note: lead.note ?? "",
+            facebookPageId: lead.facebookPage?._id ?? "",
           }
         : defaultLeadForm
     );
@@ -118,6 +128,26 @@ function LeadDrawerInner({
                 options={LEAD_SOURCE_OPTIONS as SelectProps["options"]}
                 placeholder="Chọn nguồn"
                 status={errors.source ? "error" : undefined}
+              />
+            )}
+          />
+        </FormField>
+
+        <FormField label="Trang Facebook (Sprint 8.6)" error={errors.facebookPageId?.message}>
+          <Controller
+            name="facebookPageId"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                style={{ width: "100%" }}
+                allowClear
+                loading={pagesLoading}
+                options={facebookPageOptions}
+                placeholder={pagesLoading ? "Đang tải..." : "Chọn trang Facebook (không bắt buộc)"}
+                showSearch
+                optionFilterProp="label"
+                notFoundContent={pagesLoading ? null : "Chưa có trang Facebook nào"}
               />
             )}
           />

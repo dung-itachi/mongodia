@@ -52,7 +52,7 @@ interface ProductManagementItem {
     code: string;
     name: string;
     sellingPrice: number;
-    packageSize: number;
+    packageQuantity: number;
     isActive: boolean;
   }>;
   // Inventory stats (by warehouse)
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
       productId: { $in: productIds },
       isActive: true,
     })
-      .select("_id code name productId sellingPrice packageSize isActive")
+      .select("_id code name productId sellingPrice packageQuantity isActive")
       .lean();
 
     const combosByProduct = new Map<string, typeof combos>();
@@ -331,7 +331,7 @@ export async function GET(request: Request) {
           code: c.code,
           name: c.name,
           sellingPrice: c.sellingPrice,
-          packageSize: c.packageSize,
+          packageQuantity: c.packageQuantity,
           isActive: c.isActive,
         })),
         inventoryByWarehouse,

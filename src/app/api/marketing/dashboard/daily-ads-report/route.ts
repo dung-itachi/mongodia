@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { success, error as errorResponse } from "@/utils/response";
 import { MarketingExpenseReport } from "@/models/MarketingExpenseReport";
 import { Order } from "@/models/Order";
+import { MarketingExpenseReportStatus } from "@/constants/marketing-expense";
 
 // ============================================================================
 // GET /api/marketing/dashboard/daily-ads-report
@@ -259,7 +260,7 @@ export async function POST(request: Request) {
       conversionRate: 0,
       roas: 0,
       cpa: 0,
-      status: "DRAFT",
+      status: MarketingExpenseReportStatus.DRAFT,
       createdBy: currentUser.employee._id,
     });
 

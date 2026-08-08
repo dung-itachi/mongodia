@@ -128,6 +128,19 @@ function LeadInfoTab({ lead }: { lead: MarketingLead }) {
               label: "Trùng lặp",
               value: lead.isDuplicate ? "Có" : "Không",
             },
+            {
+              label: "Trang Facebook",
+              value: lead.facebookPage ? (
+                <span>
+                  <Tag color="blue">{lead.facebookPage.name}</Tag>
+                  <span style={{ color: "#8c8c8c", fontSize: 12 }}>
+                    {` (${lead.facebookPage.code})`}
+                  </span>
+                </span>
+              ) : (
+                <span style={{ color: "#bfbfbf" }}>-</span>
+              ),
+            },
           ]}
         />
       </CardSection>

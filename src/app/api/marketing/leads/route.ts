@@ -30,6 +30,13 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     marketingEmployee: (lead as Lead & { marketingEmployee?: { _id: string; employeeCode: string; name: string } }).marketingEmployee,
     saleEmployee: (lead as Lead & { saleEmployee?: { _id: string; employeeCode: string; name: string } }).saleEmployee,
     combo: combo ? { _id: combo._id, code: combo.code, name: combo.name } : undefined,
+    facebookPage: (lead as Lead & { facebookPage?: { _id: string; code: string; name: string } }).facebookPage
+      ? {
+          _id: (lead as Lead & { facebookPage: { _id: string; code: string; name: string } }).facebookPage._id,
+          code: (lead as Lead & { facebookPage: { _id: string; code: string; name: string } }).facebookPage.code,
+          name: (lead as Lead & { facebookPage: { _id: string; code: string; name: string } }).facebookPage.name,
+        }
+      : undefined,
     note: lead.note,
     isDuplicate: lead.isDuplicate,
     // Sprint 5.7 — Lead Convert

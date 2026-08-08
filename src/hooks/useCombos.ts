@@ -1,8 +1,13 @@
 /**
- * Combo Module Hooks (Sprint 8.4.1)
+ * Combo Module Hooks (Sprint 8.x)
  *
- * Hooks for CRUD operations on Combos.
- * Uses existing API routes - NO new API creation.
+ * Combo theo Product:
+ * - productId (ObjectId hoặc string code ở input)
+ * - packageQuantity (số SP / combo)
+ * - sellingPrice
+ * - giftQuantity (số quà / combo)
+ *
+ * Combo KHÔNG lưu variant / quà cụ thể.
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,27 +24,9 @@ export interface ComboProductRef {
   name: string;
 }
 
-export interface ComboCategoryRef {
-  _id: string;
-  code: string;
-  name: string;
-}
-
 export interface ComboItemDetail {
+  // Không còn variant item; giữ field rỗng để tương thích ngược nếu cần.
   _id?: string;
-  productVariant: string | {
-    _id: string;
-    sku: string;
-    price: number;
-    productId?: {
-      _id: string;
-      code: string;
-      name: string;
-      categoryId?: { _id: string; code: string; name: string };
-    };
-  };
-  quantity: number;
-  isGift: boolean;
 }
 
 export interface ComboListItem {
@@ -47,9 +34,10 @@ export interface ComboListItem {
   code: string;
   name: string;
   product: string | ComboProductRef;
-  category: string | ComboCategoryRef;
+  productId: string;
+  packageQuantity: number;
   sellingPrice: number;
-  packageSize: number;
+  giftQuantity: number;
   displayOrder?: number;
   image?: string;
   isActive?: boolean;
@@ -57,26 +45,20 @@ export interface ComboListItem {
 }
 
 export interface ComboDetail extends ComboListItem {
-  comboItems: ComboItemDetail[];
   description?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export interface ComboItemInput {
-  productVariantId: string;
-  quantity: number;
-  isGift?: boolean;
-}
-
 export interface CreateComboInput {
   code: string;
   name: string;
-  productCode: string;
-  categoryCode: string;
-  comboItems: ComboItemInput[];
+  /** ObjectId hoặc code của Product. */
+  productId?: string;
+  productCode?: string;
+  packageQuantity: number;
   sellingPrice: number;
-  packageSize: number;
+  giftQuantity?: number;
   displayOrder?: number;
   image?: string;
   description?: string;
@@ -93,7 +75,6 @@ export interface UpdateComboInput extends CreateComboInput {
 async function fetchComboList(params?: {
   page?: number;
   limit?: number;
-  categoryId?: string;
   productId?: string;
   keyword?: string;
   isActive?: boolean;
@@ -107,7 +88,6 @@ async function fetchComboList(params?: {
   const searchParams = new URLSearchParams();
   if (params?.page) searchParams.set("page", String(params.page));
   if (params?.limit) searchParams.set("limit", String(params.limit));
-  if (params?.categoryId) searchParams.set("categoryId", params.categoryId);
   if (params?.productId) searchParams.set("productId", params.productId);
   if (params?.keyword) searchParams.set("keyword", params.keyword);
   if (params?.isActive !== undefined)
@@ -193,7 +173,6 @@ async function deleteCombo(id: string): Promise<void> {
 export function useComboList(params?: {
   page?: number;
   limit?: number;
-  categoryId?: string;
   productId?: string;
   keyword?: string;
   isActive?: boolean;

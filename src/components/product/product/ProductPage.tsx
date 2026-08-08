@@ -1,14 +1,17 @@
 /**
- * Product Page (Sprint 8.4.1)
+ * Product Page (Sprint 8.x)
  *
- * Page for managing Products with Combo info, Inventory stats, and Order stats.
+ * Quản lý sản phẩm.
+ * Combo giờ quản lý theo Product ở trang riêng /products/[productId]/combos
+ * (truy cập nhanh qua nút "Combo" ở mỗi row).
  */
 
 "use client";
 
 import { useState, useCallback } from "react";
-import { Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Button, Tooltip } from "antd";
+import { PlusOutlined, GiftOutlined } from "@ant-design/icons";
+import { useRouter } from "next/navigation";
 import {
   PageContainer,
   PageHeader,
@@ -28,6 +31,7 @@ import ProductManagementTable from "./ProductManagementTable";
 import ProductForm from "./ProductForm";
 
 export default function ProductPage() {
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProductManagementItem | null>(null);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
@@ -125,10 +129,12 @@ export default function ProductPage() {
     [updateMutation, refetch]
   );
 
-  const handleViewCombos = useCallback((item: ProductManagementItem) => {
-    // TODO: Open combo list modal or navigate to combos page
-    console.log("View combos for:", item.name, item.combos);
-  }, []);
+  const handleOpenCombos = useCallback(
+    (item: ProductManagementItem) => {
+      router.push(`/products/${item._id}/combos`);
+    },
+    [router]
+  );
 
   const handleWarehouseChange = useCallback((warehouseId: string) => {
     setSelectedWarehouseId(warehouseId);
@@ -136,18 +142,11 @@ export default function ProductPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Sản phẩm"
-        subtitle="Quản lý sản phẩm"
-      />
+      <PageHeader title="Sản phẩm" subtitle="Quản lý sản phẩm" />
 
       <CardSection>
         <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleOpenCreate}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
             Thêm sản phẩm
           </Button>
         </div>
@@ -159,7 +158,7 @@ export default function ProductPage() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onToggleActive={handleToggleActive}
-          onViewCombos={handleViewCombos}
+          onOpenCombos={handleOpenCombos}
           selectedWarehouseId={selectedWarehouseId}
           onWarehouseChange={handleWarehouseChange}
         />
@@ -176,3 +175,10 @@ export default function ProductPage() {
     </PageContainer>
   );
 }
+
+// Re-export dùng cho table tương thích
+export type { ProductManagementItem };
+
+// Suppress unused warning for tooltip import (dùng trong table cell)
+void Tooltip;
+void GiftOutlined;

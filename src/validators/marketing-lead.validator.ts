@@ -18,6 +18,12 @@ export const marketingLeadFormSchema = z.object({
   source: z.nativeEnum(LeadSource),
   status: z.nativeEnum(LeadStatus),
   note: z.string().trim().max(1000, "Ghi chú tối đa 1000 ký tự").optional(),
+  /** Facebook Page ID — optional (Sprint 8.6). Empty string is treated as unset. */
+  facebookPageId: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
 });
 
 export type MarketingLeadForm = z.infer<typeof marketingLeadFormSchema>;
@@ -29,4 +35,5 @@ export const defaultLeadForm: MarketingLeadForm = {
   source: LeadSource.FACEBOOK_COMMENT,
   status: LeadStatus.NEW,
   note: "",
+  facebookPageId: "",
 };

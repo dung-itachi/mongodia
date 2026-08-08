@@ -1,113 +1,168 @@
 /**
- * Combo Form Component (Sprint 8.4.1)
+ * Combo Form Component (Sprint 8.x)
  *
- * Form for creating and editing Combos.
+ * Refactor: Combo theo Product, không chọn variant trong combo.
+ * - Product là dữ liệu cha, chọn trước.
+ * - Category lấy từ Product, hiển thị READONLY.
+ * - Combo chỉ có: code, name, packageQuantity, sellingPrice, giftQuantity.
  */
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Form, Input, InputNumber, Select, Switch, Button, Space, Divider, Alert } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useEffect, useMemo } from "react";
+import { Form, Input, InputNumber, Select, Switch, Alert } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
-import type { ComboListItem, ComboDetail, CreateComboInput, UpdateComboInput } from "@/hooks/useCombos";
-import type { ProductVariantListItem } from "@/hooks/useVariants";
+import type {
+  ComboListItem,
+  ComboDetail,
+  CreateComboInput,
+  UpdateComboInput,
+} from "@/hooks/useCombos";
 
 const { TextArea } = Input;
+
+export interface ComboFormProductOption {
+  _id: string;
+  code: string;
+  name: string;
+  categoryCode?: string;
+  categoryName?: string;
+  isActive?: boolean;
+}
 
 interface ComboFormProps {
   open: boolean;
   editingItem?: ComboListItem | ComboDetail | null;
-  products: { _id: string; code: string; name: string }[];
-  variants: ProductVariantListItem[];
+  /** Khi đang ở trang /products/[productId]/combos, truyền 1 product duy nhất. */
+  products: ComboFormProductOption[];
   loading?: boolean;
   onClose: () => void;
   onSubmit: (values: CreateComboInput | UpdateComboInput) => void;
+  /** Khóa dropdown product (true khi productId đã xác định từ route). */
+  lockProductSelection?: boolean;
+  /** Product preselected (khi đã biết productId từ route). */
+  initialProductId?: string;
+}
+
+interface FormValues {
+  code?: string;
+  name?: string;
+  productId?: string;
+  packageQuantity?: number;
+  sellingPrice?: number;
+  giftQuantity?: number;
+  displayOrder?: number;
+  image?: string;
+  description?: string;
+  isActive?: boolean;
 }
 
 export default function ComboForm({
   open,
   editingItem,
   products,
-  variants,
   loading,
   onClose,
   onSubmit,
+  lockProductSelection = false,
+  initialProductId,
 }: ComboFormProps) {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<FormValues>();
   const isEditing = !!editingItem;
 
-  // Track selected product code for variant filtering
-  const [selectedProductCode, setSelectedProductCode] = useState<string>("");
+  const selectedProductId = Form.useWatch("productId", form) as string | undefined;
 
-  // Filter variants by selected product - simplified
-  const filteredVariants = useMemo(() => {
-    if (!selectedProductCode) return variants;
-    return variants;
-  }, [variants, selectedProductCode]);
+  const selectedProduct = useMemo(
+    () => products.find((p) => p._id === selectedProductId || p.code === selectedProductId),
+    [products, selectedProductId]
+  );
 
-  // Category options - placeholder
-  const categoryOptions: { label: string; value: string }[] = [];
+  // Lấy categoryCode hiển thị (từ selectedProduct hoặc từ editingItem.product)
+  const categoryDisplay = useMemo(() => {
+    if (selectedProduct?.categoryCode) {
+      return {
+        code: selectedProduct.categoryCode,
+        name: selectedProduct.categoryName ?? selectedProduct.categoryCode,
+      };
+    }
+    if (editingItem && typeof editingItem.product === "object" && editingItem.product !== null) {
+      const productRef = editingItem.product as unknown as {
+        categoryId?: { code: string; name: string };
+      };
+      if (productRef.categoryId) {
+        return { code: productRef.categoryId.code, name: productRef.categoryId.name };
+      }
+    }
+    return null;
+  }, [editingItem, selectedProduct]);
 
-  // Handle submit
+  const productOptions = useMemo(
+    () =>
+      products.map((p) => ({
+        label: `${p.code} - ${p.name}${p.isActive === false ? " (inactive)" : ""}`,
+        value: p._id,
+        disabled: p.isActive === false,
+      })),
+    [products]
+  );
+
   const handleSubmit = () => {
     void form.validateFields().then((values) => {
-      onSubmit(values as CreateComboInput | UpdateComboInput);
+      const product = products.find((p) => p._id === values.productId || p.code === values.productId);
+      if (!product) {
+        return;
+      }
+      onSubmit({
+        code: values.code ?? "",
+        name: values.name ?? "",
+        productId: product._id,
+        productCode: product.code,
+        packageQuantity: values.packageQuantity ?? 1,
+        sellingPrice: values.sellingPrice ?? 0,
+        giftQuantity: values.giftQuantity ?? 0,
+        displayOrder: values.displayOrder ?? 0,
+        image: values.image ?? "",
+        description: values.description ?? "",
+      } as CreateComboInput | UpdateComboInput);
     });
   };
 
-  // Reset/initialize form when drawer opens
+  // Khởi tạo form khi mở
   useEffect(() => {
-    if (open) {
-      if (editingItem) {
-        const getProductCodeFromItem = (product: ComboListItem["product"]) => {
-          if (typeof product === "object" && product !== null) {
-            return (product as { code: string }).code;
-          }
-          return "";
-        };
-        const getCategoryCodeFromItem = (category: ComboListItem["category"]) => {
-          if (typeof category === "object" && category !== null) {
-            return (category as { code: string }).code;
-          }
-          return "";
-        };
-
-        const productCode = getProductCodeFromItem(editingItem.product);
-        setSelectedProductCode(productCode);
-
-        form.setFieldsValue({
-          code: editingItem.code,
-          name: editingItem.name,
-          productCode,
-          categoryCode: getCategoryCodeFromItem(editingItem.category),
-          sellingPrice: editingItem.sellingPrice,
-          packageSize: editingItem.packageSize,
-          displayOrder: editingItem.displayOrder ?? 0,
-          image: editingItem.image ?? "",
-          description: (editingItem as ComboDetail).description ?? "",
-          isActive: editingItem.isActive ?? true,
-        });
-      } else {
-        setSelectedProductCode("");
-        form.resetFields();
-        form.setFieldsValue({
-          sellingPrice: 0,
-          packageSize: 1,
-          displayOrder: 0,
-          isActive: true,
-          comboItems: [],
-        });
-      }
+    if (!open) return;
+    if (editingItem) {
+      const productRef =
+        typeof editingItem.product === "object" && editingItem.product !== null
+          ? (editingItem.product as { _id: string; code?: string })
+          : null;
+      const productId =
+        productRef?._id ??
+        (typeof editingItem.product === "string" ? editingItem.product : "");
+      form.setFieldsValue({
+        code: editingItem.code,
+        name: editingItem.name,
+        productId,
+        packageQuantity: editingItem.packageQuantity ?? 1,
+        sellingPrice: editingItem.sellingPrice,
+        giftQuantity: editingItem.giftQuantity ?? 0,
+        displayOrder: editingItem.displayOrder ?? 0,
+        image: editingItem.image ?? "",
+        description: (editingItem as ComboDetail).description ?? "",
+        isActive: editingItem.isActive ?? true,
+      });
+      return;
     }
-  }, [open, editingItem, form]);
 
-  // Handle product selection change - auto-fill category
-  const handleProductChange = (productCode: string) => {
-    setSelectedProductCode(productCode);
-    // Clear combo items when product changes
-    form.setFieldValue("comboItems", []);
-  };
+    form.resetFields();
+    form.setFieldsValue({
+      productId: initialProductId ?? products[0]?._id,
+      packageQuantity: 1,
+      sellingPrice: 0,
+      giftQuantity: 0,
+      displayOrder: 0,
+      isActive: true,
+    });
+  }, [open, editingItem, form, products, initialProductId]);
 
   return (
     <DrawerForm
@@ -117,15 +172,16 @@ export default function ComboForm({
       onClose={onClose}
       onSubmit={handleSubmit}
       submitText={isEditing ? "Cập nhật" : "Tạo mới"}
-      width={700}
+      width={620}
     >
-      <Form form={form} layout="vertical">
+      <Form<FormValues> form={form} layout="vertical">
         <Form.Item
           name="code"
           label="Mã combo"
           rules={[
             { required: true, message: "Vui lòng nhập mã combo" },
             { min: 1, message: "Mã tối thiểu 1 ký tự" },
+            { max: 50, message: "Mã tối đa 50 ký tự" },
           ]}
         >
           <Input placeholder="VD: COMBO001" disabled={isEditing} />
@@ -139,11 +195,11 @@ export default function ComboForm({
             { min: 1, message: "Tên tối thiểu 1 ký tự" },
           ]}
         >
-          <Input placeholder="VD: Combo 1pc - 45,000₮" />
+          <Input placeholder="VD: Combo 3 hộp - 350.000đ" />
         </Form.Item>
 
         <Form.Item
-          name="productCode"
+          name="productId"
           label="Sản phẩm"
           rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
         >
@@ -151,167 +207,56 @@ export default function ComboForm({
             placeholder="Chọn sản phẩm"
             showSearch
             optionFilterProp="label"
-            disabled={isEditing}
-            onChange={handleProductChange}
-            options={products.map((p) => ({
-              label: `${p.code} - ${p.name}`,
-              value: p.code,
-            }))}
+            disabled={isEditing || lockProductSelection || products.length === 1}
+            options={productOptions}
           />
         </Form.Item>
 
-        <Form.Item
-          name="categoryCode"
-          label="Danh mục"
-          rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
-        >
-          <Select
-            placeholder="Tự động theo sản phẩm hoặc chọn thủ công"
-            showSearch
-            optionFilterProp="label"
-            disabled={isEditing}
-            options={categoryOptions}
-          />
+        <Form.Item label="Danh mục">
+          {categoryDisplay ? (
+            <Input value={`${categoryDisplay.code} - ${categoryDisplay.name}`} disabled />
+          ) : (
+            <Alert
+              type="info"
+              showIcon
+              message="Chọn sản phẩm để tự động xác định danh mục"
+            />
+          )}
         </Form.Item>
 
-        <Divider style={{ margin: "12px 0" }} />
-
         <Form.Item
-          label={
-            <span>
-              Biến thể trong combo
-              {selectedProductCode && (
-                <span style={{ fontWeight: 400, color: "#8c8c8c", marginLeft: 8 }}>
-                  (đang lọc theo: {selectedProductCode})
-                </span>
-              )}
-              {!selectedProductCode && !isEditing && (
-                <span style={{ fontWeight: 400, color: "#ff4d4f", marginLeft: 8 }}>
-                  ← Chọn sản phẩm trước
-                </span>
-              )}
-            </span>
-          }
+          name="packageQuantity"
+          label="Số lượng sản phẩm / combo"
+          rules={[
+            { required: true, message: "Vui lòng nhập số lượng" },
+            { type: "number", min: 1, message: "Số lượng phải > 0" },
+          ]}
         >
-          <Form.List name="comboItems">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.length === 0 && (
-                  <Alert
-                    message="Chưa có biến thể nào. Nhấn 'Thêm biến thể' để bắt đầu."
-                    type="info"
-                    showIcon
-                    style={{ marginBottom: 12 }}
-                  />
-                )}
-                {fields.map(({ key, name, ...restField }) => (
-                  <Space key={key} style={{ display: "flex", marginBottom: 8 }} align="start">
-                    <Form.Item
-                      {...restField}
-                      name={[name, "productVariantId"]}
-                      rules={[{ required: true, message: "Chọn biến thể" }]}
-                      style={{ marginBottom: 0, width: 220 }}
-                    >
-                      <Select
-                        placeholder="Chọn biến thể"
-                        showSearch
-                        optionFilterProp="label"
-                        options={filteredVariants.map((v) => {
-                          let sku = v.sku;
-                          let productName = "";
-                          let variantNames: string[] = [];
-
-                          if (typeof v.productId === "object" && v.productId !== null) {
-                            const vp = v.productId as {
-                              name: string;
-                              categoryId?: { code: string };
-                            };
-                            productName = vp.name;
-                            if (vp.categoryId) {
-                              productName = `[${vp.categoryId.code}] ${vp.name}`;
-                            }
-                          }
-                          if (Array.isArray(v.variantValues)) {
-                            v.variantValues.forEach((vv) => {
-                              if (typeof vv === "object" && vv !== null) {
-                                variantNames.push((vv as { name: string }).name);
-                              }
-                            });
-                          }
-                          const variantLabel =
-                            variantNames.length > 0
-                              ? `${sku} (${variantNames.join(", ")})`
-                              : sku;
-                          return {
-                            label: `${variantLabel} - ${productName}`,
-                            value: v._id,
-                          };
-                        })}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, "quantity"]}
-                      rules={[{ required: true, message: "SL" }]}
-                      initialValue={1}
-                      style={{ marginBottom: 0, width: 70 }}
-                    >
-                      <InputNumber min={1} placeholder="SL" />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, "isGift"]}
-                      valuePropName="checked"
-                      initialValue={false}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Switch checkedChildren="Tặng" unCheckedChildren="" />
-                    </Form.Item>
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => void remove(name)}
-                    />
-                  </Space>
-                ))}
-                <Button
-                  type="dashed"
-                  onClick={() => {
-                    void add({ productVariantId: "", quantity: 1, isGift: false });
-                  }}
-                  block
-                  icon={<PlusOutlined />}
-                  disabled={!selectedProductCode && !isEditing}
-                >
-                  Thêm biến thể
-                </Button>
-              </>
-            )}
-          </Form.List>
+          <InputNumber min={1} style={{ width: "100%" }} />
         </Form.Item>
-
-        <Divider style={{ margin: "12px 0" }} />
 
         <Form.Item
           name="sellingPrice"
-          label="Giá bán (₮)"
-          rules={[{ required: true, message: "Vui lòng nhập giá bán" }]}
+          label="Giá bán (₫)"
+          rules={[
+            { required: true, message: "Vui lòng nhập giá bán" },
+            { type: "number", min: 0, message: "Giá bán phải >= 0" },
+          ]}
         >
           <InputNumber
             min={0}
             style={{ width: "100%" }}
             formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-            parser={(value) => Number(value?.replace(/,/g, "") || 0) as 0}
+            parser={(value) => Number((value ?? "").replace(/,/g, "") || 0) as 0}
           />
         </Form.Item>
 
         <Form.Item
-          name="packageSize"
-          label="Số lượng trong combo"
-          rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+          name="giftQuantity"
+          label="Số lượng quà / combo"
+          rules={[{ type: "number", min: 0, message: "Số quà phải >= 0" }]}
         >
-          <InputNumber min={1} style={{ width: "100%" }} />
+          <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>
 
         <Form.Item name="displayOrder" label="Thứ tự hiển thị">
@@ -331,6 +276,13 @@ export default function ComboForm({
             <Switch />
           </Form.Item>
         )}
+
+        <Alert
+          type="info"
+          showIcon
+          message="Combo không lưu variant và quà cụ thể. Variant sẽ được Sale chọn khi chốt đơn."
+          style={{ marginTop: 8 }}
+        />
       </Form>
     </DrawerForm>
   );

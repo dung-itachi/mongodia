@@ -41,9 +41,19 @@ export const ROLES = [
     permissions: [
       "dashboard.view",
 
+      "self-account.view",
+      "self-account.update",
+      "self-account.changePassword",
+
       "employee.view",
       "employee.create",
       "employee.update",
+
+      "account.view",
+      "account.create",
+      "account.update",
+      "account.disable",
+      "account.resetPassword",
 
       "team.view",
 
@@ -78,6 +88,12 @@ export const ROLES = [
       "warehouse.view",
       "warehouse.create",
       "warehouse.update",
+      "warehouse.import",
+      "warehouse.transfer",
+      "warehouse.receive",
+      "warehouse.adjust",
+      "warehouse.ship",
+      "warehouse.return",
 
       "inventory.view",
 
@@ -158,6 +174,10 @@ export const ROLES = [
       "customer-activity.update",
       "customer-activity.delete",
 
+      "self-account.view",
+      "self-account.update",
+      "self-account.changePassword",
+
       "product.view",
       "product-variant.view",
       "combo.view",
@@ -189,6 +209,11 @@ export const ROLES = [
       "dashboard.view",
 
       "warehouse.view",
+      "warehouse.import",
+      "warehouse.transfer",
+      "warehouse.receive",
+      "warehouse.ship",
+      "warehouse.return",
       "inventory.view",
       "inventory-adjustment.view",
 
@@ -197,6 +222,10 @@ export const ROLES = [
 
       // ---- Gift (Kho cần xem để xử lý xuất quà) -------------------
       "gift.view",
+
+      "self-account.view",
+      "self-account.update",
+      "self-account.changePassword",
 
       // ---- Order --------------------------------------------------
       "order.view",
@@ -215,7 +244,16 @@ export const ROLES = [
     permissions: [
       "dashboard.view",
 
+      "self-account.view",
+      "self-account.update",
+      "self-account.changePassword",
+
       "employee.view",
+      "account.view",
+      "account.create",
+      "account.update",
+      "account.disable",
+      "account.resetPassword",
 
       "team.view",
       "category.view",
@@ -277,6 +315,10 @@ export const ROLES = [
     permissions: [
       "dashboard.view",
 
+      "self-account.view",
+      "self-account.update",
+      "self-account.changePassword",
+
       "product.view",
 
       "inventory.view",
@@ -308,6 +350,10 @@ export const ROLES = [
     name: "Marketing",
     permissions: [
       "dashboard.view",
+
+      "self-account.view",
+      "self-account.update",
+      "self-account.changePassword",
 
       "facebook-page.view",
       "facebook-page.create",

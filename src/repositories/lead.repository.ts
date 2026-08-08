@@ -31,6 +31,7 @@ function mapToLead(doc: ILead) {
     marketingEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
     saleEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
     comboId?: { _id: { toString(): string }; code: string; name: string };
+    facebookPageId?: { _id: { toString(): string }; code: string; name: string };
   };
 
   return {
@@ -75,6 +76,13 @@ function mapToLead(doc: ILead) {
           _id: rawDoc.comboId._id.toString(),
           code: rawDoc.comboId.code,
           name: rawDoc.comboId.name,
+        }
+      : undefined,
+    facebookPage: rawDoc.facebookPageId && typeof rawDoc.facebookPageId === "object" && "code" in rawDoc.facebookPageId
+      ? {
+          _id: rawDoc.facebookPageId._id.toString(),
+          code: rawDoc.facebookPageId.code,
+          name: rawDoc.facebookPageId.name,
         }
       : undefined,
     assignmentType: doc.assignmentType,
@@ -201,6 +209,7 @@ export class LeadRepository {
   async update(id: string, data: UpdateLeadInput) {
     const doc = await Lead.findByIdAndUpdate(id, data, { new: true })
       .populate("comboId", "_id code name")
+      .populate("facebookPageId", "_id code name")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);
@@ -246,6 +255,7 @@ export class LeadRepository {
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
       .populate("comboId", "_id code name")
+      .populate("facebookPageId", "_id code name")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);
@@ -257,7 +267,7 @@ export class LeadRepository {
   async findByIdWithPopulate(id: string): Promise<ILead | null> {
     return Lead.findById(id)
       .populate("customerId", "_id code name phone")
-      .populate("facebookPageId", "_id pageId pageName")
+      .populate("facebookPageId", "_id code name")
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
       .populate("categoryId", "_id code name")
@@ -280,6 +290,7 @@ export class LeadRepository {
         .populate("marketingEmployeeId", "_id employeeCode name")
         .populate("saleEmployeeId", "_id employeeCode name")
         .populate("comboId", "_id code name")
+        .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
         .skip(skip)
         .limit(limit)
@@ -562,6 +573,7 @@ export class LeadRepository {
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
       .populate("comboId", "_id code name")
+      .populate("facebookPageId", "_id code name")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);
@@ -583,6 +595,8 @@ export class LeadRepository {
       Lead.find(filter)
         .populate("marketingEmployeeId", "_id employeeCode name")
         .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("comboId", "_id code name")
+        .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
         .skip(skip)
         .limit(limit)
@@ -616,6 +630,8 @@ export class LeadRepository {
         .populate("marketingEmployeeId", "_id employeeCode name")
         .populate("saleEmployeeId", "_id employeeCode name")
         .populate("convertedOrderId", "_id orderCode totalAmount status")
+        .populate("comboId", "_id code name")
+        .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
         .skip(skip)
         .limit(limit)

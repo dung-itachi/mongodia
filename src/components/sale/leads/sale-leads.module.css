@@ -47,6 +47,10 @@
   font-size: 13px;
 }
 
+.mutedText {
+  color: #bfbfbf;
+}
+
 .priceText {
   font-weight: 700;
   color: #52c41a;

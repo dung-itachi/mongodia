@@ -49,6 +49,81 @@ export const EMPLOYEES = [
     bankAccountHolder: "",
   },
 
+  // Manager Sale (department-scoped) — RBAC Sprint
+  {
+    employeeCode: "EMP_MGR_SALE",
+
+    username: "manager_sale",
+
+    password: "123456",
+
+    fullName: "Trưởng phòng Sale",
+
+    email: "manager_sale@company.com",
+
+    phone: "",
+
+    avatar: "https://i.pravatar.cc/150?img=15",
+
+    roleCode: "MANAGER",
+
+    teamCode: null,
+
+    bankName: "",
+    bankAccountNumber: "",
+    bankAccountHolder: "",
+  },
+
+  // Manager MKT (department-scoped) — RBAC Sprint
+  {
+    employeeCode: "EMP_MGR_MKT",
+
+    username: "manager_mkt",
+
+    password: "123456",
+
+    fullName: "Trưởng phòng Marketing",
+
+    email: "manager_mkt@company.com",
+
+    phone: "",
+
+    avatar: "https://i.pravatar.cc/150?img=16",
+
+    roleCode: "MANAGER",
+
+    teamCode: null,
+
+    bankName: "",
+    bankAccountNumber: "",
+    bankAccountHolder: "",
+  },
+
+  // Manager Kho (department-scoped) — RBAC Sprint
+  {
+    employeeCode: "EMP_MGR_WH",
+
+    username: "manager_wh",
+
+    password: "123456",
+
+    fullName: "Trưởng phòng Kho",
+
+    email: "manager_wh@company.com",
+
+    phone: "",
+
+    avatar: "https://i.pravatar.cc/150?img=17",
+
+    roleCode: "MANAGER",
+
+    teamCode: null,
+
+    bankName: "",
+    bankAccountNumber: "",
+    bankAccountHolder: "",
+  },
+
   // Leader - Marketing
   {
     employeeCode: "EMP_LEADER_MKT",

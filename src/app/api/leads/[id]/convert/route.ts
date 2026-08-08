@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import { leadService } from "@/services/lead.service";
 import { getCurrentUser } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
+import type { OrderItem } from "@/types/variant";
 
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -57,8 +58,15 @@ export async function POST(
     await connectDB();
 
     const { id } = await params;
+    let orderItem: OrderItem;
+    try {
+      const body: unknown = await request.json();
+      orderItem = (body as { orderItem?: OrderItem }).orderItem as OrderItem;
+    } catch {
+      return errorResponse("Dữ liệu đơn hàng không hợp lệ");
+    }
 
-    const result = await leadService.convertLead(id, currentUser.employee?.toString() ?? "");
+    const result = await leadService.convertLead(id, currentUser.employee?._id?.toString() ?? "", orderItem);
 
     if (!result.success) {
       return errorResponse(result.error, 400);

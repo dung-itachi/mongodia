@@ -9,9 +9,9 @@
  * Status workflow with dropdown actions and Timeline from MongoDB.
  */
 
-import { use, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Row, Col, Table, message, Button, Dropdown, Space } from "antd";
+import { use, useState, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Row, Col, Table, message, Button, Dropdown, Space, Form, Input, Modal } from "antd";
 import type { TableColumnsType } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -20,7 +20,6 @@ import {
   ClockCircleOutlined,
   DownOutlined,
   CheckOutlined,
-  StopOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -34,9 +33,10 @@ import PermissionGate from "@/components/common/PermissionGate";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
 import LoadingOverlay from "@/components/common/overlay/LoadingOverlay";
 
-import { useOrder, useDeleteOrder, useChangeOrderStatus } from "@/hooks/useOrders";
-import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS, ORDER_SOURCE_LABELS } from "@/constants/orderStatus";
-import { getStatusActions, ORDER_STATUS_COLORS } from "@/configs/order-status.config";
+import { useOrder, useDeleteOrder, useChangeOrderStatus, useUpdateOrder } from "@/hooks/useOrders";
+import { useShipOrder, useReturnOrderStock } from "@/hooks/useWarehouseWorkflow";
+import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS, ORDER_SOURCE_LABELS, OrderStatus } from "@/constants/orderStatus";
+import { getStatusActions } from "@/configs/order-status.config";
 import type { OrderHistoryItem, OrderItem } from "@/types/order";
 
 interface PageProps {
@@ -46,9 +46,67 @@ interface PageProps {
 export default function OrderDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [editForm] = Form.useForm();
 
   // Fetch order
   const { order, loading, error, refetch } = useOrder(id);
+  const updateMutation = useUpdateOrder();
+  const editOpen = searchParams.get("mode") === "edit";
+  const [editLoading, setEditLoading] = useState(false);
+
+  useEffect(() => {
+    if (!order || !editOpen) return;
+
+    editForm.resetFields();
+    editForm.setFieldsValue({
+      customerName: order.customerName ?? "",
+      customerPhone: order.customerPhone ?? "",
+      note: order.note ?? "",
+      receiverName: order.shipping?.receiverName ?? "",
+      receiverPhone: order.shipping?.receiverPhone ?? "",
+      address: order.shipping?.address ?? "",
+      carrier: order.shipping?.carrier ?? "",
+      trackingNumber: order.shipping?.trackingNumber ?? "",
+      shippingFee: order.shipping?.shippingFee ?? order.summary?.shippingFee ?? 0,
+    });
+  }, [editForm, editOpen, order]);
+
+  const closeEditModal = useCallback(() => {
+    router.replace(`/orders/${id}`);
+  }, [id, router]);
+
+  const shipOrder = useShipOrder();
+  const returnOrder = useReturnOrderStock();
+  const [shipLoading, setShipLoading] = useState(false);
+
+  const handleShip = useCallback(async () => {
+    setShipLoading(true);
+    try {
+      await shipOrder.mutateAsync({ orderId: id, payload: {} });
+      message.success("Xuất kho cho đơn hàng thành công");
+      await refetch();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "Xuất kho thất bại");
+    } finally {
+      setShipLoading(false);
+    }
+  }, [id, shipOrder, refetch]);
+
+  const handleReturn = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/orders/${id}`);
+      const data = await response.json();
+      const items = (data?.data?.order?.orderItems ?? []) as Array<{ quantity: number; productName?: string; comboQuantity?: number; packageQuantity?: number; giftMode?: string; giftQuantity?: number }>;
+      const shipments = items.flatMap((item) => item.productName ? [{ itemType: "PRODUCT" as const, productId: data?.data?.order?.productId, quantity: item.quantity }] : []).filter((entry) => entry.quantity > 0);
+      if (!shipments.length) { message.warning("Đơn này chưa có dữ liệu xuất để hoàn"); return; }
+      await returnOrder.mutateAsync({ orderId: id, payload: { items: shipments, note: `Hoàn đơn ${data?.data?.order?.orderCode}` } });
+      message.success("Hoàn kho thành công");
+      await refetch();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "Hoàn kho thất bại");
+    }
+  }, [id, refetch, returnOrder]);
 
   // Delete mutation
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -59,6 +117,53 @@ export default function OrderDetailPage({ params }: PageProps) {
   const [statusTarget, setStatusTarget] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
   const statusMutation = useChangeOrderStatus();
+
+  const handleEditSave = useCallback(async () => {
+    const values = await editForm.validateFields();
+    const hasShippingDetails = [
+      values.receiverName,
+      values.receiverPhone,
+      values.address,
+      values.carrier,
+      values.trackingNumber,
+    ].some((value) => Boolean(value));
+
+    if (hasShippingDetails && (!values.receiverName?.trim() || !values.receiverPhone?.trim() || !values.address?.trim())) {
+      message.error("Vui lòng nhập đủ người nhận, số điện thoại và địa chỉ giao hàng");
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      await updateMutation.mutateAsync({
+        id,
+        data: {
+          customerName: values.customerName.trim(),
+          customerPhone: values.customerPhone?.trim() || undefined,
+          note: values.note?.trim() || undefined,
+          shipping: hasShippingDetails
+            ? {
+                receiverName: values.receiverName?.trim() || "",
+                receiverPhone: values.receiverPhone?.trim() || "",
+                address: values.address?.trim() || "",
+                carrier: values.carrier?.trim() || undefined,
+                trackingNumber: values.trackingNumber?.trim() || undefined,
+                shippingFee: Number(values.shippingFee ?? 0),
+                shippingFeeCurrency: order?.shipping?.shippingFeeCurrency ?? order?.currency ?? "VND",
+              }
+            : undefined,
+          summaryShippingFee: Number(values.shippingFee ?? 0),
+        },
+      });
+      message.success("Cập nhật đơn hàng thành công");
+      closeEditModal();
+      await refetch();
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : "Cập nhật đơn hàng thất bại");
+    } finally {
+      setEditLoading(false);
+    }
+  }, [closeEditModal, editForm, id, order, refetch, updateMutation]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -115,34 +220,48 @@ export default function OrderDetailPage({ params }: PageProps) {
     });
   }, []);
 
-  // Product table columns (Sprint 6.1)
   const productColumns: TableColumnsType<OrderItem> = [
     {
-      title: "SKU",
-      dataIndex: "sku",
-      key: "sku",
-      width: 120,
-      render: (value: string) => value || "-",
+      title: "Combo / chi tiết",
+      key: "combo",
+      render: (_: unknown, item: OrderItem) => {
+        const totalProducts = item.comboQuantity * item.packageQuantity;
+        const totalGifts = item.comboQuantity * item.giftQuantity;
+        const details = item.details ?? [];
+        const gifts = item.giftSelections ?? [];
+        return (
+          <Space direction="vertical" size={4} style={{ width: "100%" }}>
+            <strong>{item.comboName || item.productName}</strong>
+            <span style={{ color: "#8c8c8c" }}>
+              {item.comboQuantity} combo x {item.packageQuantity} SP = {totalProducts} SP
+            </span>
+            {details.map((detail, index) => {
+              const label = detail.attributes
+                .map((attribute) => attribute.valueName || attribute.valueId)
+                .join(" / ");
+              return <span key={`${detail.variantId ?? "product"}-${index}`}>- {label || item.productName} x {detail.quantity}</span>;
+            })}
+            {totalGifts > 0 && (
+              <>
+                <span>Quà: {totalGifts} - {item.giftMode === "CUSTOMER_SELECTED" ? "Khách chọn" : "Ngẫu nhiên"}</span>
+                {item.giftMode === "RANDOM" ? (
+                  <span style={{ color: "#8c8c8c" }}>Kho sẽ tự chọn {totalGifts} quà khi đóng hàng.</span>
+                ) : gifts.map((gift, index) => (
+                  <span key={`${gift.giftProductId}-${index}`}>- {gift.giftProductName || "Quà tặng"} x {gift.quantity}</span>
+                ))}
+              </>
+            )}
+          </Space>
+        );
+      },
     },
     {
-      title: "Tên sản phẩm",
-      dataIndex: "productName",
-      key: "productName",
-    },
-    {
-      title: "SL",
-      dataIndex: "quantity",
-      key: "quantity",
-      width: 80,
-      align: "center" as const,
-    },
-    {
-      title: "Đơn giá",
-      dataIndex: "unitPrice",
-      key: "unitPrice",
+      title: "Giá combo",
+      dataIndex: "sellingPrice",
+      key: "sellingPrice",
       width: 140,
       align: "right" as const,
-      render: (value: number) => formatCurrency(value),
+      render: (value: number, item: OrderItem) => formatCurrency(value ?? item.unitPrice),
     },
     {
       title: "Giảm giá",
@@ -158,9 +277,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       key: "subtotal",
       width: 150,
       align: "right" as const,
-      render: (value: number) => (
-        <span style={{ fontWeight: 600 }}>{formatCurrency(value)}</span>
-      ),
+      render: (value: number) => <span style={{ fontWeight: 600 }}>{formatCurrency(value)}</span>,
     },
   ];
 
@@ -298,6 +415,16 @@ export default function OrderDetailPage({ params }: PageProps) {
                   label="Xóa"
                   onClick={() => setDeleteId(id)}
                 />
+              )}
+            </PermissionGate>
+            <PermissionGate permission="warehouse.ship">
+              {order.status === OrderStatus.PACKING && (
+                <ActionButton type="primary" label="Xuất kho" onClick={handleShip} loading={shipLoading} />
+              )}
+            </PermissionGate>
+            <PermissionGate permission="warehouse.return">
+              {order.status === OrderStatus.RETURNED && (
+                <ActionButton type="secondary" label="Hoàn kho" onClick={handleReturn} loading={returnOrder.isPending} />
               )}
             </PermissionGate>
           </>
@@ -687,6 +814,7 @@ export default function OrderDetailPage({ params }: PageProps) {
             <Table
               dataSource={order.histories}
               columns={timelineColumns}
+              rowKey="_id"
               pagination={false}
               size="small"
             />
@@ -698,6 +826,57 @@ export default function OrderDetailPage({ params }: PageProps) {
           )}
         </CardSection>
       </div>
+
+      <Modal
+        open={editOpen}
+        title="Sửa đơn hàng"
+        okText="Lưu thay đổi"
+        cancelText="Hủy"
+        confirmLoading={editLoading}
+        onOk={() => void handleEditSave()}
+        onCancel={closeEditModal}
+        forceRender
+      >
+        <Form form={editForm} layout="vertical" preserve={false}>
+          <Form.Item
+            name="customerName"
+            label="Tên khách hàng"
+            rules={[{ required: true, whitespace: true, message: "Vui lòng nhập tên khách hàng" }]}
+          >
+            <Input maxLength={200} />
+          </Form.Item>
+          <Form.Item name="customerPhone" label="Số điện thoại">
+            <Input maxLength={20} />
+          </Form.Item>
+          <Form.Item name="receiverName" label="Người nhận">
+            <Input maxLength={200} />
+          </Form.Item>
+          <Form.Item name="receiverPhone" label="SĐT người nhận">
+            <Input maxLength={20} />
+          </Form.Item>
+          <Form.Item name="address" label="Địa chỉ giao hàng">
+            <Input.TextArea rows={2} maxLength={500} />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="carrier" label="Đơn vị vận chuyển">
+                <Input maxLength={100} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="trackingNumber" label="Mã vận đơn">
+                <Input maxLength={100} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="shippingFee" label="Phí vận chuyển">
+            <Input type="number" min={0} step={1000} />
+          </Form.Item>
+          <Form.Item name="note" label="Ghi chú">
+            <Input.TextArea rows={3} maxLength={1000} />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog

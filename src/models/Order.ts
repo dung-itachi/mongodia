@@ -53,22 +53,44 @@ export { REVENUE_UNLOCK_STATUSES };
 // Sub-document types
 // ==================================================
 
-/** Order Item - sản phẩm trong đơn hàng (Sprint 6.1) */
-export interface IOrderItem {
-  /** Product ID - key để Revenue Lock Engine so khớp */
-  productId?: Types.ObjectId;
-  /** SKU sản phẩm */
-  sku?: string;
-  /** Tên sản phẩm */
-  productName: string;
-  /** Số lượng */
+/** Variant attribute selected by Sale for one OrderItem detail. */
+export interface IOrderProductAttribute {
+  optionId: Types.ObjectId;
+  valueId: Types.ObjectId;
+}
+
+export interface IOrderVariantDetail {
+  variantId?: Types.ObjectId;
+  attributes: IOrderProductAttribute[];
   quantity: number;
-  /** Đơn giá */
-  unitPrice: number;
-  /** Giảm giá (số tiền) */
+}
+
+export interface IOrderGiftSelection {
+  giftProductId: Types.ObjectId;
+  giftProductName?: string;
+  quantity: number;
+}
+
+/** Order Item - one purchased Combo (Sprint 6.1 / 8.x). */
+export interface IOrderItem {
+  comboId?: Types.ObjectId;
+  productId?: Types.ObjectId;
+  comboName: string;
+  comboCode?: string;
+  comboQuantity: number;
+  packageQuantity: number;
+  giftQuantity: number;
+  sellingPrice: number;
   discount: number;
-  /** Thành tiền = (unitPrice * quantity) - discount */
   subtotal: number;
+  details: IOrderVariantDetail[];
+  giftMode: "RANDOM" | "CUSTOMER_SELECTED";
+  giftSelections: IOrderGiftSelection[];
+  /** Legacy fields retained for existing orders and consumers. */
+  sku?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
 }
 
 /** Payment details attached to an Order. */
@@ -367,13 +389,38 @@ const OrderSchema = new Schema<IOrder>(
       type: [
         new Schema<IOrderItem>(
           {
+            comboId: { type: Schema.Types.ObjectId, ref: "Combo" },
             productId: { type: Schema.Types.ObjectId, ref: "Product" },
-            sku: { type: String, default: "" },
-            productName: { type: String, required: true },
-            quantity: { type: Number, required: true, min: 1, default: 1 },
-            unitPrice: { type: Number, required: true, min: 0, default: 0 },
+            comboName: { type: String, default: "" },
+            comboCode: { type: String, default: "" },
+            comboQuantity: { type: Number, min: 1, default: 1 },
+            packageQuantity: { type: Number, min: 1, default: 1 },
+            giftQuantity: { type: Number, min: 0, default: 0 },
+            sellingPrice: { type: Number, min: 0, default: 0 },
             discount: { type: Number, default: 0, min: 0 },
-            subtotal: { type: Number, required: true, min: 0, default: 0 },
+            subtotal: { type: Number, min: 0, default: 0 },
+            details: {
+              type: [{
+                variantId: { type: Schema.Types.ObjectId, ref: "ProductVariant" },
+                attributes: [{
+                  optionId: { type: Schema.Types.ObjectId, ref: "VariantOption", required: true },
+                  valueId: { type: Schema.Types.ObjectId, ref: "VariantValue", required: true },
+                }],
+                quantity: { type: Number, required: true, min: 1 },
+              }],
+              default: [],
+            },
+            giftMode: { type: String, enum: ["RANDOM", "CUSTOMER_SELECTED"], default: "RANDOM" },
+            giftSelections: [{
+              giftProductId: { type: Schema.Types.ObjectId, ref: "Gift", required: true },
+              giftProductName: { type: String, default: "" },
+              quantity: { type: Number, required: true, min: 1 },
+            }],
+            // Legacy fields retained for old order documents.
+            sku: { type: String, default: "" },
+            productName: { type: String, default: "" },
+            quantity: { type: Number, min: 1, default: 1 },
+            unitPrice: { type: Number, min: 0, default: 0 },
           },
           { _id: false }
         ),
@@ -482,6 +529,8 @@ OrderSchema.index({ warehouseId: 1, isActive: 1 });
 // Phục vụ Dashboard: lọc theo orderType + status.
 OrderSchema.index({ orderType: 1, status: 1, createdAt: -1 });
 OrderSchema.index({ orderSource: 1, createdAt: -1 });
+// A lead can be converted to exactly one order, including concurrent requests.
+OrderSchema.index({ leadId: 1 }, { unique: true, sparse: true });
 
 export const Order =
   mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema);

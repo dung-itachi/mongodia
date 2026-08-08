@@ -35,6 +35,12 @@ export type NavGroup = {
   label: string;
   /** Inline SVG for the group header. */
   iconSvg: string;
+  /**
+   * Optional root href for the group.
+   * If provided, clicking the group label navigates here (in addition to
+   * expanding/collapsing the group). Sprint 8.6 — group "Đơn hàng" → /orders.
+   */
+  href?: string;
   items: NavItem[];
 };
 
@@ -71,6 +77,7 @@ function buildNavGroups(): NavGroup[] {
         key: `ng-${groupDef.key.toLowerCase()}`,
         label: groupDef.label,
         iconSvg: groupDef.icon,
+        href: groupDef.href,
         items: modulesInGroup.map(moduleToNavItem),
       });
     }

@@ -1,12 +1,14 @@
-/**
- * Gift Table Component (Sprint 8.x - Gift Management)
- */
-
 "use client";
 
 import { useCallback } from "react";
-import { Switch, Popconfirm, Tag } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Button, Popconfirm, Switch, Tag, Tooltip } from "antd";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  HistoryOutlined,
+  PlusOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
 import type { GiftListItem } from "@/hooks/useGifts";
@@ -17,6 +19,9 @@ interface GiftTableProps {
   onEdit: (item: GiftListItem) => void;
   onDelete: (item: GiftListItem) => void;
   onToggleActive?: (item: GiftListItem) => void;
+  onImport: (item: GiftListItem) => void;
+  onAdjust: (item: GiftListItem) => void;
+  onHistory: (item: GiftListItem) => void;
 }
 
 export default function GiftTable({
@@ -25,11 +30,12 @@ export default function GiftTable({
   onEdit,
   onDelete,
   onToggleActive,
+  onImport,
+  onAdjust,
+  onHistory,
 }: GiftTableProps) {
   const handleToggleActive = useCallback(
-    (item: GiftListItem) => {
-      onToggleActive?.(item);
-    },
+    (item: GiftListItem) => onToggleActive?.(item),
     [onToggleActive]
   );
 
@@ -39,15 +45,9 @@ export default function GiftTable({
       title: "STT",
       width: 60,
       align: "center",
-      render: (_: unknown, record: Record<string, unknown>, index: number) => {
-        return <span>{index + 1}</span>;
-      },
+      render: (_: unknown, __: Record<string, unknown>, index: number) => <span>{index + 1}</span>,
     },
-    {
-      key: "name",
-      title: "Tên quà",
-      dataIndex: "name",
-    },
+    { key: "name", title: "Tên quà", dataIndex: "name" },
     {
       key: "stockQuantity",
       title: "Tồn kho",
@@ -55,9 +55,9 @@ export default function GiftTable({
       width: 120,
       align: "right",
       render: (value: unknown) => {
-        const n = Number(value ?? 0);
-        const color = n <= 10 ? "red" : n <= 30 ? "orange" : "green";
-        return <Tag color={color}>{n.toLocaleString("vi-VN")}</Tag>;
+        const quantity = Number(value ?? 0);
+        const color = quantity <= 10 ? "red" : quantity <= 30 ? "orange" : "green";
+        return <Tag color={color}>{quantity.toLocaleString("vi-VN")}</Tag>;
       },
     },
     {
@@ -66,30 +66,32 @@ export default function GiftTable({
       dataIndex: "isActive",
       width: 120,
       align: "center",
-      render: (value: unknown, record: Record<string, unknown>) => {
+      render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as GiftListItem;
-        return (
-          <Switch
-            checked={item.isActive !== false}
-            onChange={() => handleToggleActive(item)}
-            size="small"
-          />
-        );
+        return <Switch checked={item.isActive !== false} onChange={() => handleToggleActive(item)} size="small" />;
       },
     },
     {
       key: "actions",
       title: "Thao tác",
-      width: 120,
+      width: 230,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as GiftListItem;
         return (
-          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <EditOutlined
-              style={{ color: "#1890ff", cursor: "pointer", fontSize: 16 }}
-              onClick={() => onEdit(item)}
-            />
+          <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+            <Tooltip title="Nhập tồn">
+              <Button type="text" icon={<PlusOutlined />} onClick={() => onImport(item)} />
+            </Tooltip>
+            <Tooltip title="Điều chỉnh tồn">
+              <Button type="text" icon={<SettingOutlined />} onClick={() => onAdjust(item)} />
+            </Tooltip>
+            <Tooltip title="Lịch sử tồn">
+              <Button type="text" icon={<HistoryOutlined />} onClick={() => onHistory(item)} />
+            </Tooltip>
+            <Tooltip title="Sửa thông tin">
+              <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(item)} />
+            </Tooltip>
             <Popconfirm
               title="Xóa quà tặng?"
               description="Quà tặng sẽ bị vô hiệu hóa."
@@ -98,9 +100,7 @@ export default function GiftTable({
               cancelText="Hủy"
               okButtonProps={{ danger: true }}
             >
-              <DeleteOutlined
-                style={{ color: "#ff4d4f", cursor: "pointer", fontSize: 16 }}
-              />
+              <Button type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </div>
         );
@@ -116,7 +116,7 @@ export default function GiftTable({
       rowKey="_id"
       pagination={false}
       emptyText="Chưa có quà tặng nào"
-      scroll={{ y: 500 }}
+      scroll={{ x: 850, y: 500 }}
     />
   );
 }

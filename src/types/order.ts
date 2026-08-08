@@ -7,35 +7,51 @@
  */
 
 import type { OrderStatus, OrderType, OrderSource, RevenueLockReason } from "@/constants/orderStatus";
+import type { GiftSelection, OrderGiftMode, ProductVariantSelection } from "@/types/variant";
 
 // ============================================================================
 // Order Item (Sprint 6.1)
 // ============================================================================
 
 export interface OrderItem {
-  /** Product ID - key để Revenue Lock Engine so khớp */
+  comboId?: string;
   productId?: string;
-  /** SKU sản phẩm */
-  sku?: string;
-  /** Tên sản phẩm */
-  productName: string;
-  /** Số lượng */
-  quantity: number;
-  /** Đơn giá */
-  unitPrice: number;
-  /** Giảm giá (số tiền) */
+  comboName: string;
+  comboCode?: string;
+  comboQuantity: number;
+  packageQuantity: number;
+  giftQuantity: number;
+  sellingPrice: number;
   discount: number;
-  /** Thành tiền = (unitPrice * quantity) - discount */
   subtotal: number;
+  details: ProductVariantSelection[];
+  giftMode: OrderGiftMode;
+  giftSelections: GiftSelection[];
+  /** Legacy fields retained for existing orders and consumers. */
+  sku?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
 }
 
 export interface CreateOrderItemInput {
+  comboId?: string;
   productId?: string;
+  comboName?: string;
+  comboCode?: string;
+  comboQuantity?: number;
+  packageQuantity?: number;
+  giftQuantity?: number;
+  sellingPrice?: number;
+  discount?: number;
+  subtotal?: number;
+  details?: ProductVariantSelection[];
+  giftMode?: OrderGiftMode;
+  giftSelections?: GiftSelection[];
   sku?: string;
-  productName: string;
+  productName?: string;
   quantity?: number;
   unitPrice?: number;
-  discount?: number;
 }
 
 // ============================================================================

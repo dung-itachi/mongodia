@@ -40,6 +40,17 @@ export interface Lead {
     employeeCode: string;
     name: string;
   };
+  /** Populated FacebookPage reference (Sprint 8.6). */
+  facebookPage?: {
+    _id: string;
+    code: string;
+    name: string;
+  };
+  combo?: {
+    _id: string;
+    code: string;
+    name: string;
+  };
   assignmentType?: "AUTO" | "MANUAL";
   assignedAt?: Date;
   categoryId?: string;

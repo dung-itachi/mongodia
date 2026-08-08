@@ -192,12 +192,20 @@ export const MODULES: ModuleDefinition[] = [
 
   // Accounts Group
   {
-    id: "employees",
+    id: "accounts",
     title: "QL tài khoản",
-    route: "/employees",
-    permission: "employee.view",
+    route: "/accounts",
+    permission: "account.view",
     group: "ACCOUNTS",
     icon: `<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>`,
+  },
+  {
+    id: "my-account",
+    title: "Tài khoản của tôi",
+    route: "/account/profile",
+    permission: "self-account.view",
+    group: "ACCOUNTS",
+    icon: `<circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>`,
   },
 
   // Warehouse Group
@@ -209,6 +217,38 @@ export const MODULES: ModuleDefinition[] = [
     group: "WAREHOUSE",
     icon: `<path d="M21 8v13H3V8"/>`,
   },
+  {
+    id: "warehouse-inventory",
+    title: "Tồn kho",
+    route: "/warehouse/inventory",
+    permission: "inventory.view",
+    group: "WAREHOUSE",
+    icon: `<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>`,
+  },
+  {
+    id: "warehouse-transfers",
+    title: "Chuyển kho",
+    route: "/warehouse/transfers",
+    permission: "warehouse.transfer",
+    group: "WAREHOUSE",
+    icon: `<path d="M3 7h13l-3-3M21 17H8l3 3"/>`,
+  },
+  {
+    id: "warehouse-receipts",
+    title: "Nhập kho",
+    route: "/warehouse/receipts",
+    permission: "warehouse.import",
+    group: "WAREHOUSE",
+    icon: `<path d="M12 3v12M5 10l7 7 7-7M5 21h14"/>`,
+  },
+  {
+    id: "warehouse-movements",
+    title: "Lịch sử kho",
+    route: "/warehouse/movements",
+    permission: "inventory.view",
+    group: "WAREHOUSE",
+    icon: `<path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/>`,
+  },
 ];
 
 /**
@@ -218,6 +258,16 @@ export type NavGroupDefinition = {
   key: NavGroupKey;
   label: string;
   icon: ModuleIcon;
+  /**
+   * Optional root href for the group.
+   * When set, the group header label becomes a link that navigates here
+   * while still expanding the group. The chevron keeps its own toggle
+   * behavior (hybrid interaction).
+   *
+   * Example: ORDERS → "/orders" means clicking "Đơn hàng" goes to all orders.
+   * Sprint 8.6.
+   */
+  href?: string;
 };
 
 /**
@@ -248,6 +298,7 @@ export const NAV_GROUPS: NavGroupDefinition[] = [
     key: "ORDERS",
     label: "Đơn hàng",
     icon: `<rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/>`,
+    href: "/orders",
   },
   {
     key: "PRODUCTS",

@@ -40,6 +40,12 @@ export interface MarketingLead {
     code: string;
     name: string;
   };
+  /** Facebook Page (Sprint 8.6). */
+  facebookPage?: {
+    _id: string;
+    code: string;
+    name: string;
+  };
   note?: string;
   isDuplicate: boolean;
   /** Lead đã được convert thành Order (Sprint 5.7). */
@@ -72,6 +78,8 @@ export interface CreateMarketingLeadRequest {
   email?: string;
   source: LeadSource;
   note?: string;
+  /** Facebook Page ID (Sprint 8.6). */
+  facebookPageId?: string;
 }
 
 /**

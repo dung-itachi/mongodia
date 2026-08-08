@@ -1,16 +1,6 @@
-/**
- * Gift Hooks (Sprint 8.x - Gift Management)
- *
- * Hooks for CRUD operations on Gifts.
- */
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { message } from "antd";
 import api from "@/lib/axios";
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface GiftListItem {
   _id: string;
@@ -21,8 +11,6 @@ export interface GiftListItem {
   updatedAt?: string;
 }
 
-export interface GiftDetail extends GiftListItem {}
-
 export interface CreateGiftInput {
   name: string;
   stockQuantity?: number;
@@ -31,8 +19,19 @@ export interface CreateGiftInput {
 
 export interface UpdateGiftInput {
   name: string;
-  stockQuantity: number;
   isActive: boolean;
+}
+
+export interface GiftInventoryHistoryItem {
+  _id: string;
+  giftId: string;
+  type: "INITIAL" | "IMPORT" | "ADJUSTMENT";
+  quantityBefore: number;
+  quantityChange: number;
+  quantityAfter: number;
+  createdAt: string;
+  createdBy: { _id: string; employeeCode?: string; fullName?: string };
+  note: string;
 }
 
 interface GiftListResponse {
@@ -42,9 +41,14 @@ interface GiftListResponse {
   pageSize: number;
 }
 
-// ============================================================================
-// API Functions
-// ============================================================================
+interface GiftInventoryHistoryResponse {
+  items: GiftInventoryHistoryItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+type ApiResponse<T> = { success: boolean; data: T; message?: string };
 
 async function fetchGiftList(params?: {
   search?: string;
@@ -56,63 +60,58 @@ async function fetchGiftList(params?: {
     query.set("isActive", String(params.isActive));
   }
   const qs = query.toString();
-
-  const response = await api.get<{ success: boolean; data: GiftListResponse }>(
+  const response = await api.get<ApiResponse<GiftListResponse>>(
     `/api/gifts${qs ? `?${qs}` : ""}`
   );
-  if (!response.data.success) {
-    throw new Error("Failed to fetch gifts");
-  }
+  if (!response.data.success) throw new Error("Không thể tải danh sách quà tặng");
   return response.data.data;
 }
 
-async function fetchGiftDetail(id: string): Promise<GiftDetail> {
-  const response = await api.get<{ success: boolean; data: GiftDetail }>(
-    `/api/gifts/${id}`
-  );
-  if (!response.data.success) {
-    throw new Error("Failed to fetch gift");
-  }
+async function createGift(input: CreateGiftInput): Promise<GiftListItem> {
+  const response = await api.post<ApiResponse<GiftListItem>>("/api/gifts", input);
+  if (!response.data.success) throw new Error(response.data.message ?? "Không thể tạo quà tặng");
   return response.data.data;
 }
 
-async function createGift(input: CreateGiftInput): Promise<GiftDetail> {
-  const response = await api.post<{
-    success: boolean;
-    data: GiftDetail;
-    message?: string;
-  }>("/api/gifts", input);
-  if (!response.data.success) {
-    throw new Error(response.data.message ?? "Failed to create gift");
-  }
-  return response.data.data;
-}
-
-async function updateGift(id: string, input: UpdateGiftInput): Promise<GiftDetail> {
-  const response = await api.put<{
-    success: boolean;
-    data: GiftDetail;
-    message?: string;
-  }>(`/api/gifts/${id}`, input);
-  if (!response.data.success) {
-    throw new Error(response.data.message ?? "Failed to update gift");
-  }
+async function updateGift(id: string, input: UpdateGiftInput): Promise<GiftListItem> {
+  const response = await api.put<ApiResponse<GiftListItem>>(`/api/gifts/${id}`, input);
+  if (!response.data.success) throw new Error(response.data.message ?? "Không thể cập nhật quà tặng");
   return response.data.data;
 }
 
 async function deleteGift(id: string): Promise<void> {
-  const response = await api.delete<{
-    success: boolean;
-    message?: string;
-  }>(`/api/gifts/${id}`);
-  if (!response.data.success) {
-    throw new Error(response.data.message ?? "Failed to delete gift");
-  }
+  const response = await api.delete<ApiResponse<null>>(`/api/gifts/${id}`);
+  if (!response.data.success) throw new Error(response.data.message ?? "Không thể xóa quà tặng");
 }
 
-// ============================================================================
-// Hooks
-// ============================================================================
+async function fetchGiftInventoryHistory(id: string): Promise<GiftInventoryHistoryResponse> {
+  const response = await api.get<ApiResponse<GiftInventoryHistoryResponse>>(
+    `/api/gifts/${id}/inventory`
+  );
+  if (!response.data.success) throw new Error("Không thể tải lịch sử tồn quà tặng");
+  return response.data.data;
+}
+
+async function changeGiftInventory(
+  id: string,
+  input:
+    | { operation: "IMPORT"; quantity: number; note: string }
+    | { operation: "ADJUSTMENT"; direction: "INCREASE" | "DECREASE"; quantity: number; note: string }
+): Promise<GiftListItem> {
+  const response = await api.post<ApiResponse<{ gift: GiftListItem }>>(
+    `/api/gifts/${id}/inventory`,
+    input
+  );
+  if (!response.data.success) throw new Error(response.data.message ?? "Không thể thay đổi tồn quà tặng");
+  return response.data.data.gift;
+}
+
+function invalidateGiftData(queryClient: ReturnType<typeof useQueryClient>, id?: string) {
+  void queryClient.invalidateQueries({ queryKey: ["gift-list"] });
+  if (id) {
+    void queryClient.invalidateQueries({ queryKey: ["gift-inventory-history", id] });
+  }
+}
 
 export function useGiftList(params?: { search?: string; isActive?: boolean | null }) {
   return useQuery({
@@ -122,11 +121,11 @@ export function useGiftList(params?: { search?: string; isActive?: boolean | nul
   });
 }
 
-export function useGiftDetail(id: string | null) {
+export function useGiftInventoryHistory(id: string | null) {
   return useQuery({
-    queryKey: ["gift-detail", id],
-    queryFn: () => fetchGiftDetail(id!),
-    enabled: !!id,
+    queryKey: ["gift-inventory-history", id],
+    queryFn: () => fetchGiftInventoryHistory(id!),
+    enabled: Boolean(id),
     staleTime: 0,
   });
 }
@@ -136,30 +135,22 @@ export function useCreateGift() {
   return useMutation({
     mutationFn: createGift,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["gift-list"] });
+      invalidateGiftData(queryClient);
       void message.success("Tạo quà tặng thành công");
     },
-    onError: (error: Error) => {
-      void message.error(error.message);
-    },
+    onError: (error: Error) => void message.error(error.message),
   });
 }
 
 export function useUpdateGift() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateGiftInput }) =>
-      updateGift(id, input),
-    onSuccess: (_, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ["gift-list"] });
-      void queryClient.invalidateQueries({
-        queryKey: ["gift-detail", variables.id],
-      });
+    mutationFn: ({ id, input }: { id: string; input: UpdateGiftInput }) => updateGift(id, input),
+    onSuccess: () => {
+      invalidateGiftData(queryClient);
       void message.success("Cập nhật quà tặng thành công");
     },
-    onError: (error: Error) => {
-      void message.error(error.message);
-    },
+    onError: (error: Error) => void message.error(error.message),
   });
 }
 
@@ -168,11 +159,38 @@ export function useDeleteGift() {
   return useMutation({
     mutationFn: deleteGift,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["gift-list"] });
+      invalidateGiftData(queryClient);
       void message.success("Xóa quà tặng thành công");
     },
-    onError: (error: Error) => {
-      void message.error(error.message);
+    onError: (error: Error) => void message.error(error.message),
+  });
+}
+
+export function useChangeGiftInventory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input:
+        | { operation: "IMPORT"; quantity: number; note: string }
+        | {
+            operation: "ADJUSTMENT";
+            direction: "INCREASE" | "DECREASE";
+            quantity: number;
+            note: string;
+          };
+    }) => changeGiftInventory(id, input),
+    onSuccess: (_, variables) => {
+      invalidateGiftData(queryClient, variables.id);
+      void message.success(
+        variables.input.operation === "IMPORT"
+          ? "Nhập tồn quà tặng thành công"
+          : "Điều chỉnh tồn quà tặng thành công"
+      );
     },
+    onError: (error: Error) => void message.error(error.message),
   });
 }

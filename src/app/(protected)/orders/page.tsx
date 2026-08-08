@@ -11,7 +11,7 @@
 
 import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { message, Dropdown } from "antd";
+import { message, Dropdown, Button } from "antd";
 import {
   PlusOutlined,
   EyeOutlined,
@@ -99,6 +99,16 @@ function OrdersPageInner() {
     setPage(1);
   }, []);
 
+  const getOrderItemTotals = useCallback((order: OrderListItem) => {
+    const items = order.orderItems ?? [];
+    return {
+      comboName: items.map((item) => item.comboName || item.productName).filter(Boolean).join(", ") || order.combo?.name || order.product?.name || "-",
+      comboQuantity: items.reduce((sum, item) => sum + (item.comboQuantity ?? item.quantity ?? 0), 0) || order.quantity,
+      productQuantity: items.reduce((sum, item) => sum + item.comboQuantity * item.packageQuantity, 0),
+      giftQuantity: items.reduce((sum, item) => sum + item.comboQuantity * item.giftQuantity, 0),
+    };
+  }, []);
+
   // Table columns
   const columns = useMemo(() => [
     {
@@ -130,6 +140,33 @@ function OrdersPageInner() {
           ) : null}
         </div>
       ),
+    },
+    {
+      key: "combo",
+      title: "Combo",
+      width: 200,
+      render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).comboName,
+    },
+    {
+      key: "comboQuantity",
+      title: "SL combo",
+      width: 95,
+      align: "center" as const,
+      render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).comboQuantity,
+    },
+    {
+      key: "totalProducts",
+      title: "Tổng SP",
+      width: 90,
+      align: "center" as const,
+      render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).productQuantity || "-",
+    },
+    {
+      key: "totalGifts",
+      title: "Tổng quà",
+      width: 90,
+      align: "center" as const,
+      render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).giftQuantity || "-",
     },
     {
       key: "saleEmployee",
@@ -197,6 +234,7 @@ function OrdersPageInner() {
         return (
           <Dropdown
             trigger={["click"]}
+            getPopupContainer={() => document.body}
             menu={{
               items: [
                 {
@@ -224,16 +262,17 @@ function OrdersPageInner() {
               ],
             }}
           >
-            <ActionButton
-              type="ghost"
+            <Button
+              type="text"
               icon={<MoreOutlined />}
               size="small"
+              aria-label="Thao tác đơn hàng"
             />
           </Dropdown>
         );
       },
     },
-  ], [router, orders]);
+  ], [router, orders, getOrderItemTotals]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -374,7 +413,11 @@ function OrdersPageInner() {
             loading={loading}
             pagination={pagination}
             rowKey="_id"
-            scroll={{ x: 1000 }}
+            scroll={{ x: 1450 }}
+            onRow={(record) => ({
+              onClick: () => router.push(`/orders/${record._id as string}`),
+              style: { cursor: "pointer" },
+            })}
           />
         )}
       </div>

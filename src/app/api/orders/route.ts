@@ -24,6 +24,8 @@ import { mapOrderList } from "@/mappers/order.mapper";
 
 import { success, error as errorResponse } from "@/utils/response";
 import { createOrderSchema } from "@/utils/validator";
+import { saleOrderService } from "@/services/sale-order.service";
+import type { OrderItem } from "@/types/variant";
 
 import { resolveCustomerRevenue } from "@/services/order/revenueEngine.service";
 import {
@@ -206,6 +208,20 @@ export async function POST(request: Request) {
 
     const data = parsedBody.data;
 
+    let validatedOrderItems: Awaited<ReturnType<typeof saleOrderService.validateItem>>[] = [];
+    if (data.orderItems?.length) {
+      try {
+        validatedOrderItems = await Promise.all(
+          data.orderItems.map((item) => saleOrderService.validateItem(item as OrderItem))
+        );
+      } catch (validationError) {
+        return errorResponse(
+          validationError instanceof Error ? validationError.message : "Thông tin combo không hợp lệ",
+          400
+        );
+      }
+    }
+
     // ---- Reference existence checks ------------------------------------
     const [customer, lead, product, productVariant, combo, warehouse, marketing, sale] =
       await Promise.all([
@@ -263,7 +279,9 @@ export async function POST(request: Request) {
           comboSnapshot: undefined,
           quantity: data.quantity,
           unitPrice: data.unitPrice,
-          totalAmount: data.totalAmount,
+          totalAmount: validatedOrderItems.length > 0
+            ? validatedOrderItems.reduce((sum, item) => sum + item.subtotal, 0) + (data.shipping?.shippingFee ?? 0)
+            : data.totalAmount,
           currency: data.currency || "VND",
           estimatedWeight: data.estimatedWeight || undefined,
           actualWeight: data.actualWeight || undefined,
@@ -274,6 +292,18 @@ export async function POST(request: Request) {
           isPrepaid: data.isPrepaid ?? false,
           orderType,
           orderSource,
+          orderItems: validatedOrderItems,
+          summary: validatedOrderItems.length > 0
+            ? {
+                subtotal: validatedOrderItems.reduce((sum, item) => sum + item.subtotal, 0),
+                discount: validatedOrderItems.reduce((sum, item) => sum + item.discount, 0),
+                shippingFee: data.shipping?.shippingFee ?? 0,
+                grandTotal:
+                  validatedOrderItems.reduce((sum, item) => sum + item.subtotal, 0) +
+                  (data.shipping?.shippingFee ?? 0),
+                currency: data.currency || "VND",
+              }
+            : undefined,
           payments: (data.payments ?? []).map((p) => ({
             method: p.method,
             amount: p.amount,
@@ -404,6 +434,8 @@ export async function POST(request: Request) {
       .populate("productId", "_id code name")
       .populate("productVariantId", "_id sku")
       .populate("comboId", "_id code name")
+      .populate("orderItems.details.attributes.optionId", "_id name")
+      .populate("orderItems.details.attributes.valueId", "_id name")
       .populate("warehouseId", "_id code name")
       .populate("marketingEmployeeId", "_id employeeCode fullName")
       .populate("saleEmployeeId", "_id employeeCode fullName")

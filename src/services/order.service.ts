@@ -41,6 +41,7 @@ import Customer, { ICustomer } from "@/models/Customer";
 // Sprint 6.3: Warehouse Integration
 import { warehouseService } from "@/services/warehouse.service";
 
+import type { OrderItem as SaleOrderItem } from "@/types/variant";
 import type {
   OrderFilter,
   CreateOrderInput,
@@ -70,6 +71,7 @@ export interface CreateFromLeadData {
   marketingEmployeeId?: string;
   saleEmployeeId?: string;
   note?: string;
+  orderItem?: SaleOrderItem;
 }
 
 export interface CreateCustomerFromLeadData {
@@ -180,31 +182,43 @@ export class OrderService {
    * Process order items from input (Sprint 6.1)
    * Calculate subtotal for each item
    */
-  processOrderItems(
-    orderItems: CreateOrderItemInput[]
-  ): Array<{
-    productId?: mongoose.Types.ObjectId;
-    sku: string;
-    productName: string;
-    quantity: number;
-    unitPrice: number;
-    discount: number;
-    subtotal: number;
-  }> {
+  processOrderItems(orderItems: CreateOrderItemInput[]): Array<Record<string, unknown>> {
     return orderItems.map((item) => {
-      const quantity = item.quantity ?? 1;
-      const unitPrice = item.unitPrice ?? 0;
+      const comboQuantity = item.comboQuantity ?? item.quantity ?? 1;
+      const packageQuantity = item.packageQuantity ?? 1;
+      const sellingPrice = item.sellingPrice ?? item.unitPrice ?? 0;
       const discount = item.discount ?? 0;
-      const subtotal = Math.max(0, unitPrice * quantity - discount);
+      const subtotal = item.subtotal ?? Math.max(0, sellingPrice * comboQuantity - discount);
 
       return {
+        comboId: item.comboId ? new mongoose.Types.ObjectId(item.comboId) : undefined,
         productId: item.productId ? new mongoose.Types.ObjectId(item.productId) : undefined,
-        sku: item.sku ?? "",
-        productName: item.productName,
-        quantity,
-        unitPrice,
+        comboName: item.comboName ?? item.productName ?? "",
+        comboCode: item.comboCode ?? "",
+        comboQuantity,
+        packageQuantity,
+        giftQuantity: item.giftQuantity ?? 0,
+        sellingPrice,
         discount,
         subtotal,
+        details: (item.details ?? []).map((detail) => ({
+          variantId: detail.variantId ? new mongoose.Types.ObjectId(detail.variantId) : undefined,
+          attributes: detail.attributes.map((attribute) => ({
+            optionId: new mongoose.Types.ObjectId(attribute.optionId),
+            valueId: new mongoose.Types.ObjectId(attribute.valueId),
+          })),
+          quantity: detail.quantity,
+        })),
+        giftMode: item.giftMode ?? "RANDOM",
+        giftSelections: (item.giftSelections ?? []).map((gift) => ({
+          giftProductId: new mongoose.Types.ObjectId(gift.giftProductId),
+          giftProductName: gift.giftProductName ?? "",
+          quantity: gift.quantity,
+        })),
+        sku: item.sku ?? "",
+        productName: item.productName ?? item.comboName ?? "",
+        quantity: comboQuantity,
+        unitPrice: sellingPrice,
       };
     });
   }
@@ -354,7 +368,11 @@ export class OrderService {
 
     // Build summary (Sprint 6.1)
     const summary = this.buildOrderSummary(
-      processedOrderItems,
+      processedOrderItems.map((item) => ({
+        unitPrice: Number(item.sellingPrice ?? item.unitPrice ?? 0),
+        quantity: Number(item.comboQuantity ?? item.quantity ?? 1),
+        discount: Number(item.discount ?? 0),
+      })),
       0, // No order-level discount on create
       data.shipping?.shippingFee ?? 0,
       currency
@@ -456,7 +474,16 @@ export class OrderService {
       const currency = (data.currency ?? existingOrder.currency ?? "VND") as "VND" | "MNT" | "USD";
 
       // Recalculate summary
-      const summary = this.buildOrderSummary(processedOrderItems, orderDiscount, shippingFee, currency);
+      const summary = this.buildOrderSummary(
+        processedOrderItems.map((item) => ({
+          unitPrice: Number(item.sellingPrice ?? item.unitPrice ?? 0),
+          quantity: Number(item.comboQuantity ?? item.quantity ?? 1),
+          discount: Number(item.discount ?? 0),
+        })),
+        orderDiscount,
+        shippingFee,
+        currency
+      );
       updateData.summary = summary;
       updateData.totalAmount = summary.grandTotal;
     } else if (data.summaryDiscount !== undefined || data.summaryShippingFee !== undefined) {
@@ -718,6 +745,45 @@ export class OrderService {
           : undefined,
         orderSource: OrderSource.MANUAL,
         note: data.note,
+        summary: data.orderItem
+          ? {
+              subtotal: data.orderItem.subtotal,
+              discount: data.orderItem.discount,
+              shippingFee: 0,
+              grandTotal: data.orderItem.subtotal,
+              currency: data.currency,
+            }
+          : undefined,
+        orderItems: data.orderItem ? [{
+          comboId: new mongoose.Types.ObjectId(data.orderItem.comboId),
+          productId: new mongoose.Types.ObjectId(data.orderItem.productId),
+          comboName: data.orderItem.comboName,
+          comboCode: data.orderItem.comboCode,
+          comboQuantity: data.orderItem.comboQuantity,
+          packageQuantity: data.orderItem.packageQuantity,
+          giftQuantity: data.orderItem.giftQuantity,
+          sellingPrice: data.orderItem.sellingPrice,
+          discount: data.orderItem.discount,
+          subtotal: data.orderItem.subtotal,
+          giftMode: data.orderItem.giftMode,
+          giftSelections: data.orderItem.giftSelections.map((selection) => ({
+            giftProductId: new mongoose.Types.ObjectId(selection.giftProductId),
+            giftProductName: selection.giftProductName,
+            quantity: selection.quantity,
+          })),
+          details: data.orderItem.details.map((detail) => ({
+            quantity: detail.quantity,
+            variantId: detail.variantId ? new mongoose.Types.ObjectId(detail.variantId) : undefined,
+            attributes: detail.attributes.map((attribute) => ({
+              optionId: new mongoose.Types.ObjectId(attribute.optionId),
+              valueId: new mongoose.Types.ObjectId(attribute.valueId),
+            })),
+          })),
+          sku: "",
+          productName: data.orderItem.comboName,
+          quantity: data.orderItem.comboQuantity,
+          unitPrice: data.orderItem.sellingPrice,
+        }] : [],
       },
       session
     );

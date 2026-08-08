@@ -27,6 +27,8 @@ export { default as File } from "./File";
 
 export { default as Gift } from "./Gift";
 
+export { default as GiftInventoryHistory } from "./GiftInventoryHistory";
+
 export { default as Inventory } from "./Inventory";
 
 export { default as InventoryAdjustment } from "./InventoryAdjustment";
@@ -76,3 +78,7 @@ export { default as VariantOption } from "./VariantOption";
 export { default as VariantValue } from "./VariantValue";
 
 export { default as Warehouse } from "./Warehouse";
+export { default as WarehouseInventory } from "./WarehouseInventory";
+export { default as WarehouseReceipt } from "./WarehouseReceipt";
+export { default as WarehouseTransfer } from "./WarehouseTransfer";
+export { default as WarehouseStockMovement } from "./WarehouseStockMovement";

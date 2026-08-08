@@ -41,17 +41,17 @@ export interface ProductItem {
 }
 
 /**
- * Combo from Combo API
- * Note: product field is populated from productId
+ * Combo từ Combo API
+ * Sprint 8.x: packageQuantity thay cho packageSize, bỏ comboItems, bỏ category riêng.
  */
 export interface ComboItem {
   _id: string;
   code: string;
   name: string;
   product: ProductItem | string;
-  category: CategoryItem | string;
+  packageQuantity: number;
   sellingPrice: number;
-  packageSize: number;
+  giftQuantity?: number;
   displayOrder?: number;
   image?: string;
   description?: string;
@@ -72,14 +72,16 @@ export interface ProductWithCategory {
 }
 
 /**
- * Combo with product info (normalized)
+ * Combo với product info (normalized)
+ * Sprint 8.x: packageQuantity thay cho packageSize.
  */
 export interface ComboWithProduct {
   _id: string;
   code: string;
   name: string;
   sellingPrice: number;
-  packageSize: number;
+  packageQuantity: number;
+  giftQuantity?: number;
   productId?: string;
   productName?: string;
   description?: string;
@@ -320,7 +322,8 @@ export function useCombosWithProduct(productId: string | null) {
       code: combo.code,
       name: combo.name,
       sellingPrice: combo.sellingPrice,
-      packageSize: combo.packageSize,
+      packageQuantity: combo.packageQuantity,
+      giftQuantity: combo.giftQuantity ?? 0,
       productId: typeof product === "object" && product !== null ? product._id : String(product),
       productName: typeof product === "object" && product !== null ? product.name : "",
       description: combo.description,
@@ -351,7 +354,8 @@ export function useAllCombosNormalized() {
         code: combo.code,
         name: combo.name,
         sellingPrice: combo.sellingPrice,
-        packageSize: combo.packageSize,
+        packageQuantity: combo.packageQuantity,
+        giftQuantity: combo.giftQuantity ?? 0,
         productId: typeof product === "object" && product !== null ? product._id : String(product),
         productName: typeof product === "object" && product !== null ? product.name : "",
         description: combo.description,
@@ -370,7 +374,8 @@ export function useAllCombosNormalized() {
       code: combo.code,
       name: combo.name,
       sellingPrice: combo.sellingPrice,
-      packageSize: combo.packageSize,
+      packageQuantity: combo.packageQuantity,
+      giftQuantity: combo.giftQuantity ?? 0,
       productId: typeof product === "object" && product !== null ? product._id : String(product),
       productName: typeof product === "object" && product !== null ? product.name : "",
       description: combo.description,

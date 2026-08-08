@@ -1,61 +1,103 @@
 /**
- * Combo Page (Sprint 8.4.1)
+ * Combo Page (Sprint 8.x)
  *
- * Page for managing Combos.
+ * Trang tổng hợp combo: hiển thị tất cả combo trên hệ thống với filter theo Product.
+ * - "Thêm combo" yêu cầu chọn Product trước (modal/drawer sẽ chọn trong form).
+ * - Có link sang trang /products/[productId]/combos để quản lý combo theo product.
+ *
+ * Lưu ý: Combo KHÔNG chọn variant; variant là trách nhiệm của Sale trong Order.
  */
 
 "use client";
 
-import { useState, useCallback } from "react";
-import { Button, Select, Input } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { useState, useCallback, useMemo } from "react";
+import { Button, Select, Input, Modal } from "antd";
+import { PlusOutlined, AppstoreOutlined } from "@ant-design/icons";
 import {
   PageContainer,
   PageHeader,
   CardSection,
 } from "@/components/common";
-import { useComboList, useCreateCombo, useUpdateCombo, useDeleteCombo, type ComboListItem, type CreateComboInput, type UpdateComboInput } from "@/hooks/useCombos";
-import { useProductVariantList } from "@/hooks/useVariants";
+import {
+  useComboList,
+  useCreateCombo,
+  useUpdateCombo,
+  useDeleteCombo,
+  type ComboListItem,
+  type CreateComboInput,
+  type UpdateComboInput,
+} from "@/hooks/useCombos";
+import { useProductList, type ProductListItem } from "@/hooks/useProductCrud";
 import ComboTable from "./ComboTable";
-import ComboForm from "./ComboForm";
+import ComboForm, { type ComboFormProductOption } from "./ComboForm";
 
 export default function ComboPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComboListItem | null>(null);
+  const [pickProductOpen, setPickProductOpen] = useState(false);
+  const [pendingProductId, setPendingProductId] = useState<string | null>(null);
 
-  // Filters
   const [filterProductId, setFilterProductId] = useState<string | undefined>();
   const [filterKeyword, setFilterKeyword] = useState<string | undefined>();
 
-  // Data queries
   const { data, isLoading, refetch } = useComboList({
     productId: filterProductId,
     keyword: filterKeyword,
     limit: 1000,
   });
-  const { data: variantsData } = useProductVariantList({ limit: 1000 });
+  const { data: productsData } = useProductList();
 
-  // Mutations
   const createMutation = useCreateCombo();
   const updateMutation = useUpdateCombo();
   const deleteMutation = useDeleteCombo();
 
   const combos = data?.items ?? [];
-  const variants = variantsData?.items ?? [];
+  const products: ProductListItem[] = productsData?.items ?? [];
 
-  // Extract unique products from variants for the filter dropdown
-  const uniqueProductsMap = new Map<string, { _id: string; code: string; name: string }>();
-  for (const variant of variants) {
-    const productId = typeof variant.productId === "object" ? (variant.productId as { _id: string; code: string; name: string })._id : String(variant.productId);
-    const productCode = typeof variant.productId === "object" ? (variant.productId as { code: string }).code : "";
-    const productName = typeof variant.productId === "object" ? (variant.productId as { name: string }).name : "";
-    if (productId && !uniqueProductsMap.has(productId)) {
-      uniqueProductsMap.set(productId, { _id: productId, code: productCode, name: productName });
-    }
-  }
-  const products = Array.from(uniqueProductsMap.values());
+  const productOptions: ComboFormProductOption[] = useMemo(
+    () =>
+      products.map((p) => {
+        const category =
+          typeof p.category === "object" && p.category !== null ? p.category : null;
+        return {
+          _id: p._id,
+          code: p.code,
+          name: p.name,
+          categoryCode: category?.code,
+          categoryName: category?.name,
+          isActive: p.isActive,
+        };
+      }),
+    [products]
+  );
+
+  const filterProductOptions = useMemo(
+    () =>
+      products.map((p) => {
+        const category =
+          typeof p.category === "object" && p.category !== null ? p.category : null;
+        return {
+          label: `${p.code} - ${p.name}${category ? ` [${category.code}]` : ""}`,
+          value: p._id,
+        };
+      }),
+    [products]
+  );
 
   const handleOpenCreate = useCallback(() => {
+    if (products.length === 0) return;
+    if (products.length === 1) {
+      setPendingProductId(products[0]._id);
+      setEditingItem(null);
+      setDrawerOpen(true);
+      return;
+    }
+    setPickProductOpen(true);
+  }, [products]);
+
+  const handlePickProduct = useCallback((productId: string) => {
+    setPendingProductId(productId);
+    setPickProductOpen(false);
     setEditingItem(null);
     setDrawerOpen(true);
   }, []);
@@ -68,28 +110,23 @@ export default function ComboPage() {
   const handleClose = useCallback(() => {
     setDrawerOpen(false);
     setEditingItem(null);
+    setPendingProductId(null);
   }, []);
 
   const handleSubmit = useCallback(
     (values: CreateComboInput | UpdateComboInput) => {
+      const onSuccess = () => {
+        handleClose();
+        void refetch();
+      };
       if (editingItem) {
         updateMutation.mutate(
           { id: editingItem._id, input: values as UpdateComboInput },
-          {
-            onSuccess: () => {
-              handleClose();
-              void refetch();
-            },
-          }
+          { onSuccess }
         );
-      } else {
-        createMutation.mutate(values as CreateComboInput, {
-          onSuccess: () => {
-            handleClose();
-            void refetch();
-          },
-        });
+        return;
       }
+      createMutation.mutate(values as CreateComboInput, { onSuccess });
     },
     [editingItem, createMutation, updateMutation, handleClose, refetch]
   );
@@ -106,37 +143,27 @@ export default function ComboPage() {
   );
 
   const handleToggleActive = useCallback(
-    (item: ComboListItem) => {
-      const getProductCode = (product: ComboListItem["product"]) => {
-        if (typeof product === "object" && product !== null) {
-          return (product as { code: string }).code;
-        }
-        return "";
-      };
-
-      const getCategoryCode = (category: ComboListItem["category"]) => {
-        if (typeof category === "object" && category !== null) {
-          return (category as { code: string }).code;
-        }
-        return "";
-      };
-
+    (item: ComboListItem, checked: boolean) => {
+      const productId =
+        typeof item.product === "object" && item.product !== null
+          ? (item.product as { _id: string })._id
+          : String(item.product);
       updateMutation.mutate(
         {
           id: item._id,
           input: {
             code: item.code,
             name: item.name,
-            productCode: getProductCode(item.product),
-            categoryCode: getCategoryCode(item.category),
-            comboItems: [], // Required by schema but not used for toggle
+            productId,
+            productCode: typeof item.product === "object" ? (item.product as { code: string }).code : "",
+            packageQuantity: item.packageQuantity,
             sellingPrice: item.sellingPrice,
-            packageSize: item.packageSize,
-            displayOrder: item.displayOrder,
+            giftQuantity: item.giftQuantity ?? 0,
+            displayOrder: item.displayOrder ?? 0,
             image: item.image,
             description: "",
-            isActive: !item.isActive,
-          },
+            isActive: checked,
+          } as UpdateComboInput,
         },
         {
           onSuccess: () => {
@@ -150,10 +177,7 @@ export default function ComboPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Combo"
-        subtitle="Quản lý combo sản phẩm"
-      />
+      <PageHeader title="Combo" subtitle="Quản lý combo theo sản phẩm" />
 
       <CardSection>
         <div style={{ marginBottom: 16, display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -168,10 +192,7 @@ export default function ComboPage() {
               setFilterProductId(v);
               void refetch();
             }}
-            options={products.map((p) => ({
-              label: `${p.code} - ${p.name}`,
-              value: p._id,
-            }))}
+            options={filterProductOptions}
           />
           <Input.Search
             placeholder="Tìm kiếm combo..."
@@ -202,12 +223,44 @@ export default function ComboPage() {
       <ComboForm
         open={drawerOpen}
         editingItem={editingItem}
-        products={products}
-        variants={variants}
+        products={productOptions}
         loading={createMutation.isPending || updateMutation.isPending}
         onClose={handleClose}
         onSubmit={handleSubmit}
+        initialProductId={pendingProductId ?? undefined}
+        lockProductSelection={!!pendingProductId}
       />
+
+      <Modal
+        title={
+          <>
+            <AppstoreOutlined style={{ marginRight: 8 }} />
+            Chọn sản phẩm để tạo combo
+          </>
+        }
+        open={pickProductOpen}
+        onCancel={() => setPickProductOpen(false)}
+        footer={null}
+        width={520}
+      >
+        <p style={{ color: "#8c8c8c" }}>
+          Combo phải gắn với một sản phẩm. Chọn sản phẩm bên dưới để tiếp tục.
+        </p>
+        <Select
+          placeholder="Chọn sản phẩm"
+          showSearch
+          optionFilterProp="label"
+          style={{ width: "100%" }}
+          value={pendingProductId ?? undefined}
+          onChange={(value) => handlePickProduct(value)}
+          options={productOptions
+            .filter((p) => p.isActive !== false)
+            .map((p) => ({
+              label: `${p.code} - ${p.name}${p.categoryCode ? ` [${p.categoryCode}]` : ""}`,
+              value: p._id,
+            }))}
+        />
+      </Modal>
     </PageContainer>
   );
 }

@@ -80,6 +80,17 @@ function SaleLeadTableInner({
         },
       },
       {
+        key: "facebookPage",
+        title: "Trang FB",
+        width: 130,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as SaleLead;
+          return lead.facebookPage?.name || (
+            <span className={styles.mutedText}>-</span>
+          );
+        },
+      },
+      {
         key: "price",
         title: "Giá",
         width: 120,

@@ -1,5 +1,10 @@
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  getAccountListFilter,
+  getAccountScope,
+  hasAccountPermission,
+} from "@/lib/account-scope";
 
 import Employee from "@/models/Employee";
 import Role from "@/models/Role";
@@ -38,8 +43,11 @@ export async function GET(request: Request) {
     try {
         const currentUser = await getCurrentUser(request);
 
-        if (!currentUser.permissions.includes("employee.view")) {
+        if (!hasAccountPermission(currentUser, "account.view")) {
             return errorResponse("Bạn không có quyền xem nhân viên", 403);
+        }
+        if (currentUser.role.code === "LEADER" || currentUser.role.code === "EMPLOYEE") {
+            return errorResponse("Hãy sử dụng API quản lý tài khoản theo phạm vi", 403);
         }
 
         const { searchParams } = new URL(request.url);
@@ -64,40 +72,60 @@ export async function GET(request: Request) {
 
         await connectDB();
 
-        const filter: any = {
-            isActive: true,
-        };
+        // Áp dụng scope của account engine
+        const scopeFilter = await getAccountListFilter(currentUser);
+        if (scopeFilter === null) return errorResponse("Bạn không có quyền quản lý tài khoản", 403);
 
+        const scope = getAccountScope(currentUser);
+        const filter: Record<string, unknown> = { ...scopeFilter };
         if (isActive !== null) {
             filter.isActive = isActive === "true";
         }
+        // MANAGER scope: giới hạn theo team.managerId
+        if (scope === "DEPARTMENT") {
+            const managedTeams = await Team.find({ managerId: currentUser.employee._id, isActive: true }).select("_id").lean();
+            const teamIds = managedTeams.map((t) => t._id);
+            delete filter.$or;
+            delete filter["team.department.code"];
+            if (teamIds.length) {
+                filter.$or = [
+                    { _id: currentUser.employee._id },
+                    { teamId: { $in: teamIds } },
+                ];
+            } else {
+                filter._id = currentUser.employee._id;
+            }
+        }
 
         if (keyword) {
-            filter.$or = [
-                {
-                    employeeCode: {
-                        $regex: keyword,
-                        $options: "i",
+            filter.$and = [
+                ...((filter.$and as Array<Record<string, unknown>>) ?? []),
+                { $or: [
+                    {
+                        employeeCode: {
+                            $regex: keyword,
+                            $options: "i",
+                        },
                     },
-                },
-                {
-                    username: {
-                        $regex: keyword,
-                        $options: "i",
+                    {
+                        username: {
+                            $regex: keyword,
+                            $options: "i",
+                        },
                     },
-                },
-                {
-                    fullName: {
-                        $regex: keyword,
-                        $options: "i",
+                    {
+                        fullName: {
+                            $regex: keyword,
+                            $options: "i",
+                        },
                     },
-                },
-                {
-                    email: {
-                        $regex: keyword,
-                        $options: "i",
+                    {
+                        email: {
+                            $regex: keyword,
+                            $options: "i",
+                        },
                     },
-                },
+                ] },
             ];
         }
 
@@ -160,11 +188,14 @@ export async function POST(request: Request) {
     try {
         const currentUser = await getCurrentUser(request);
 
-        if (!currentUser.permissions.includes("employee.create")) {
+        if (!hasAccountPermission(currentUser, "account.create")) {
             return errorResponse(
                 "Bạn không có quyền tạo nhân viên",
                 403
             );
+        }
+        if (currentUser.role.code === "LEADER" || currentUser.role.code === "EMPLOYEE") {
+            return errorResponse("Hãy sử dụng API quản lý tài khoản theo phạm vi", 403);
         }
 
         await connectDB();
@@ -225,27 +256,27 @@ export async function POST(request: Request) {
         const hashedPassword = await hashPassword(data.password);
         const employee = await Employee.create({
             employeeCode,
-          
+
             username: data.username.toLowerCase(),
-          
+
             password: hashedPassword,
-          
+
             fullName: data.fullName,
-          
+
             email: data.email.toLowerCase(),
-          
+
             phone: data.phone ?? "",
-          
+
             avatar: data.avatar ?? "",
-          
+
             roleId: role._id,
-          
+
             teamId: team?._id ?? null,
-          
+
             bankName: data.bankName ?? "",
-          
+
             bankAccountNumber: data.bankAccountNumber ?? "",
-          
+
             bankAccountHolder: data.bankAccountHolder ?? "",
           });
           const createdEmployee = await Employee.findById(employee._id)

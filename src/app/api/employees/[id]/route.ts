@@ -25,6 +25,9 @@ export async function GET(
                 403
             );
         }
+        if (currentUser.role.code === "LEADER" || currentUser.role.code === "EMPLOYEE") {
+            return errorResponse("Hãy sử dụng API quản lý tài khoản theo phạm vi", 403);
+        }
 
         await connectDB();
 
@@ -71,6 +74,9 @@ export async function PUT(
                 "Bạn không có quyền cập nhật nhân viên",
                 403
             );
+        }
+        if (currentUser.role.code === "LEADER" || currentUser.role.code === "EMPLOYEE") {
+            return errorResponse("Hãy sử dụng API quản lý tài khoản theo phạm vi", 403);
         }
 
         await connectDB();
@@ -212,6 +218,9 @@ export async function DELETE(
                 "Bạn không có quyền xóa nhân viên",
                 403
             );
+        }
+        if (currentUser.role.code === "LEADER" || currentUser.role.code === "EMPLOYEE") {
+            return errorResponse("Hãy sử dụng API quản lý tài khoản theo phạm vi", 403);
         }
 
         await connectDB();

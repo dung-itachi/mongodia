@@ -1,7 +1,13 @@
 /**
- * Combo Table Component (Sprint 8.4.1)
+ * Combo Table Component (Sprint 8.x)
  *
- * Table for displaying and managing Combos.
+ * Hiển thị danh sách Combo với các field:
+ * - Ảnh, Mã, Tên combo
+ * - Sản phẩm (Product)
+ * - SL SP/combo, Giá bán, SL quà/combo
+ * - Trạng thái, Thao tác
+ *
+ * Combo KHÔNG hiển thị variant ở đây (Sale sẽ chọn trong Order).
  */
 
 "use client";
@@ -35,19 +41,12 @@ export default function ComboTable({
     return "-";
   }, []);
 
-  const getCategoryName = useCallback((category: ComboListItem["category"]) => {
-    if (typeof category === "object" && category !== null) {
-      return (category as { name: string }).name;
+  const getProductCode = useCallback((product: ComboListItem["product"]) => {
+    if (typeof product === "object" && product !== null) {
+      return (product as { code: string }).code;
     }
-    return "-";
+    return "";
   }, []);
-
-  const handleToggleActive = useCallback(
-    (item: ComboListItem, checked: boolean) => {
-      onToggleActive?.(item, checked);
-    },
-    [onToggleActive]
-  );
 
   const columns: Column[] = [
     {
@@ -86,19 +85,37 @@ export default function ComboTable({
     {
       key: "product",
       title: "Sản phẩm",
-      width: 150,
+      width: 180,
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ComboListItem;
-        return getProductName(item.product);
+        return (
+          <div>
+            <div>{getProductName(item.product)}</div>
+            {getProductCode(item.product) && (
+              <div style={{ fontSize: 12, color: "#999" }}>{getProductCode(item.product)}</div>
+            )}
+          </div>
+        );
       },
     },
     {
-      key: "category",
-      title: "Danh mục",
-      width: 120,
-      render: (_: unknown, record: Record<string, unknown>) => {
-        const item = record as unknown as ComboListItem;
-        return getCategoryName(item.category);
+      key: "packageQuantity",
+      title: "SL SP",
+      dataIndex: "packageQuantity",
+      width: 80,
+      align: "center",
+    },
+    {
+      key: "giftQuantity",
+      title: "SL quà",
+      dataIndex: "giftQuantity",
+      width: 80,
+      align: "center",
+      render: (value: unknown) => {
+        if (typeof value === "number" && value > 0) {
+          return <Tag color="purple">{value}</Tag>;
+        }
+        return <span style={{ color: "#999" }}>0</span>;
       },
     },
     {
@@ -109,45 +126,30 @@ export default function ComboTable({
       align: "right",
       render: (value: unknown) => {
         if (typeof value === "number") {
-          return <span style={{ color: "#52c41a", fontWeight: 500 }}>{value.toLocaleString()}₮</span>;
-        }
-        return "-";
-      },
-    },
-    {
-      key: "packageSize",
-      title: "Gói",
-      dataIndex: "packageSize",
-      width: 60,
-      align: "center",
-    },
-    {
-      key: "itemCount",
-      title: "SP",
-      dataIndex: "itemCount",
-      width: 50,
-      align: "center",
-      render: (value: unknown) => {
-        if (typeof value === "number") {
-          return <Tag color="blue">{value}</Tag>;
+          return (
+            <span style={{ color: "#52c41a", fontWeight: 500 }}>
+              {value.toLocaleString()}₫
+            </span>
+          );
         }
         return "-";
       },
     },
     {
       key: "isActive",
-      title: "Kích hoạt",
+      title: "Trạng thái",
       dataIndex: "isActive",
-      width: 80,
+      width: 100,
       align: "center",
-      render: (value: unknown, record: Record<string, unknown>) => {
+      render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ComboListItem;
+        const active = item.isActive !== false;
         return (
           <Switch
-            checked={item.isActive !== false}
-            onChange={(checked) => {
-              onToggleActive?.(item, checked);
-            }}
+            checked={active}
+            onChange={(checked) => onToggleActive?.(item, checked)}
+            checkedChildren="Active"
+            unCheckedChildren="Off"
             size="small"
           />
         );
