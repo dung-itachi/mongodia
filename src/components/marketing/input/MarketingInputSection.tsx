@@ -233,11 +233,7 @@ export default function MarketingInputSection({
 
   // Parse leads from input text - SPRINT 8.5.2 ENHANCED
   const handleParseLeads = useCallback(() => {
-    if (!selectedProductId) {
-      toast.warning("Vui lòng chọn sản phẩm trước");
-      return;
-    }
-
+    // Chỉ cần chọn Facebook page là được điền (sản phẩm có thể nằm trong form)
     if (!selectedFacebookPageId) {
       toast.warning("Vui lòng chọn trang Facebook trước");
       return;
@@ -290,7 +286,7 @@ export default function MarketingInputSection({
             customerName: name || "Khách hàng",
             phone,
             source: LeadSource.FACEBOOK_COMMENT,
-            productId: selectedProductId,
+            productId: selectedProductId || "",
             productName: comboToUse?.productName || "",
             comboId: comboToUse?._id || "",
             comboName: comboToUse?.name || "",
@@ -362,7 +358,7 @@ export default function MarketingInputSection({
             customerName: name,
             phone,
             source: LeadSource.LANDING_PAGE,
-            productId: combo.productId || selectedProductId,
+            productId: combo.productId || selectedProductId || "",
             productName: combo.productName || "",
             comboId: combo._id,
             comboName: combo.name,
@@ -802,21 +798,21 @@ export default function MarketingInputSection({
         <TextArea
           placeholder={
             inputType === "comment"
-              ? "Nhập thông tin: Tên\tSĐT\nHoặc chỉ SĐT\n(Combo sẽ tự động detect từ text hoặc dùng combo đã chọn)"
-              : "Nhập thông tin theo format:\nNgày\tTên\tSĐT\tĐịa chỉ\tCombo\nCombo sẽ được tự động detect từ text"
+              ? "Nhập thông tin: Tên\tSĐT\nHoặc chỉ SĐT\n(Sản phẩm & Combo có thể tự detect từ text)"
+              : "Nhập thông tin theo format:\nNgày\tTên\tSĐT\tĐịa chỉ\tCombo\nSản phẩm & Combo sẽ được tự động detect từ text"
           }
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           rows={4}
           className={styles.textArea}
-          disabled={!selectedProductId || !selectedFacebookPageId}
+          disabled={!selectedFacebookPageId}
         />
 
         <div className={styles.inputActions}>
           <Button
             type="primary"
             onClick={handleParseLeads}
-            disabled={!selectedProductId || !selectedFacebookPageId || !inputText.trim()}
+            disabled={!selectedFacebookPageId || !inputText.trim()}
           >
             Phân loại
           </Button>
