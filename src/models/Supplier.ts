@@ -82,8 +82,6 @@ const SupplierSchema = new Schema<ISupplier>(
   }
 );
 
-SupplierSchema.index({ code: 1 }, { unique: true });
-SupplierSchema.index({ phone: 1 }, { unique: true });
 SupplierSchema.index({ areaId: 1 });
 
 const Supplier: Model<ISupplier> =

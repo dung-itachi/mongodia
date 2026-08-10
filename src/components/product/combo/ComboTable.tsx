@@ -18,6 +18,7 @@ import { EditOutlined, DeleteOutlined, GiftOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
 import type { ComboListItem } from "@/hooks/useCombos";
+import { formatMNT } from "@/lib/format";
 
 interface ComboTableProps {
   data: ComboListItem[];
@@ -128,7 +129,7 @@ export default function ComboTable({
         if (typeof value === "number") {
           return (
             <span style={{ color: "#52c41a", fontWeight: 500 }}>
-              {value.toLocaleString()}₫
+              {formatMNT(value)}
             </span>
           );
         }

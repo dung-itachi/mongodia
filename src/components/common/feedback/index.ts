@@ -3,4 +3,4 @@
  */
 
 export { default as ConfirmDialog } from "./ConfirmDialog";
-export { default as Toast, toast, setToastInstance } from "./Toast";
+export { default as Toast, toast } from "./Toast";

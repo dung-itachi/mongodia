@@ -155,7 +155,6 @@ export async function POST(request: Request) {
       comboId: parsed.data.comboId ?? undefined,
       quantity: parsed.data.quantity ?? undefined,
       unitPriceMNT: parsed.data.unitPriceMNT ?? undefined,
-      unitPriceVND: parsed.data.unitPriceVND ?? undefined,
       exchangeRate: parsed.data.exchangeRate ?? undefined,
       estimatedWeight: parsed.data.estimatedWeight ?? undefined,
       status: statusValue,

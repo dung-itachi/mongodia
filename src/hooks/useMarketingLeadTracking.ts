@@ -35,7 +35,6 @@ export interface MarketingLeadTracking {
     name: string;
   };
   quantity?: number;
-  unitPriceVND?: number;
   unitPriceMNT?: number;
   exchangeRate?: number;
   saleEmployeeId?: {

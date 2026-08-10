@@ -193,7 +193,8 @@ export function useCreateProduct() {
     mutationFn: createProduct,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["product-list"] });
-      void message.success("Tạo sản phẩm thành công");
+      void queryClient.invalidateQueries({ queryKey: ["categories"] });
+      void queryClient.invalidateQueries({ queryKey: ["products"] });
     },
     onError: (error: Error) => {
       void message.error(error.message);

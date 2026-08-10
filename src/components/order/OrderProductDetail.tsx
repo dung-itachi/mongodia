@@ -47,6 +47,7 @@ import type {
 } from "@/types/variant";
 import { resolveVariantId, validateOrderItem } from "@/types/variant";
 import { useGiftList, type GiftListItem } from "@/hooks/useGifts";
+import { formatMNT } from "@/lib/format";
 
 const { Text } = Typography;
 
@@ -795,7 +796,7 @@ function OrderItemRow({
             Thành tiền
           </Text>
           <Text strong style={{ display: "block", color: "#1890ff", fontSize: 16 }}>
-            {item.subtotal.toLocaleString("vi-VN")} đ
+            {formatMNT(item.subtotal)}
           </Text>
         </div>
       </div>
@@ -1030,7 +1031,7 @@ export default function OrderProductDetail({
             <div>
               <Text type="secondary">Tổng giảm giá:</Text>
               <Text style={{ marginLeft: 8, color: "#ff4d4f" }}>
-                -{totals.totalDiscount.toLocaleString("vi-VN")} đ
+                -{formatMNT(totals.totalDiscount)}
               </Text>
             </div>
             <div>
@@ -1039,7 +1040,7 @@ export default function OrderProductDetail({
                 strong
                 style={{ marginLeft: 8, fontSize: 18, color: "#1890ff" }}
               >
-                {totals.totalSubtotal.toLocaleString("vi-VN")} đ
+                {formatMNT(totals.totalSubtotal)}
               </Text>
             </div>
           </div>

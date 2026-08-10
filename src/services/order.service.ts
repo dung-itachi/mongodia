@@ -49,6 +49,7 @@ import type {
   CreateOrderItemInput,
   OrderSummaryPrice,
 } from "@/types/order";
+import { getCurrentExchangeRate } from "@/lib/system-settings";
 
 // ============================================================================
 // Types
@@ -164,7 +165,7 @@ export class OrderService {
     orderItems: Array<{ unitPrice: number; quantity: number; discount: number }>,
     orderDiscount: number,
     shippingFee: number,
-    currency: "VND" | "MNT" | "USD" = "VND"
+    currency: "VND" | "MNT" | "USD" = "MNT"
   ): OrderSummaryPrice {
     const subtotal = this.calculateSubtotal(orderItems);
     const grandTotal = this.calculateGrandTotal(subtotal, orderDiscount, shippingFee);
@@ -364,7 +365,7 @@ export class OrderService {
       ? this.processOrderItems(data.orderItems)
       : [];
 
-    const currency = data.currency ?? "VND";
+    const currency = data.currency ?? "MNT";
 
     // Build summary (Sprint 6.1)
     const summary = this.buildOrderSummary(
@@ -377,6 +378,10 @@ export class OrderService {
       data.shipping?.shippingFee ?? 0,
       currency
     );
+
+    // Sprint Settings: snapshot exchange rate (1 USD → MNT) at creation time.
+    // Existing orders are NEVER recalculated when this rate later changes.
+    const exchangeRateSnap = await getCurrentExchangeRate();
 
     const order = await orderRepository.create({
       orderCode,
@@ -392,6 +397,8 @@ export class OrderService {
       unitPrice: data.unitPrice ?? 0,
       totalAmount: data.totalAmount ?? summary.grandTotal,
       currency,
+      exchangeRate: exchangeRateSnap.rate,
+      exchangeRateDate: new Date(),
       estimatedWeight: data.estimatedWeight,
       marketingEmployeeId: data.marketingEmployeeId
         ? new mongoose.Types.ObjectId(data.marketingEmployeeId)
@@ -717,6 +724,11 @@ export class OrderService {
   async createFromLead(data: CreateFromLeadData, session?: mongoose.ClientSession) {
     const orderCode = await this.generateOrderCode(session);
 
+    // Sprint Settings: snapshot exchange rate at the moment the lead
+    // is converted. Existing orders keep their snapshot — only new
+    // orders see the latest rate.
+    const exchangeRateSnap = await getCurrentExchangeRate();
+
     return orderRepository.create(
       {
         orderCode,
@@ -736,6 +748,8 @@ export class OrderService {
         unitPrice: data.unitPrice,
         totalAmount: data.totalAmount,
         currency: data.currency,
+        exchangeRate: exchangeRateSnap.rate,
+        exchangeRateDate: new Date(),
         estimatedWeight: data.estimatedWeight,
         marketingEmployeeId: data.marketingEmployeeId
           ? new mongoose.Types.ObjectId(data.marketingEmployeeId)

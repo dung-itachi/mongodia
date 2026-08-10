@@ -1,25 +1,44 @@
 /**
  * Format Utilities (Sprint 4.1 - Dashboard Foundation)
+ * Updated for Sprint Settings — Exchange Rate / Currency = MNT (Tugrik)
  *
- * Common formatting helpers for numbers and currency.
+ * All public currency formatters display Mongolian Tugrik (₮ / MNT).
+ * Do not duplicate formatting logic in components — import these helpers.
  */
 
+/** Currency code used across the system. */
+export const SYSTEM_CURRENCY_CODE = "MNT";
+
+/** Display symbol. */
+export const SYSTEM_CURRENCY_SYMBOL = "₮";
+
+/** Human readable name. */
+export const SYSTEM_CURRENCY_NAME = "Mongolian Tugrik";
+
 /**
- * Format a number as Vietnamese Dong currency.
+ * Format a number as Mongolian Tugrik (₮).
+ * Uses Mongolian locale grouping (1,000 / 10,000).
+ *
+ * @example
+ *   formatCurrency(350000) // "350,000 ₮"
  */
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
+  const safeNumber = Number.isFinite(value) ? value : 0;
+  const formatted = new Intl.NumberFormat("mn-MN", {
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(safeNumber);
+  return `${formatted} ${SYSTEM_CURRENCY_SYMBOL}`;
 }
 
+/** Alias retained for clarity at call-sites. */
+export const formatMNT = formatCurrency;
+
 /**
- * Format a number with thousands separator.
+ * Format a number with thousands separator (Mongolian style).
  */
 export function formatNumber(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(value);
+  const safeNumber = Number.isFinite(value) ? value : 0;
+  return new Intl.NumberFormat("mn-MN").format(safeNumber);
 }
 
 /**

@@ -44,6 +44,7 @@ const GROUP_BADGE_VARIANT: Record<NavGroupKey, string> = {
   PRODUCTS: "vb-o",
   ACCOUNTS: "vb-b",
   WAREHOUSE: "vb-o",
+  SETTINGS: "vb-t",
 };
 
 const GROUP_LABEL: Record<NavGroupKey, string> = Object.fromEntries(

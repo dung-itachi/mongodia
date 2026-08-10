@@ -24,7 +24,7 @@
 import Counter from "@/models/Counter";
 import { Lead } from "@/models/Lead";
 import { LeadHistory } from "@/models/LeadHistory";
-import Customer from "@/models/Customer";
+import Customer, { type IAddress } from "@/models/Customer";
 import Employee from "@/models/Employee";
 import FacebookPage from "@/models/FacebookPage";
 import Combo from "@/models/Combo";
@@ -60,7 +60,7 @@ async function ensureCustomer(args: {
   name: string;
   phone: string;
   marketingEmployeeId: string;
-  address?: string;
+  address?: Partial<IAddress>;
 }): Promise<string> {
   const area = await Area.findOne({ code: "PVD" });
   const team = await Team.findOne({ code: "SALE" });
@@ -71,14 +71,19 @@ async function ensureCustomer(args: {
     { phone: args.phone },
     {
       $set: {
-        code: args.code,
-        name: args.name,
+        customerCode: args.code,
+        fullName: args.name,
         phone: args.phone,
         areaId: area._id,
         teamId: team._id,
         marketingEmployeeId: args.marketingEmployeeId,
-        address: args.address ?? "",
-        gender: "OTHER",
+        address: {
+          street: args.address?.street ?? "",
+          province: args.address?.province ?? "",
+          district: args.address?.district ?? "",
+          ward: args.address?.ward ?? "",
+        },
+        gender: "other",
         isActive: true,
       },
     },
@@ -195,8 +200,8 @@ export async function seedLeads() {
     saleEmployeeId?: string;
     comboId?: string;
     productId?: string;
-    unitPriceVND?: number;
     quantity?: number;
+    unitPriceMNT?: number;
     status: LeadStatus;
     customerId?: string;
     latestRemark?: string;
@@ -228,7 +233,7 @@ export async function seedLeads() {
       saleEmployeeId: idOf(saleA),
       status: LeadStatus.ASSIGNED,
       comboId: idOf(combo1),
-      unitPriceVND: 45000,
+      unitPriceMNT: 45000,
       quantity: 1,
       latestRemark: "Đã phân cho Sale A xử lý",
       assignmentType: "AUTO",
@@ -245,7 +250,7 @@ export async function seedLeads() {
       saleEmployeeId: idOf(saleB),
       customerId: customerDuongId,
       comboId: idOf(combo2),
-      unitPriceVND: 90000,
+      unitPriceMNT: 90000,
       quantity: 1,
       status: LeadStatus.PROCESSING,
       latestRemark: "Đang chốt deal",
@@ -263,7 +268,7 @@ export async function seedLeads() {
       marketingEmployeeId: idOf(mktB),
       saleEmployeeId: idOf(saleA),
       productId: idOf(productIphone),
-      unitPriceVND: 25000000,
+      unitPriceMNT: 25000000,
       quantity: 1,
       status: LeadStatus.NO_ANSWER,
       latestRemark: "Gọi 3 lần không nghe",
@@ -282,7 +287,7 @@ export async function seedLeads() {
       saleEmployeeId: idOf(saleC),
       customerId: customerPhongId,
       comboId: idOf(combo1),
-      unitPriceVND: 45000,
+      unitPriceMNT: 45000,
       quantity: 1,
       status: LeadStatus.POTENTIAL,
       latestRemark: "Khách hẹn chuyển khoản trong hôm nay",
@@ -301,7 +306,7 @@ export async function seedLeads() {
       saleEmployeeId: idOf(saleB),
       customerId: customerLongId,
       comboId: idOf(combo2),
-      unitPriceVND: 90000,
+      unitPriceMNT: 90000,
       quantity: 2,
       status: LeadStatus.ORDER_CREATED,
       latestRemark: "Đã tạo đơn hàng #ORD000001",
@@ -319,7 +324,7 @@ export async function seedLeads() {
       marketingEmployeeId: idOf(mktA),
       saleEmployeeId: idOf(saleA),
       productId: idOf(productGalaxy),
-      unitPriceVND: 18000000,
+      unitPriceMNT: 18000000,
       quantity: 1,
       status: LeadStatus.REJECTED,
       latestRemark: "Khách không có nhu cầu",
@@ -337,7 +342,7 @@ export async function seedLeads() {
       marketingEmployeeId: idOf(mktB),
       saleEmployeeId: idOf(saleC),
       comboId: idOf(combo1),
-      unitPriceVND: 45000,
+      unitPriceMNT: 45000,
       quantity: 1,
       status: LeadStatus.CANCELLED,
       latestRemark: "Khách hủy sau khi đặt",
@@ -368,7 +373,7 @@ export async function seedLeads() {
       marketingEmployeeId: idOf(mktA),
       saleEmployeeId: idOf(saleB),
       productId: idOf(productIphone),
-      unitPriceVND: 25000000,
+      unitPriceMNT: 25000000,
       quantity: 1,
       status: LeadStatus.ASSIGNED,
       latestRemark: "Trùng Facebook với Lead cũ",
@@ -385,7 +390,7 @@ export async function seedLeads() {
       facebookPageId: idOf(fbLaptop),
       marketingEmployeeId: idOf(mktB),
       comboId: idOf(combo2),
-      unitPriceVND: 90000,
+      unitPriceMNT: 90000,
       quantity: 1,
       status: LeadStatus.PROCESSING,
       latestRemark: "Đang chờ Sale nhận",
@@ -403,7 +408,7 @@ export async function seedLeads() {
       saleEmployeeId: idOf(saleA),
       customerId: customerLinhId,
       productId: idOf(productGalaxy),
-      unitPriceVND: 18000000,
+      unitPriceMNT: 18000000,
       quantity: 1,
       status: LeadStatus.POTENTIAL,
       latestRemark: "Khách so sánh giá",
@@ -436,7 +441,7 @@ export async function seedLeads() {
       marketingEmployeeId: idOf(mktA),
       saleEmployeeId: idOf(saleC),
       comboId: idOf(combo1),
-      unitPriceVND: 45000,
+      unitPriceMNT: 45000,
       quantity: 3,
       status: LeadStatus.ORDER_CREATED,
       latestRemark: "Đã tạo đơn #ORD000002",
@@ -464,7 +469,7 @@ export async function seedLeads() {
       marketingEmployeeId: idOf(mktB),
       saleEmployeeId: idOf(saleB),
       productId: idOf(productIphone),
-      unitPriceVND: 25000000,
+      unitPriceMNT: 25000000,
       quantity: 1,
       status: LeadStatus.CANCELLED,
       latestRemark: "Không liên lạc được sau 5 ngày",
@@ -513,7 +518,7 @@ export async function seedLeads() {
         assignedAt: spec.assignedAt,
         comboId: spec.comboId,
         productId: spec.productId,
-        unitPriceVND: spec.unitPriceVND,
+        unitPriceMNT: spec.unitPriceMNT,
         quantity: spec.quantity ?? 1,
         status: spec.status,
         latestRemark: spec.latestRemark,

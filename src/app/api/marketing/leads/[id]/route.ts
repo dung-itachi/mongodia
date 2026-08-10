@@ -125,7 +125,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       comboId: parsed.data.comboId ?? undefined,
       quantity: parsed.data.quantity ?? undefined,
       unitPriceMNT: parsed.data.unitPriceMNT ?? undefined,
-      unitPriceVND: parsed.data.unitPriceVND ?? undefined,
       exchangeRate: parsed.data.exchangeRate ?? undefined,
       estimatedWeight: parsed.data.estimatedWeight ?? undefined,
       assignedAt: assignedAtValue,

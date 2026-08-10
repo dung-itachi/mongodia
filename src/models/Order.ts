@@ -169,6 +169,16 @@ export interface IOrder extends Document {
   totalAmount: number;
   currency: "VND" | "MNT" | "USD";
 
+  // ---- Sprint Settings: Exchange Rate snapshot (Sprint Settings) ------
+  /**
+   * Tỷ giá (1 USD → MNT) tại thời điểm tạo Order.
+   * KHÔNG BAO GIỜ thay đổi sau khi Order được tạo.
+   * Nếu Admin đổi exchange rate → Order cũ vẫn giữ rate cũ.
+   */
+  exchangeRate?: number;
+  /** Thời điểm snapshot tỷ giá. */
+  exchangeRateDate?: Date;
+
   // ---- Weight --------------------------------------------------------
   estimatedWeight?: number;
   actualWeight?: number;
@@ -295,7 +305,6 @@ const OrderSchema = new Schema<IOrder>(
     leadId: {
       type: Schema.Types.ObjectId,
       ref: "Lead",
-      index: true,
     },
 
     productId: {
@@ -328,8 +337,18 @@ const OrderSchema = new Schema<IOrder>(
     currency: {
       type: String,
       enum: ["VND", "MNT", "USD"],
-      default: "VND",
+      default: "MNT",
     },
+
+    // ---- Sprint Settings: Exchange Rate snapshot (Sprint Settings) ------
+    /**
+     * Tỷ giá (1 USD → MNT) tại thời điểm tạo Order.
+     * KHÔNG BAO GIỜ thay đổi sau khi Order được tạo.
+     * Nếu Admin đổi exchange rate → Order cũ vẫn giữ rate cũ.
+     */
+    exchangeRate: { type: Number, min: 0 },
+    /** Thời điểm snapshot tỷ giá. */
+    exchangeRateDate: { type: Date },
 
     // ---- Weight -------------------------------------------------------
     estimatedWeight: { type: Number, min: 0 },

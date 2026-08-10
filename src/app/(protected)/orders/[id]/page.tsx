@@ -38,6 +38,7 @@ import { useShipOrder, useReturnOrderStock } from "@/hooks/useWarehouseWorkflow"
 import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS, ORDER_SOURCE_LABELS, OrderStatus } from "@/constants/orderStatus";
 import { getStatusActions } from "@/configs/order-status.config";
 import type { OrderHistoryItem, OrderItem } from "@/types/order";
+import { formatMNT, formatNumber } from "@/lib/format";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -200,13 +201,11 @@ export default function OrderDetailPage({ params }: PageProps) {
     }
   }, [id, statusMutation, refetch]);
 
-  // Format currency
-  const formatCurrency = useCallback((amount: number, currency: string = "VND") => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  // Format currency (Sprint Settings — MNT / ₮).
+  // Backwards-compat: callers can still pass a currency code, but we always
+  // format in Tugrik because the system's master currency is MNT.
+  const formatCurrency = useCallback((amount: number, _currency?: string) => {
+    return formatMNT(amount);
   }, []);
 
   // Format date
@@ -462,6 +461,21 @@ export default function OrderDetailPage({ params }: PageProps) {
                   <div style={{ color: "#8c8c8c", fontSize: 12 }}>Đơn giá</div>
                   <div>{formatCurrency(order.unitPrice, order.currency)}</div>
                 </Col>
+                {typeof order.exchangeRate === "number" && (
+                  <Col xs={24} sm={8}>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>
+                      Tỷ giá lúc tạo
+                    </div>
+                    <div>
+                      1 USD = {formatNumber(order.exchangeRate)} ₮
+                      {order.exchangeRateDate && (
+                        <div style={{ fontSize: 11, color: "#999" }}>
+                          {new Date(order.exchangeRateDate).toLocaleString("vi-VN")}
+                        </div>
+                      )}
+                    </div>
+                  </Col>
+                )}
                 <Col xs={24} sm={8}>
                   <div style={{ color: "#8c8c8c", fontSize: 12 }}>Đã thanh toán</div>
                   <div style={{ color: "#52c41a" }}>{formatCurrency(order.totalPaid, order.currency)}</div>

@@ -11,8 +11,8 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
 import api from "@/lib/axios";
+import { toast } from "@/components/common/feedback/Toast";
 
 // ============================================================================
 // Types
@@ -200,10 +200,12 @@ export function useCreateCombo() {
     mutationFn: createCombo,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["combo-list"] });
-      void message.success("Tạo combo thành công");
+      void queryClient.invalidateQueries({ queryKey: ["combos-by-product"] });
+      void queryClient.invalidateQueries({ queryKey: ["all-combos"] });
+      void queryClient.invalidateQueries({ queryKey: ["product-list"] });
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      toast.error(error.message);
     },
   });
 }
@@ -219,10 +221,10 @@ export function useUpdateCombo() {
       void queryClient.invalidateQueries({
         queryKey: ["combo-detail", variables.id],
       });
-      void message.success("Cập nhật combo thành công");
+      toast.success("Cập nhật combo thành công");
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      toast.error(error.message);
     },
   });
 }
@@ -234,10 +236,10 @@ export function useDeleteCombo() {
     mutationFn: deleteCombo,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["combo-list"] });
-      void message.success("Xóa combo thành công");
+      toast.success("Xóa combo thành công");
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      toast.error(error.message);
     },
   });
 }

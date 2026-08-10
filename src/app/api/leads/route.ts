@@ -237,7 +237,6 @@ export async function POST(request: Request) {
           comboId: data.comboId || undefined,
           quantity: data.quantity || undefined,
           unitPriceMNT: data.unitPriceMNT || undefined,
-          unitPriceVND: data.unitPriceVND || undefined,
           exchangeRate: data.exchangeRate || undefined,
           estimatedWeight: data.estimatedWeight || undefined,
           status: (data.status as LeadStatus) || LeadStatus.NEW,

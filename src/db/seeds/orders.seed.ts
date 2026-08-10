@@ -166,8 +166,10 @@ function idOf(doc: unknown): string {
 }
 
 /**
- * Đảm bảo Customer tồn tại (lookup theo code hoặc tạo mới).
- * Idempotent: upsert theo `code`.
+ * Đảm bảo Customer tồn tại (lookup theo phone trước, hoặc upsert theo customerCode).
+ * - Ưu tiên reuse customer theo phone (tránh trùng unique index với leads.seed).
+ * - Nếu phone chưa có → upsert theo customerCode (idempotent).
+ * - Nếu customerCode đã tồn tại với phone khác → reuse theo customerCode.
  */
 async function ensureCustomer(args: {
   code: string;
@@ -180,18 +182,36 @@ async function ensureCustomer(args: {
   if (!area) throw new Error("Seed Order: missing area PVD");
   if (!team) throw new Error("Seed Order: missing team SALE");
 
+  // 1. Thử reuse theo phone (trùng với leads.seed → lấy KH đã tồn tại)
+  const existingByPhone = await Customer.findOne({ phone: args.phone }).lean();
+  if (existingByPhone) {
+    return existingByPhone._id.toString();
+  }
+
+  // 2. Thử reuse theo customerCode
+  const existingByCode = await Customer.findOne({ customerCode: args.code }).lean();
+  if (existingByCode) {
+    return existingByCode._id.toString();
+  }
+
+  // 3. Chưa có → upsert theo customerCode
   const doc = await Customer.findOneAndUpdate(
-    { code: args.code },
+    { customerCode: args.code },
     {
       $set: {
-        code: args.code,
-        name: args.name,
+        customerCode: args.code,
+        fullName: args.name,
         phone: args.phone,
         areaId: area._id,
         teamId: team._id,
         marketingEmployeeId: args.marketingEmployeeId,
-        gender: "OTHER",
-        address: "",
+        address: {
+          street: "",
+          province: "",
+          district: "",
+          ward: "",
+        },
+        gender: "other",
         isActive: true,
       },
     },

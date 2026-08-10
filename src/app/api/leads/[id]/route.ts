@@ -292,9 +292,9 @@ export async function PUT(
       updateData.unitPriceMNT = data.unitPriceMNT;
     }
 
-    // unitPriceVND
-    if (data.unitPriceVND !== undefined) {
-      updateData.unitPriceVND = data.unitPriceVND;
+    // unitPriceMNT (Sprint Settings — chỉ giữ MNT)
+    if (data.unitPriceMNT !== undefined) {
+      updateData.unitPriceMNT = data.unitPriceMNT;
     }
 
     // exchangeRate

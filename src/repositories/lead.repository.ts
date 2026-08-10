@@ -92,7 +92,6 @@ function mapToLead(doc: ILead) {
     comboId: doc.comboId?.toString(),
     quantity: doc.quantity,
     unitPriceMNT: doc.unitPriceMNT,
-    unitPriceVND: doc.unitPriceVND,
     exchangeRate: doc.exchangeRate,
     estimatedWeight: doc.estimatedWeight,
     status: doc.status,

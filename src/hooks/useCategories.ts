@@ -6,8 +6,8 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
 import api from "@/lib/axios";
+import { toast } from "@/components/common/feedback/Toast";
 
 // ============================================================================
 // Types
@@ -145,12 +145,12 @@ export function useCreateCategory() {
 
   return useMutation({
     mutationFn: createCategory,
-    onSuccess: () => {
+    onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ["category-list"] });
-      void message.success("Tạo danh mục thành công");
+      toast.success(`Tạo danh mục "${data.name}" thành công`);
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      toast.error(error.message);
     },
   });
 }
@@ -166,15 +166,15 @@ export function useUpdateCategory() {
       id: string;
       input: UpdateCategoryInput;
     }) => updateCategory(id, input),
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ["category-list"] });
       void queryClient.invalidateQueries({
         queryKey: ["category-detail", variables.id],
       });
-      void message.success("Cập nhật danh mục thành công");
+      toast.success(`Cập nhật danh mục "${data.name}" thành công`);
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      toast.error(error.message);
     },
   });
 }
@@ -186,10 +186,10 @@ export function useDeleteCategory() {
     mutationFn: deleteCategory,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["category-list"] });
-      void message.success("Xóa danh mục thành công");
+      toast.success("Xóa danh mục thành công");
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      toast.error(error.message);
     },
   });
 }

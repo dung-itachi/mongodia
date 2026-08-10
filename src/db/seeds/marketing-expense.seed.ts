@@ -417,10 +417,17 @@ export async function seedMarketingExpenseReports() {
       );
       updated += 1;
     } else {
-      await MarketingExpenseReport.create(
-        payload as unknown as Parameters<
-          typeof MarketingExpenseReport.create
-        >[0]
+      // Upsert query chỉ 2 fields đúng theo unique index DB.
+      // findOneAndUpdate → matched existing doc → UPDATE (no duplicate).
+      // → không matched → INSERT với 2 fields → unique index check OK.
+      // Nếu marketingEmployeeId khác → update luôn (idempotent theo index).
+      await MarketingExpenseReport.findOneAndUpdate(
+        {
+          reportDate: payload.reportDate,
+          facebookPageId: payload.facebookPageId,
+        },
+        { $set: payload },
+        { upsert: true, returnDocument: "after" }
       );
       inserted += 1;
     }

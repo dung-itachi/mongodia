@@ -29,6 +29,9 @@ export interface CreateOrderData {
   unitPrice: number;
   totalAmount: number;
   currency: "VND" | "MNT" | "USD";
+  // Sprint Settings: snapshot exchange rate at order creation time
+  exchangeRate?: number;
+  exchangeRateDate?: Date;
   estimatedWeight?: number;
   marketingEmployeeId?: Types.ObjectId;
   saleEmployeeId?: Types.ObjectId;

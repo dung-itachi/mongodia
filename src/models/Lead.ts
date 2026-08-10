@@ -48,8 +48,9 @@ export interface ILead extends Document {
   productId?: mongoose.Types.ObjectId;
   comboId?: mongoose.Types.ObjectId;
   quantity?: number;
+  /** Giá trên 1 combo (MNT). Đơn vị tiền bán hàng chính của hệ thống. */
   unitPriceMNT?: number;
-  unitPriceVND?: number;
+  /** Tỷ giá 1 USD → MNT tại thời điểm tạo Lead (audit). */
   exchangeRate?: number;
   estimatedWeight?: number;
   status: LeadStatus;
@@ -101,10 +102,9 @@ const LeadSchema = new Schema<ILead>(
     categoryId: { type: Schema.Types.ObjectId, ref: "Category" },
     productId: { type: Schema.Types.ObjectId, ref: "Product" },
     comboId: { type: Schema.Types.ObjectId, ref: "Combo" },
-    quantity: { type: Number, min: 1 },
-    unitPriceMNT: { type: Number, min: 0 },
-    unitPriceVND: { type: Number, min: 0 },
-    exchangeRate: { type: Number, min: 0 },
+quantity: { type: Number, min: 1 },
+  unitPriceMNT: { type: Number, min: 0 },
+  exchangeRate: { type: Number, min: 0 },
     estimatedWeight: { type: Number, min: 0 },
     status: {
       type: String,

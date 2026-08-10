@@ -120,6 +120,10 @@ export interface OrderListItem {
   totalAmount: number;
   currency: "VND" | "MNT" | "USD";
 
+  // Sprint Settings — Exchange rate snapshot (1 USD → MNT)
+  exchangeRate?: number;
+  exchangeRateDate?: string;
+
   // Weight
   estimatedWeight?: number;
   actualWeight?: number;

@@ -470,4 +470,14 @@ export const PERMISSIONS = [
     code: "report.view",
     name: "View Report",
   },
+
+  // Sprint Settings — Exchange Rate
+  {
+    code: "settings.exchange_rate.view",
+    name: "View Exchange Rate",
+  },
+  {
+    code: "settings.exchange_rate.update",
+    name: "Update Exchange Rate",
+  },
 ];

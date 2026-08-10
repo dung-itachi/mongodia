@@ -96,10 +96,10 @@ function SaleLeadTableInner({
         width: 120,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
-          if (lead.unitPriceVND) {
+          if (lead.unitPriceMNT) {
             return (
               <span className={styles.priceText}>
-                {lead.unitPriceVND.toLocaleString("vi-VN")}đ
+                {lead.unitPriceMNT.toLocaleString("vi-VN")} ₮
               </span>
             );
           }

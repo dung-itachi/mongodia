@@ -11,13 +11,15 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Card, Button, Input, Select, message } from "antd";
+import { Card, Button, Input, Select } from "antd";
 import {
   SendOutlined,
   ClearOutlined,
   DeleteOutlined,
   PlusOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import { toast } from "@/components/common/feedback/Toast";
 import {
   useProductsByCategory,
   useCombosWithProduct,
@@ -30,6 +32,7 @@ import { useActiveFacebookPages } from "@/hooks/useFacebookPages";
 import { LeadSource } from "@/constants/leadSource";
 import FacebookPageDrawer from "@/app/(protected)/facebook-pages/FacebookPageDrawer";
 import styles from "./MarketingInputSection.module.css";
+import QuickProductDrawer from "./QuickProductDrawer";
 
 const { TextArea } = Input;
 
@@ -63,9 +66,16 @@ export default function MarketingInputSection({
   /** Sprint 8.6: Facebook Page that all newly-staged leads will be tagged with. */
   const [selectedFacebookPageId, setSelectedFacebookPageId] = useState<string | null>(null);
   const [facebookPageDrawerOpen, setFacebookPageDrawerOpen] = useState(false);
+  const [quickProductDrawerOpen, setQuickProductDrawerOpen] = useState(false);
   const [inputText, setInputText] = useState("");
   const [inputType, setInputType] = useState<"comment" | "ladi">("comment");
   const [stagedLeads, setStagedLeads] = useState<StagedLead[]>([]);
+  // Bộ lọc & sắp xếp sản phẩm
+  const [productSearch, setProductSearch] = useState("");
+  const [productSort, setProductSort] = useState<"newest" | "oldest" | "name-asc" | "name-desc" | "code">("newest");
+  const [productCategoryFilter, setProductCategoryFilter] = useState<string | "all">("all");
+  /** Combo list collapse state - true = thu gọn (chỉ 4 đầu), false = mở rộng hết */
+  const [comboExpanded, setComboExpanded] = useState(false);
 
   // ============================================================
   // QUERIES - Fetch from Product Module
@@ -98,6 +108,74 @@ export default function MarketingInputSection({
   // COMPUTED VALUES
   // ============================================================
 
+  // Lọc + sắp xếp sản phẩm theo danh mục, tìm kiếm, sort
+  const filteredCategories = useMemo(() => {
+    const search = productSearch.trim().toLowerCase();
+
+    // 1) Lọc theo category & search
+    const filtered = categories
+      .filter((cat) => {
+        if (productCategoryFilter !== "all" && cat._id !== productCategoryFilter) {
+          return false;
+        }
+        return true;
+      })
+      .map((cat) => {
+        const matchedProducts = cat.products.filter((p) => {
+          if (!search) return true;
+          return (
+            p.name.toLowerCase().includes(search) ||
+            p.code.toLowerCase().includes(search) ||
+            (p.categoryName ?? "").toLowerCase().includes(search)
+          );
+        });
+        return { ...cat, products: matchedProducts };
+      })
+      .filter((cat) => cat.products.length > 0);
+
+    // 2) Sort products trong mỗi category
+    const sortFn = (
+      a: typeof filtered[number]["products"][number],
+      b: typeof filtered[number]["products"][number]
+    ) => {
+      switch (productSort) {
+        case "name-asc":
+          return a.name.localeCompare(b.name, "vi");
+        case "name-desc":
+          return b.name.localeCompare(a.name, "vi");
+        case "code":
+          return a.code.localeCompare(b.code, "vi");
+        case "oldest": {
+          const aT = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bT = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return aT - bT;
+        }
+        case "newest":
+        default: {
+          const aT = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bT = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bT - aT;
+        }
+      }
+    };
+
+    filtered.forEach((cat) => {
+      cat.products.sort(sortFn);
+    });
+
+    return filtered;
+  }, [categories, productSearch, productCategoryFilter, productSort]);
+
+  const totalProductsCount = useMemo(
+    () => categories.reduce((sum, c) => sum + c.products.length, 0),
+    [categories]
+  );
+
+  const filteredProductsCount = useMemo(
+    () => filteredCategories.reduce((sum, c) => sum + c.products.length, 0),
+    [filteredCategories]
+  );
+
   // Get selected combo info from product combos
   const selectedCombo = useMemo(() => {
     return productCombos.find((c) => c._id === selectedComboId);
@@ -125,6 +203,7 @@ export default function MarketingInputSection({
   const handleSelectProduct = useCallback((productId: string) => {
     setSelectedProductId(productId);
     setSelectedComboId(null);
+    setComboExpanded(false);
   }, []);
 
   // Handle combo selection
@@ -142,21 +221,31 @@ export default function MarketingInputSection({
     setFacebookPageDrawerOpen(false);
   }, []);
 
+  // Handle quick product created
+  const handleQuickProductCreated = useCallback(
+    (productId: string, productName: string, comboIds: string[]) => {
+      setSelectedProductId(productId);
+      // Tự chọn combo đầu tiên sau khi tạo
+      setSelectedComboId(comboIds[0] ?? null);
+    },
+    []
+  );
+
   // Parse leads from input text - SPRINT 8.5.2 ENHANCED
   const handleParseLeads = useCallback(() => {
     if (!selectedProductId) {
-      void message.warning("Vui lòng chọn sản phẩm trước");
+      toast.warning("Vui lòng chọn sản phẩm trước");
       return;
     }
 
     if (!selectedFacebookPageId) {
-      void message.warning("Vui lòng chọn trang Facebook trước");
+      toast.warning("Vui lòng chọn trang Facebook trước");
       return;
     }
 
     const lines = inputText.trim().split("\n").filter((l) => l.trim());
     if (lines.length === 0) {
-      void message.warning("Vui lòng nhập thông tin lead");
+      toast.warning("Vui lòng nhập thông tin lead");
       return;
     }
 
@@ -309,13 +398,13 @@ export default function MarketingInputSection({
     setInputText("");
 
     if (errorCount > 0) {
-      void message.warning(
+      toast.warning(
         `Đã thêm ${newLeads.length} lead, có ${errorCount} lỗi không tìm thấy combo`
       );
     } else if (autoDetectCount > 0) {
-      void message.success(`Đã thêm ${newLeads.length} lead (tự động detect ${autoDetectCount} combo)`);
+      toast.success(`Đã thêm ${newLeads.length} lead (tự động detect ${autoDetectCount} combo)`);
     } else {
-      void message.success(`Đã thêm ${newLeads.length} lead vào staging`);
+      toast.success(`Đã thêm ${newLeads.length} lead vào staging`);
     }
   }, [inputText, inputType, selectedCombo, selectedProductId, comboByNameMap, selectedFacebookPageId, facebookPages]);
 
@@ -327,31 +416,31 @@ export default function MarketingInputSection({
   // Handle clear all staged leads
   const handleClearAll = useCallback(() => {
     setStagedLeads([]);
-    void message.success("Đã xóa tất cả leads trong staging");
+    toast.success("Đã xóa tất cả leads trong staging");
   }, []);
 
   // Handle push to Sale - SPRINT 8.5.2 ENHANCED
   const handlePushToSale = useCallback(async () => {
     if (stagedLeads.length === 0) {
-      void message.warning("Không có lead nào để đẩy");
+      toast.warning("Không có lead nào để đẩy");
       return;
     }
 
     const leadsWithoutFacebookPage = stagedLeads.filter((lead) => !lead.facebookPageId);
     if (leadsWithoutFacebookPage.length > 0) {
-      void message.error("Vui lòng chọn trang Facebook cho tất cả lead trước khi đẩy");
+      toast.error("Vui lòng chọn trang Facebook cho tất cả lead trước khi đẩy");
       return;
     }
 
     // Filter out leads with errors
     const validLeads = stagedLeads.filter((l) => !l.error);
     if (validLeads.length === 0) {
-      void message.error("Tất cả leads đều có lỗi, không thể đẩy");
+      toast.error("Tất cả leads đều có lỗi, không thể đẩy");
       return;
     }
 
     if (validLeads.length < stagedLeads.length) {
-      void message.warning(
+      toast.warning(
         `Bỏ qua ${stagedLeads.length - validLeads.length} leads có lỗi`
       );
     }
@@ -378,7 +467,7 @@ export default function MarketingInputSection({
     }
 
     if (leadIds.length === 0) {
-      void message.error("Không thể tạo leads");
+      toast.error("Không thể tạo leads");
       return;
     }
 
@@ -386,10 +475,10 @@ export default function MarketingInputSection({
     try {
       await pushToSaleMutation.mutateAsync({ leadIds });
       setStagedLeads([]);
-      void message.success(`Đã đẩy ${leadIds.length} lead sang Sale`);
+      toast.success(`Đã đẩy ${leadIds.length} lead sang Sale`);
       onLeadsCreated?.();
     } catch (err) {
-      void message.error(`Lỗi: ${(err as Error).message}`);
+      toast.error(`Lỗi: ${(err as Error).message}`);
     }
   }, [stagedLeads, createLeadMutation, pushToSaleMutation, onLeadsCreated]);
 
@@ -427,24 +516,116 @@ export default function MarketingInputSection({
       </div>
 
       {/* Product Selection - SPRINT 8.5.2: From Product Module */}
-      <Card title="① Chọn sản phẩm" size="small" className={styles.card}>
+      <Card
+        title={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>① Chọn sản phẩm</span>
+            <Button
+              type="link"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => setQuickProductDrawerOpen(true)}
+              style={{ marginRight: -8 }}
+            >
+              Thêm nhanh
+            </Button>
+          </div>
+        }
+        size="small"
+        className={styles.card}
+      >
         {categoriesError && (
           <div className={styles.empty} style={{ color: "#ff4d4f", marginBottom: 8 }}>
             Lỗi: {categoriesError}
           </div>
         )}
+
+        {/* Bộ lọc & sắp xếp sản phẩm */}
+        {categories.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              marginBottom: 12,
+              alignItems: "center",
+            }}
+          >
+            <Input
+              allowClear
+              placeholder="Tìm theo tên, mã SP, danh mục..."
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              style={{ flex: 1, minWidth: 180 }}
+              prefix={<SearchOutlined />}
+            />
+            <Select
+              value={productCategoryFilter}
+              onChange={setProductCategoryFilter}
+              style={{ minWidth: 140 }}
+              options={[
+                { value: "all", label: `Tất cả danh mục (${categories.length})` },
+                ...categories.map((c) => ({
+                  value: c._id,
+                  label: `${c.name} (${c.products.length})`,
+                })),
+              ]}
+            />
+            <Select
+              value={productSort}
+              onChange={setProductSort}
+              style={{ minWidth: 160 }}
+              options={[
+                { value: "newest", label: "Mới tạo nhất" },
+                { value: "oldest", label: "Cũ nhất" },
+                { value: "name-asc", label: "Tên A → Z" },
+                { value: "name-desc", label: "Tên Z → A" },
+                { value: "code", label: "Mã sản phẩm" },
+              ]}
+            />
+          </div>
+        )}
+
+        {productSearch || productCategoryFilter !== "all" ? (
+          <div
+            style={{
+              fontSize: 12,
+              color: "#666",
+              marginBottom: 8,
+            }}
+          >
+            Hiển thị {filteredProductsCount}/{totalProductsCount} sản phẩm
+            {productSearch && (
+              <Button
+                type="link"
+                size="small"
+                onClick={() => setProductSearch("")}
+              >
+                Xóa tìm kiếm
+              </Button>
+            )}
+          </div>
+        ) : null}
+
         {isLoading ? (
           <div className={styles.loading}>Đang tải sản phẩm...</div>
         ) : categories.length === 0 && !categoriesError ? (
           <div className={styles.empty}>
             Chưa có sản phẩm nào - liên hệ Admin
           </div>
+        ) : filteredCategories.length === 0 ? (
+          <div className={styles.empty}>
+            Không tìm thấy sản phẩm phù hợp
+          </div>
         ) : (
           <div className={styles.productGrid}>
-            {categories.map((category) => (
+            {filteredCategories.map((category) => (
               <div key={category._id} className={styles.productCategory}>
                 <div className={styles.categoryName}>
                   {category.name || "Khác"}
+                  <span style={{ fontSize: 11, color: "#999", marginLeft: 6 }}>
+                    ({category.products.length})
+                  </span>
                 </div>
                 <div className={styles.productList}>
                   {category.products.map((product) => (
@@ -454,6 +635,7 @@ export default function MarketingInputSection({
                         selectedProductId === product._id ? styles.selected : ""
                       }`}
                       onClick={() => handleSelectProduct(product._id)}
+                      title={product.code}
                     >
                       {product.name}
                     </button>
@@ -475,22 +657,55 @@ export default function MarketingInputSection({
                 Chưa có combo - liên hệ Admin tạo combo cho sản phẩm này
               </div>
             ) : (
-              <div className={styles.comboList}>
-                {productCombos.map((combo) => (
-                  <button
-                    key={combo._id}
-                    className={`${styles.comboBtn} ${
-                      selectedComboId === combo._id ? styles.selected : ""
-                    }`}
-                    onClick={() => handleSelectCombo(combo._id)}
+              <>
+                <div className={styles.comboList}>
+                  {(comboExpanded
+                    ? productCombos
+                    : productCombos.slice(0, 4)
+                  ).map((combo) => (
+                    <button
+                      key={combo._id}
+                      className={`${styles.comboBtn} ${
+                        selectedComboId === combo._id ? styles.selected : ""
+                      }`}
+                      onClick={() => handleSelectCombo(combo._id)}
+                    >
+                      <span style={{ flex: 1, textAlign: "left" }}>
+                        <span>{combo.name}</span>
+                        <span
+                          style={{
+                            marginLeft: 6,
+                            fontSize: 11,
+                            color:
+                              selectedComboId === combo._id
+                                ? "rgba(255,255,255,0.85)"
+                                : "#888",
+                            fontWeight: 500,
+                          }}
+                        >
+                          ({combo.packageQuantity} SP
+                          {combo.giftQuantity ? ` + ${combo.giftQuantity} quà` : ""})
+                        </span>
+                      </span>
+                      <span className={styles.comboPrice}>
+                        {combo.sellingPrice.toLocaleString()}₮
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {productCombos.length > 4 && (
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => setComboExpanded((v) => !v)}
+                    style={{ padding: 0, marginTop: 4 }}
                   >
-                    <span>{combo.name}</span>
-                    <span className={styles.comboPrice}>
-                      {combo.sellingPrice.toLocaleString()}₮
-                    </span>
-                  </button>
-                ))}
-              </div>
+                    {comboExpanded
+                      ? `Thu gọn (${productCombos.length - 4} combo ẩn)`
+                      : `Mở rộng (còn ${productCombos.length - 4} combo)`}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         )}
@@ -553,6 +768,12 @@ export default function MarketingInputSection({
         open={facebookPageDrawerOpen}
         onClose={() => setFacebookPageDrawerOpen(false)}
         onSuccess={handleFacebookPageCreated}
+      />
+
+      <QuickProductDrawer
+        open={quickProductDrawerOpen}
+        onClose={() => setQuickProductDrawerOpen(false)}
+        onSuccess={handleQuickProductCreated}
       />
 
       {/* Lead Input */}

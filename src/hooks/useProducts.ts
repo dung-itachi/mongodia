@@ -6,7 +6,7 @@
  * Uses axios for automatic authentication token handling.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 
 // ============================================================================
@@ -38,6 +38,8 @@ export interface ProductItem {
   image?: string;
   description?: string;
   isActive?: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 /**
@@ -69,6 +71,7 @@ export interface ProductWithCategory {
   categoryId?: string;
   categoryCode?: string;
   categoryName?: string;
+  createdAt?: string | null;
 }
 
 /**
@@ -172,6 +175,12 @@ export function useCategories() {
     error: error?.message ?? null,
     refetch,
   };
+}
+
+/** Force-refresh categories (call after creating a new category). */
+export function useInvalidateCategories() {
+  const { invalidateQueries } = useQueryClient();
+  return () => invalidateQueries({ queryKey: ["categories"] });
 }
 
 /**
@@ -294,6 +303,7 @@ export function useProductsByCategory() {
         categoryId,
         categoryCode,
         categoryName,
+        createdAt: product.createdAt ?? null,
       });
     });
 

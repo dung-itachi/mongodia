@@ -144,6 +144,10 @@ export const ROLES = [
       "sales.kpi.update",
 
       "report.view",
+
+      // ---- Settings (Exchange Rate) ------------------------------------
+      "settings.exchange_rate.view",
+      "settings.exchange_rate.update",
     ],
   },
 

@@ -140,7 +140,6 @@ export function mapLead(lead: ILead): LeadResponse {
     comboId: lead.comboId?.toString(),
     quantity: lead.quantity,
     unitPriceMNT: lead.unitPriceMNT,
-    unitPriceVND: lead.unitPriceVND,
     exchangeRate: lead.exchangeRate,
     estimatedWeight: lead.estimatedWeight,
     status: lead.status,

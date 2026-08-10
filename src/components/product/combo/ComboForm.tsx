@@ -195,7 +195,7 @@ export default function ComboForm({
             { min: 1, message: "Tên tối thiểu 1 ký tự" },
           ]}
         >
-          <Input placeholder="VD: Combo 3 hộp - 350.000đ" />
+          <Input placeholder="VD: Combo 3 hộp - 350.000₮" />
         </Form.Item>
 
         <Form.Item
@@ -219,7 +219,7 @@ export default function ComboForm({
             <Alert
               type="info"
               showIcon
-              message="Chọn sản phẩm để tự động xác định danh mục"
+              title="Chọn sản phẩm để tự động xác định danh mục"
             />
           )}
         </Form.Item>
@@ -237,7 +237,7 @@ export default function ComboForm({
 
         <Form.Item
           name="sellingPrice"
-          label="Giá bán (₫)"
+          label="Giá bán (₮)"
           rules={[
             { required: true, message: "Vui lòng nhập giá bán" },
             { type: "number", min: 0, message: "Giá bán phải >= 0" },
@@ -280,7 +280,7 @@ export default function ComboForm({
         <Alert
           type="info"
           showIcon
-          message="Combo không lưu variant và quà cụ thể. Variant sẽ được Sale chọn khi chốt đơn."
+          title="Combo không lưu variant và quà cụ thể. Variant sẽ được Sale chọn khi chốt đơn."
           style={{ marginTop: 8 }}
         />
       </Form>

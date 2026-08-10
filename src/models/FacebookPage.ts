@@ -96,7 +96,7 @@ const FacebookPageSchema = new Schema<IFacebookPage>(
 );
 
 // Indexes
-FacebookPageSchema.index({ code: 1 }, { unique: true });
+// NOTE: 'code' already has unique:true in field definition above
 FacebookPageSchema.index({ name: 1 });
 FacebookPageSchema.index({ status: 1 });
 FacebookPageSchema.index({ isActive: 1 });

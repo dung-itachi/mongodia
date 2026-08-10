@@ -8,6 +8,7 @@ import { useComboList, type ComboListItem } from "@/hooks/useCombos";
 import { useProductWithVariants } from "@/hooks/useProductVariants";
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import { validateOrderItem, type OrderItem } from "@/types/variant";
+import { formatMNT } from "@/lib/format";
 
 interface SaleOrderModalProps {
   lead: SaleLead | null;
@@ -98,11 +99,11 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
           loading={combosLoading}
           style={{ display: "block", marginTop: 6, width: "100%" }}
           placeholder="Chọn combo"
-          options={combos.map((combo) => ({ label: `${combo.name} - ${combo.sellingPrice.toLocaleString("vi-VN")} đ`, value: combo._id }))}
+          options={combos.map((combo) => ({ label: `${combo.name} - ${formatMNT(combo.sellingPrice)}`, value: combo._id }))}
         />
       </div>
-      {!combosLoading && combos.length === 0 && <Alert type="warning" message="Không có combo đang hoạt động cho sản phẩm của lead." showIcon />}
-      {item && !validation.isValid && <Alert type="warning" message={validation.detailsError || validation.giftsError || "Thông tin đơn hàng chưa hợp lệ."} showIcon style={{ marginBottom: 12 }} />}
+      {!combosLoading && combos.length === 0 && <Alert type="warning" title="Không có combo đang hoạt động cho sản phẩm của lead." showIcon />}
+      {item && !validation.isValid && <Alert type="warning" title={validation.detailsError || validation.giftsError || "Thông tin đơn hàng chưa hợp lệ."} showIcon style={{ marginBottom: 12 }} />}
       {productLoading ? <Spin /> : item && <OrderProductDetail items={items} product={product} onChange={setItems} disabled={loading} />}
     </Modal>
   );

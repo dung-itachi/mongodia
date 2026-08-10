@@ -265,7 +265,7 @@ export async function importLeads(
               customerName: row.customerName.trim(),
               phone: row.phone.trim(),
               comboId: resolveComboIdFromContext(row.combo, context) ?? undefined,
-              unitPriceVND: priceNum ?? undefined,
+              unitPriceMNT: priceNum ?? undefined,
               sourceType,
               status: LeadStatus.NEW,
               isDuplicate: row.isDuplicate,

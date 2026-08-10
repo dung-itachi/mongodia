@@ -138,6 +138,12 @@ export interface OrderResponse {
   totalAmount: number;
   currency: string;
 
+  // ---- Sprint Settings: Exchange Rate snapshot ----------------------
+  /** Tỷ giá 1 USD → MNT tại thời điểm tạo Order. Bất biến. */
+  exchangeRate?: number;
+  /** Thời điểm snapshot tỷ giá. */
+  exchangeRateDate?: string;
+
   // ---- Weight ------------------------------------------------------
   estimatedWeight?: number;
   actualWeight?: number;
@@ -351,6 +357,8 @@ export function mapOrder(order: IOrder): OrderResponse {
     unitPrice: order.unitPrice,
     totalAmount: order.totalAmount,
     currency: order.currency,
+    exchangeRate: order.exchangeRate,
+    exchangeRateDate: order.exchangeRateDate?.toISOString(),
     estimatedWeight: order.estimatedWeight,
     actualWeight: order.actualWeight,
     warehouseId: order.warehouseId?.toString(),

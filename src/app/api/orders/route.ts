@@ -26,6 +26,7 @@ import { success, error as errorResponse } from "@/utils/response";
 import { createOrderSchema } from "@/utils/validator";
 import { saleOrderService } from "@/services/sale-order.service";
 import type { OrderItem } from "@/types/variant";
+import { getCurrentExchangeRate } from "@/lib/system-settings";
 
 import { resolveCustomerRevenue } from "@/services/order/revenueEngine.service";
 import {
@@ -264,6 +265,10 @@ export async function POST(request: Request) {
 
     const orderCode = await generateOrderCode(session);
 
+    // Sprint Settings: snapshot exchange rate (1 USD → MNT) at order
+    // creation time. Existing orders keep their original rate forever.
+    const exchangeRateSnap = await getCurrentExchangeRate();
+
     const [order] = await Order.create(
       [
         {
@@ -282,7 +287,9 @@ export async function POST(request: Request) {
           totalAmount: validatedOrderItems.length > 0
             ? validatedOrderItems.reduce((sum, item) => sum + item.subtotal, 0) + (data.shipping?.shippingFee ?? 0)
             : data.totalAmount,
-          currency: data.currency || "VND",
+          currency: data.currency || "MNT",
+          exchangeRate: exchangeRateSnap.rate,
+          exchangeRateDate: new Date(),
           estimatedWeight: data.estimatedWeight || undefined,
           actualWeight: data.actualWeight || undefined,
           warehouseId: data.warehouseId || undefined,
@@ -301,13 +308,13 @@ export async function POST(request: Request) {
                 grandTotal:
                   validatedOrderItems.reduce((sum, item) => sum + item.subtotal, 0) +
                   (data.shipping?.shippingFee ?? 0),
-                currency: data.currency || "VND",
+                currency: data.currency || "MNT",
               }
             : undefined,
           payments: (data.payments ?? []).map((p) => ({
             method: p.method,
             amount: p.amount,
-            currency: p.currency || "VND",
+            currency: p.currency || "MNT",
             paidAt: p.paidAt ? new Date(p.paidAt) : undefined,
             transactionId: p.transactionId || undefined,
             note: p.note || undefined,

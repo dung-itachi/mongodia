@@ -34,7 +34,6 @@ export interface SaleLead {
     name: string;
   };
   quantity?: number;
-  unitPriceVND?: number;
   unitPriceMNT?: number;
   exchangeRate?: number;
   marketingEmployeeId?: {
