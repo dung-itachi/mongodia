@@ -1,8 +1,10 @@
 /**
- * Cài đặt hệ thống — Tỷ giá tiền tệ
+ * Trang Cài đặt Tỷ giá Tiền tệ (MNT sang VND)
  *
- * Admin có thể xem / cập nhật tỷ giá 1 USD → MNT. Order snapshot giá trị
- * này tại thời điểm tạo; thay đổi tỷ giá KHÔNG ảnh hưởng Order cũ.
+ * Admin có thể xem/cập nhật tỷ giá 1 MNT sang VND.
+ * Order snapshot tại thời điểm tạo; thay đổi tỷ giá KHÔNG ảnh hưởng Order cũ.
+ *
+ * Business: Tỷ giá dùng để quy đổi doanh thu MNT sang VND cho báo cáo.
  */
 
 "use client";
@@ -31,7 +33,7 @@ import {
   useExchangeRate,
   useUpdateExchangeRate,
 } from "@/hooks/useExchangeRate";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, formatVND, convertMNTtoVND } from "@/lib/format";
 import { toast } from "@/components/common/feedback/Toast";
 
 const { Text, Title } = Typography;
@@ -77,7 +79,7 @@ export default function ExchangeRateSettingsPage() {
     <PageContainer>
       <PageHeader
         title="Tỷ giá tiền tệ"
-        subtitle="Quản lý tỷ giá quy đổi 1 USD → MNT (Tugrik)"
+        subtitle="Quản lý tỷ giá quy đổi MNT sang VND"
         breadcrumb={[
           { label: "Trang chủ", href: "/" },
           { label: "Cài đặt hệ thống", href: "/settings" },
@@ -111,7 +113,7 @@ export default function ExchangeRateSettingsPage() {
               <Alert
                 type="warning"
                 showIcon
-                message="Thay đổi tỷ giá KHÔNG ảnh hưởng đến đơn hàng đã tạo."
+                title="Thay đổi tỷ giá KHÔNG ảnh hưởng đến đơn hàng đã tạo."
                 description={
                   <>
                     Mỗi đơn hàng đã snapshot tỷ giá tại thời điểm tạo (lưu trong <code>exchangeRate</code> + <code>exchangeRateDate</code>).
@@ -132,30 +134,22 @@ export default function ExchangeRateSettingsPage() {
                 >
                   <Form.Item
                     name="rate"
-                    label="Tỷ giá (1 USD → MNT)"
+                    label="Tỷ giá (1 MNT sang VND)"
                     rules={[
                       { required: true, message: "Vui lòng nhập tỷ giá" },
                       {
                         type: "number",
-                        min: 1,
+                        min: 0.01,
                         message: "Tỷ giá phải lớn hơn 0",
                       },
                     ]}
-                    extra
-                    valuePropName="value"
+                    extra="Nhập số VND tương ứng với 1 MNT. Ví dụ: 7.00"
                   >
                     <InputNumber
                       style={{ width: "100%" }}
-                      placeholder="Ví dụ: 3500"
-                      formatter={(value) =>
-                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                      }
-                      parser={((value: string | undefined): 1 => {
-                        const n = Number((value ?? "").replace(/,/g, ""));
-                        return (Number.isFinite(n) ? n : 0) as 1;
-                      })}
-                      min={1}
-                      step={100}
+                      placeholder="VD: 7.00"
+                      min={0.01}
+                      step={0.5}
                     />
                   </Form.Item>
 
@@ -191,12 +185,16 @@ export default function ExchangeRateSettingsPage() {
                 <Descriptions.Item label="Tỷ giá hiện tại">
                   <Statistic
                     value={data.rate}
-                    suffix="₮"
-                    valueStyle={{ color: "#1890ff", fontSize: 20 }}
+                    suffix="VND/MNT"
+                    prefix="1 MNT = "
+                    styles={{ content: { color: "#1890ff", fontSize: 20 } }}
                   />
                 </Descriptions.Item>
-                <Descriptions.Item label="Đơn vị tiền tệ">
-                  <Tag color="green">MNT — Mongolian Tugrik</Tag>
+                <Descriptions.Item label="Đơn vị tiền tệ gốc">
+                  <Tag color="green">MNT - Mongolian Tugrik</Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Đơn vị quy đổi">
+                  <Tag color="orange">VND - Vietnamese Dong</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Cập nhật lúc">
                   {data.updatedAt
@@ -224,10 +222,10 @@ export default function ExchangeRateSettingsPage() {
                 Snapshot <strong>không bao giờ</strong> thay đổi kể cả khi Admin cập nhật tỷ giá sau đó.
               </li>
               <li>
-                Đơn vị tiền hiển thị trên UI là <strong>MNT / ₮</strong> cho tất cả các màn hình bán hàng.
+                Đơn vị tiền hiển thị trên UI là <strong>MNT</strong> cho tất cả các màn hình bán hàng.
               </li>
               <li>
-                <strong>Không</strong> có logic re-calculate Order cũ khi tỷ giá thay đổi.
+                Tỷ giá dùng để quy đổi <strong>doanh thu MNT sang VND</strong> trên các báo cáo.
               </li>
             </ul>
           </Card>
@@ -237,12 +235,25 @@ export default function ExchangeRateSettingsPage() {
             style={{ marginTop: 16 }}
             styles={{ body: { paddingTop: 0 } }}
           >
-            <Text type="secondary">
-              Với tỷ giá <strong>{data ? formatNumber(data.rate) : "3,500"}</strong> ₮ / USD:
-            </Text>
-            <div style={{ marginTop: 8 }}>
-              <code>100 USD = {(data ? data.rate * 100 : 350_000).toLocaleString("mn-MN")} ₮</code>
-            </div>
+            {data ? (
+              <>
+                <Text type="secondary">
+                  Với tỷ giá <strong>1 MNT = {formatNumber(data.rate)} VND</strong>:
+                </Text>
+                <div style={{ marginTop: 8 }}>
+                  <code>100,000 MNT = {formatVND(convertMNTtoVND(100000, data.rate))}</code>
+                </div>
+              </>
+            ) : (
+              <>
+                <Text type="secondary">
+                  Với tỷ giá mặc định <strong>1 MNT = 7.00 VND</strong>:
+                </Text>
+                <div style={{ marginTop: 8 }}>
+                  <code>100,000 MNT = 700,000 VND</code>
+                </div>
+              </>
+            )}
           </Card>
         </Col>
       </Row>

@@ -1,14 +1,16 @@
 /**
- * System Settings seed (Sprint Settings — Exchange Rate)
+ * System Settings seed (Sprint Settings — Exchange Rate MNT→VND)
  *
  * Idempotently inserts/updates the single `exchange_rate` row used by the
  * Settings UI. Existing Order documents are intentionally untouched —
  * see `lib/system-settings.ts` for the snapshot guarantee.
+ *
+ * Business: Exchange rate = VND per 1 MNT (e.g., rate = 7 means 1 MNT = 7 VND).
  */
 
 import Setting from "@/models/Setting";
 import {
-  DEFAULT_EXCHANGE_RATE,
+  DEFAULT_MNT_TO_VND_RATE,
   EXCHANGE_RATE_SETTING_KEY,
 } from "@/lib/system-settings";
 
@@ -19,18 +21,19 @@ export async function seedSystemSettings() {
       $set: {
         key: EXCHANGE_RATE_SETTING_KEY,
         value: {
-          rate: DEFAULT_EXCHANGE_RATE,
-          currency: "MNT",
+          rate: DEFAULT_MNT_TO_VND_RATE,
+          fromCurrency: "MNT",
+          toCurrency: "VND",
           updatedAt: new Date().toISOString(),
           updatedBy: null,
         },
         description:
-          "Tỷ giá quy đổi 1 USD → MNT (Tugrik). Snapshot vào Order tại thời điểm tạo.",
+          "Tỷ giá quy đổi 1 MNT → VND. Dùng để báo cáo doanh thu.",
         isPublic: false,
       },
     },
     { upsert: true, returnDocument: "after" },
   );
 
-  console.log("[OK] System Settings (exchange rate)");
+  console.log("[OK] System Settings (exchange rate MNT→VND)");
 }

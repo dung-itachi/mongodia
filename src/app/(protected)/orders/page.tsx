@@ -11,13 +11,14 @@
 
 import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { message, Dropdown, Button } from "antd";
+import { message, Dropdown, Button, Space } from "antd";
 import {
   PlusOutlined,
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -348,14 +349,22 @@ function OrdersPageInner() {
           { label: "Trang chủ", href: "/" },
           { label: "Đơn hàng" },
         ]}
-        actions={
+          actions={
           <PermissionGate permission="order.create">
-            <ActionButton
-              type="primary"
-              icon={<PlusOutlined />}
-              label="Tạo đơn"
-              onClick={() => router.push("/orders/new")}
-            />
+            <Space>
+              <ActionButton
+                type="ghost"
+                icon={<UploadOutlined />}
+                label="Nhập nhanh"
+                onClick={() => router.push("/orders/quick-import")}
+              />
+              <ActionButton
+                type="primary"
+                icon={<PlusOutlined />}
+                label="Tạo đơn"
+                onClick={() => router.push("/orders/new")}
+              />
+            </Space>
           </PermissionGate>
         }
       />
@@ -369,12 +378,20 @@ function OrdersPageInner() {
           loading={loading}
           actions={
             <PermissionGate permission="order.create">
-              <ActionButton
-                type="primary"
-                icon={<PlusOutlined />}
-                label="Tạo đơn"
-                onClick={() => router.push("/orders/new")}
-              />
+              <Space>
+                <ActionButton
+                  type="ghost"
+                  icon={<UploadOutlined />}
+                  label="Nhập nhanh"
+                  onClick={() => router.push("/orders/quick-import")}
+                />
+                <ActionButton
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  label="Tạo đơn"
+                  onClick={() => router.push("/orders/new")}
+                />
+              </Space>
             </PermissionGate>
           }
         />

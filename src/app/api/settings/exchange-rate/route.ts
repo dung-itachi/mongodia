@@ -2,13 +2,16 @@
  * GET /api/settings/exchange-rate
  * PUT /api/settings/exchange-rate
  *
- * Returns/updates the active exchange rate (1 USD → MNT) used for Order
- * snapshotting. Requires `settings.exchange_rate.view` to read and
- * `settings.exchange_rate.update` to write.
+ * Returns/updates the active exchange rate (1 MNT → VND) used for Order
+ * snapshotting and revenue reporting. Requires `settings.exchange_rate.view`
+ * to read and `settings.exchange_rate.update` to write.
  *
  * IMPORTANT: Writing a new rate does NOT recalculate any existing Order
  * documents. Each Order carries its own snapshot (`exchangeRate`,
  * `exchangeRateDate`) — see `lib/system-settings.ts` for the contract.
+ *
+ * Business: Order prices are stored in MNT (₮). Exchange rate converts
+ * MNT → VND for reporting purposes only.
  */
 
 import { NextResponse } from "next/server";

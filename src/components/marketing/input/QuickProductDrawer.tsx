@@ -302,7 +302,7 @@ export default function QuickProductDrawer({
 
                     <Form.Item
                       name={[field.name, "sellingPrice"]}
-                      label="Giá bán (₫)"
+                      label="Giá bán (₮)"
                       rules={[
                         { required: true, message: "Nhập giá" },
                         { type: "number", min: 0, message: "Giá >= 0" },

@@ -120,7 +120,7 @@ export interface OrderListItem {
   totalAmount: number;
   currency: "VND" | "MNT" | "USD";
 
-  // Sprint Settings — Exchange rate snapshot (1 USD → MNT)
+  // Sprint Settings — Exchange rate snapshot (1 MNT → VND)
   exchangeRate?: number;
   exchangeRateDate?: string;
 
@@ -274,6 +274,8 @@ export interface CreateOrderInput {
   productId?: string;
   comboId?: string;
   productVariantId?: string;
+  productSnapshot?: { code: string; name: string };
+  comboSnapshot?: { code: string; name: string };
   quantity?: number;
   unitPrice?: number;
   totalAmount?: number;

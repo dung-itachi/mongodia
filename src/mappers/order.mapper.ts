@@ -139,7 +139,7 @@ export interface OrderResponse {
   currency: string;
 
   // ---- Sprint Settings: Exchange Rate snapshot ----------------------
-  /** Tỷ giá 1 USD → MNT tại thời điểm tạo Order. Bất biến. */
+  /** Tỷ giá 1 MNT → VND tại thời điểm tạo Order. Bất biến. */
   exchangeRate?: number;
   /** Thời điểm snapshot tỷ giá. */
   exchangeRateDate?: string;

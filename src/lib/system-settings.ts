@@ -1,10 +1,14 @@
 /**
- * System Settings helpers (Sprint Settings — Exchange Rate)
+ * System Settings helpers (Sprint Settings — Exchange Rate MNT→VND)
  *
  * Centralized accessor for system-wide config rows stored in the
- * `Setting` collection. Today we only store the active exchange rate
- * (1 USD → MNT) but the API is generic enough to host future keys
- * like `DEFAULT_AREA_CODE`, `DEFAULT_TEAM_CODE`, etc.
+ * `Setting` collection. Today we store the active exchange rate
+ * (1 MNT → VND) for revenue reporting.
+ *
+ * Business Requirement:
+ * - Order prices are stored in MNT (₮) — this is the system currency.
+ * - Exchange rate converts MNT → VND for reporting purposes only.
+ * - Revenue dashboards may show: "100,000 ₮ ≈ 700,000 ₫" (rate = 7).
  *
  * IMPORTANT: Reading the current exchange rate here does NOT mutate
  * existing Order snapshots — that is the responsibility of Order
@@ -19,18 +23,23 @@ export const EXCHANGE_RATE_SETTING_KEY = "exchange_rate";
 
 /**
  * Shape persisted in `Setting.value` for the `exchange_rate` key.
- * `rate` is MNT per 1 USD.
+ * `rate` = VND per 1 MNT (e.g., rate = 7 means 1 MNT = 7 VND).
  */
 export interface ExchangeRateSettingValue {
   rate: number;
-  currency: "MNT";
+  fromCurrency: "MNT";
+  toCurrency: "VND";
   /** ISO string */
   updatedAt?: string;
   /** employeeId string */
   updatedBy?: string | null;
 }
 
-export const DEFAULT_EXCHANGE_RATE = 3500;
+/** Default exchange rate: 1 MNT = 7 VND */
+export const DEFAULT_MNT_TO_VND_RATE = 7;
+
+/** @deprecated Use DEFAULT_MNT_TO_VND_RATE */
+export const DEFAULT_EXCHANGE_RATE = DEFAULT_MNT_TO_VND_RATE;
 
 export function isExchangeRateSettingValue(
   value: unknown,
@@ -41,9 +50,9 @@ export function isExchangeRateSettingValue(
 }
 
 /**
- * Get the current exchange rate (1 USD → MNT).
+ * Get the current exchange rate (1 MNT → VND).
  *
- * Falls back to `DEFAULT_EXCHANGE_RATE` if no setting row exists yet
+ * Falls back to `DEFAULT_MNT_TO_VND_RATE` if no setting row exists yet
  * so callers don't crash on a brand-new install.
  */
 export async function getCurrentExchangeRate(): Promise<ExchangeRateSettingValue> {
@@ -56,8 +65,9 @@ export async function getCurrentExchangeRate(): Promise<ExchangeRateSettingValue
   }
 
   return {
-    rate: DEFAULT_EXCHANGE_RATE,
-    currency: "MNT",
+    rate: DEFAULT_MNT_TO_VND_RATE,
+    fromCurrency: "MNT",
+    toCurrency: "VND",
     updatedAt: new Date().toISOString(),
     updatedBy: null,
   };
@@ -78,7 +88,8 @@ export async function setExchangeRate(input: {
 
   const value: ExchangeRateSettingValue = {
     rate: input.rate,
-    currency: "MNT",
+    fromCurrency: "MNT",
+    toCurrency: "VND",
     updatedAt: new Date().toISOString(),
     updatedBy: input.updatedBy ?? null,
   };
@@ -89,7 +100,7 @@ export async function setExchangeRate(input: {
       $set: {
         key: EXCHANGE_RATE_SETTING_KEY,
         value,
-        description: "Tỷ giá quy đổi 1 USD → MNT (Tugrik). Snapshot vào Order tại thời điểm tạo.",
+        description: "Tỷ giá quy đổi 1 MNT → VND. Dùng để báo cáo doanh thu.",
         isPublic: false,
       },
     },

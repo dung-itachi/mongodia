@@ -97,3 +97,41 @@ export function formatRelativeTime(iso: string): string {
   const years = Math.floor(months / 12);
   return `${years} năm trước`;
 }
+
+// ============================================================================
+// VND Formatting (Sprint Settings — Exchange Rate MNT→VND)
+// ============================================================================
+
+/** VND currency code. */
+export const VND_CURRENCY_CODE = "VND";
+
+/** VND display symbol. */
+export const VND_CURRENCY_SYMBOL = "₫";
+
+/**
+ * Format a number as Vietnamese Dong (₫).
+ *
+ * @example
+ *   formatVND(700000) // "700,000 ₫"
+ */
+export function formatVND(value: number): string {
+  const safeNumber = Number.isFinite(value) ? value : 0;
+  const formatted = new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 0,
+  }).format(safeNumber);
+  return `${formatted} ${VND_CURRENCY_SYMBOL}`;
+}
+
+/**
+ * Convert MNT amount to VND using the given exchange rate.
+ * Exchange rate = VND per 1 MNT (e.g., rate = 7 means 1 MNT = 7 VND).
+ *
+ * @example
+ *   convertMNTtoVND(100000, 7) // 700000
+ */
+export function convertMNTtoVND(mntAmount: number, exchangeRate: number): number {
+  if (!Number.isFinite(mntAmount) || !Number.isFinite(exchangeRate)) {
+    return 0;
+  }
+  return Math.round(mntAmount * exchangeRate);
+}

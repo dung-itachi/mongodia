@@ -171,7 +171,7 @@ export interface IOrder extends Document {
 
   // ---- Sprint Settings: Exchange Rate snapshot (Sprint Settings) ------
   /**
-   * Tỷ giá (1 USD → MNT) tại thời điểm tạo Order.
+   * Tỷ giá (1 MNT → VND) tại thời điểm tạo Order.
    * KHÔNG BAO GIỜ thay đổi sau khi Order được tạo.
    * Nếu Admin đổi exchange rate → Order cũ vẫn giữ rate cũ.
    */
@@ -342,7 +342,7 @@ const OrderSchema = new Schema<IOrder>(
 
     // ---- Sprint Settings: Exchange Rate snapshot (Sprint Settings) ------
     /**
-     * Tỷ giá (1 USD → MNT) tại thời điểm tạo Order.
+     * Tỷ giá (1 MNT → VND) tại thời điểm tạo Order.
      * KHÔNG BAO GIỜ thay đổi sau khi Order được tạo.
      * Nếu Admin đổi exchange rate → Order cũ vẫn giữ rate cũ.
      */

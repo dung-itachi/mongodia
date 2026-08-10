@@ -50,7 +50,7 @@ export interface ILead extends Document {
   quantity?: number;
   /** Giá trên 1 combo (MNT). Đơn vị tiền bán hàng chính của hệ thống. */
   unitPriceMNT?: number;
-  /** Tỷ giá 1 USD → MNT tại thời điểm tạo Lead (audit). */
+  /** Tỷ giá 1 MNT → VND tại thời điểm tạo Lead (audit). */
   exchangeRate?: number;
   estimatedWeight?: number;
   status: LeadStatus;
