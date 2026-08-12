@@ -8,9 +8,16 @@ export interface IWarehouseInventory {
   productId?: Types.ObjectId | null;
   variantId?: Types.ObjectId | null;
   giftId?: Types.ObjectId | null;
+  /** Tổng số lượng tồn kho vật lý tại warehouse */
   quantity: number;
+  /** Số lượng khả dụng = quantity - inTransitQuantity - reservedQuantity */
+  availableQuantity: number;
+  /** Số lượng đang chuyển đến kho khác (đã SENT, chưa RECEIVED) */
   inTransitQuantity: number;
+  /** Số lượng đã xuất - CHỈ dùng thống kê/lịch sử, KHÔNG ảnh hưởng availableQuantity */
   shippedQuantity: number;
+  /** Số lượng đã giữ cho đơn hàng đang xử lý */
+  reservedQuantity: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -24,8 +31,11 @@ const WarehouseInventorySchema = new Schema<IWarehouseInventory>(
     variantId: { type: Schema.Types.ObjectId, ref: "ProductVariant", default: null },
     giftId: { type: Schema.Types.ObjectId, ref: "Gift", default: null },
     quantity: { type: Number, min: 0, default: 0 },
+    /** availableQuantity = quantity - inTransitQuantity - reservedQuantity */
+    availableQuantity: { type: Number, min: 0, default: 0 },
     inTransitQuantity: { type: Number, min: 0, default: 0 },
     shippedQuantity: { type: Number, min: 0, default: 0 },
+    reservedQuantity: { type: Number, min: 0, default: 0 },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true, collection: "warehouse_inventory" }

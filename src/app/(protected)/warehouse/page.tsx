@@ -1,93 +1,218 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
-import { Card, Col, Row, Statistic } from "antd";
-import { useWarehouses } from "@/hooks/useWarehouses";
-import { useWarehouseWorkflowInventory, useWarehouseMovements, useWarehouseReceipts, useWarehouseTransfers } from "@/hooks/useWarehouseWorkflow";
+import { useState, useMemo } from "react";
+import { Select } from "antd";
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import CardSection from "@/components/common/cards/CardSection";
+import { useWarehouses } from "@/hooks/useWarehouses";
+import { useWarehouseWorkflowInventory } from "@/hooks/useWarehouseWorkflow";
+import WarehouseStats from "./components/WarehouseStats";
+import LowStockAlert from "./components/LowStockAlert";
+import { LOW_STOCK_THRESHOLD } from "./warehouse.constants";
+import styles from "./warehouse-dashboard.module.css";
 
-function totalsForWarehouse(warehouseId: string | undefined, inventory: { items: { warehouseId?: { _id?: string } | string; quantity?: number; inTransitQuantity?: number; shippedQuantity?: number }[] } | undefined) {
-  if (!warehouseId) return { quantity: 0, inTransit: 0, shipped: 0 };
-  const items = inventory?.items ?? [];
-  let quantity = 0;
-  let inTransit = 0;
-  let shipped = 0;
-  for (const item of items) {
-    const wid = (item.warehouseId as { _id?: string } | string | undefined);
-    const id = typeof wid === "string" ? wid : wid?._id;
-    if (id !== warehouseId) continue;
-    quantity += item.quantity ?? 0;
-    inTransit += item.inTransitQuantity ?? 0;
-    shipped += item.shippedQuantity ?? 0;
-  }
-  return { quantity, inTransit, shipped };
+export type WarehouseStats = {
+  totalSKU: number;
+  totalQuantity: number;
+  availableQuantity: number;
+  reservedQuantity: number;
+  inTransitQuantity: number;
+};
+
+export type LowStockItem = {
+  key: string;
+  name: string;
+  sku?: string;
+  warehouseName?: string;
+  availableQuantity: number;
+};
+
+type InventoryItem = {
+  _id: string;
+  warehouseId?: { _id: string; name: string } | string;
+  productId?: { _id: string; code?: string; name?: string } | null;
+  variantId?: { _id: string; sku?: string } | null;
+  giftId?: { _id: string; name?: string } | null;
+  itemType: "PRODUCT" | "GIFT";
+  quantity: number;
+  availableQuantity: number;
+  inTransitQuantity: number;
+  reservedQuantity: number;
+};
+
+function getWarehouseId(warehouseId: { _id?: string } | string | undefined): string {
+  if (!warehouseId) return "";
+  if (typeof warehouseId === "string") return warehouseId;
+  return warehouseId._id ?? "";
+}
+
+function computeStatsForWarehouse(
+  warehouseId: string,
+  inventory: InventoryItem[]
+): WarehouseStats {
+  const warehouseItems = inventory.filter(
+    (item) => getWarehouseId(item.warehouseId) === warehouseId
+  );
+
+  return {
+    totalSKU: warehouseItems.length,
+    totalQuantity: warehouseItems.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
+    availableQuantity: warehouseItems.reduce((sum, item) => sum + (item.availableQuantity ?? 0), 0),
+    reservedQuantity: warehouseItems.reduce((sum, item) => sum + (item.reservedQuantity ?? 0), 0),
+    inTransitQuantity: warehouseItems.reduce((sum, item) => sum + (item.inTransitQuantity ?? 0), 0),
+  };
+}
+
+function computeLowStockItems(
+  inventory: InventoryItem[],
+  warehouseNameMap: Map<string, string>
+): LowStockItem[] {
+  return inventory
+    .filter((item) => (item.availableQuantity ?? 0) < LOW_STOCK_THRESHOLD && (item.availableQuantity ?? 0) > 0)
+    .map((item) => {
+      const wid = getWarehouseId(item.warehouseId);
+      let name = "Không xác định";
+      let sku: string | undefined;
+
+      if (item.itemType === "GIFT") {
+        name = (item.giftId as { name?: string } | null)?.name ?? "Quà tặng";
+      } else {
+        const product = item.productId as { code?: string; name?: string } | null;
+        const variant = item.variantId as { sku?: string } | null;
+        name = product?.name ?? product?.code ?? "Sản phẩm";
+        sku = variant?.sku;
+      }
+
+      return {
+        key: item._id,
+        name,
+        sku,
+        warehouseName: warehouseNameMap.get(wid),
+        availableQuantity: item.availableQuantity ?? 0,
+      };
+    })
+    .slice(0, 10);
 }
 
 export default function WarehouseDashboardPage() {
-  const { warehouses, loading } = useWarehouses();
-  const list = warehouses ?? [];
+  const { warehouses, loading: warehousesLoading } = useWarehouses();
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>(undefined);
 
-  const allInventory = useWarehouseWorkflowInventory({ limit: 100 });
-  const transfers = useWarehouseTransfers({ limit: 100 });
-  const receipts = useWarehouseReceipts({ limit: 100 });
-  const movements = useWarehouseMovements({ limit: 100 });
+  const allInventory = useWarehouseWorkflowInventory({ limit: 500 });
+  const inventoryData: InventoryItem[] = allInventory.data?.items ?? [];
+  const loading = allInventory.isLoading;
 
-  const cards = useMemo(() => list.map((warehouse: { _id: string; code: string; name: string }) => {
-    const totals = totalsForWarehouse(warehouse._id, allInventory.data);
-    return { warehouse, totals };
-  }), [list, allInventory.data]);
+  const warehouseNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const w of warehouses) {
+      map.set(w._id, w.name);
+    }
+    return map;
+  }, [warehouses]);
 
-  const overall = useMemo(() => {
-    const quantity = cards.reduce((sum, card) => sum + card.totals.quantity, 0);
-    const inTransit = cards.reduce((sum, card) => sum + card.totals.inTransit, 0);
-    const shipped = cards.reduce((sum, card) => sum + card.totals.shipped, 0);
-    return { quantity, inTransit, shipped };
-  }, [cards]);
+  const filteredInventory = useMemo(() => {
+    if (!selectedWarehouseId) return inventoryData;
+    return inventoryData.filter(
+      (item) => getWarehouseId(item.warehouseId) === selectedWarehouseId
+    );
+  }, [inventoryData, selectedWarehouseId]);
+
+  const activeWarehouses = useMemo(
+    () => warehouses.filter((w: { isActive: boolean }) => w.isActive),
+    [warehouses]
+  );
+
+  const perWarehouseStats = useMemo(() => {
+    const map = new Map<string, WarehouseStats>();
+    for (const w of activeWarehouses) {
+      const stats = computeStatsForWarehouse(w._id, inventoryData);
+      map.set(w._id, stats);
+    }
+    return map;
+  }, [activeWarehouses, inventoryData]);
+
+  const overallStats = useMemo(() => {
+    let totalSKU = 0;
+    let totalQuantity = 0;
+    let availableQuantity = 0;
+    let reservedQuantity = 0;
+    let inTransitQuantity = 0;
+
+    const statsSource = selectedWarehouseId ? filteredInventory : inventoryData;
+    for (const item of statsSource) {
+      totalSKU += 1;
+      totalQuantity += item.quantity ?? 0;
+      availableQuantity += item.availableQuantity ?? 0;
+      reservedQuantity += item.reservedQuantity ?? 0;
+      inTransitQuantity += item.inTransitQuantity ?? 0;
+    }
+
+    return { totalSKU, totalQuantity, availableQuantity, reservedQuantity, inTransitQuantity };
+  }, [selectedWarehouseId, inventoryData, filteredInventory]);
+
+  const lowStockItems = useMemo(
+    () => computeLowStockItems(filteredInventory, warehouseNameMap),
+    [filteredInventory, warehouseNameMap]
+  );
 
   return (
     <PageContainer>
       <PageHeader
-        title="Tổng quan kho"
-        subtitle={loading ? "Đang tải..." : `${list.length} kho`}
-        breadcrumb={[{ label: "Trang chủ", href: "/" }, { label: "Kho" }]}
+        title="Dashboard Kho"
+        subtitle={warehousesLoading ? "Đang tải..." : `${activeWarehouses.length} kho đang hoạt động`}
+        breadcrumb={[
+          { label: "Trang chủ", href: "/" },
+          { label: "Kho", href: "/warehouse" },
+          { label: "Dashboard" },
+        ]}
       />
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={8}><Card><Statistic title="Tổng tồn kho" value={overall.quantity} /></Card></Col>
-        <Col xs={24} md={8}><Card><Statistic title="Đang chuyển" value={overall.inTransit} /></Card></Col>
-        <Col xs={24} md={8}><Card><Statistic title="Đã xuất" value={overall.shipped} /></Card></Col>
-      </Row>
-
-      {cards.map((card) => (
-        <div key={card.warehouse._id} style={{ marginBottom: 16 }}>
-          <CardSection title={`Kho ${card.warehouse.name} (${card.warehouse.code})`}>
-            <Row gutter={16}>
-              <Col xs={24} md={8}><Statistic title="Tồn kho" value={card.totals.quantity} /></Col>
-              <Col xs={24} md={8}><Statistic title="Đang chuyển" value={card.totals.inTransit} /></Col>
-              <Col xs={24} md={8}><Statistic title="Đã xuất" value={card.totals.shipped} /></Col>
-            </Row>
-            <div style={{ marginTop: 12, display: "flex", gap: 12 }}>
-              <Link href="/warehouse/inventory">Tồn chi tiết</Link>
-              <Link href="/warehouse/imports">Phiếu nhập</Link>
-              <Link href="/warehouse/transfers">Phiếu chuyển</Link>
-              <Link href="/warehouse/movements">Lịch sử</Link>
-            </div>
-          </CardSection>
+      <div className={styles["warehouse-page"]}>
+        <div className={styles["warehouse-params"]}>
+          <span className={styles["warehouse-params-text"]}>Kho:</span>
+          <Select
+            placeholder="Tất cả kho"
+            allowClear
+            style={{ width: 200 }}
+            value={selectedWarehouseId}
+            onChange={(value) => setSelectedWarehouseId(value)}
+            options={[
+              { value: "", label: "Tất cả kho" },
+              ...activeWarehouses.map((w: { _id: string; name: string }) => ({
+                value: w._id,
+                label: w.name,
+              })),
+            ]}
+          />
         </div>
-      ))}
 
-      <Row gutter={16}>
-        <Col xs={24} md={12}><Card title={`Phiếu nhập gần đây (${receipts.data?.total ?? 0})`} loading={receipts.isLoading}>{receipts.data?.items.slice(0, 5).map((item: { _id: string; receiptCode: string; createdAt: string; warehouseId?: { name?: string } }) => (<div key={item._id}>{item.receiptCode} • {item.warehouseId?.name} • {new Date(item.createdAt).toLocaleString("vi-VN")}</div>))}</Card></Col>
-        <Col xs={24} md={12}><Card title={`Phiếu chuyển gần đây (${transfers.data?.total ?? 0})`} loading={transfers.isLoading}>{transfers.data?.items.slice(0, 5).map((item: { _id: string; transferCode: string; status: string; createdAt: string }) => (<div key={item._id}>{item.transferCode} • {item.status} • {new Date(item.createdAt).toLocaleString("vi-VN")}</div>))}</Card></Col>
-      </Row>
+        <WarehouseStats stats={overallStats} loading={loading} />
 
-      <div style={{ marginTop: 16 }}>
-        <Card title={`Lịch sử tồn kho mới nhất (${movements.data?.total ?? 0})`} loading={movements.isLoading}>
-          {movements.data?.items.slice(0, 5).map((item: { _id: string; type: string; quantity: number; createdAt: string }) => (<div key={item._id}>{item.type} • {item.quantity} • {new Date(item.createdAt).toLocaleString("vi-VN")}</div>))}
-        </Card>
+        {activeWarehouses.map((warehouse: { _id: string; code: string; name: string }) => {
+          const stats = perWarehouseStats.get(warehouse._id);
+          const isSelected = !selectedWarehouseId || selectedWarehouseId === warehouse._id;
+
+          return (
+            <CardSection
+              key={warehouse._id}
+              title={`Kho ${warehouse.name} (${warehouse.code})`}
+            >
+              <div style={{ marginBottom: 16 }}>
+                <WarehouseStats stats={stats ?? { totalSKU: 0, totalQuantity: 0, availableQuantity: 0, reservedQuantity: 0, inTransitQuantity: 0 }} />
+              </div>
+              {isSelected && lowStockItems.length > 0 && (
+                <LowStockAlert
+                  items={lowStockItems.filter((item) => item.warehouseName === warehouse.name)}
+                />
+              )}
+            </CardSection>
+          );
+        })}
+
+        {selectedWarehouseId && lowStockItems.length > 0 && (
+          <LowStockAlert items={lowStockItems} />
+        )}
       </div>
     </PageContainer>
   );

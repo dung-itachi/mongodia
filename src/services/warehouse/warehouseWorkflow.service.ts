@@ -88,17 +88,40 @@ async function adjustInventory(
   field: "quantity" | "inTransitQuantity" = "quantity"
 ) {
   const filter = itemFilter(warehouseId, item);
-  const query = change < 0 ? { ...filter, [field]: { $gte: Math.abs(change) } } : filter;
-  const update = change < 0
-    ? { $inc: { [field]: change } }
-    : { $inc: { [field]: change }, $setOnInsert: { inTransitQuantity: 0, shippedQuantity: 0, isActive: true } };
-  const result = await WarehouseInventory.findOneAndUpdate(
-    query,
-    update,
-    { upsert: change > 0, new: true, session, setDefaultsOnInsert: true }
-  );
-  if (!result) throw new Error(`Không đủ tồn kho: cần ${Math.abs(change)}`);
-  return result;
+
+  if (change > 0) {
+    // Increase: add to quantity and availableQuantity
+    const update = {
+      $inc: {
+        [field]: change,
+        ...(field === "quantity" ? { availableQuantity: change } : {}),
+      },
+      $setOnInsert: { inTransitQuantity: 0, shippedQuantity: 0, reservedQuantity: 0, isActive: true },
+    };
+    const result = await WarehouseInventory.findOneAndUpdate(
+      filter,
+      update,
+      { upsert: true, new: true, session, setDefaultsOnInsert: true }
+    );
+    return result;
+  } else {
+    // Decrease: check available or quantity
+    const query = field === "quantity"
+      ? { ...filter, availableQuantity: { $gte: Math.abs(change) } }
+      : { ...filter, [field]: { $gte: Math.abs(change) } };
+
+    const update: Record<string, Record<string, number>> = field === "quantity"
+      ? { $inc: { [field]: change, availableQuantity: change } }
+      : { $inc: { [field]: change } };
+
+    const result = await WarehouseInventory.findOneAndUpdate(
+      query,
+      update,
+      { new: true, session }
+    );
+    if (!result) throw new Error(`Không đủ tồn kho: cần ${Math.abs(change)}`);
+    return result;
+  }
 }
 
 export class WarehouseWorkflowService {
@@ -222,11 +245,50 @@ export class WarehouseWorkflowService {
     return { items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
   }
 
-  async listMovements(filters: { warehouseId?: string; type?: string; page?: number; limit?: number }) {
+  async listMovements(filters: { warehouseId?: string; type?: string; startDate?: string; endDate?: string; search?: string; page?: number; limit?: number }) {
     const page = filters.page ?? 1; const limit = filters.limit ?? 20;
     const query: Record<string, unknown> = {};
     if (filters.warehouseId) query.warehouseId = oid(filters.warehouseId, "Warehouse ID");
     if (filters.type) query.type = filters.type as WarehouseStockMovementType;
+    
+    // Date range filter - use start/end of day in UTC to avoid timezone issues
+    if (filters.startDate || filters.endDate) {
+      const start = filters.startDate ? new Date(filters.startDate + "T00:00:00.000Z") : undefined;
+      const end = filters.endDate ? new Date(filters.endDate + "T23:59:59.999Z") : undefined;
+      query.createdAt = {};
+      if (start) (query.createdAt as Record<string, unknown>).$gte = start;
+      if (end) (query.createdAt as Record<string, unknown>).$lte = end;
+    }
+    
+    // Search filter - must pre-query IDs since MongoDB $or doesn't work on populated fields in find()
+    if (filters.search) {
+      const searchRegex = new RegExp(filters.search, "i");
+      const searchConditions: Record<string, unknown>[] = [{ referenceCode: searchRegex }];
+      
+      // Find matching product/variant/gift IDs
+      const [matchingProducts, matchingVariants, matchingGifts] = await Promise.all([
+        Product.find({ name: searchRegex, isActive: true }).select("_id").limit(100).lean(),
+        ProductVariant.find({ sku: searchRegex, isActive: true }).select("_id").limit(100).lean(),
+        Gift.find({ name: searchRegex, isActive: true }).select("_id").limit(100).lean(),
+      ]);
+      
+      const productIds = matchingProducts.map(p => p._id);
+      const variantIds = matchingVariants.map(v => v._id);
+      const giftIds = matchingGifts.map(g => g._id);
+      
+      // Add ID-based conditions to search
+      if (productIds.length) searchConditions.push({ productId: { $in: productIds } });
+      if (variantIds.length) searchConditions.push({ variantId: { $in: variantIds } });
+      if (giftIds.length) searchConditions.push({ giftId: { $in: giftIds } });
+      
+      if (searchConditions.length > 1) {
+        query.$and = [{ $or: searchConditions }];
+      } else if (searchConditions.length === 1) {
+        // Only referenceCode match
+        Object.assign(query, searchConditions[0]);
+      }
+    }
+    
     const [items, total] = await Promise.all([
       WarehouseStockMovement.find(query).populate("warehouseId", "_id code name").populate("productId", "_id code name").populate("variantId", "_id sku").populate("giftId", "_id name").populate("createdBy", "_id employeeCode fullName").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       WarehouseStockMovement.countDocuments(query),

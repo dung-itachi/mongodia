@@ -83,12 +83,8 @@ function mapToPage(doc: IFacebookPage) {
 function buildFilter(params: FacebookPageFilter): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
 
-  if (params.isActive === false) {
-    filter.isActive = false;
-  } else if (params.isActive === true) {
-    filter.isActive = true;
-  } else {
-    filter.isActive = { $ne: false };
+  if (params.isActive !== undefined) {
+    filter.isActive = params.isActive;
   }
 
   if (params.keyword && params.keyword.trim().length > 0) {
@@ -145,7 +141,6 @@ export class FacebookPageRepository {
   async findById(id: string) {
     const doc = await FacebookPage.findOne({
       _id: id,
-      isActive: { $ne: false },
     }).lean();
     if (!doc) return null;
     return mapToPage(doc as unknown as IFacebookPage);
@@ -154,7 +149,6 @@ export class FacebookPageRepository {
   async findByCode(code: string) {
     const doc = await FacebookPage.findOne({
       code: code.toUpperCase(),
-      isActive: { $ne: false },
     }).lean();
     if (!doc) return null;
     return mapToPage(doc as unknown as IFacebookPage);
@@ -222,7 +216,6 @@ export class FacebookPageRepository {
   async existsByCode(code: string, excludeId?: string) {
     const filter: Record<string, unknown> = {
       code: code.toUpperCase(),
-      isActive: { $ne: false },
     };
     if (excludeId) {
       filter._id = { $ne: new mongoose.Types.ObjectId(excludeId) };

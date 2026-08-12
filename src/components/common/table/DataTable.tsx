@@ -14,7 +14,8 @@ export type Column = {
   dataIndex?: string;
   width?: number | string;
   align?: "left" | "center" | "right";
-  render?: (value: unknown, record: Record<string, unknown>, index: number) => ReactNode;
+  fixed?: "left" | "right";
+  render?: (value: unknown, record: Record<string, unknown>, index?: number) => ReactNode;
 };
 
 export type DataTableProps = {

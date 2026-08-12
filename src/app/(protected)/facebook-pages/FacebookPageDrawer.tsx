@@ -3,7 +3,7 @@
  */
 
 import { memo, useEffect } from "react";
-import { Drawer, Input, Select, Button, Space, Form } from "antd";
+import { Drawer, Input, Select, Button, Space, Form, Switch } from "antd";
 import { toast } from "@/components/common/feedback/Toast";
 import { useFacebookPage, useCreateFacebookPage, useUpdateFacebookPage } from "@/hooks/useFacebookPages";
 import type { CreateFacebookPageInput, UpdateFacebookPageInput } from "@/hooks/useFacebookPages";
@@ -16,8 +16,9 @@ const FACEBOOK_PAGE_STATUS_OPTIONS = [
 ];
 
 const CURRENCY_OPTIONS = [
-  { value: "VND", label: "VND" },
-  { value: "USD", label: "USD" },
+  { value: "MNT", label: "MNT - Tiền Mông Cổ (₮)" },
+  { value: "VND", label: "VND - Việt Nam (₫)" },
+  { value: "USD", label: "USD - Đô la Mỹ ($)" },
 ];
 
 export interface FacebookPageDrawerProps {
@@ -62,15 +63,16 @@ function FacebookPageDrawerInner({
         facebookPageId: recordData.facebookPageId ?? "",
         description: recordData.description ?? "",
         businessManager: recordData.businessManager ?? "",
-        currency: recordData.currency ?? "VND",
+        currency: recordData.currency ?? "MNT",
         timezone: recordData.timezone ?? "Asia/Ho_Chi_Minh",
         status: recordData.status,
         note: recordData.note ?? "",
+        isActive: recordData.isActive,
       });
     } else {
       form.resetFields();
       form.setFieldsValue({
-        currency: "VND",
+        currency: "MNT",
         timezone: "Asia/Ho_Chi_Minh",
         status: "ACTIVE",
       });
@@ -80,8 +82,18 @@ function FacebookPageDrawerInner({
   const onSubmit = (values: Record<string, unknown>) => {
     if (isEdit && recordId) {
       const updateData: UpdateFacebookPageInput = {
-        ...values,
-      } as UpdateFacebookPageInput;
+        code: values.code as string,
+        name: values.name as string,
+        pageUrl: values.pageUrl as string | undefined,
+        facebookPageId: values.facebookPageId as string | undefined,
+        description: values.description as string | undefined,
+        businessManager: values.businessManager as string | undefined,
+        currency: values.currency as string | undefined,
+        timezone: values.timezone as string | undefined,
+        status: values.status as "ACTIVE" | "INACTIVE" | undefined,
+        note: values.note as string | undefined,
+        isActive: values.isActive as boolean | undefined,
+      };
       updateMutation.mutate(
         { id: recordId, data: updateData },
         {
@@ -179,19 +191,19 @@ function FacebookPageDrawerInner({
           <Input placeholder="Facebook Page ID" />
         </Form.Item>
 
-        <Form.Item name="businessManager" label="Business Manager">
+        <Form.Item name="businessManager" label="Business Manager ID">
           <Input placeholder="Business Manager ID" />
         </Form.Item>
 
         <Space style={{ width: "100%" }} size={16}>
-          <Form.Item name="currency" label="Currency" style={{ width: 120 }}>
+          <Form.Item name="currency" label="Đơn vị tiền tệ" style={{ width: 200 }}>
             <Select
               options={CURRENCY_OPTIONS}
               style={{ width: "100%" }}
             />
           </Form.Item>
 
-          <Form.Item name="timezone" label="Timezone" style={{ flex: 1 }}>
+          <Form.Item name="timezone" label="Múi giờ" style={{ flex: 1 }}>
             <Input placeholder="Asia/Ho_Chi_Minh" />
           </Form.Item>
         </Space>
@@ -207,6 +219,12 @@ function FacebookPageDrawerInner({
         <Form.Item name="note" label="Ghi chú">
           <TextArea rows={2} placeholder="Ghi chú..." />
         </Form.Item>
+
+        {isEdit && (
+          <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        )}
       </Form>
     </Drawer>
   );

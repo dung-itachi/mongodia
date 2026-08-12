@@ -3,7 +3,7 @@
  */
 
 import { memo } from "react";
-import { Table, Tag, Button, Space, Dropdown } from "antd";
+import { Table, Tag, Button, Space, Dropdown, Switch } from "antd";
 import type { TablePaginationConfig } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
@@ -30,6 +30,7 @@ export type FacebookPagesTableProps = {
   onPageChange: (page: number, pageSize: number) => void;
   onSortChange: (field: string, order: "asc" | "desc" | undefined) => void;
   onEdit: (id: string) => void;
+  onToggleActive?: (page: FacebookPage, checked: boolean) => void;
 };
 
 function FacebookPagesTableInner({
@@ -42,6 +43,7 @@ function FacebookPagesTableInner({
   onPageChange,
   onSortChange,
   onEdit,
+  onToggleActive,
 }: FacebookPagesTableProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleTableChange = (pagination: TablePaginationConfig, _filters: any, sorter: any) => {
@@ -107,9 +109,22 @@ function FacebookPagesTableInner({
       ellipsis: true,
     },
     {
+      title: "Thao tác",
+      key: "active",
+      width: 100,
+      align: "center",
+      render: (_: unknown, record: FacebookPage) => (
+        <Switch
+          checked={record.status === "ACTIVE"}
+          onChange={(checked) => onToggleActive?.(record, checked)}
+          size="small"
+        />
+      ),
+    },
+    {
       title: "",
       key: "actions",
-      width: 60,
+      width: 50,
       fixed: "right",
       render: (_: unknown, record: FacebookPage) => (
         <Space>

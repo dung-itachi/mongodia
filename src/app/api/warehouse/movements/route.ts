@@ -13,6 +13,14 @@ export async function GET(request: Request) {
     if (!warehouseId && !canAccessAllWarehouses(currentUser)) return error("Nhân viên kho chỉ được xem lịch sử kho được giao", 403);
     if (warehouseId && !canAccessWarehouse(currentUser, warehouseId)) return error("Bạn không có quyền truy cập kho này", 403);
     await connectDB();
-    return success(await warehouseWorkflowService.listMovements({ warehouseId, type: params.get("type") ?? undefined, page: Number(params.get("page") ?? 1), limit: Math.min(Number(params.get("limit") ?? 20), 100) }));
+    return success(await warehouseWorkflowService.listMovements({
+      warehouseId,
+      type: params.get("type") ?? undefined,
+      startDate: params.get("startDate") ?? undefined,
+      endDate: params.get("endDate") ?? undefined,
+      search: params.get("search") ?? undefined,
+      page: Number(params.get("page") ?? 1),
+      limit: Math.min(Number(params.get("limit") ?? 20), 100),
+    }));
   } catch (cause) { return error(cause instanceof Error ? cause.message : "Không thể lấy lịch sử tồn kho", 400); }
 }

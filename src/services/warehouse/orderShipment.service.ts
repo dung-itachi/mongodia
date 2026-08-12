@@ -61,12 +61,14 @@ async function resolveGift(giftId: string): Promise<mongoose.Types.ObjectId> {
 
 async function adjustInventoryForShip(warehouseId: mongoose.Types.ObjectId, item: NormalizedShipmentItem, quantity: number, session: mongoose.ClientSession) {
   const where = filter(warehouseId, item);
+  // Check availableQuantity (quantity - inTransit - reserved)
+  // shippedQuantity là tracking counter, KHÔNG ảnh hưởng available
   const updated = await WarehouseInventory.findOneAndUpdate(
-    { ...where, quantity: { $gte: quantity } } as never,
-    { $inc: { quantity: -quantity, shippedQuantity: quantity } },
+    { ...where, availableQuantity: { $gte: quantity } } as never,
+    { $inc: { quantity: -quantity, availableQuantity: -quantity } },
     { new: true, session }
   ).lean();
-  if (!updated) throw new Error(`Không đủ tồn kho: cần ${quantity}`);
+  if (!updated) throw new Error(`Không đủ tồn kho khả dụng: cần ${quantity}`);
   return updated;
 }
 
@@ -74,7 +76,7 @@ async function adjustInventoryForReturn(warehouseId: mongoose.Types.ObjectId, it
   const where = filter(warehouseId, item);
   const updated = await WarehouseInventory.findOneAndUpdate(
     where as never,
-    { $inc: { quantity, shippedQuantity: -quantity }, $setOnInsert: { inTransitQuantity: 0, shippedQuantity: 0, isActive: true } },
+    { $inc: { quantity, availableQuantity: quantity }, $setOnInsert: { inTransitQuantity: 0, shippedQuantity: 0, reservedQuantity: 0, isActive: true } },
     { upsert: true, new: true, session }
   ).lean();
   if (!updated) throw new Error("Không thể hoàn hàng vào kho");
@@ -84,7 +86,19 @@ async function adjustInventoryForReturn(warehouseId: mongoose.Types.ObjectId, it
 // Combo giờ chỉ lưu productId + packageQuantity.
 // Khi build shipment demand, lấy tất cả active variants của product
 // (Sale đã nhập variant chi tiết trong OrderItem.details).
-async function buildProductDemands(orderId: string) {
+//
+// RANDOM gift selection: Uses WarehouseInventory.availableQuantity from the specific warehouse.
+// Does NOT use Gift.stockQuantity (global stock) to avoid selecting a gift unavailable in the warehouse.
+//
+// Parameters:
+// - orderId: Order ID
+// - warehouseId: Target warehouse ID (from order.warehouseId)
+// - session: MongoDB session for transaction consistency
+async function buildProductDemands(
+  orderId: string,
+  warehouseId: mongoose.Types.ObjectId,
+  session: mongoose.ClientSession
+) {
   const order = await Order.findById(orderId).select("orderItems comboId").lean();
   if (!order) throw new Error("Đơn hàng không tồn tại");
   if (!order.orderItems?.length) throw new Error("Đơn hàng chưa có sản phẩm để xuất kho");
@@ -136,6 +150,7 @@ async function buildProductDemands(orderId: string) {
     const giftQty = (item.giftQuantity ?? 0) * (item.comboQuantity || 1);
     if (giftQty <= 0) continue;
     if (item.giftMode === "CUSTOMER_SELECTED" && item.giftSelections?.length) {
+      // CUSTOMER_SELECTED: Use exact gift from order's giftSelections
       for (const sel of item.giftSelections) {
         const giftId = sel.giftProductId.toString();
         const existing = giftDemand.find((g) => g.giftId === giftId);
@@ -143,9 +158,36 @@ async function buildProductDemands(orderId: string) {
         else giftDemand.push({ itemType: "GIFT", giftId, quantity: sel.quantity });
       }
     } else if (giftQty > 0) {
-      const gifts = await Gift.find({ isActive: true }).select("_id stockQuantity").sort({ stockQuantity: -1 }).limit(1).lean();
-      if (!gifts.length) throw new Error("Kho không đủ quà RANDOM");
-      giftDemand.push({ itemType: "GIFT", giftId: gifts[0]._id.toString(), quantity: giftQty });
+      // RANDOM: Select from WarehouseInventory of the current warehouse
+      // Uses availableQuantity (not Gift.stockQuantity) to ensure gift exists in this warehouse
+      const warehouseGifts = await WarehouseInventory.find({
+        warehouseId,
+        itemType: "GIFT",
+        availableQuantity: { $gte: giftQty },
+        isActive: true,
+      })
+        .populate("giftId", "_id isActive")
+        .sort({ availableQuantity: -1 })  // Select gift with highest available quantity
+        .session(session)
+        .lean();
+
+      // Filter for valid, active gifts
+      const validGift = warehouseGifts.find(
+        (wg) => {
+          if (!wg.giftId) return false;
+          const populatedGift = wg.giftId as unknown as { _id: mongoose.Types.ObjectId; isActive: boolean };
+          return populatedGift.isActive;
+        }
+      );
+
+      if (!validGift) {
+        throw new Error(`Kho không đủ quà RANDOM cho đơn này`);
+      }
+
+      const selectedGiftId = (validGift.giftId as unknown as { _id: mongoose.Types.ObjectId })._id.toString();
+      const existing = giftDemand.find((g) => g.giftId === selectedGiftId);
+      if (existing) existing.quantity += giftQty;
+      else giftDemand.push({ itemType: "GIFT", giftId: selectedGiftId, quantity: giftQty });
     }
   }
 
@@ -161,7 +203,7 @@ export class OrderShipmentService {
       if (!order) throw new Error("Đơn hàng không tồn tại");
       if (!order.warehouseId) throw new Error("Đơn hàng chưa gán kho xuất");
       const warehouseId = order.warehouseId;
-      const demands = input.actualShipments?.length ? input.actualShipments : (await buildProductDemands(input.orderId)).demands;
+      const demands = input.actualShipments?.length ? input.actualShipments : (await buildProductDemands(input.orderId, warehouseId, session)).demands;
       const employeeId = oid(input.employeeId, "Employee ID");
       const orderCode = (await Order.findById(input.orderId).select("orderCode").lean())?.orderCode ?? "";
       for (const item of demands) {

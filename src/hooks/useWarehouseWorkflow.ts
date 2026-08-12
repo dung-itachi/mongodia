@@ -58,13 +58,16 @@ export function useWarehouseWorkflowInventory(filters: { warehouseId?: string; i
   return { ...result, loading: result.isLoading };
 }
 
-export function useWarehouseMovements(filters: { warehouseId?: string; type?: string; page?: number; limit?: number }) {
+export function useWarehouseMovements(filters: { warehouseId?: string; type?: string; startDate?: string; endDate?: string; search?: string; page?: number; limit?: number }) {
   const result = useQuery({
     queryKey: ["warehouse-movements", filters],
     queryFn: () => {
       const params = new URLSearchParams();
       if (filters.warehouseId) params.set("warehouseId", filters.warehouseId);
       if (filters.type) params.set("type", filters.type);
+      if (filters.startDate) params.set("startDate", filters.startDate);
+      if (filters.endDate) params.set("endDate", filters.endDate);
+      if (filters.search) params.set("search", filters.search);
       if (filters.page) params.set("page", String(filters.page));
       if (filters.limit) params.set("limit", String(filters.limit));
       return callApi(`/api/warehouse/movements?${params.toString()}`);

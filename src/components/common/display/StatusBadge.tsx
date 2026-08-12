@@ -79,14 +79,15 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   SUCCESS: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Thành công" },
   CONFIRMED: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đã xác nhận", icon: ICON_MAP.CheckOutlined },
   DELIVERED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao", icon: ICON_MAP.CheckCircleOutlined },
-  SHIPPED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao hàng" },
 
   // Order statuses (Sprint 6.2)
+  WAIT_CONFIRM: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ xác nhận", icon: ICON_MAP.ClockCircleOutlined },
   PACKING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Đang đóng gói", icon: ICON_MAP.InboxOutlined },
   SHIPPING: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đang giao", icon: ICON_MAP.CarOutlined },
+  SHIPPED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao hàng" },
   RETURNED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Đã hoàn trả", icon: ICON_MAP.UndoOutlined },
+  RECONCILED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đối soát", icon: ICON_MAP.CheckCircleOutlined },
   CANCELLED: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Đã hủy", icon: ICON_MAP.CloseCircleOutlined },
-  PREPAID: { color: "#722ed1", backgroundColor: "#f9f0ff", label: "Đã cọc / Trả trước", icon: ICON_MAP.WalletOutlined },
   REJECTED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Bị từ chối", icon: ICON_MAP.StopOutlined },
   FAILED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Giao thất bại", icon: ICON_MAP.WarningOutlined },
 
@@ -105,7 +106,6 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   NO_ANSWER: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Không nghe máy" },
   POTENTIAL: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Tiềm năng" },
   ORDER_CREATED: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đã tạo đơn" },
-  RECONCILED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đối soát" },
 };
 
 export default function StatusBadge({

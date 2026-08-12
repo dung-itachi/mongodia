@@ -23,8 +23,10 @@ import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonTable from "@/components/common/overlay/SkeletonTable";
+import { toast } from "@/components/common/feedback/Toast";
 
-import { useFacebookPages } from "@/hooks/useFacebookPages";
+import { useFacebookPages, useUpdateFacebookPage } from "@/hooks/useFacebookPages";
+import type { FacebookPage } from "@/hooks/useFacebookPages";
 import { useDebounce } from "@/hooks/useDebounce";
 
 import FacebookPagesToolbar from "./FacebookPagesToolbar";
@@ -75,6 +77,8 @@ export default function FacebookPagesListPage() {
     refetch,
   } = useFacebookPages(filterParams);
 
+  const updateMutation = useUpdateFacebookPage();
+
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
@@ -84,6 +88,24 @@ export default function FacebookPagesListPage() {
   }, [error]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
+  const handleToggleActive = useCallback(
+    (page: FacebookPage, checked: boolean) => {
+      updateMutation.mutate(
+        { id: page._id, data: { status: checked ? "ACTIVE" : "INACTIVE" } },
+        {
+          onSuccess: () => {
+            toast.success(checked ? "Đã bật trạng thái hoạt động" : "Đã tắt trạng thái hoạt động");
+            void refetch();
+          },
+          onError: (err: Error) => {
+            toast.error(err.message || "Lỗi khi cập nhật trạng thái");
+          },
+        }
+      );
+    },
+    [updateMutation, refetch]
+  );
+
   const handleToolbarFiltersChange = useCallback(
     (newFilters: {
       keyword?: string;
@@ -189,6 +211,7 @@ export default function FacebookPagesListPage() {
             onPageChange={handlePageChange}
             onSortChange={handleSortChange}
             onEdit={handleEdit}
+            onToggleActive={handleToggleActive}
           />
         )}
       </div>

@@ -266,6 +266,22 @@ export const MODULES: ModuleDefinition[] = [
     group: "WAREHOUSE",
     icon: `<path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/>`,
   },
+  {
+    id: "warehouse-shipments",
+    title: "Xuất kho",
+    route: "/warehouse/shipments",
+    permission: "warehouse.ship",
+    group: "WAREHOUSE",
+    icon: `<path d="M5 12h14M12 5l7 7-7 7"/>`,
+  },
+  {
+    id: "warehouse-adjustments",
+    title: "Điều chỉnh tồn kho",
+    route: "/warehouse/adjustments",
+    permission: "warehouse.adjust",
+    group: "WAREHOUSE",
+    icon: `<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>`,
+  },
 
   // Settings Group (Sprint Settings — Exchange Rate)
   {

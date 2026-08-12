@@ -1,88 +1,105 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Select, Space } from "antd";
+import { useState, useCallback } from "react";
+import { Button, Space, Typography } from "antd";
+import { ReloadOutlined } from "@ant-design/icons";
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
-import DataTable from "@/components/common/table/DataTable";
 import TableToolbar from "@/components/common/table/TableToolbar";
-import FilterBar from "@/components/common/filters/FilterBar";
 import PermissionGate from "@/components/common/PermissionGate";
-import { useWarehouses } from "@/hooks/useWarehouses";
-import { useWarehouseWorkflowInventory } from "@/hooks/useWarehouseWorkflow";
+import { useWarehouseInventory, type WarehouseInventoryFilters } from "@/hooks/useWarehouseInventory";
+import { useWarehouseInventorySelectors } from "@/hooks/useWarehouseInventory";
+import WarehouseInventoryFiltersComponent from "@/components/warehouse/inventory/WarehouseInventoryFilters";
+import WarehouseInventoryTable from "@/components/warehouse/inventory/WarehouseInventoryTable";
+
+const { Text } = Typography;
+const DEFAULT_PAGE_SIZE = 20;
 
 export default function WarehouseInventoryPage() {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [warehouseId, setWarehouseId] = useState<string | undefined>();
-  const [itemType, setItemType] = useState<string | undefined>();
+  const [filters, setFilters] = useState<WarehouseInventoryFilters>({
+    page: 1,
+    limit: DEFAULT_PAGE_SIZE,
+  });
 
-  const { warehouses } = useWarehouses();
-  const filters = useMemo(() => ({ warehouseId, itemType, page, limit: pageSize }), [warehouseId, itemType, page, pageSize]);
-  const { data, loading } = useWarehouseWorkflowInventory(filters);
-  const items = data?.items ?? [];
+  const selectors = useWarehouseInventorySelectors();
+  const { items, loading, fetching, total, refetch, response } = useWarehouseInventory({ filters });
 
-  const columns = useMemo(() => [
-    { key: "name", title: "Sản phẩm / Quà", render: (_: unknown, row: Record<string, unknown>) => {
-      const variant = row.variantId as { sku?: string } | null;
-      const product = row.productId as { code?: string; name?: string } | null;
-      const gift = row.giftId as { name?: string } | null;
-      if (row.itemType === "GIFT") return gift?.name ?? "Quà tặng";
-      const variantLabel = variant?.sku ?? "Không có";
-      const productLabel = product?.name ?? product?.code ?? "";
-      return `${productLabel} • ${variantLabel}`;
-    } },
-    { key: "type", title: "Loại", dataIndex: "itemType", width: 100, render: (value: unknown) => value === "GIFT" ? "Quà tặng" : "Sản phẩm" },
-    { key: "warehouse", title: "Kho", dataIndex: "warehouseId", width: 180, render: (value: unknown) => (value as { name?: string } | null)?.name ?? "-" },
-    { key: "quantity", title: "Tồn kho", dataIndex: "quantity", width: 120, align: "right" as const, render: (value: unknown) => Number(value ?? 0) },
-    { key: "inTransit", title: "Đang chuyển", dataIndex: "inTransitQuantity", width: 130, align: "right" as const, render: (value: unknown) => Number(value ?? 0) },
-    { key: "shipped", title: "Đã xuất", dataIndex: "shippedQuantity", width: 120, align: "right" as const, render: (value: unknown) => Number(value ?? 0) },
-    { key: "updated", title: "Cập nhật", dataIndex: "updatedAt", width: 160, render: (value: unknown) => new Date(String(value)).toLocaleString("vi-VN") },
-  ], []);
+  const handleFilterChange = useCallback((newFilters: WarehouseInventoryFilters) => {
+    setFilters(newFilters);
+  }, []);
 
-  const filterItems = useMemo(() => [
-    {
-      key: "warehouseId", type: "select" as const, label: "Kho",
-      options: [{ value: "", label: "Tất cả kho" }, ...(warehouses ?? []).map((w: { _id: string; name: string }) => ({ value: w._id, label: w.name }))],
-    },
-    {
-      key: "itemType", type: "select" as const, label: "Loại",
-      options: [{ value: "", label: "Tất cả" }, { value: "PRODUCT", label: "Sản phẩm" }, { value: "GIFT", label: "Quà tặng" }],
-    },
-  ], [warehouses]);
+  const handlePageChange = useCallback((page: number, pageSize: number) => {
+    setFilters((prev) => ({
+      ...prev,
+      page,
+      limit: pageSize,
+    }));
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
+  const pageActions = (
+    <Space direction="vertical" size={0} style={{ textAlign: "right" }}>
+      <Text strong>Tổng: {(total ?? 0).toLocaleString("vi-VN")} dòng</Text>
+      {filters.search && (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          Kết quả tìm kiếm: {items.length.toLocaleString("vi-VN")}
+        </Text>
+      )}
+    </Space>
+  );
 
   return (
     <PageContainer>
-      <PageHeader title="Tồn kho" subtitle={`${data?.total ?? 0} dòng`} breadcrumb={[{ label: "Trang chủ", href: "/" }, { label: "Kho", href: "/warehouses" }, { label: "Tồn kho" }]} />
-      <div className="card">
-        <TableToolbar
-          actions={<FilterBar items={filterItems} values={{ warehouseId: warehouseId ?? "", itemType: itemType ?? "" }} onChange={(values) => {
-            setWarehouseId(values.warehouseId ? String(values.warehouseId) : undefined);
-            setItemType(values.itemType ? String(values.itemType) : undefined);
-            setPage(1);
-          }} />}
-          onRefresh={() => undefined}
-        />
-        <Space style={{ marginBottom: 8 }}>
-          <Select placeholder="Kho" allowClear style={{ width: 200 }} value={warehouseId} onChange={(value) => { setWarehouseId(value); setPage(1); }} options={[{ value: "", label: "Tất cả kho" }, ...(warehouses ?? []).map((w: { _id: string; name: string }) => ({ value: w._id, label: w.name }))]} />
-          <Select placeholder="Loại" allowClear style={{ width: 160 }} value={itemType} onChange={(value) => { setItemType(value); setPage(1); }} options={[{ value: "PRODUCT", label: "Sản phẩm" }, { value: "GIFT", label: "Quà tặng" }]} />
-        </Space>
-        <PermissionGate permission="inventory.view">
-          <DataTable
-            columns={columns}
-            data={items as unknown as Record<string, unknown>[]}
-            loading={loading}
-            rowKey={(record: Record<string, unknown>) => {
-              const warehouse = (record.warehouseId as { _id?: string } | null)?._id ?? String(record.warehouseId);
-              const variant = (record.variantId as { _id?: string } | null)?._id ?? "";
-              const product = (record.productId as { _id?: string } | null)?._id ?? "";
-              const gift = (record.giftId as { _id?: string } | null)?._id ?? "";
-              return `${warehouse}::${record.itemType}::${variant}::${product}::${gift}`;
-            }}
-            pagination={{ current: page, pageSize, total: data?.total ?? 0, onChange: (p, s) => { setPage(p); setPageSize(s); } }}
+      <PageHeader
+        title="Tồn kho"
+        breadcrumb={[
+          { label: "Trang chủ", href: "/" },
+          { label: "Kho", href: "/warehouses" },
+          { label: "Tồn kho" },
+        ]}
+        actions={pageActions}
+      />
+
+      <PermissionGate permission="inventory.view">
+        <div className="card">
+          <TableToolbar
+            searchValue={filters.search}
+            onSearchChange={(value) => handleFilterChange({ ...filters, search: value || undefined })}
+            searchPlaceholder="Tìm kiếm sản phẩm, SKU, quà tặng..."
+            onRefresh={handleRefresh}
+            loading={fetching}
+            actions={
+              <Button icon={<ReloadOutlined spin={fetching} />} onClick={handleRefresh}>
+                Làm mới
+              </Button>
+            }
           />
-        </PermissionGate>
-      </div>
+
+          <WarehouseInventoryFiltersComponent
+            filters={filters}
+            onChange={handleFilterChange}
+            products={selectors.products.map((p) => ({ _id: p._id, code: p.code, name: p.name }))}
+            gifts={selectors.gifts}
+            warehouses={selectors.warehouses.map((w) => ({ _id: w._id, code: w.code, name: w.name }))}
+            variants={selectors.variants}
+            loading={selectors.loading}
+          />
+
+          <WarehouseInventoryTable
+            data={items}
+            loading={loading}
+            pagination={{
+              current: filters.page ?? 1,
+              pageSize: filters.limit ?? DEFAULT_PAGE_SIZE,
+              total: response?.total ?? total,
+              onChange: handlePageChange,
+            }}
+          />
+        </div>
+      </PermissionGate>
     </PageContainer>
   );
 }

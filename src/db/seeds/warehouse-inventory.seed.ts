@@ -11,14 +11,16 @@ export async function seedWarehouseInventory() {
   const variants = await ProductVariant.find({ isActive: true }).sort({ sku: 1 }).limit(2).lean();
   for (let index = 0; index < variants.length; index++) {
     const variant = variants[index];
+    const qty1 = index === 0 ? 1000 : 500;
+    const qty2 = index === 0 ? 300 : 150;
     await WarehouseInventory.updateOne(
       { warehouseId: kho1._id, itemType: "PRODUCT", productId: variant.productId, variantId: variant._id, giftId: null },
-      { $setOnInsert: { quantity: index === 0 ? 100 : 80, inTransitQuantity: 0, shippedQuantity: 0, isActive: true } },
+      { $setOnInsert: { quantity: qty1, availableQuantity: qty1, inTransitQuantity: 0, shippedQuantity: 0, reservedQuantity: 0, isActive: true } },
       { upsert: true }
     );
     await WarehouseInventory.updateOne(
       { warehouseId: kho2._id, itemType: "PRODUCT", productId: variant.productId, variantId: variant._id, giftId: null },
-      { $setOnInsert: { quantity: index === 0 ? 20 : 15, inTransitQuantity: 0, shippedQuantity: 0, isActive: true } },
+      { $setOnInsert: { quantity: qty2, availableQuantity: qty2, inTransitQuantity: 0, shippedQuantity: 0, reservedQuantity: 0, isActive: true } },
       { upsert: true }
     );
   }
@@ -28,7 +30,7 @@ export async function seedWarehouseInventory() {
     for (const warehouse of [kho1, kho2]) {
       await WarehouseInventory.updateOne(
         { warehouseId: warehouse._id, itemType: "GIFT", productId: null, variantId: null, giftId: gift._id },
-        { $setOnInsert: { quantity: 100, inTransitQuantity: 0, shippedQuantity: 0, isActive: true } },
+        { $setOnInsert: { quantity: 100, availableQuantity: 100, inTransitQuantity: 0, shippedQuantity: 0, reservedQuantity: 0, isActive: true } },
         { upsert: true }
       );
     }
