@@ -247,8 +247,9 @@ export const createTeamSchema = z.object({
 
 export const updateTeamSchema = createTeamSchema.extend({
   isActive: z.boolean({
-    message: "TrÃ¡ÂºÂ¡ng thÃƒÂ¡i hoÃ¡ÂºÂ¡t Ã„â€˜Ã¡Â»â„¢ng khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡",
+    message: "Trạng thái hoạt động không hợp lệ",
   }),
+  areaCode: z.string().nullable().optional(),
 });
 
 export const createCategorySchema = z.object({

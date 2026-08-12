@@ -11,7 +11,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Card, Button, Input, Select } from "antd";
+import { Card, Button, Input, Select, Form, Modal, Space, InputNumber } from "antd";
 import {
   SendOutlined,
   ClearOutlined,
@@ -77,6 +77,9 @@ export default function MarketingInputSection({
   const [productCategoryFilter, setProductCategoryFilter] = useState<string | "all">("all");
   /** Combo list collapse state - true = thu gọn (chỉ 4 đầu), false = mở rộng hết */
   const [comboExpanded, setComboExpanded] = useState(false);
+  /** Sprint 8.7: Manual order input */
+  const [manualOrderOpen, setManualOrderOpen] = useState(false);
+  const [manualOrderForm] = Form.useForm();
 
   // ============================================================
   // QUERIES - Fetch from Product Module
@@ -90,7 +93,7 @@ export default function MarketingInputSection({
     useCombosWithProduct(selectedProductId);
 
   // Fetch ALL combos for landing parser lookup
-  const { comboByNameMap, loading: allCombosLoading } = useAllCombosNormalized();
+  const { comboByNameMap, comboMap, loading: allCombosLoading } = useAllCombosNormalized();
 
   // Fetch existing leads for stats
   const { leads: existingLeads, refetch: refetchLeads } = useMarketingLeads({
@@ -241,6 +244,45 @@ export default function MarketingInputSection({
       toast.warning("Không thể đọc clipboard. Vui lòng dùng Ctrl+V.");
     }
   }, []);
+
+  // Handle manual order add
+  const handleManualOrderAdd = useCallback(() => {
+    manualOrderForm.validateFields().then((values) => {
+      const { facebookPageId, customerName, phone, productId, comboId } = values;
+
+      if (!facebookPageId) {
+        toast.warning("Vui lòng chọn trang Facebook");
+        return;
+      }
+
+      // Find selected combo info
+      const combo = comboMap[comboId];
+      const product = categories
+        .flatMap(c => c.products || [])
+        .find(p => p._id === productId);
+
+      const newLead: StagedLead = {
+        id: `staged-${Date.now()}`,
+        customerName: customerName || "Khách hàng",
+        phone,
+        source: LeadSource.FACEBOOK_COMMENT,
+        productId: productId || "",
+        productName: product?.name || combo?.productName || "",
+        comboId: comboId || "",
+        comboName: combo?.name || "",
+        price: combo?.sellingPrice || 0,
+        facebookPageId,
+        facebookPageName: facebookPages.find(p => p._id === facebookPageId)?.name,
+      };
+
+      setStagedLeads(prev => [...prev, newLead]);
+      toast.success("Đã thêm đơn hàng thủ công");
+      manualOrderForm.resetFields();
+      setManualOrderOpen(false);
+    }).catch(() => {
+      // Validation failed
+    });
+  }, [facebookPages, comboMap, categories, manualOrderForm]);
 
   // Handle quick product created
   const handleQuickProductCreated = useCallback(
@@ -495,7 +537,11 @@ export default function MarketingInputSection({
       toast.success(`Đã đẩy ${leadIds.length} lead sang Sale`);
       onLeadsCreated?.();
     } catch (err) {
-      toast.error(`Lỗi: ${(err as Error).message}`);
+      // Log chi tiết lỗi để debug
+      console.error("Push to sale error:", err);
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error).message;
+      toast.error(`Lỗi khi đẩy sang Sale: ${errorMessage}`);
+      // Giữ stagedLeads để user có thể thử lại
     }
   }, [stagedLeads, createLeadMutation, pushToSaleMutation, onLeadsCreated]);
 
@@ -794,7 +840,20 @@ export default function MarketingInputSection({
       />
 
       {/* Lead Input */}
-      <Card title="② Dán số" size="small" className={styles.card}>
+      <Card
+        title="② Dán số"
+        size="small"
+        className={styles.card}
+        extra={
+          <Button
+            size="small"
+            icon={<PlusOutlined />}
+            onClick={() => setManualOrderOpen(true)}
+          >
+            Nhập đơn hàng thủ công
+          </Button>
+        }
+      >
         <div className={styles.inputTypeTabs}>
           <button
             className={`${styles.inputTab} ${
@@ -849,6 +908,151 @@ export default function MarketingInputSection({
           </Button>
         </div>
       </Card>
+
+      {/* Manual Order Modal */}
+      <Modal
+        title="Nhập đơn hàng thủ công"
+        open={manualOrderOpen}
+        onCancel={() => {
+          setManualOrderOpen(false);
+        }}
+        footer={
+          <Space>
+            <Button onClick={() => {
+              setManualOrderOpen(false);
+            }}>
+              Hủy
+            </Button>
+            <Button type="primary" onClick={handleManualOrderAdd}>
+              Thêm vào staging
+            </Button>
+          </Space>
+        }
+        width={520}
+      >
+        <Form
+          form={manualOrderForm}
+          layout="vertical"
+        >
+          <Form.Item
+            name="facebookPageId"
+            label="Trang Facebook"
+            rules={[{ required: true, message: "Vui lòng chọn trang Facebook" }]}
+          >
+            <Select
+              placeholder="Chọn trang Facebook"
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+              options={facebookPages.map(p => ({
+                value: p._id,
+                label: p.name,
+              }))}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="customerName"
+            label="Tên khách hàng"
+            rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+          >
+            <Input placeholder="Nhập tên khách hàng" />
+          </Form.Item>
+
+          <Form.Item
+            name="phone"
+            label="Số điện thoại"
+            rules={[
+              { required: true, message: "Vui lòng nhập SĐT" },
+              { pattern: /^[0-9]{6,15}$/, message: "SĐT không hợp lệ" }
+            ]}
+          >
+            <Input placeholder="Nhập số điện thoại" />
+          </Form.Item>
+
+          <Form.Item name="address" label="Địa chỉ">
+            <Input placeholder="Nhập địa chỉ (tùy chọn)" />
+          </Form.Item>
+
+          <Form.Item
+            name="productId"
+            label="Sản phẩm"
+            rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
+          >
+            <Select
+              placeholder="Chọn sản phẩm"
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+              options={categories.flatMap(c =>
+                (c.products || []).map(p => ({
+                  value: p._id,
+                  label: `${p.name}${p.code ? ` (${p.code})` : ""}`,
+                }))
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) => prevValues.productId !== currentValues.productId}
+          >
+            {({ getFieldValue }) => {
+              const productId = getFieldValue("productId");
+              const combosForProduct = Object.values(comboByNameMap).filter(
+                c => c.productId === productId
+              );
+
+              return (
+                <Form.Item
+                  name="comboId"
+                  label="Combo"
+                  rules={[{ required: true, message: "Vui lòng chọn combo" }]}
+                >
+                  <Select
+                    placeholder={productId ? "Chọn combo" : "Chọn sản phẩm trước"}
+                    disabled={!productId}
+                    options={[
+                      ...combosForProduct.map(c => ({
+                        value: c._id,
+                        label: `${c.name} - ${c.sellingPrice?.toLocaleString()}₫ (${c.packageQuantity} cái)`,
+                      })),
+                      ...(productId ? [{
+                        value: "__create_new__",
+                        label: "+ Tạo combo mới cho sản phẩm này",
+                      }] : []),
+                    ]}
+                    onChange={(value) => {
+                      if (value === "__create_new__") {
+                        manualOrderForm.setFieldValue("comboId", undefined);
+                        // Open quick product drawer với product đã chọn
+                        setQuickProductDrawerOpen(true);
+                      }
+                    }}
+                  />
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Quick Product Drawer */}
+      <QuickProductDrawer
+        open={quickProductDrawerOpen}
+        onClose={() => setQuickProductDrawerOpen(false)}
+        onSuccess={(productId, productName, comboIds) => {
+          // Set product and auto-select first combo
+          manualOrderForm.setFieldsValue({
+            productId,
+            comboId: comboIds[0] ?? undefined,
+          });
+          setSelectedProductId(productId);
+          setSelectedComboId(comboIds[0] ?? null);
+        }}
+      />
 
       {/* Staging Area */}
       {stagedLeads.length > 0 && (

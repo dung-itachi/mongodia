@@ -8,7 +8,7 @@ export interface IEmployee {
 
   fullName: string;
 
-  email: string;
+  email?: string;
   phone?: string;
 
   avatar?: string;
@@ -63,7 +63,7 @@ const EmployeeSchema = new Schema<IEmployee>(
 
     email: {
       type: String,
-      required: true,
+      default: "",
       unique: true,
       lowercase: true,
       trim: true,

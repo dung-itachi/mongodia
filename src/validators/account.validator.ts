@@ -3,11 +3,18 @@ import { z } from "zod";
 const id = z.string().regex(/^[a-f\d]{24}$/i, "ID không hợp lệ");
 const optionalId = id.nullable().optional();
 
+const bankFields = {
+  bankName: z.string().trim().max(100).optional(),
+  bankAccountNumber: z.string().trim().max(50).optional(),
+  bankAccountHolder: z.string().trim().max(200).optional(),
+};
+
 const identity = {
   fullName: z.string().trim().min(2).max(100),
-  email: z.string().trim().email(),
+  email: z.string().trim().email().optional().or(z.literal("")),
   phone: z.string().trim().max(30).optional(),
   avatar: z.string().trim().max(500).optional(),
+  ...bankFields,
 };
 
 export const createAccountSchema = z.object({

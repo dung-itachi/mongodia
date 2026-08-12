@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
+import { useAntApp } from "@/providers/AntdProvider";
 import api from "@/lib/axios";
 
 export interface GiftListItem {
@@ -132,6 +132,7 @@ export function useGiftInventoryHistory(id: string | null) {
 
 export function useCreateGift() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
   return useMutation({
     mutationFn: createGift,
     onSuccess: () => {
@@ -144,6 +145,7 @@ export function useCreateGift() {
 
 export function useUpdateGift() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateGiftInput }) => updateGift(id, input),
     onSuccess: () => {
@@ -156,6 +158,7 @@ export function useUpdateGift() {
 
 export function useDeleteGift() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
   return useMutation({
     mutationFn: deleteGift,
     onSuccess: () => {
@@ -168,6 +171,7 @@ export function useDeleteGift() {
 
 export function useChangeGiftInventory() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
   return useMutation({
     mutationFn: ({
       id,

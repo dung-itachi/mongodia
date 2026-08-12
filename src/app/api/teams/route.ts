@@ -146,15 +146,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const area = await Area.findOne({
-      code: data.areaCode.toUpperCase(),
-    });
+    // areaCode is optional - find a default area or skip
+    let areaId = null;
+    if (data.areaCode) {
+      const area = await Area.findOne({
+        code: data.areaCode.toUpperCase(),
+      });
+      if (area) {
+        areaId = area._id;
+      }
+    }
 
-    if (!area) {
-      return errorResponse(
-        "Khu vực không tồn tại",
-        400
-      );
+    // If no areaCode provided or area not found, try to find any active area
+    if (!areaId) {
+      const defaultArea = await Area.findOne({ isActive: true }).lean();
+      if (defaultArea) {
+        areaId = defaultArea._id;
+      }
     }
 
     let leader = null;
@@ -194,7 +202,7 @@ export async function POST(request: Request) {
 
       departmentId: department._id,
 
-      areaId: area._id,
+      areaId: areaId,
 
       leaderId: leader?._id ?? null,
 

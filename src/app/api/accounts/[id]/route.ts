@@ -111,6 +111,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (data.email !== undefined) target.email = data.email.toLowerCase();
     if (data.phone !== undefined) target.phone = data.phone;
     if (data.avatar !== undefined) target.avatar = data.avatar;
+    if (data.bankName !== undefined) target.bankName = data.bankName;
+    if (data.bankAccountNumber !== undefined) target.bankAccountNumber = data.bankAccountNumber;
+    if (data.bankAccountHolder !== undefined) target.bankAccountHolder = data.bankAccountHolder;
     if (data.teamId !== undefined) target.teamId = data.teamId ? new mongoose.Types.ObjectId(data.teamId) : null;
     if (data.leaderId !== undefined) target.leaderId = data.leaderId ? new mongoose.Types.ObjectId(data.leaderId) : null;
     if (data.isActive !== undefined) target.isActive = data.isActive;

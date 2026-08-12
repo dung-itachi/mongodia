@@ -181,15 +181,23 @@ export async function PUT(
             );
         }
 
-        const area = await Area.findOne({
-            code: data.areaCode.toUpperCase(),
-        });
+        // areaCode is optional - find a default area or skip
+        let areaId: mongoose.Types.ObjectId | null = null;
+        if (data.areaCode) {
+            const area = await Area.findOne({
+                code: data.areaCode.toUpperCase(),
+            });
+            if (area) {
+                areaId = area._id as mongoose.Types.ObjectId;
+            }
+        }
 
-        if (!area) {
-            return errorResponse(
-                "Khu vực không tồn tại",
-                400
-            );
+        // If no areaCode provided or area not found, try to find any active area
+        if (!areaId) {
+            const defaultArea = await Area.findOne({ isActive: true }).lean();
+            if (defaultArea) {
+                areaId = defaultArea._id as mongoose.Types.ObjectId;
+            }
         }
 
         let leader = null;
@@ -228,7 +236,7 @@ export async function PUT(
 
         team.departmentId = department._id;
 
-        team.areaId = area._id;
+        team.areaId = areaId;
 
         team.leaderId = leader?._id ?? null;
 

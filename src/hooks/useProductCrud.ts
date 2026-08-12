@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
+import { useAntApp } from "@/providers/AntdProvider";
 import api from "@/lib/axios";
 import { useState, useCallback } from "react";
 
@@ -188,6 +188,7 @@ export function useProductDetail(id: string | null) {
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: createProduct,
@@ -204,6 +205,7 @@ export function useCreateProduct() {
 
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateProductInput }) =>
@@ -223,6 +225,7 @@ export function useUpdateProduct() {
 
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: deleteProduct,

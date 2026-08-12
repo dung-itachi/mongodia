@@ -229,8 +229,11 @@ export class MarketingDispatchService {
     const Employee = (await import("@/models/Employee")).default;
     const Role = (await import("@/models/Role")).default;
 
-    // Find SALE role
-    const saleRole = await Role.findOne({ code: "SALE" }).lean();
+    // Find SALE role (case-insensitive)
+    const saleRole = await Role.findOne({ 
+      code: { $regex: /^sale$/i } 
+    }).lean();
+    
     if (!saleRole) {
       return null;
     }
@@ -242,7 +245,7 @@ export class MarketingDispatchService {
     })
       .select("_id")
       .lean();
-
+    
     if (saleEmployees.length === 0) {
       return null;
     }

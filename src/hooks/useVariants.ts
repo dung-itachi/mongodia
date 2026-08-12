@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
+import { useAntApp } from "@/providers/AntdProvider";
 import api from "@/lib/axios";
 
 // ============================================================================
@@ -391,6 +391,7 @@ export function useVariantOptionDetail(id: string | null) {
 
 export function useCreateVariantOption() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: createVariantOption,
@@ -408,6 +409,7 @@ export function useCreateVariantOption() {
 
 export function useUpdateVariantOption() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: ({
@@ -461,6 +463,7 @@ export function useVariantValueDetail(id: string | null) {
 
 export function useCreateVariantValue() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: createVariantValue,
@@ -478,6 +481,7 @@ export function useCreateVariantValue() {
 
 export function useUpdateVariantValue() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: ({
@@ -504,6 +508,7 @@ export function useUpdateVariantValue() {
 
 export function useDeleteVariantValue() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: deleteVariantValue,
@@ -548,6 +553,7 @@ export function useProductVariantDetail(id: string | null) {
 
 export function useCreateProductVariant() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: createProductVariant,
@@ -565,6 +571,7 @@ export function useCreateProductVariant() {
 
 export function useUpdateProductVariant() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: ({
@@ -591,6 +598,7 @@ export function useUpdateProductVariant() {
 
 export function useDeleteProductVariant() {
   const queryClient = useQueryClient();
+  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: deleteProductVariant,

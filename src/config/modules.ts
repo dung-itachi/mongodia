@@ -201,6 +201,22 @@ export const MODULES: ModuleDefinition[] = [
     icon: `<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>`,
   },
   {
+    id: "accounts-teams",
+    title: "QL Teams",
+    route: "/teams",
+    permission: "team.view",
+    group: "ACCOUNTS",
+    icon: `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+  },
+  {
+    id: "accounts-leaders",
+    title: "QL Leaders",
+    route: "/leaders",
+    permission: "account.view",
+    group: "ACCOUNTS",
+    icon: `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+  },
+  {
     id: "my-account",
     title: "Tài khoản của tôi",
     route: "/account/profile",
