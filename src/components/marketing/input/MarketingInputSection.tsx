@@ -18,6 +18,7 @@ import {
   DeleteOutlined,
   PlusOutlined,
   SearchOutlined,
+  SnippetsOutlined,
 } from "@ant-design/icons";
 import { toast } from "@/components/common/feedback/Toast";
 import {
@@ -219,6 +220,26 @@ export default function MarketingInputSection({
   const handleFacebookPageCreated = useCallback((page?: { _id: string }) => {
     if (page) setSelectedFacebookPageId(page._id);
     setFacebookPageDrawerOpen(false);
+  }, []);
+
+  // Handle paste from clipboard
+  const handlePasteFromClipboard = useCallback(async () => {
+    try {
+      if (!navigator.clipboard?.readText) {
+        toast.warning("Trình duyệt không hỗ trợ đọc clipboard. Vui lòng dùng Ctrl+V.");
+        return;
+      }
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) {
+        toast.warning("Clipboard trống");
+        return;
+      }
+      setInputText(text);
+      toast.success("Đã dán dữ liệu từ clipboard");
+    } catch (err) {
+      console.error("Clipboard read error:", err);
+      toast.warning("Không thể đọc clipboard. Vui lòng dùng Ctrl+V.");
+    }
   }, []);
 
   // Handle quick product created
@@ -815,6 +836,13 @@ export default function MarketingInputSection({
             disabled={!selectedFacebookPageId || !inputText.trim()}
           >
             Phân loại
+          </Button>
+          <Button
+            icon={<SnippetsOutlined />}
+            onClick={handlePasteFromClipboard}
+            disabled={!selectedFacebookPageId}
+          >
+            Dán
           </Button>
           <Button onClick={() => setInputText("")} disabled={!inputText}>
             Xóa
