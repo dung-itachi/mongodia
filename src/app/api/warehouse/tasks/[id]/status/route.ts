@@ -6,6 +6,8 @@
  * Sprint 6.3 — Warehouse Integration
  *
  * Change warehouse task status.
+ *
+ * Security: Requires warehouse.update permission AND warehouse scope check.
  */
 
 import { NextResponse } from "next/server";
@@ -15,6 +17,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { warehouseService } from "@/services/warehouse.service";
 import { success, error as errorResponse } from "@/utils/response";
 import { z } from "zod";
+import { canAccessWarehouse } from "@/lib/warehouse-scope";
+import { WarehouseTask } from "@/models/WarehouseTask";
 
 const changeStatusSchema = z.object({
   status: z.string().min(1, "Status is required"),
@@ -37,6 +41,17 @@ export async function PATCH(
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return errorResponse("ID không hợp lệ", 400);
+    }
+
+    // Get task to check warehouse scope
+    const taskDoc = await WarehouseTask.findById(id).select("warehouseId").lean();
+    if (!taskDoc) {
+      return errorResponse("WarehouseTask không tồn tại", 404);
+    }
+
+    // Check warehouse scope - user must have access to the task's warehouse
+    if (!canAccessWarehouse(currentUser, taskDoc.warehouseId.toString())) {
+      return errorResponse("Bạn không có quyền thao tác với task này", 403);
     }
 
     let body: unknown;

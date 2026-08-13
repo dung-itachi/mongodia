@@ -117,13 +117,6 @@ export class MarketingDispatchService {
             continue;
           }
 
-          console.log(`Push Lead ${leadId} - lead data:`, {
-            isConverted: lead.isConverted,
-            saleEmployeeId: lead.saleEmployeeId,
-            status: lead.status,
-            requestSaleEmployeeId: saleEmployeeId
-          });
-
           // 2. Check if already converted (Sprint 8.5: không push lead đã convert)
           if (lead.isConverted) {
             errors.push(`Lead ${lead.leadCode} đã được chốt đơn trước đó`);
@@ -365,15 +358,111 @@ export class MarketingDispatchService {
   }
 
   /**
+   * Reassign lead to different Sale employee (Admin/Manager)
+   */
+  async reassignLead(
+    leadId: string,
+    newSaleEmployeeId: string,
+    reassignedBy: string
+  ): Promise<{
+    success: boolean;
+    leadId: string;
+    errors: string[];
+  }> {
+    // 1. Find lead
+    const lead = await Lead.findById(leadId);
+    if (!lead) {
+      return {
+        success: false,
+        leadId,
+        errors: ["Lead không tồn tại"],
+      };
+    }
+
+    // 2. Check if already converted
+    if (lead.isConverted) {
+      return {
+        success: false,
+        leadId,
+        errors: ["Lead đã được chốt đơn, không thể phân công lại"],
+      };
+    }
+
+    const oldSaleId = lead.saleEmployeeId?.toString();
+    const newSaleId = new mongoose.Types.ObjectId(newSaleEmployeeId);
+
+    // 3. Update lead
+    lead.saleEmployeeId = newSaleId;
+    lead.assignedAt = new Date();
+    lead.assignmentType = "MANUAL"; // Manual reassignment
+
+    await lead.save();
+
+    // 4. Create timeline record
+    await LeadHistory.create([
+      {
+        leadId: lead._id,
+        employeeId: new mongoose.Types.ObjectId(reassignedBy),
+        action: LeadAction.ASSIGNED,
+        oldValue: oldSaleId || "(chưa có)",
+        newValue: newSaleEmployeeId,
+        note: "Admin/Manager phân công lại lead cho Sale khác",
+      },
+    ]);
+
+    return {
+      success: true,
+      leadId,
+      errors: [],
+    };
+  }
+
+  /**
+   * Bulk reassign leads to multiple sale employees (round-robin)
+   */
+  async bulkReassignLeads(
+    leadIds: string[],
+    saleEmployeeIds: string[],
+    reassignedBy: string
+  ): Promise<Array<{ leadId: string; success: boolean; error?: string }>> {
+    const results: Array<{ leadId: string; success: boolean; error?: string }> = [];
+
+    // Round-robin assignment
+    for (let i = 0; i < leadIds.length; i++) {
+      const leadId = leadIds[i];
+      const saleEmployeeId = saleEmployeeIds[i % saleEmployeeIds.length];
+
+      try {
+        const result = await this.reassignLead(leadId, saleEmployeeId, reassignedBy);
+        results.push({
+          leadId,
+          success: result.success,
+          error: result.errors[0],
+        });
+      } catch (err) {
+        results.push({
+          leadId,
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * Lấy danh sách leads cho Sale (Số cần gọi)
    *
+   * - Nếu saleEmployeeId = null → lấy TẤT CẢ leads (Admin/Manager)
+   * - Nếu saleEmployeeId = string → chỉ lấy leads của sale đó
+   *
    * Leads hiển thị:
-   * - Đã được assign cho sale này
-   * - Chưa convert (isConverted = false)
+   * - Đã được assign cho sale
    * - isActive = true
    */
   async getSaleLeads(
-    saleEmployeeId: string,
+    saleEmployeeId: string | null,
     options: {
       status?: LeadStatus[];
       keyword?: string;
@@ -384,10 +473,14 @@ export class MarketingDispatchService {
     const { status, keyword, page = 1, limit = 20 } = options;
 
     const filter: Record<string, unknown> = {
-      saleEmployeeId: new mongoose.Types.ObjectId(saleEmployeeId),
-      isConverted: false,
       isActive: true,
     };
+
+    // If saleEmployeeId is provided, filter by that employee
+    if (saleEmployeeId) {
+      filter.saleEmployeeId = new mongoose.Types.ObjectId(saleEmployeeId);
+    }
+    // If saleEmployeeId is null, return all leads (for Admin/Manager)
 
     if (status && status.length > 0) {
       filter.status = { $in: status };
@@ -538,13 +631,20 @@ export class MarketingDispatchService {
 
   /**
    * Get counts for Sale dashboard (Số cần gọi)
+   * 
+   * - Nếu saleEmployeeId = null → đếm TẤT CẢ leads (Admin/Manager)
+   * - Nếu saleEmployeeId = string → chỉ đếm leads của sale đó
    */
-  async getSaleLeadCounts(saleEmployeeId: string) {
-    const baseFilter = {
-      saleEmployeeId: new mongoose.Types.ObjectId(saleEmployeeId),
-      isConverted: false,
+  async getSaleLeadCounts(saleEmployeeId: string | null) {
+    const baseFilter: Record<string, unknown> = {
       isActive: true,
     };
+
+    // If saleEmployeeId is provided, filter by that employee
+    if (saleEmployeeId) {
+      baseFilter.saleEmployeeId = new mongoose.Types.ObjectId(saleEmployeeId);
+    }
+    // If saleEmployeeId is null, count all leads (for Admin/Manager)
 
     const [total, newCount, contactedCount, noAnswerCount, potentialCount, closedCount] =
       await Promise.all([

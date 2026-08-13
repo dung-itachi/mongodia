@@ -10,6 +10,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import type { LeadStatus } from "@/constants/leadStatus";
+import { useAuthStore } from "@/store/auth.store";
 
 // ============================================================================
 // Types
@@ -87,7 +88,8 @@ export interface SaleLeadFilters {
 // ============================================================================
 
 async function fetchSaleLeads(
-  filters: SaleLeadFilters = {}
+  filters: SaleLeadFilters = {},
+  viewAll: boolean = false
 ): Promise<SaleLeadListResponse> {
   const params = new URLSearchParams();
 
@@ -103,6 +105,9 @@ async function fetchSaleLeads(
   if (filters.limit) {
     params.set("limit", String(filters.limit));
   }
+  if (viewAll) {
+    params.set("viewAll", "true");
+  }
 
   const queryString = params.toString();
   const url = `/api/sale/leads${queryString ? `?${queryString}` : ""}`;
@@ -111,8 +116,9 @@ async function fetchSaleLeads(
   return response.data.data;
 }
 
-async function fetchSaleLeadCounts(): Promise<SaleLeadCounts> {
-  const response = await api.get("/api/sale/leads/counts");
+async function fetchSaleLeadCounts(viewAll: boolean = false): Promise<SaleLeadCounts> {
+  const url = viewAll ? "/api/sale/leads/counts?viewAll=true" : "/api/sale/leads/counts";
+  const response = await api.get(url);
   return response.data.data;
 }
 
@@ -136,14 +142,19 @@ async function updateLeadStatus(
  * Hook to fetch paginated list of sale leads
  */
 export function useSaleLeads(filters: SaleLeadFilters = {}) {
+  // Get current user role from auth store
+  const user = useAuthStore((state) => state.user);
+  const isAdminOrManager = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const viewAll = isAdminOrManager;
+
   const {
     data,
     isLoading,
     error,
     refetch,
   } = useQuery<SaleLeadListResponse, Error>({
-    queryKey: ["sale-leads", filters],
-    queryFn: () => fetchSaleLeads(filters),
+    queryKey: ["sale-leads", filters, viewAll],
+    queryFn: () => fetchSaleLeads(filters, viewAll),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
@@ -168,14 +179,19 @@ export function useSaleLeads(filters: SaleLeadFilters = {}) {
  * Hook to fetch sale lead counts
  */
 export function useSaleLeadCounts() {
+  // Get current user role from auth store
+  const user = useAuthStore((state) => state.user);
+  const isAdminOrManager = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const viewAll = isAdminOrManager;
+
   const {
     data,
     isLoading,
     error,
     refetch,
   } = useQuery<SaleLeadCounts, Error>({
-    queryKey: ["sale-lead-counts"],
-    queryFn: fetchSaleLeadCounts,
+    queryKey: ["sale-lead-counts", viewAll],
+    queryFn: () => fetchSaleLeadCounts(viewAll),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,

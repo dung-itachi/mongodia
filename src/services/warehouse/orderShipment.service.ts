@@ -83,14 +83,36 @@ async function validateGiftShipment(
 
 async function adjustInventoryForShip(warehouseId: mongoose.Types.ObjectId, item: NormalizedShipmentItem, quantity: number, session: mongoose.ClientSession) {
   const where = filter(warehouseId, item);
-  // Check availableQuantity (quantity - inTransit - reserved)
-  // shippedQuantity là tracking counter, KHÔNG ảnh hưởng available
-  const updated = await WarehouseInventory.findOneAndUpdate(
-    { ...where, availableQuantity: { $gte: quantity } } as never,
-    { $inc: { quantity: -quantity, availableQuantity: -quantity } },
-    { new: true, session }
-  ).lean();
-  if (!updated) throw new Error(`Không đủ tồn kho khả dụng: cần ${quantity}`);
+
+  let updated;
+  if (item.itemType === "PRODUCT") {
+    // Reserved shipment: consume reserved stock
+    // Check reservedQuantity >= qty
+    updated = await WarehouseInventory.findOneAndUpdate(
+      { ...where, reservedQuantity: { $gte: quantity } } as never,
+      { $inc: { quantity: -quantity, reservedQuantity: -quantity } },
+      { new: true, session }
+    ).lean();
+    if (!updated) {
+      // Try to get more info for error message
+      const current = await WarehouseInventory.findOne(where as never).lean();
+      const currentQty = current?.reservedQuantity ?? 0;
+      throw new Error(`Không đủ tồn đã giữ chỗ để xuất: cần ${quantity}, đã giữ ${currentQty}`);
+    }
+  } else {
+    // Gift shipment: consume available stock
+    // Check availableQuantity >= qty
+    updated = await WarehouseInventory.findOneAndUpdate(
+      { ...where, availableQuantity: { $gte: quantity } } as never,
+      { $inc: { quantity: -quantity, availableQuantity: -quantity } },
+      { new: true, session }
+    ).lean();
+    if (!updated) {
+      const current = await WarehouseInventory.findOne(where as never).lean();
+      const currentQty = current?.availableQuantity ?? 0;
+      throw new Error(`Không đủ tồn kho khả dụng cho quà: cần ${quantity}, có ${currentQty}`);
+    }
+  }
   return updated;
 }
 
@@ -191,10 +213,30 @@ async function buildProductDemands(
 }
 
 export class OrderShipmentService {
-  async shipOrder(input: { orderId: string; employeeId: string; actualShipments?: ShipmentItem[]; note?: string }) {
-    const session = await mongoose.startSession();
+  /**
+   * Ship an order from warehouse.
+   *
+   * @param input - Shipment parameters
+   * @param options - Optional options including session for transaction propagation
+   *
+   * Transaction behavior:
+   * - If options.session is provided, uses that session (reuses transaction)
+   * - If options.session is not provided, creates new session/transaction (root operation)
+   *
+   * This allows callers like warehouseService.changeStatus() to pass their session,
+   * ensuring all operations happen in a single transaction.
+   */
+  async shipOrder(
+    input: { orderId: string; employeeId: string; actualShipments?: ShipmentItem[]; note?: string },
+    options: { session?: mongoose.ClientSession } = {}
+  ) {
+    const ownsSession = !options.session;
+    const session = options.session ?? await mongoose.startSession();
+
     try {
-      session.startTransaction();
+      if (ownsSession) {
+        session.startTransaction();
+      }
       const order = await Order.findById(input.orderId).select("warehouseId status").session(session).lean();
       if (!order) throw new Error("Đơn hàng không tồn tại");
       if (!order.warehouseId) throw new Error("Đơn hàng chưa gán kho xuất");
@@ -227,21 +269,44 @@ export class OrderShipmentService {
           note: input.note ?? "",
         }], { session });
       }
-      await session.commitTransaction();
+      if (ownsSession) {
+        await session.commitTransaction();
+      }
       return { success: true, shipments: demands };
     } catch (error) {
-      await session.abortTransaction();
+      if (ownsSession) {
+        await session.abortTransaction();
+      }
       throw error;
     } finally {
-      await session.endSession();
+      if (ownsSession) {
+        await session.endSession();
+      }
     }
   }
 
-  async returnOrder(input: { orderId: string; employeeId: string; items: ShipmentItem[]; note?: string }) {
+  /**
+   * Return order items to warehouse.
+   *
+   * @param input - Return parameters
+   * @param options - Optional options including session for transaction propagation
+   *
+   * Transaction behavior:
+   * - If options.session is provided, uses that session (reuses transaction)
+   * - If options.session is not provided, creates new session/transaction (root operation)
+   */
+  async returnOrder(
+    input: { orderId: string; employeeId: string; items: ShipmentItem[]; note?: string },
+    options: { session?: mongoose.ClientSession } = {}
+  ) {
     if (!input.items.length) throw new Error("Phải chọn mặt hàng hoàn");
-    const session = await mongoose.startSession();
+    const ownsSession = !options.session;
+    const session = options.session ?? await mongoose.startSession();
+
     try {
-      session.startTransaction();
+      if (ownsSession) {
+        session.startTransaction();
+      }
       const order = await Order.findById(input.orderId).select("warehouseId status orderCode").session(session).lean();
       if (!order) throw new Error("Đơn hàng không tồn tại");
       if (!order.warehouseId) throw new Error("Đơn hàng chưa gán kho");
@@ -268,13 +333,19 @@ export class OrderShipmentService {
           note: input.note ?? "",
         }], { session });
       }
-      await session.commitTransaction();
+      if (ownsSession) {
+        await session.commitTransaction();
+      }
       return { success: true };
     } catch (error) {
-      await session.abortTransaction();
+      if (ownsSession) {
+        await session.abortTransaction();
+      }
       throw error;
     } finally {
-      await session.endSession();
+      if (ownsSession) {
+        await session.endSession();
+      }
     }
   }
 }

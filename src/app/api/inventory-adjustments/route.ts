@@ -20,6 +20,28 @@ import {
   createInventoryAdjustmentSchema,
 } from "@/utils/validator";
 
+/**
+ * ==================================================
+ * LEGACY INVENTORY ADJUSTMENT API
+ * ==================================================
+ *
+ * @deprecated
+ * This endpoint is DEPRECATED and should not be used.
+ *
+ * Replacement:
+ *   POST /api/warehouse/adjustments
+ *   → warehouse-adjustment.service
+ *   → WarehouseInventory (SoT)
+ *
+ * This endpoint writes to the legacy Inventory collection
+ * instead of WarehouseInventory (SoT). It is kept for backward
+ * compatibility with historical data but should not be used
+ * for new adjustments.
+ *
+ * Audit (Phase 5): No active callers found in codebase.
+ * ==================================================
+ */
+
 export async function GET(request: Request) {
   try {
     const currentUser = await getCurrentUser(request);
@@ -119,8 +141,15 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * @deprecated Use POST /api/warehouse/adjustments instead.
+ * This endpoint writes to legacy Inventory collection instead of WarehouseInventory (SoT).
+ * Phase 5 Audit: No active callers found.
+ */
 export async function POST(request: Request) {
   const session = await mongoose.startSession();
+
+  console.warn("[DEPRECATED] POST /api/inventory-adjustments called. Use POST /api/warehouse/adjustments instead.");
 
   try {
     session.startTransaction();

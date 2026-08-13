@@ -3,6 +3,9 @@
  *
  * GET /api/sale/leads/counts
  *
+ * Query params:
+ * - viewAll: if "true", Admin/Manager can view all lead counts
+ *
  * Returns counts for Sale dashboard:
  * - total: Tổng số leads cần gọi
  * - new: Số leads mới
@@ -29,8 +32,19 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
+    const { searchParams } = new URL(request.url);
+    const viewAll = searchParams.get("viewAll") === "true";
+
+    // Check if user is Admin or Manager (can view all leads)
+    // Note: currentUser.role can be an object with .code property or a string
+    const roleCode = typeof currentUser.role === 'string' 
+      ? currentUser.role 
+      : currentUser.role?.code;
+    const isAdminOrManager = roleCode === "ADMIN" || roleCode === "MANAGER";
+    const canViewAll = viewAll && isAdminOrManager;
+
     const counts = await marketingDispatchService.getSaleLeadCounts(
-      currentUser.employee._id.toString()
+      canViewAll ? null : currentUser.employee._id.toString()
     );
 
     return success(counts);

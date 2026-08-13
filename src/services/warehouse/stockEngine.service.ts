@@ -162,25 +162,22 @@ export interface TransferStockResult {
 // ==================================================
 
 /**
- * Dual-write flag - controls whether WarehouseInventory is updated alongside Inventory.
- * Set to true after migration is complete and dual-write is verified.
- * DEFAULT: false (Phase 2 dual-write inactive until explicitly enabled)
+ * DEPRECATED: Dual-write mode. Kept for API compatibility.
+ * Now always returns FALSE - WarehouseInventory is primary (only) target.
+ * @deprecated Use WarehouseInventory directly
  */
 let DUAL_WRITE_ENABLED = false;
 
 /**
- * Enable dual-write mode. Call this after migration is complete.
- * WARNING: This should only be enabled after:
- * 1. Migration script has been run successfully
- * 2. Reconciliation shows no critical discrepancies
- * 3. Testing in staging environment is complete
+ * @deprecated Use WarehouseInventory directly
  */
 export function enableDualWrite(): void {
-  DUAL_WRITE_ENABLED = true;
+  console.warn("[StockEngine] enableDualWrite() is deprecated. WarehouseInventory is now the primary write target.");
+  DUAL_WRITE_ENABLED = false;
 }
 
 /**
- * Disable dual-write mode (for rollback or maintenance).
+ * @deprecated Use WarehouseInventory directly
  */
 export function disableDualWrite(): void {
   DUAL_WRITE_ENABLED = false;
@@ -188,9 +185,10 @@ export function disableDualWrite(): void {
 
 /**
  * Check if dual-write mode is enabled.
+ * Always returns FALSE in Phase 3.
  */
 export function isDualWriteEnabled(): boolean {
-  return DUAL_WRITE_ENABLED;
+  return false; // Phase 3: WarehouseInventory is primary
 }
 
 // ==================================================
@@ -481,18 +479,8 @@ async function applyWarehouseInventoryReserve(
   qty: number,
   session: mongoose.ClientSession
 ): Promise<OperationSnapshot> {
-  if (!DUAL_WRITE_ENABLED) {
-    // If dual-write is disabled, skip WarehouseInventory update entirely
-    // This allows legacy behavior during transition
-    // Return null to indicate skip (no snapshot needed)
-    return {
-      beforeQuantity: 0,
-      changeQuantity: 0,
-      afterQuantity: 0,
-      beforeReserved: 0,
-      afterReserved: 0,
-    };
-  }
+  // Phase 3: WarehouseInventory is the primary (only) write target
+  // No longer checking DUAL_WRITE_ENABLED flag
 
   const filter = buildWarehouseInventoryFilter(warehouseId, item, "PRODUCT");
 
@@ -561,18 +549,8 @@ async function applyWarehouseInventoryUnreserve(
   qty: number,
   session: mongoose.ClientSession
 ): Promise<OperationSnapshot> {
-  if (!DUAL_WRITE_ENABLED) {
-    // If dual-write is disabled, skip WarehouseInventory update entirely
-    // This allows legacy behavior during transition
-    // Return null to indicate skip (no snapshot needed)
-    return {
-      beforeQuantity: 0,
-      changeQuantity: 0,
-      afterQuantity: 0,
-      beforeReserved: 0,
-      afterReserved: 0,
-    };
-  }
+  // Phase 3: WarehouseInventory is the primary (only) write target
+  // No longer checking DUAL_WRITE_ENABLED flag
 
   const filter = buildWarehouseInventoryFilter(warehouseId, item, "PRODUCT");
 
@@ -824,17 +802,19 @@ function buildChangeResult(
 /**
  * RESERVE — giữ chỗ tồn kho cho 1 item.
  *
- * Phase 2: Dual-write implementation.
- * - Updates Inventory (current SoT) for business logic
- * - Updates WarehouseInventory (future SoT) if dual-write is enabled
+ * Phase 3: WarehouseInventory is the SOURCE OF TRUTH.
+ * - Updates WarehouseInventory only
+ * - No longer updates Inventory (write path switched)
  *
- * Both updates happen in the SAME transaction (same session).
+ * Semantics:
+ * - availableQuantity -= qty
+ * - reservedQuantity += qty
+ * - quantity: UNCHANGED
+ * - inTransitQuantity: UNCHANGED
  *
- * - Trừ `availableQuantity` (qua tăng `reservedQuantity`).
- * - Không đổi `quantity` tổng.
- * - Throw `InsufficientStockError` nếu `availableQuantity < quantity`.
- * - Ghi InventoryHistory(action=RESERVE, reason=ORDER_RESERVED).
- *
+ * Atomic condition: availableQuantity >= qty
+ * 
+ * @throws InsufficientStockError if availableQuantity < quantity
  * @returns `StockChangeResult[]` — 1 phần tử / item, theo thứ tự input.
  */
 export async function reserveStock(
@@ -853,18 +833,10 @@ export async function reserveStock(
   return runInTransaction(options.session, async (session) => {
     const results: StockChangeResult[] = [];
     for (const item of items) {
-      // Primary: Update Inventory (current SoT)
-      const snapshot = await applyItem(
-        wid,
-        item,
-        InventoryAction.RESERVE,
-        session
-      );
+      // Phase 3: Update WarehouseInventory only (SOURCE OF TRUTH)
+      const snapshot = await applyWarehouseInventoryReserve(wid, item, item.quantity, session);
 
-      // Phase 2: Dual-write to WarehouseInventory (future SoT)
-      // This is called within the SAME transaction
-      await applyWarehouseInventoryReserve(wid, item, item.quantity, session);
-
+      // Append history for audit trail
       const historyId = await appendHistory({
         warehouseId: wid,
         productVariantId: toObjectIdOptional(item.productVariantId),
@@ -901,17 +873,19 @@ export async function reserveStock(
 /**
  * UNRESERVE — trả lại chỗ đã giữ (vd: cancel trước khi OUT).
  *
- * Phase 2: Dual-write implementation.
- * - Updates Inventory (current SoT) for business logic
- * - Updates WarehouseInventory (future SoT) if dual-write is enabled
+ * Phase 3: WarehouseInventory is the SOURCE OF TRUTH.
+ * - Updates WarehouseInventory only
+ * - No longer updates Inventory (write path switched)
  *
- * Both updates happen in the SAME transaction (same session).
+ * Semantics:
+ * - reservedQuantity -= qty
+ * - availableQuantity += qty
+ * - quantity: UNCHANGED
+ * - inTransitQuantity: UNCHANGED
  *
- * - Giảm `reservedQuantity` (cộng ngược vào `availableQuantity`).
- * - Không đổi `quantity` tổng.
- * - Throw `InsufficientReservedStockError` nếu `reservedQuantity < quantity`.
- * - Ghi InventoryHistory(action=UNRESERVE, reason=ORDER_UNRESERVED).
- *
+ * Atomic condition: reservedQuantity >= qty
+ * 
+ * @throws InsufficientReservedStockError if reservedQuantity < quantity
  * @returns `StockChangeResult[]` — 1 phần tử / item, theo thứ tự input.
  */
 export async function releaseReservedStock(
@@ -930,17 +904,8 @@ export async function releaseReservedStock(
   return runInTransaction(options.session, async (session) => {
     const results: StockChangeResult[] = [];
     for (const item of items) {
-      // Primary: Update Inventory (current SoT)
-      const snapshot = await applyItem(
-        wid,
-        item,
-        InventoryAction.UNRESERVE,
-        session
-      );
-
-      // Phase 2: Dual-write to WarehouseInventory (future SoT)
-      // This is called within the SAME transaction
-      await applyWarehouseInventoryUnreserve(wid, item, item.quantity, session);
+      // Phase 3: Update WarehouseInventory only (SOURCE OF TRUTH)
+      const snapshot = await applyWarehouseInventoryUnreserve(wid, item, item.quantity, session);
 
       const historyId = await appendHistory({
         warehouseId: wid,

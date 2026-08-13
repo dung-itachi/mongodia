@@ -1,12 +1,21 @@
 /**
  * ==================================================
- * INVENTORY REPOSITORY
+ * INVENTORY REPOSITORY (DEPRECATED)
  * ==================================================
  *
- * Sprint 6.4 — Inventory Movement
+ * @deprecated
+ * This repository is DEPRECATED. It writes to the legacy
+ * Inventory collection instead of WarehouseInventory (SoT).
  *
- * Clean Architecture: Repository layer cho Inventory.
- * Chỉ query - không business logic.
+ * Replacement mapping:
+ *   decreaseStock → NOT NEEDED (use orderShipmentService or stockEngine)
+ *   increaseStock → NOT NEEDED (use warehouseWorkflowService)
+ *
+ * Phase 5 Audit: These methods are only called by deprecated
+ * inventoryService methods, which are themselves unused.
+ *
+ * This repository is kept for backward compatibility and should
+ * NOT be used for new stock operations.
  */
 
 import mongoose from "mongoose";
@@ -88,6 +97,10 @@ export class InventoryRepository {
 
   /**
    * Decrease stock quantity (called within a transaction)
+   *
+   * @deprecated Write to WarehouseInventory instead using stockEngine or orderShipmentService.
+   * This method writes to legacy Inventory collection instead of WarehouseInventory (SoT).
+   * Phase 5 Audit: Only called by deprecated inventoryService methods.
    */
   async decreaseStock(
     warehouseId: string,
@@ -122,6 +135,10 @@ export class InventoryRepository {
 
   /**
    * Increase stock quantity (called within a transaction)
+   *
+   * @deprecated Write to WarehouseInventory instead using warehouseWorkflowService.
+   * This method writes to legacy Inventory collection instead of WarehouseInventory (SoT).
+   * Phase 5 Audit: Only called by deprecated inventoryService methods.
    */
   async increaseStock(
     warehouseId: string,

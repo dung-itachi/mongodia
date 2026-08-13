@@ -314,7 +314,7 @@ export default function WarehouseShipmentsPage() {
               title="Chờ đóng gói"
               value={stats.confirmed}
               prefix={<CheckOutlined style={{ color: "#1890ff" }} />}
-              valueStyle={{ color: "#1890ff" }}
+              styles={{ content: { color: "#1890ff" } }}
             />
           </Card>
         </Col>
@@ -324,7 +324,7 @@ export default function WarehouseShipmentsPage() {
               title="Đang đóng gói"
               value={stats.packing}
               prefix={<ShoppingOutlined style={{ color: "#fa8c16" }} />}
-              valueStyle={{ color: "#fa8c16" }}
+              styles={{ content: { color: "#fa8c16" } }}
             />
           </Card>
         </Col>

@@ -197,9 +197,11 @@ export class WarehouseService {
         session
       );
 
-      // Sync: Warehouse SHIPPED → Order SHIPPING + Export Inventory
+      // Sync: Warehouse SHIPPED → Order SHIPPING + Ship via WarehouseInventory
       if (newStatus === WarehouseStatus.SHIPPED) {
-        // Step 1: Export inventory first (must succeed before status change)
+        // Phase 3: Use shipOrder instead of exportOrder
+        // shipOrder updates WarehouseInventory (SoT) and creates stock movements
+        
         const orderDoc = await getOrderDocument(task.orderId.toString());
         if (!orderDoc) {
           await session.abortTransaction();
@@ -214,38 +216,29 @@ export class WarehouseService {
           };
         }
 
-        if (orderDoc.orderItems && orderDoc.orderItems.length > 0) {
-          const inventoryService = await getInventoryService();
-          const orderItems = orderDoc.orderItems as Array<{
-            productId?: mongoose.Types.ObjectId;
-            sku: string;
-            productName: string;
-            quantity: number;
-          }>;
-          const exportResult = await inventoryService.exportOrder({
+        // Import orderShipmentService lazily
+        const { orderShipmentService } = await import("@/services/warehouse/orderShipment.service");
+        
+        // Call shipOrder with actualShipments from the order
+        // This will:
+        // 1. Consume reserved stock from WarehouseInventory
+        // 2. Create stock movement records
+        // 3. Use WarehouseInventory as SoT
+        // 4. Use same session as changeStatus for atomic transaction
+        let shipmentResult;
+        try {
+          shipmentResult = await orderShipmentService.shipOrder({
             orderId: task.orderId.toString(),
-            warehouseTaskId: taskId,
-            warehouseId: orderDoc.warehouseId.toString(),
-            items: orderItems.map((item) => ({
-              productVariantId: orderDoc.productVariantId?.toString(),
-              sku: item.sku,
-              productName: item.productName,
-              quantity: item.quantity,
-            })),
             employeeId,
+            // actualShipments will be built from order items
             note: note || "Xuất kho khi WarehouseTask SHIPPED",
-          });
-
-          if (!exportResult.success) {
-            await session.abortTransaction();
-            const detail = exportResult.insufficientItems
-              ? `: ${exportResult.insufficientItems.map((i) => `${i.sku} (cần ${i.requested}, còn ${i.available})`).join(", ")}`
-              : "";
-            return {
-              success: false,
-              error: `Xuất kho thất bại${detail}: ${exportResult.error}`,
-            };
-          }
+          }, { session }); // Pass session for transaction propagation
+        } catch (shipError) {
+          await session.abortTransaction();
+          return {
+            success: false,
+            error: `Xuất kho thất bại: ${shipError instanceof Error ? shipError.message : String(shipError)}`,
+          };
         }
 
         // Step 2: Change Order status to SHIPPING

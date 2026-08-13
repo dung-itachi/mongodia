@@ -41,7 +41,7 @@ export default function WarehouseInventoryPage() {
   }, [refetch]);
 
   const pageActions = (
-    <Space direction="vertical" size={0} style={{ textAlign: "right" }}>
+    <Space orientation="vertical" size={0} style={{ textAlign: "right" }}>
       <Text strong>Tổng: {(total ?? 0).toLocaleString("vi-VN")} dòng</Text>
       {filters.search && (
         <Text type="secondary" style={{ fontSize: 12 }}>

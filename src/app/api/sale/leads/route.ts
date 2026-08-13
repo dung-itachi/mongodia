@@ -8,6 +8,7 @@
  * - keyword: search by name, phone, leadCode
  * - page: page number (default: 1)
  * - limit: items per page (default: 20)
+ * - viewAll: if "true", Admin/Leader can view all leads
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
     const keyword = searchParams.get("keyword") ?? "";
     const page = parseInt(searchParams.get("page") ?? "1");
     const limit = parseInt(searchParams.get("limit") ?? "20");
+    const viewAll = searchParams.get("viewAll") === "true";
 
     // Parse status filter
     let status: LeadStatus[] | undefined;
@@ -41,9 +43,17 @@ export async function GET(request: NextRequest) {
       status = statusParam.split(",").map((s) => s.trim() as LeadStatus);
     }
 
-    // Get leads for this sale employee
+    // Check if user is Admin or Manager (can view all leads)
+    // Note: currentUser.role can be an object with .code property or a string
+    const roleCode = typeof currentUser.role === 'string' 
+      ? currentUser.role 
+      : currentUser.role?.code;
+    const isAdminOrManager = roleCode === "ADMIN" || roleCode === "MANAGER";
+    const canViewAll = viewAll && isAdminOrManager;
+
+    // Get leads - Admin/Manager see all, Sale sees only their own
     const result = await marketingDispatchService.getSaleLeads(
-      currentUser.employee._id.toString(),
+      canViewAll ? null : currentUser.employee._id.toString(),
       {
         status,
         keyword: keyword || undefined,

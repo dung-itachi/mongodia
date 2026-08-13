@@ -563,7 +563,7 @@ export default function WarehouseTransfersPage() {
         width={820}
         okText="Tạo phiếu"
         cancelText="Hủy"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Row gutter={12}>

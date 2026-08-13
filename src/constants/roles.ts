@@ -297,6 +297,7 @@ export const ROLES = [
       "gift.view",
 
       "lead.view",
+      "lead.assign",
 
       // ---- Marketing Expense (Workflow Simplification) --------------------
       // Marketing tự lock khi hoàn thành báo cáo ngày.

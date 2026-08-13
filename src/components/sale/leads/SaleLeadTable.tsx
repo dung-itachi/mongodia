@@ -6,8 +6,8 @@
  */
 
 import { memo, useMemo } from "react";
-import { Button, Space } from "antd";
-import { PhoneOutlined, SwapOutlined } from "@ant-design/icons";
+import { Button, Space, Tag } from "antd";
+import { PhoneOutlined, SwapOutlined, UserSwitchOutlined } from "@ant-design/icons";
 import { DataTable, StatusBadge } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
@@ -19,14 +19,25 @@ export interface SaleLeadTableProps {
   data: SaleLead[];
   onUpdateStatus: (lead: SaleLead, status: LeadStatus) => void;
   onConvert: (lead: SaleLead) => void;
+  onReassign?: (lead: SaleLead) => void;
   loading?: boolean;
+  canReassign?: boolean;
+  // Row selection for bulk operations
+  selectedRowKeys?: string[];
+  onSelectionChange?: (keys: string[]) => void;
+  selectionType?: "checkbox" | "none";
 }
 
 function SaleLeadTableInner({
   data,
   onUpdateStatus,
   onConvert,
+  onReassign,
   loading,
+  canReassign = false,
+  selectedRowKeys = [],
+  onSelectionChange,
+  selectionType = "none",
 }: SaleLeadTableProps) {
   const columns: Column[] = useMemo(
     () => [
@@ -60,6 +71,24 @@ function SaleLeadTableInner({
         dataIndex: "address",
         width: 200,
         render: (value: unknown) => String(value) || "-",
+      },
+      {
+        key: "saleEmployee",
+        title: "Sale phụ trách",
+        width: 150,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as SaleLead;
+          if (lead.saleEmployeeId) {
+            return (
+              <Tag color="blue" icon={<UserSwitchOutlined />}>
+                {lead.saleEmployeeId.name || lead.saleEmployeeId.employeeCode}
+              </Tag>
+            );
+          }
+          return (
+            <Tag color="default">Chưa phân công</Tag>
+          );
+        },
       },
       {
         key: "sourceType",
@@ -118,7 +147,7 @@ function SaleLeadTableInner({
       {
         key: "actions",
         title: "Thao tác",
-        width: 320,
+        width: 380,
         align: "center" as const,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -181,13 +210,34 @@ function SaleLeadTableInner({
               >
                 Chốt
               </Button>
+
+              {/* Reassign Button - Only for Admin/Manager */}
+              {canReassign && onReassign && (
+                <Button
+                  size="small"
+                  icon={<UserSwitchOutlined />}
+                  onClick={() => onReassign(lead)}
+                >
+                  Phân công
+                </Button>
+              )}
             </div>
           );
         },
       },
     ],
-    [onUpdateStatus, onConvert]
+    [onUpdateStatus, onConvert, onReassign, canReassign]
   );
+
+  // Row selection config
+  const rowSelection = selectionType === "checkbox" && onSelectionChange
+    ? {
+        selectedRowKeys,
+        onChange: (keys: React.Key[]) => {
+          onSelectionChange(keys as string[]);
+        },
+      }
+    : undefined;
 
   return (
     <DataTable
@@ -197,7 +247,8 @@ function SaleLeadTableInner({
       pagination={false}
       rowKey="_id"
       size="small"
-      scroll={{ x: 1500 }}
+      scroll={{ x: 1650 }}
+      rowSelection={rowSelection}
     />
   );
 }

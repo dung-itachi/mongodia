@@ -1,12 +1,24 @@
 /**
  * ==================================================
- * INVENTORY SERVICE
+ * INVENTORY SERVICE (DEPRECATED)
  * ==================================================
  *
- * Sprint 6.4 — Inventory Movement
+ * @deprecated
+ * This service is DEPRECATED. All methods write to the legacy
+ * Inventory collection instead of WarehouseInventory (SoT).
  *
- * Clean Architecture: Service layer cho Inventory.
- * Chứa business logic - được gọi bởi API Routes hoặc WarehouseService.
+ * Replacement mapping:
+ *   exportOrder()    → orderShipmentService.shipOrder()
+ *   reserveStock()  → stockEngine.reserveStock()
+ *   releaseStock()  → stockEngine.releaseReservedStock()
+ *   rollbackExport()→ Not needed (use orderShipmentService)
+ *   checkStock()    → warehouseInventoryQueryService
+ *
+ * Phase 5 Audit: All mutation methods are NOT CALLED by any
+ * production code. Only read methods (checkStock) are used.
+ *
+ * This service is kept for backward compatibility and should
+ * NOT be used for new stock operations.
  */
 
 import mongoose from "mongoose";
@@ -146,9 +158,10 @@ export class InventoryService {
 
   /**
    * Export order items from warehouse
-   * - Check stock availability
-   * - If all items have sufficient stock, decrease stock and create movements
-   * - If any item is insufficient, rollback and return error
+   *
+   * @deprecated Use orderShipmentService.shipOrder() instead.
+   * This method writes to legacy Inventory collection instead of WarehouseInventory (SoT).
+   * Phase 5 Audit: NOT CALLED by any production code.
    */
   async exportOrder(
     data: ExportOrderData
@@ -314,6 +327,10 @@ export class InventoryService {
   /**
    * Rollback export by restoring stock
    * Used when order is cancelled or returned
+   *
+   * @deprecated Use orderShipmentService.returnOrder() instead.
+   * This method writes to legacy Inventory collection instead of WarehouseInventory (SoT).
+   * Phase 5 Audit: NOT CALLED by any production code.
    */
   async rollbackExport(
     data: RollbackExportData
@@ -458,6 +475,10 @@ export class InventoryService {
 
   /**
    * Reserve stock for an order (Phase 4.3 compatible)
+   *
+   * @deprecated Use stockEngine.reserveStock() instead.
+   * This method writes to legacy Inventory collection instead of WarehouseInventory (SoT).
+   * Phase 5 Audit: NOT CALLED by any production code.
    */
   async reserveStock(
     warehouseId: string,
@@ -487,6 +508,10 @@ export class InventoryService {
 
   /**
    * Release reserved stock
+   *
+   * @deprecated Use stockEngine.releaseReservedStock() instead.
+   * This method writes to legacy Inventory collection instead of WarehouseInventory (SoT).
+   * Phase 5 Audit: NOT CALLED by any production code.
    */
   async releaseStock(
     warehouseId: string,
