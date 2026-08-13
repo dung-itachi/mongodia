@@ -285,7 +285,7 @@ export async function POST(request: Request) {
           quantity: data.quantity,
           unitPrice: data.unitPrice,
           totalAmount: validatedOrderItems.length > 0
-            ? validatedOrderItems.reduce((sum, item) => sum + item.subtotal, 0) + (data.shipping?.shippingFee ?? 0)
+            ? Math.max(0, validatedOrderItems.reduce((sum, item) => sum + item.subtotal - item.discount, 0) + (data.shipping?.shippingFee ?? 0))
             : data.totalAmount,
           currency: data.currency || "MNT",
           exchangeRate: exchangeRateSnap.rate,
@@ -306,8 +306,7 @@ export async function POST(request: Request) {
                 discount: validatedOrderItems.reduce((sum, item) => sum + item.discount, 0),
                 shippingFee: data.shipping?.shippingFee ?? 0,
                 grandTotal:
-                  validatedOrderItems.reduce((sum, item) => sum + item.subtotal, 0) +
-                  (data.shipping?.shippingFee ?? 0),
+                  Math.max(0, validatedOrderItems.reduce((sum, item) => sum + item.subtotal - item.discount, 0) + (data.shipping?.shippingFee ?? 0)),
                 currency: data.currency || "MNT",
               }
             : undefined,

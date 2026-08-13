@@ -217,7 +217,7 @@ export class InventoryService {
         const beforeQuantity = stock.quantity;
         const beforeAvailable = stock.availableQuantity;
 
-        // Decrease stock
+        // Decrease stock (OUT action: reduces both quantity and reservedQuantity)
         const updatedStock = await Inventory.findOneAndUpdate(
           {
             warehouseId: warehouseObjId,
@@ -227,6 +227,7 @@ export class InventoryService {
           {
             $inc: {
               quantity: -item.quantity,
+              reservedQuantity: -item.quantity,
               availableQuantity: -item.quantity,
             },
           },

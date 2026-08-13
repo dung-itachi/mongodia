@@ -30,7 +30,7 @@ import Team from "@/models/Team";
 import { OrderHistory } from "@/models/OrderHistory";
 import { orderRepository } from "@/repositories/order.repository";
 import { orderHistoryService } from "@/services/order-history.service";
-import { OrderSource, OrderStatus, ORDER_STATUS_LABELS } from "@/constants/orderStatus";
+import { OrderSource, OrderStatus, ORDER_STATUS_LABELS, OrderAction } from "@/constants/orderStatus";
 import {
   isStatusTransitionAllowed,
   getAllowedNextStatuses,
@@ -286,8 +286,6 @@ export class OrderService {
     const session = await mongoose.startSession();
 
     try {
-      session.startTransaction();
-
       // Update status in repository
       const updatedOrder = await orderRepository.changeStatus(orderId, newStatus, session);
 
@@ -531,15 +529,28 @@ export class OrderService {
 
       // Create history for status change
       if (data.status && data.status !== existingOrder.status) {
+        // Map status to workflow action (Sprint 8.5)
+        const statusActionMap: Record<string, OrderAction> = {
+          [OrderStatus.WAIT_CONFIRM]: OrderAction.WAIT_CONFIRM,
+          [OrderStatus.CONFIRMED]: OrderAction.CONFIRMED,
+          [OrderStatus.PACKING]: OrderAction.PACKING,
+          [OrderStatus.SHIPPING]: OrderAction.SHIPPING,
+          [OrderStatus.DELIVERED]: OrderAction.DELIVERED,
+          [OrderStatus.RETURNED]: OrderAction.RETURNED,
+          [OrderStatus.RECONCILED]: OrderAction.RECONCILED,
+          [OrderStatus.CANCELLED]: OrderAction.CANCELLED,
+        };
+        const action = statusActionMap[data.status] || OrderAction.UPDATED;
+
         await OrderHistory.create(
           [
             {
               orderId: new mongoose.Types.ObjectId(id),
               employeeId: new mongoose.Types.ObjectId(updatedBy),
-              action: "STATUS_CHANGED",
+              action,
               fieldName: "status",
               oldValue: ORDER_STATUS_LABELS[existingOrder.status as OrderStatus],
-              newValue: ORDER_STATUS_LABELS[data.status],
+              newValue: ORDER_STATUS_LABELS[data.status as OrderStatus],
               note: "Đổi trạng thái",
             },
           ],

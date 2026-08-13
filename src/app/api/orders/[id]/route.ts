@@ -264,6 +264,18 @@ export async function PATCH(
       });
     };
 
+    // Status to workflow action map (Sprint 8.5)
+    const statusActionMap: Record<string, OrderAction> = {
+      [OrderStatus.WAIT_CONFIRM]: OrderAction.WAIT_CONFIRM,
+      [OrderStatus.CONFIRMED]: OrderAction.CONFIRMED,
+      [OrderStatus.PACKING]: OrderAction.PACKING,
+      [OrderStatus.SHIPPING]: OrderAction.SHIPPING,
+      [OrderStatus.DELIVERED]: OrderAction.DELIVERED,
+      [OrderStatus.RETURNED]: OrderAction.RETURNED,
+      [OrderStatus.RECONCILED]: OrderAction.RECONCILED,
+      [OrderStatus.CANCELLED]: OrderAction.CANCELLED,
+    };
+
     // customerId
     if (data.customerId !== undefined) {
       const oldV = existedOrder.customerId.toString();
@@ -357,7 +369,8 @@ export async function PATCH(
 
     // status
     if (data.status !== undefined && data.status !== existedOrder.status) {
-      pushHistory(OrderAction.STATUS_CHANGED, {
+      const statusAction = statusActionMap[data.status as string] || OrderAction.UPDATED;
+      pushHistory(statusAction, {
         fieldName: "status",
         oldValue:
           ORDER_STATUS_LABELS[existedOrder.status as OrderStatus],
@@ -446,10 +459,10 @@ export async function PATCH(
         subtotal,
         discount,
         shippingFee,
-        grandTotal: subtotal + shippingFee,
+        grandTotal: Math.max(0, subtotal - discount + shippingFee),
         currency: data.currency ?? existedOrder.currency,
       };
-      updateData.totalAmount = subtotal + shippingFee;
+      updateData.totalAmount = Math.max(0, subtotal - discount + shippingFee);
       updateData.comboId = validatedOrderItems[0]?.comboId;
       updateData.productId = validatedOrderItems[0]?.productId;
       updateData.quantity = validatedOrderItems[0]?.comboQuantity;
@@ -699,8 +712,6 @@ export async function DELETE(
       quantity: existedOrder.quantity,
       orderType: existedOrder.orderType as OrderType,
     };
-
-    session.startTransaction();
 
     const netMap = await queryNetReserved(existedOrder._id, session);
     const deleteStockPlan = buildStockWiringPlanForDelete(
