@@ -6,12 +6,12 @@
  * Drawer for confirming order shipment.
  * Shows order details with products, variants, gifts, and allows shipping.
  *
- * === BUSINESS LOGIC (Backend handles) ===
+ * === BUSINESS LOGIC ===
  *
  * GIFT HANDLING:
- * - RANDOM: Backend's buildProductDemands() automatically selects the gift with
- *   highest stockQuantity from active gifts. UI only displays "Ngẫu nhiên".
- *   No UI gift selection needed - backend handles it.
+ * - RANDOM: Warehouse employee selects the actual gift from available inventory.
+ *   UI displays "Ngẫu nhiên" and allows employee to choose the specific gift.
+ *   The selected giftId is sent via actualShipments to the API.
  *
  * - CUSTOMER_SELECTED: Backend uses giftSelections[] from order.
  *   Backend adjusts quantity by comboQuantity. UI displays required gifts.
@@ -29,7 +29,8 @@
  * - Display order details (read-only)
  * - Show combo calculations: comboQuantity × packageQuantity
  * - Show gift mode (RANDOM vs CUSTOMER_SELECTED)
- * - Pass orderId and optional note to shipment API
+ * - For RANDOM: allow warehouse employee to select actual gift
+ * - Pass orderId, actualShipments, and note to shipment API
  * - Handle success/error feedback
  *
  * === API CALLS ===
@@ -38,13 +39,15 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
-import { Drawer, Button, Space, Table, Tag, Input, message, Alert, Divider, Typography } from "antd";
+import { Drawer, Button, Space, Table, Tag, Input, message, Alert, Divider, Typography, Select } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { CheckOutlined, GiftOutlined, ShoppingOutlined, UndoOutlined } from "@ant-design/icons";
 import type { OrderDetail } from "@/types/order";
 import type { OrderItem, OrderGiftMode, GiftSelection, ProductVariantSelection } from "@/types/variant";
 import type { ShipmentItem } from "@/hooks/useWarehouseShipments";
 import { useShipOrder } from "@/hooks/useWarehouseShipments";
+import { useWarehouseInventory } from "@/hooks/useWarehouseInventory";
+import { getItemDisplayName } from "@/hooks/useWarehouseInventory";
 
 const { Text, Title } = Typography;
 
@@ -80,10 +83,42 @@ interface ProductDisplayItem {
 export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
   const [shipNote, setShipNote] = useState("");
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
+  const [selectedRandomGifts, setSelectedRandomGifts] = useState<Record<string, string>>({});
 
   const shipMutation = useShipOrder();
 
   const isLoading = shipMutation.isPending;
+
+  // Fetch warehouse inventory for gifts (only GIFT items)
+  // warehouseId is a string, warehouse is the populated object
+  const warehouseIdStr: string | undefined = order?.warehouseId ?? order?.warehouse?._id;
+  const { items: inventoryItems, loading: inventoryLoading } = useWarehouseInventory({
+    filters: {
+      warehouseId: warehouseIdStr ?? "",
+      itemType: "GIFT",
+      limit: 100,
+    },
+  });
+
+  // Filter available gifts for selection (only those with sufficient quantity)
+  const availableGifts = useMemo(() => {
+    return inventoryItems.filter((item) => {
+      const requiredQty = Object.values(selectedRandomGifts).filter((id) => id === item.giftIdValue).length;
+      // Calculate total required including current selection
+      const currentRequired = Object.entries(selectedRandomGifts).reduce((sum, [key, giftId]) => {
+        if (giftId === item.giftIdValue) {
+          const orderItemIdx = parseInt(key.split("-")[0]);
+          const orderItem = order?.orderItems?.[orderItemIdx];
+          if (orderItem) {
+            const comboQty = orderItem.comboQuantity ?? 1;
+            return sum + (orderItem.giftQuantity ?? 0) * comboQty;
+          }
+        }
+        return sum;
+      }, 0);
+      return item.availableQuantity > 0;
+    });
+  }, [inventoryItems, selectedRandomGifts, order?.orderItems]);
 
   // Build display items from order items
   const displayItems = useMemo<ProductDisplayItem[]>(() => {
@@ -113,10 +148,14 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
           });
         } else {
           // RANDOM mode - warehouse can choose from inventory
+          const giftKey = `${idx}-gift-random`;
+          const selectedGiftId = selectedRandomGifts[giftKey];
           gifts.push({
-            key: `${idx}-gift-random`,
-            giftProductId: "",
-            giftProductName: "Quà ngẫu nhiên (Kho chọn)",
+            key: giftKey,
+            giftProductId: selectedGiftId || "",
+            giftProductName: selectedGiftId
+              ? getItemDisplayName(inventoryItems.find((item) => item.giftIdValue === selectedGiftId) || { itemType: "GIFT", giftId: selectedGiftId } as any)
+              : "Chọn quà thực tế",
             quantity: giftQty,
             mode: "RANDOM",
             status: "required",
@@ -137,7 +176,7 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
         status: "pending" as const,
       };
     });
-  }, [order]);
+  }, [order, selectedRandomGifts, inventoryItems]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -173,18 +212,42 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
       title: "Quà",
       dataIndex: "giftProductName",
       key: "name",
-      render: (name: string, record: GiftDisplayItem) => (
-        <Space>
-          <GiftOutlined />
-          <Text>{name}</Text>
-          {record.mode === "CUSTOMER_SELECTED" && (
+      width: 250,
+      render: (name: string, record: GiftDisplayItem) => {
+        if (record.mode === "RANDOM") {
+          // RANDOM: Show dropdown to select actual gift
+          const giftOptions = availableGifts.map((item) => ({
+            label: `${getItemDisplayName(item)} - Còn: ${item.availableQuantity}`,
+            value: item.giftIdValue,
+          }));
+
+          return (
+            <Space>
+              <GiftOutlined />
+              <Select
+                placeholder="Chọn quà thực tế"
+                value={record.giftProductId || undefined}
+                onChange={(value) => {
+                  setSelectedRandomGifts((prev) => ({ ...prev, [record.key]: value }));
+                }}
+                options={giftOptions}
+                style={{ minWidth: 200 }}
+                size="small"
+                loading={inventoryLoading}
+                showSearch
+                optionFilterProp="label"
+              />
+            </Space>
+          );
+        }
+        return (
+          <Space>
+            <GiftOutlined />
+            <Text>{name}</Text>
             <Tag color="purple" style={{ fontSize: 10 }}>Khách chọn</Tag>
-          )}
-          {record.mode === "RANDOM" && (
-            <Tag color="orange" style={{ fontSize: 10 }}>Ngẫu nhiên</Tag>
-          )}
-        </Space>
-      ),
+          </Space>
+        );
+      },
     },
     {
       title: "Số lượng",
@@ -192,9 +255,16 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
       key: "quantity",
       width: 100,
       align: "center",
-      render: (qty: number) => <Text strong>{qty}</Text>,
+      render: (qty: number, record: GiftDisplayItem) => (
+        <Space>
+          <Text strong>{qty}</Text>
+          {record.mode === "RANDOM" && !record.giftProductId && (
+            <Tag color="orange" style={{ fontSize: 10 }}>Chưa chọn</Tag>
+          )}
+        </Space>
+      ),
     },
-  ], []);
+  ], [availableGifts, inventoryLoading]);
 
   // Main columns for combo items
   const columns: ColumnsType<ProductDisplayItem> = useMemo(() => [
@@ -246,9 +316,40 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
   const handleShip = useCallback(async () => {
     if (!order) return;
 
+    // Validate that all RANDOM gifts have been selected
+    const missingRandomGifts = displayItems.some((item) =>
+      item.gifts.some((gift) => gift.mode === "RANDOM" && !gift.giftProductId)
+    );
+
+    if (missingRandomGifts) {
+      void message.error("Vui lòng chọn quà cho tất cả mục RANDOM trước khi xuất kho");
+      return;
+    }
+
+    // Build actualShipments from selected gifts
+    const shipmentItems: ShipmentItem[] = [];
+
+    // Process RANDOM gifts from selectedRandomGifts
+    Object.entries(selectedRandomGifts).forEach(([key, giftId]) => {
+      if (giftId) {
+        const orderItemIdx = parseInt(key.split("-")[0]);
+        const orderItem = order.orderItems?.[orderItemIdx];
+        if (orderItem) {
+          const comboQty = orderItem.comboQuantity ?? 1;
+          const giftQty = (orderItem.giftQuantity ?? 0) * comboQty;
+          shipmentItems.push({
+            itemType: "GIFT",
+            giftId,
+            quantity: giftQty,
+          });
+        }
+      }
+    });
+
     try {
       const payload: { items?: ShipmentItem[]; note?: string } = {
         note: shipNote || undefined,
+        ...(shipmentItems.length > 0 ? { items: shipmentItems } : {}),
       };
 
       await shipMutation.mutateAsync({
@@ -258,12 +359,13 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
 
       message.success("Xuất kho thành công!");
       setShipNote("");
+      setSelectedRandomGifts({});
       onSuccess?.();
       onClose();
     } catch (err) {
       message.error(err instanceof Error ? err.message : "Xuất kho thất bại");
     }
-  }, [order, shipNote, shipMutation, onSuccess, onClose]);
+  }, [order, shipNote, shipMutation, onSuccess, onClose, selectedRandomGifts, displayItems]);
 
   const handleClose = useCallback(() => {
     setShipNote("");

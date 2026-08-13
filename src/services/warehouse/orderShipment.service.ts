@@ -59,6 +59,28 @@ async function resolveGift(giftId: string): Promise<mongoose.Types.ObjectId> {
   return oid(giftId, "Gift ID");
 }
 
+// Validate that a gift shipment item belongs to the correct warehouse and has sufficient stock
+async function validateGiftShipment(
+  warehouseId: mongoose.Types.ObjectId,
+  giftId: string,
+  quantity: number,
+  session: mongoose.ClientSession
+): Promise<void> {
+  const inventory = await WarehouseInventory.findOne({
+    warehouseId,
+    itemType: "GIFT",
+    giftId: oid(giftId, "Gift ID"),
+    isActive: true,
+  }).session(session).lean();
+
+  if (!inventory) {
+    throw new Error(`Quà không tồn tại trong kho này: ${giftId}`);
+  }
+  if (inventory.availableQuantity < quantity) {
+    throw new Error(`Không đủ tồn kho khả dụng cho quà ${giftId}: cần ${quantity}, có ${inventory.availableQuantity}`);
+  }
+}
+
 async function adjustInventoryForShip(warehouseId: mongoose.Types.ObjectId, item: NormalizedShipmentItem, quantity: number, session: mongoose.ClientSession) {
   const where = filter(warehouseId, item);
   // Check availableQuantity (quantity - inTransit - reserved)
@@ -83,12 +105,12 @@ async function adjustInventoryForReturn(warehouseId: mongoose.Types.ObjectId, it
   return updated;
 }
 
-// Combo giờ chỉ lưu productId + packageQuantity.
-// Khi build shipment demand, lấy tất cả active variants của product
-// (Sale đã nhập variant chi tiết trong OrderItem.details).
+// buildProductDemands builds shipment demands from order data.
+// For CUSTOMER_SELECTED gifts: uses giftSelections[] from order
+// For RANDOM gifts: requires actualShipments to be provided by caller
 //
-// RANDOM gift selection: Uses WarehouseInventory.availableQuantity from the specific warehouse.
-// Does NOT use Gift.stockQuantity (global stock) to avoid selecting a gift unavailable in the warehouse.
+// RANDOM gifts must be specified in actualShipments with the actual giftId chosen by
+// the warehouse employee. This function does NOT auto-select gifts.
 //
 // Parameters:
 // - orderId: Order ID
@@ -158,36 +180,10 @@ async function buildProductDemands(
         else giftDemand.push({ itemType: "GIFT", giftId, quantity: sel.quantity });
       }
     } else if (giftQty > 0) {
-      // RANDOM: Select from WarehouseInventory of the current warehouse
-      // Uses availableQuantity (not Gift.stockQuantity) to ensure gift exists in this warehouse
-      const warehouseGifts = await WarehouseInventory.find({
-        warehouseId,
-        itemType: "GIFT",
-        availableQuantity: { $gte: giftQty },
-        isActive: true,
-      })
-        .populate("giftId", "_id isActive")
-        .sort({ availableQuantity: -1 })  // Select gift with highest available quantity
-        .session(session)
-        .lean();
-
-      // Filter for valid, active gifts
-      const validGift = warehouseGifts.find(
-        (wg) => {
-          if (!wg.giftId) return false;
-          const populatedGift = wg.giftId as unknown as { _id: mongoose.Types.ObjectId; isActive: boolean };
-          return populatedGift.isActive;
-        }
-      );
-
-      if (!validGift) {
-        throw new Error(`Kho không đủ quà RANDOM cho đơn này`);
-      }
-
-      const selectedGiftId = (validGift.giftId as unknown as { _id: mongoose.Types.ObjectId })._id.toString();
-      const existing = giftDemand.find((g) => g.giftId === selectedGiftId);
-      if (existing) existing.quantity += giftQty;
-      else giftDemand.push({ itemType: "GIFT", giftId: selectedGiftId, quantity: giftQty });
+      // RANDOM gift: caller must provide actualShipments with the exact gift chosen by warehouse.
+      // Do NOT auto-select. Throw error if buildProductDemands is called for RANDOM gifts
+      // without actualShipments.
+      throw new Error("Quà RANDOM cần được chỉ định cụ thể từ kho. Vui lòng gửi actualShipments với giftId đã chọn.");
     }
   }
 
@@ -211,6 +207,10 @@ export class OrderShipmentService {
         const normalized: NormalizedShipmentItem = item.itemType === "PRODUCT"
           ? { itemType: "PRODUCT", ...(await resolveProductLine(item.productId, item.variantId)) }
           : { itemType: "GIFT", productId: null, variantId: null, giftId: await resolveGift(item.giftId!) };
+        // Validate gift items against warehouse inventory before deduction
+        if (item.itemType === "GIFT" && item.giftId) {
+          await validateGiftShipment(warehouseId, item.giftId, item.quantity, session);
+        }
         await adjustInventoryForShip(warehouseId, normalized, item.quantity, session);
         await WarehouseStockMovement.create([{
           warehouseId,

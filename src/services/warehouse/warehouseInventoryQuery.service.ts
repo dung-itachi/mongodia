@@ -85,6 +85,9 @@ export async function queryInventory(filters: InventoryQueryFilters): Promise<In
 
     if (searchConditions.length > 0) {
       query.$or = searchConditions;
+    } else if (filters.search) {
+      // Search was provided but nothing matched - force 0 results
+      query._id = { $in: [] };
     }
   }
 
