@@ -111,11 +111,15 @@ export class WarehouseService {
    * Create warehouse task from order
    * Called automatically when Order moves to PACKING status
    */
-  async createFromOrder(data: CreateWarehouseTaskData): Promise<CreateTaskResult | CreateTaskError> {
+  async createFromOrder(
+    data: CreateWarehouseTaskData,
+    options?: { session?: mongoose.ClientSession }
+  ): Promise<CreateTaskResult | CreateTaskError> {
     const { orderId, employeeId, assignedEmployeeId, note } = data;
+    const session = options?.session;
 
-    // Check if task already exists
-    const existing = await warehouseRepository.findByOrderId(orderId);
+    // Check if task already exists (use the same session if provided)
+    const existing = await warehouseRepository.findByOrderId(orderId, session);
     if (existing) {
       return { success: false, error: "WarehouseTask đã tồn tại cho đơn hàng này" };
     }
@@ -128,7 +132,7 @@ export class WarehouseService {
         ? new mongoose.Types.ObjectId(assignedEmployeeId)
         : undefined,
       note,
-    });
+    }, session);
 
     // Record history
     await warehouseHistoryService.createHistory({
@@ -136,7 +140,7 @@ export class WarehouseService {
       employeeId,
       action: WarehouseAction.CREATED,
       note: "Tạo task từ đơn hàng",
-    });
+    }, session);
 
     return { success: true, task };
   }
@@ -332,6 +336,7 @@ export class WarehouseService {
   async getAllTasks(options?: {
     status?: string;
     assignedEmployeeId?: string;
+    warehouseId?: string;
     page?: number;
     limit?: number;
   }) {

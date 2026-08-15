@@ -106,7 +106,8 @@ const CampaignSchema = new Schema<ICampaign>(
 );
 
 // Indexes
-CampaignSchema.index({ code: 1 }, { unique: true });
+// Sprint 8.x: Removed duplicate index on `code` — already declared via `unique: true` on field.
+// Mongoose warning: "Duplicate schema index on {\"code\":1} for model \"Campaign\"".
 CampaignSchema.index({ facebookPageId: 1, status: 1 });
 CampaignSchema.index({ marketingEmployeeId: 1 });
 CampaignSchema.index({ startDate: 1 });

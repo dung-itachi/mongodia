@@ -251,7 +251,7 @@ export default function OrderDetailPage({ params }: PageProps) {
         const hasCombo = Boolean(item.comboName);
         const hasProduct = Boolean(item.productName);
         return (
-          <Space direction="vertical" size={4} style={{ width: "100%" }}>
+          <Space orientation="vertical" size={4} style={{ width: "100%" }}>
             {hasCombo && (
               <span>
                 <strong>Combo:</strong> {item.comboName}

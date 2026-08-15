@@ -30,8 +30,11 @@ export interface FieldSpec {
 }
 
 const COMMENT_FIELDS: FieldSpec[] = [
-  { key: "phone", label: "SĐT", required: true },
   { key: "name", label: "Tên", required: false },
+  { key: "phone", label: "SĐT", required: true },
+  { key: "address", label: "Địa chỉ", required: false },
+  { key: "combo", label: "Combo", required: false },
+  { key: "product", label: "Sản phẩm", required: false },
 ];
 
 const LADI_FIELDS: FieldSpec[] = [
@@ -39,12 +42,14 @@ const LADI_FIELDS: FieldSpec[] = [
   { key: "name", label: "Tên", required: false },
   { key: "phone", label: "SĐT", required: true },
   { key: "address", label: "Địa chỉ", required: false },
-  { key: "combo", label: "Combo/Giá", required: false },
+  { key: "combo", label: "Combo", required: false },
+  { key: "product", label: "Sản phẩm", required: false },
 ];
 
 const EXAMPLE_BY_MODE: Record<InputType, string> = {
-  comment: "0123456789\tNguyễn Văn A\n0987654321\tTrần Thị B",
-  ladi: "2025-08-15\tNguyễn Văn A\t0123456789\tHà Nội\tCombo A 99,000₮",
+  comment:
+    "Гантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE",
+  ladi: "2026-08-15\tГантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE",
 };
 
 const MODE_LABEL: Record<InputType, string> = {
@@ -97,8 +102,49 @@ export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps)
         </span>
       </div>
 
-      {/* Example */}
-      <div className={styles.exampleRow}>{example}</div>
+      {/* Example — hiển thị dạng TAB-separated (đúng như user paste) */}
+      <div className={styles.exampleBlock}>
+        <div className={styles.exampleLabel}>Ví dụ</div>
+
+        {/* Raw row — copy/paste được luôn */}
+        <div className={styles.exampleRaw}>{example}</div>
+
+        {/* Annotation: đánh số cột ngay trên raw */}
+        <div className={styles.exampleAnnot}>
+          {fields.map((f, idx) => (
+            <span key={f.key} className={styles.exampleAnnotItem}>
+              <span className={styles.exampleAnnotIdx}>{idx + 1}</span>
+              <span
+                className={`${styles.exampleAnnotLabel} ${
+                  f.key === "address" ? styles.addressAccent : ""
+                }`}
+              >
+                {f.label}
+              </span>
+            </span>
+          ))}
+        </div>
+
+        {/* Per-column breakdown */}
+        <div className={styles.exampleBreakdown}>
+          {fields.map((f, idx) => {
+            const value = example.split("\t")[idx] ?? "";
+            return (
+              <div key={f.key} className={styles.exampleLine}>
+                <span className={styles.exampleIdx}>{idx + 1}.</span>
+                <span
+                  className={`${styles.exampleField} ${
+                    f.key === "address" ? styles.addressAccent : ""
+                  }`}
+                >
+                  {f.label}:
+                </span>
+                <span className={styles.exampleValue}>{value}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

@@ -220,7 +220,9 @@ export async function PUT(
           barcode: data.barcode ?? "",
           image: data.image ?? "",
           variantValues: data.variantValues,
-          price: data.price,
+          // Sprint 8.x: Variant KHÔNG có giá — giá nằm ở Combo.
+          // Không chạm vào price hiện tại để bảo toàn dữ liệu cũ;
+          // các variant mới tạo sau này sẽ luôn có price=0.
           cost: data.cost ?? 0,
           weight: data.weight ?? 0,
           sortOrder: data.sortOrder ?? 0,

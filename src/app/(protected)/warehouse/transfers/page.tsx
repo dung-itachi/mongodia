@@ -615,7 +615,7 @@ export default function WarehouseTransfersPage() {
           </Form.Item>
 
           <CardSection title="Danh sách mặt hàng">
-            <Space direction="vertical" style={{ width: "100%" }} size={8}>
+            <Space orientation="vertical" style={{ width: "100%" }} size={8}>
               <Text type="secondary" style={{ fontSize: 12 }}>
                 Chỉ hiển thị mặt hàng có tồn kho tại kho nguồn
               </Text>
@@ -864,7 +864,7 @@ export default function WarehouseTransfersPage() {
         okText="Xác nhận nhận"
         cancelText="Hủy"
       >
-        <Space direction="vertical" style={{ width: "100%" }} size={12}>
+        <Space orientation="vertical" style={{ width: "100%" }} size={12}>
           <Text>
             <strong>Kho đích:</strong>{" "}
             {activeRecord

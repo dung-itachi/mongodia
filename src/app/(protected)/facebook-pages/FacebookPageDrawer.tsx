@@ -2,11 +2,15 @@
  * Facebook Page Drawer Component (Sprint 7.4)
  */
 
-import { memo, useEffect } from "react";
-import { Drawer, Input, Select, Button, Space, Form, Switch } from "antd";
+import { memo, useEffect, useMemo } from "react";
+import { Drawer, Input, Select, Button, Space, Form, Switch, DatePicker } from "antd";
+import dayjs, { type Dayjs } from "dayjs";
+import api from "@/lib/axios";
 import { toast } from "@/components/common/feedback/Toast";
-import { useFacebookPage, useCreateFacebookPage, useUpdateFacebookPage } from "@/hooks/useFacebookPages";
+import { useFacebookPage, useCreateFacebookPage, useUpdateFacebookPage, facebookPageKeys } from "@/hooks/useFacebookPages";
 import type { CreateFacebookPageInput, UpdateFacebookPageInput } from "@/hooks/useFacebookPages";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useQueryClient } from "@tanstack/react-query";
 
 const { TextArea } = Input;
 
@@ -20,6 +24,26 @@ const CURRENCY_OPTIONS = [
   { value: "VND", label: "VND - Việt Nam (₫)" },
   { value: "USD", label: "USD - Đô la Mỹ ($)" },
 ];
+
+const DEFAULT_CURRENCY = "MNT";
+const DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh";
+
+type AssignmentApiResponse = {
+  success: boolean;
+  data?: unknown;
+  message?: string;
+};
+
+async function createAssignment(input: {
+  facebookPageId: string;
+  marketingEmployeeId: string;
+  startDate: string;
+  endDate?: string | null;
+  note?: string;
+}): Promise<AssignmentApiResponse> {
+  const { data } = await api.post<AssignmentApiResponse>("/api/facebook-page-assignments", input);
+  return data;
+}
 
 export interface FacebookPageDrawerProps {
   mode: "create" | "edit";
@@ -38,9 +62,26 @@ function FacebookPageDrawerInner({
 }: FacebookPageDrawerProps) {
   const isEdit = mode === "edit";
   const [form] = Form.useForm();
+  const queryClient = useQueryClient();
 
   const { data: recordData, isLoading: isLoadingRecord } = useFacebookPage(
     isEdit && recordId ? recordId : null
+  );
+
+  // Danh sách nhân viên MKT đang hoạt động
+  const { data: mktEmployees = [], isLoading: isLoadingMkt } = useEmployees({
+    role: "MKT",
+    isActive: true,
+    pageSize: 100,
+  });
+
+  const mktOptions = useMemo(
+    () =>
+      mktEmployees.map((emp) => ({
+        value: emp._id,
+        label: `${emp.employeeCode} - ${emp.fullName}`,
+      })),
+    [mktEmployees]
   );
 
   const createMutation = useCreateFacebookPage();
@@ -56,6 +97,7 @@ function FacebookPageDrawerInner({
     }
 
     if (isEdit && recordData) {
+      const currentAssignment = recordData.currentAssignment;
       form.setFieldsValue({
         code: recordData.code,
         name: recordData.name,
@@ -63,24 +105,74 @@ function FacebookPageDrawerInner({
         facebookPageId: recordData.facebookPageId ?? "",
         description: recordData.description ?? "",
         businessManager: recordData.businessManager ?? "",
-        currency: recordData.currency ?? "MNT",
-        timezone: recordData.timezone ?? "Asia/Ho_Chi_Minh",
+        currency: recordData.currency ?? DEFAULT_CURRENCY,
+        timezone: recordData.timezone ?? DEFAULT_TIMEZONE,
         status: recordData.status,
         note: recordData.note ?? "",
         isActive: recordData.isActive,
+        marketingEmployeeId: currentAssignment?.marketingEmployeeId ?? null,
+        marketingStartDate: currentAssignment?.startDate
+          ? dayjs(currentAssignment.startDate)
+          : dayjs(),
       });
     } else {
       form.resetFields();
       form.setFieldsValue({
-        currency: "MNT",
-        timezone: "Asia/Ho_Chi_Minh",
+        currency: DEFAULT_CURRENCY,
+        timezone: DEFAULT_TIMEZONE,
         status: "ACTIVE",
+        marketingStartDate: dayjs(),
       });
     }
   }, [open, isEdit, recordData, form]);
 
-  const onSubmit = (values: Record<string, unknown>) => {
+  const submitAssignmentChange = async (params: {
+    facebookPageId: string;
+    newEmployeeId: string;
+    currentEmployeeId: string | null;
+    startDate: Dayjs;
+  }): Promise<boolean> => {
+    if (params.newEmployeeId === params.currentEmployeeId) return true;
+
+    try {
+      const startOfDay = params.startDate.startOf("day").toISOString();
+      const result = await createAssignment({
+        facebookPageId: params.facebookPageId,
+        marketingEmployeeId: params.newEmployeeId,
+        startDate: startOfDay,
+        endDate: null,
+      });
+
+      if (!result.success) {
+        toast.error(result.message || "Không thể cập nhật nhân viên phụ trách");
+        return false;
+      }
+
+      // Invalidate cache của page detail & list để drawer + table hiển thị MKT mới
+      void queryClient.invalidateQueries({
+        queryKey: facebookPageKeys.detail(params.facebookPageId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: facebookPageKeys.lists(),
+      });
+
+      return true;
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        (err as Error).message ||
+        "Không thể cập nhật nhân viên phụ trách";
+      toast.error(message);
+      return false;
+    }
+  };
+
+  const onSubmit = async (values: Record<string, unknown>) => {
     if (isEdit && recordId) {
+      const currentAssignment = recordData?.currentAssignment;
+      const newEmployeeId = values.marketingEmployeeId as string | undefined;
+      const startDate = (values.marketingStartDate as Dayjs | undefined) ?? dayjs();
+
       const updateData: UpdateFacebookPageInput = {
         code: values.code as string,
         name: values.name as string,
@@ -94,10 +186,22 @@ function FacebookPageDrawerInner({
         note: values.note as string | undefined,
         isActive: values.isActive as boolean | undefined,
       };
+
       updateMutation.mutate(
         { id: recordId, data: updateData },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
+            // Update assignment nếu có thay đổi nhân viên phụ trách
+            if (newEmployeeId) {
+              const ok = await submitAssignmentChange({
+                facebookPageId: recordId,
+                newEmployeeId,
+                currentEmployeeId: currentAssignment?.marketingEmployeeId ?? null,
+                startDate,
+              });
+              if (!ok) return;
+            }
+
             toast.success("Cập nhật thành công");
             onSuccess?.();
             onClose();
@@ -196,14 +300,22 @@ function FacebookPageDrawerInner({
         </Form.Item>
 
         <Space style={{ width: "100%" }} size={16}>
-          <Form.Item name="currency" label="Đơn vị tiền tệ" style={{ width: 200 }}>
+          <Form.Item
+            name="currency"
+            label="Đơn vị tiền tệ"
+            style={{ width: 200 }}
+          >
             <Select
               options={CURRENCY_OPTIONS}
               style={{ width: "100%" }}
             />
           </Form.Item>
 
-          <Form.Item name="timezone" label="Múi giờ" style={{ flex: 1 }}>
+          <Form.Item
+            name="timezone"
+            label="Múi giờ"
+            style={{ flex: 1 }}
+          >
             <Input placeholder="Asia/Ho_Chi_Minh" />
           </Form.Item>
         </Space>
@@ -211,6 +323,37 @@ function FacebookPageDrawerInner({
         <Form.Item name="status" label="Trạng thái">
           <Select options={FACEBOOK_PAGE_STATUS_OPTIONS} style={{ width: "100%" }} />
         </Form.Item>
+
+        {isEdit && (
+          <>
+            <Form.Item
+              name="marketingEmployeeId"
+              label="Nhân viên MKT phụ trách"
+              tooltip="Chọn nhân viên MKT mới sẽ tự động đóng phân công hiện tại và bàn giao cho nhân viên mới từ ngày bắt đầu."
+            >
+              <Select
+                options={mktOptions}
+                loading={isLoadingMkt}
+                showSearch
+                placeholder={isLoadingMkt ? "Đang tải..." : "Chọn nhân viên MKT"}
+                optionFilterProp="label"
+                allowClear
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="marketingStartDate"
+              label="Ngày bắt đầu phụ trách"
+              tooltip="Áp dụng khi chọn nhân viên MKT mới. Phân công hiện tại sẽ tự đóng vào ngày trước đó, phân công mới bắt đầu từ ngày này."
+            >
+              <DatePicker
+                style={{ width: "100%" }}
+                format="DD/MM/YYYY"
+                placeholder="Chọn ngày bắt đầu"
+              />
+            </Form.Item>
+          </>
+        )}
 
         <Form.Item name="description" label="Mô tả">
           <TextArea rows={3} placeholder="Mô tả page..." />
@@ -224,6 +367,10 @@ function FacebookPageDrawerInner({
           <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
             <Switch />
           </Form.Item>
+        )}
+
+        {isEdit && isLoadingRecord && (
+          <div style={{ color: "#999" }}>Đang tải dữ liệu page...</div>
         )}
       </Form>
     </Drawer>

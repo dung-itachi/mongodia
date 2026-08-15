@@ -809,9 +809,9 @@ export async function aggregateRankingData() {
 
 /**
  * Aggregate full Marketing Dashboard data in one call.
- * Gộp lead, expense, revenue, charts để Service gọi 1 lần.
+ * Gộp lead, expense, revenue, orders, charts để Service gọi 1 lần.
  */
-export async function aggregateMarketingDashboard(): Promise<{
+export async function aggregateMarketingDashboard(filter?: MarketingDashboardFilter): Promise<{
   lead: {
     todayLead: number;
     weekLead: number;
@@ -836,21 +836,530 @@ export async function aggregateMarketingDashboard(): Promise<{
     totalRevenue: number;
     orderCount: number;
   };
+  order: OrderSummary;
   roas: number;
   conversion: number;
 }> {
-  const [leadSummary, expenseSummary, revenueSummary] = await Promise.all([
+  const [leadSummary, expenseSummary, revenueSummary, orderSummary] = await Promise.all([
     aggregateLeadSummary(),
     aggregateExpenseSummary(),
     aggregateRevenueSummary(),
+    aggregateOrderSummary(filter),
   ]);
 
   return {
     lead: leadSummary,
     expense: expenseSummary,
     revenue: revenueSummary,
+    order: orderSummary,
     roas: expenseSummary.roas,
     conversion: expenseSummary.averageConversionRate,
+  };
+}
+
+// ============================================================================
+// Trend Aggregation (Sprint 7.4 — Real trend %, computed from previous period)
+// ============================================================================
+
+export type TrendValue = {
+  /** Phần trăm thay đổi so với kỳ trước. null = không so sánh được. */
+  pctChange: number | null;
+  /** Hướng: up / down / neutral. */
+  direction: "up" | "down" | "neutral";
+};
+
+/**
+ * Tính phần trăm thay đổi từ current/previous.
+ * - current > previous → up
+ * - current < previous → down
+ * - current == previous → neutral
+ * - previous == 0:
+ *   - current > 0 → up 100%
+ *   - current == 0 → neutral 0
+ * - current == 0, previous > 0 → down -100%
+ */
+export function computeTrend(current: number, previous: number): TrendValue {
+  if (previous === 0) {
+    if (current === 0) return { pctChange: 0, direction: "neutral" };
+    return { pctChange: 100, direction: "up" };
+  }
+  if (current === 0) {
+    return { pctChange: -100, direction: "down" };
+  }
+  const pctChange = Math.round(((current - previous) / previous) * 1000) / 10;
+  if (pctChange === 0) return { pctChange: 0, direction: "neutral" };
+  return {
+    pctChange,
+    direction: pctChange > 0 ? "up" : "down",
+  };
+}
+
+export type LeadTrendSummary = {
+  /** Trend của todayLead so với yesterday. */
+  todayLead: TrendValue;
+  /** Trend của monthLead so với last-month. */
+  monthLead: TrendValue;
+  /** Trend của assignedLead so với tháng trước. */
+  assignedLead: TrendValue;
+  /** Trend của closedLead so với tháng trước. */
+  closedLead: TrendValue;
+};
+
+export type ExpenseTrendSummary = {
+  /** Trend của totalSpent (tháng này vs tháng trước). */
+  totalSpent: TrendValue;
+  /** Trend của roas (tháng này vs tháng trước). */
+  roas: TrendValue;
+  /** Trend của conversionRate (tháng này vs tháng trước). */
+  conversionRate: TrendValue;
+};
+
+export type RevenueTrendSummary = {
+  /** Trend của monthRevenue (tháng này vs tháng trước). */
+  monthRevenue: TrendValue;
+};
+
+export type OrderTrendSummary = {
+  /** Trend của totalPushed (kỳ này vs kỳ trước, cùng độ dài). */
+  totalPushed: TrendValue;
+  /** Trend của called. */
+  called: TrendValue;
+  /** Trend của notCalled. */
+  notCalled: TrendValue;
+  /** Trend của closingRate. */
+  closingRate: TrendValue;
+  /** Trend của totalRevenue. */
+  totalRevenue: TrendValue;
+  /** Trend của deliveredOk. */
+  deliveredOk: TrendValue;
+};
+
+/**
+ * Tính khoảng ngày [start, end] của kỳ trước, cùng độ dài với kỳ hiện tại.
+ */
+function getPreviousPeriod(
+  start: Date,
+  end: Date
+): { start: Date; end: Date } {
+  const durationMs = end.getTime() - start.getTime();
+  const prevEnd = new Date(start.getTime() - 1);
+  prevEnd.setUTCHours(23, 59, 59, 999);
+  const prevStart = new Date(prevEnd.getTime() - durationMs);
+  prevStart.setUTCHours(0, 0, 0, 0);
+  return { start: prevStart, end: prevEnd };
+}
+
+/**
+ * Tính trend cho Lead KPIs (today vs yesterday, month vs last-month).
+ */
+export async function aggregateLeadTrendSummary(): Promise<LeadTrendSummary> {
+  const now = new Date();
+  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+  const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
+  const yesterdayEnd = new Date(yesterdayStart);
+  yesterdayEnd.setUTCHours(23, 59, 59, 999);
+
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+  const lastMonthEnd = new Date(monthStart);
+  lastMonthEnd.setUTCMilliseconds(lastMonthEnd.getUTCMilliseconds() - 1);
+
+  const results = await Lead.aggregate([
+    { $match: { isActive: true } },
+    {
+      $facet: {
+        todayCount: [
+          { $match: { createdAt: { $gte: todayStart, $lte: todayEnd } } },
+          { $count: "count" },
+        ],
+        yesterdayCount: [
+          { $match: { createdAt: { $gte: yesterdayStart, $lte: yesterdayEnd } } },
+          { $count: "count" },
+        ],
+        monthCount: [
+          { $match: { createdAt: { $gte: monthStart } } },
+          { $count: "count" },
+        ],
+        lastMonthCount: [
+          { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+          { $count: "count" },
+        ],
+        monthAssignedCount: [
+          { $match: { createdAt: { $gte: monthStart }, saleEmployeeId: { $exists: true, $ne: null } } },
+          { $count: "count" },
+        ],
+        lastMonthAssignedCount: [
+          { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd }, saleEmployeeId: { $exists: true, $ne: null } } },
+          { $count: "count" },
+        ],
+        monthClosedCount: [
+          { $match: { createdAt: { $gte: monthStart }, status: LeadStatus.CLOSED } },
+          { $count: "count" },
+        ],
+        lastMonthClosedCount: [
+          { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd }, status: LeadStatus.CLOSED } },
+          { $count: "count" },
+        ],
+      },
+    },
+  ]).exec();
+
+  const facet = results[0] ?? {};
+  const today = (facet.todayCount?.[0]?.count as number) ?? 0;
+  const yesterday = (facet.yesterdayCount?.[0]?.count as number) ?? 0;
+  const month = (facet.monthCount?.[0]?.count as number) ?? 0;
+  const lastMonth = (facet.lastMonthCount?.[0]?.count as number) ?? 0;
+  const monthAssigned = (facet.monthAssignedCount?.[0]?.count as number) ?? 0;
+  const lastMonthAssigned = (facet.lastMonthAssignedCount?.[0]?.count as number) ?? 0;
+  const monthClosed = (facet.monthClosedCount?.[0]?.count as number) ?? 0;
+  const lastMonthClosed = (facet.lastMonthClosedCount?.[0]?.count as number) ?? 0;
+
+  return {
+    todayLead: computeTrend(today, yesterday),
+    monthLead: computeTrend(month, lastMonth),
+    assignedLead: computeTrend(monthAssigned, lastMonthAssigned),
+    closedLead: computeTrend(monthClosed, lastMonthClosed),
+  };
+}
+
+/**
+ * Tính trend cho Expense KPIs (tháng này vs tháng trước).
+ */
+export async function aggregateExpenseTrendSummary(): Promise<ExpenseTrendSummary> {
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+  const lastMonthEnd = new Date(monthStart);
+  lastMonthEnd.setUTCMilliseconds(lastMonthEnd.getUTCMilliseconds() - 1);
+
+  const results = await MarketingExpenseReport.aggregate([
+    {
+      $match: {
+        reportDate: { $gte: lastMonthStart },
+        isActive: { $ne: false },
+      },
+    },
+    {
+      $facet: {
+        monthSpent: [
+          { $match: { reportDate: { $gte: monthStart } } },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: { $add: ["$spentBudget.morning", "$spentBudget.afternoon", "$spentBudget.emergency"] } },
+              revenue: { $sum: "$totalRevenue" },
+              closedLeads: { $sum: "$closedLeads" },
+              avgRate: { $avg: "$conversionRate" },
+            },
+          },
+        ],
+        lastMonthSpent: [
+          { $match: { reportDate: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: { $add: ["$spentBudget.morning", "$spentBudget.afternoon", "$spentBudget.emergency"] } },
+              revenue: { $sum: "$totalRevenue" },
+              closedLeads: { $sum: "$closedLeads" },
+              avgRate: { $avg: "$conversionRate" },
+            },
+          },
+        ],
+      },
+    },
+  ]).exec();
+
+  const facet = results[0] ?? {};
+  const m = facet.monthSpent?.[0] ?? { total: 0, revenue: 0, closedLeads: 0, avgRate: 0 };
+  const lm = facet.lastMonthSpent?.[0] ?? { total: 0, revenue: 0, closedLeads: 0, avgRate: 0 };
+
+  const monthRoas = m.total > 0 ? m.revenue / m.total : 0;
+  const lastMonthRoas = lm.total > 0 ? lm.revenue / lm.total : 0;
+
+  return {
+    totalSpent: computeTrend(m.total, lm.total),
+    roas: computeTrend(monthRoas, lastMonthRoas),
+    conversionRate: computeTrend(m.avgRate ?? 0, lm.avgRate ?? 0),
+  };
+}
+
+/**
+ * Tính trend cho Revenue KPIs (tháng này vs tháng trước).
+ */
+export async function aggregateRevenueTrendSummary(): Promise<RevenueTrendSummary> {
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+  const lastMonthEnd = new Date(monthStart);
+  lastMonthEnd.setUTCMilliseconds(lastMonthEnd.getUTCMilliseconds() - 1);
+
+  const results = await Order.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: lastMonthStart },
+        isActive: true,
+        status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+      },
+    },
+    {
+      $facet: {
+        month: [
+          { $match: { createdAt: { $gte: monthStart } } },
+          { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+        ],
+        lastMonth: [
+          { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+          { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+        ],
+      },
+    },
+  ]).exec();
+
+  const facet = results[0] ?? {};
+  const m = (facet.month?.[0]?.total as number) ?? 0;
+  const lm = (facet.lastMonth?.[0]?.total as number) ?? 0;
+
+  return {
+    monthRevenue: computeTrend(m, lm),
+  };
+}
+
+/**
+ * Tính trend cho Order KPIs.
+ * Nếu filter có dateRange → so sánh với kỳ trước cùng độ dài.
+ * Nếu không → so sánh tháng này vs tháng trước.
+ */
+export async function aggregateOrderTrendSummary(
+  filter?: MarketingDashboardFilter
+): Promise<OrderTrendSummary> {
+  const now = new Date();
+  let currentStart: Date;
+  let currentEnd: Date;
+  let prevStart: Date;
+  let prevEnd: Date;
+
+  if (filter?.dateRange?.startDate && filter?.dateRange?.endDate) {
+    currentStart = new Date(filter.dateRange.startDate);
+    currentStart.setUTCHours(0, 0, 0, 0);
+    currentEnd = new Date(filter.dateRange.endDate);
+    currentEnd.setUTCHours(23, 59, 59, 999);
+    const prev = getPreviousPeriod(currentStart, currentEnd);
+    prevStart = prev.start;
+    prevEnd = prev.end;
+  } else {
+    currentStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+    currentEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+    prevStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+    prevEnd = new Date(currentStart);
+    prevEnd.setUTCMilliseconds(prevEnd.getUTCMilliseconds() - 1);
+  }
+
+  const buildMatch = (from: Date, to: Date) => ({
+    isActive: true,
+    createdAt: { $gte: from, $lte: to },
+  });
+
+  const [current, prev] = await Promise.all([
+    Order.aggregate([
+      { $match: buildMatch(currentStart, currentEnd) },
+      {
+        $facet: {
+          totalPushed: [
+            { $match: { status: { $nin: [OrderStatus.CANCELLED] } } },
+            { $count: "count" },
+          ],
+          called: [
+            { $match: { status: { $in: CALLED_STATUSES } } },
+            { $count: "count" },
+          ],
+          notCalled: [
+            { $match: { status: OrderStatus.WAIT_CONFIRM } },
+            { $count: "count" },
+          ],
+          deliveredOk: [
+            { $match: { status: { $in: DELIVERED_OK_STATUSES } } },
+            { $count: "count" },
+          ],
+          totalRevenue: [
+            { $match: { status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] } } },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+          ],
+        },
+      },
+    ]).exec(),
+    Order.aggregate([
+      { $match: buildMatch(prevStart, prevEnd) },
+      {
+        $facet: {
+          totalPushed: [
+            { $match: { status: { $nin: [OrderStatus.CANCELLED] } } },
+            { $count: "count" },
+          ],
+          called: [
+            { $match: { status: { $in: CALLED_STATUSES } } },
+            { $count: "count" },
+          ],
+          notCalled: [
+            { $match: { status: OrderStatus.WAIT_CONFIRM } },
+            { $count: "count" },
+          ],
+          deliveredOk: [
+            { $match: { status: { $in: DELIVERED_OK_STATUSES } } },
+            { $count: "count" },
+          ],
+          totalRevenue: [
+            { $match: { status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] } } },
+            { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+          ],
+        },
+      },
+    ]).exec(),
+  ]);
+
+  const cf = current[0] ?? {};
+  const pf = prev[0] ?? {};
+
+  const cTotalPushed = (cf.totalPushed?.[0]?.count as number) ?? 0;
+  const pTotalPushed = (pf.totalPushed?.[0]?.count as number) ?? 0;
+  const cCalled = (cf.called?.[0]?.count as number) ?? 0;
+  const pCalled = (pf.called?.[0]?.count as number) ?? 0;
+  const cNotCalled = (cf.notCalled?.[0]?.count as number) ?? 0;
+  const pNotCalled = (pf.notCalled?.[0]?.count as number) ?? 0;
+  const cDeliveredOk = (cf.deliveredOk?.[0]?.count as number) ?? 0;
+  const pDeliveredOk = (pf.deliveredOk?.[0]?.count as number) ?? 0;
+  const cRevenue = (cf.totalRevenue?.[0]?.total as number) ?? 0;
+  const pRevenue = (pf.totalRevenue?.[0]?.total as number) ?? 0;
+
+  const cClosingRate = cTotalPushed > 0 ? (cDeliveredOk / cTotalPushed) * 100 : 0;
+  const pClosingRate = pTotalPushed > 0 ? (pDeliveredOk / pTotalPushed) * 100 : 0;
+
+  return {
+    totalPushed: computeTrend(cTotalPushed, pTotalPushed),
+    called: computeTrend(cCalled, pCalled),
+    notCalled: computeTrend(cNotCalled, pNotCalled),
+    closingRate: computeTrend(cClosingRate, pClosingRate),
+    totalRevenue: computeTrend(cRevenue, pRevenue),
+    deliveredOk: computeTrend(cDeliveredOk, pDeliveredOk),
+  };
+}
+
+// ============================================================================
+// Order Aggregations (Sprint 7.4 — Order KPIs on Marketing Dashboard)
+// ============================================================================
+
+/**
+ * Trạng thái đã "gọi" (Sale đã tiếp xúc khách, đơn đã vượt qua WAIT_CONFIRM).
+ * Dùng cho thẻ "Đã gọi".
+ */
+const CALLED_STATUSES: OrderStatus[] = [
+  OrderStatus.CONFIRMED,
+  OrderStatus.PACKING,
+  OrderStatus.SHIPPING,
+  OrderStatus.DELIVERED,
+  OrderStatus.RETURNED,
+  OrderStatus.RECONCILED,
+];
+
+/**
+ * Trạng thái "chốt thành công" (giao TC).
+ * DELIVERED + RECONCILED = đơn giao thành công.
+ */
+const DELIVERED_OK_STATUSES: OrderStatus[] = [
+  OrderStatus.DELIVERED,
+  OrderStatus.RECONCILED,
+];
+
+export type OrderSummary = {
+  /** Tổng đơn đã đẩy (không tính CANCELLED). */
+  totalPushed: number;
+  /** Số đơn đã "gọi" (status khác WAIT_CONFIRM, không tính CANCELLED). */
+  called: number;
+  /** Số đơn chưa gọi (WAIT_CONFIRM). */
+  notCalled: number;
+  /** Số đơn giao thành công (DELIVERED + RECONCILED). */
+  deliveredOk: number;
+  /** Tỉ lệ chốt (%) = deliveredOk / totalPushed * 100. */
+  closingRate: number;
+  /** Tổng doanh thu (sum totalAmount, không tính CANCELLED + RETURNED). */
+  totalRevenue: number;
+};
+
+/**
+ * Aggregate order summary theo filter (date range + advanced filters).
+ */
+export async function aggregateOrderSummary(
+  filter?: MarketingDashboardFilter
+): Promise<OrderSummary> {
+  const match: Record<string, unknown> = { isActive: true };
+
+  if (filter?.dateRange?.startDate) {
+    const startDate = new Date(filter.dateRange.startDate);
+    match.createdAt = { $gte: startDate };
+  }
+  if (filter?.dateRange?.endDate) {
+    const endDate = new Date(filter.dateRange.endDate);
+    endDate.setUTCHours(23, 59, 59, 999);
+    if (match.createdAt) {
+      (match.createdAt as Record<string, Date>).$lte = endDate;
+    } else {
+      match.createdAt = { $lte: endDate };
+    }
+  }
+  if (filter?.marketingEmployeeId) {
+    match.marketingEmployeeId = filter.marketingEmployeeId;
+  }
+  if (filter?.facebookPageId) {
+    // Lọc qua lead nếu cần — tạm thời bỏ qua (order không có facebookPageId trực tiếp)
+  }
+
+  const results = await Order.aggregate([
+    { $match: match },
+    {
+      $facet: {
+        totalPushed: [
+          { $match: { status: { $nin: [OrderStatus.CANCELLED] } } },
+          { $count: "count" },
+        ],
+        called: [
+          { $match: { status: { $in: CALLED_STATUSES } } },
+          { $count: "count" },
+        ],
+        notCalled: [
+          { $match: { status: OrderStatus.WAIT_CONFIRM } },
+          { $count: "count" },
+        ],
+        deliveredOk: [
+          { $match: { status: { $in: DELIVERED_OK_STATUSES } } },
+          { $count: "count" },
+        ],
+        totalRevenue: [
+          { $match: { status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] } } },
+          { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+        ],
+      },
+    },
+  ]).exec();
+
+  const facet = results[0] ?? {};
+  const totalPushed = (facet.totalPushed?.[0]?.count as number) ?? 0;
+  const called = (facet.called?.[0]?.count as number) ?? 0;
+  const notCalled = (facet.notCalled?.[0]?.count as number) ?? 0;
+  const deliveredOk = (facet.deliveredOk?.[0]?.count as number) ?? 0;
+  const totalRevenue = (facet.totalRevenue?.[0]?.total as number) ?? 0;
+
+  const closingRate = totalPushed > 0
+    ? Math.round((deliveredOk / totalPushed) * 1000) / 10
+    : 0;
+
+  return {
+    totalPushed,
+    called,
+    notCalled,
+    deliveredOk,
+    closingRate,
+    totalRevenue,
   };
 }
 
@@ -935,7 +1444,7 @@ export async function aggregateExportData(
   const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - periodDays, 0, 0, 0, 0));
   const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
-  const [summaryFacets, leadTrend, expenseTrend, revenueTrend, roasTrend, conversionTrend, expenseSummary, topPages, topEmployees, topCampaigns] =
+  const [summaryFacets, leadTrend, expenseTrend, revenueTrend, roasTrend, conversionTrend, expenseSummary, orderSummary, topPages, topEmployees, topCampaigns] =
     await Promise.all([
       // Summary facets
       Lead.aggregate([
@@ -1091,6 +1600,9 @@ export async function aggregateExportData(
         },
       ]).exec(),
 
+      // Order summary (Sprint 7.4)
+      aggregateOrderSummary(filter),
+
       // Top Facebook Pages
       aggregateTopFacebookPagesWithFilter(leadMatch),
 
@@ -1125,6 +1637,11 @@ export async function aggregateExportData(
       roas,
       cpa,
       conversionRate,
+      totalPushed: orderSummary.totalPushed,
+      called: orderSummary.called,
+      notCalled: orderSummary.notCalled,
+      deliveredOk: orderSummary.deliveredOk,
+      closingRate: orderSummary.closingRate,
     },
     leads: leadTrend,
     expenses: expenseTrend,
@@ -1479,6 +1996,13 @@ export const dashboardRepository = {
   aggregateExpenseSummary,
   aggregateTopMarketingChannels,
   aggregateRevenueSummary,
+  // Order summary (Sprint 7.4)
+  aggregateOrderSummary,
+  // Trend summary (Sprint 7.4 — real computed trends)
+  aggregateLeadTrendSummary,
+  aggregateExpenseTrendSummary,
+  aggregateRevenueTrendSummary,
+  aggregateOrderTrendSummary,
   // Chart trend methods
   aggregateLeadTrend,
   aggregateExpenseTrend,

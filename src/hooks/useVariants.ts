@@ -85,7 +85,8 @@ export interface CreateProductVariantInput {
   barcode?: string;
   image?: string;
   variantValues: string[];
-  price: number;
+  // Sprint 8.x: Variant KHÔNG có giá bán — giá nằm ở Combo.
+  // Bỏ field khỏi input type; backend tự set price=0.
   cost?: number;
   weight?: number;
   sortOrder?: number;

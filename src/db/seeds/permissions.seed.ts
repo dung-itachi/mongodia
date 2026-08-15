@@ -137,6 +137,10 @@ const MODULE_MAP: Record<string, string> = {
   // Sprint Settings — Exchange Rate
   "settings.exchange_rate.view": "Setting",
   "settings.exchange_rate.update": "Setting",
+
+  // Sprint Settings — Shipping Fee
+  "settings.shipping_fee.view": "Setting",
+  "settings.shipping_fee.update": "Setting",
 };
 
 export async function seedPermissions() {

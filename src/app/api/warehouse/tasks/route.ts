@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
+import { canAccessWarehouse } from "@/lib/warehouse-scope";
 import { warehouseService } from "@/services/warehouse.service";
 import { success, error as errorResponse } from "@/utils/response";
 import { z } from "zod";
@@ -20,6 +21,7 @@ const querySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional().default(20),
   status: z.string().optional(),
   assignedEmployeeId: z.string().optional(),
+  warehouseId: z.string().optional(),
 });
 
 export async function GET(request: Request) {
@@ -38,13 +40,18 @@ export async function GET(request: Request) {
       return errorResponse("Dữ liệu query không hợp lệ", 400);
     }
 
-    const { page, limit, status, assignedEmployeeId } = query.data;
+    const { page, limit, status, assignedEmployeeId, warehouseId } = query.data;
+
+    if (warehouseId && !canAccessWarehouse(currentUser, warehouseId)) {
+      return errorResponse("Bạn không có quyền truy cập kho này", 403);
+    }
 
     const result = await warehouseService.getAllTasks({
       page,
       limit,
       status,
       assignedEmployeeId,
+      warehouseId,
     });
 
     return success(result, "Lấy danh sách warehouse task thành công");

@@ -125,8 +125,9 @@ async function fetchProducts(): Promise<ProductItem[]> {
 }
 
 async function fetchCombosByProduct(productId: string): Promise<ComboItem[]> {
+  // Chỉ lấy combo đang active để combo đã xóa mềm không hiện trong dropdown
   const response = await api.get<{ success: boolean; data: { items: ComboItem[] } }>(
-    `/api/combos?productId=${productId}`
+    `/api/combos?productId=${productId}&isActive=true&limit=1000`
   );
 
   if (!response.data.success || !response.data.data) {
@@ -137,8 +138,10 @@ async function fetchCombosByProduct(productId: string): Promise<ComboItem[]> {
 }
 
 async function fetchAllCombos(): Promise<ComboItem[]> {
+  // Chỉ lấy combo đang active để dropdown thủ công / auto-detect parser
+  // không pick nhầm combo đã xóa mềm.
   const response = await api.get<{ success: boolean; data: { items: ComboItem[] } }>(
-    "/api/combos?limit=1000"
+    "/api/combos?isActive=true&limit=1000"
   );
 
   if (!response.data.success || !response.data.data) {

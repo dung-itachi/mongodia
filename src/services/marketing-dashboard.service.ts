@@ -17,6 +17,7 @@ import type {
   TopMarketingChannel,
   ExportData,
   DrillDownData,
+  MarketingTrendSummary,
 } from "@/types/marketing-dashboard";
 import type { MarketingDashboardFilter } from "@/types/marketing-dashboard-filter";
 
@@ -25,19 +26,27 @@ export class MarketingDashboardService {
    * Get full dashboard data (summary + charts + top marketing).
    * CHỉ orchestration.
    */
-  async getDashboard(): Promise<MarketingDashboardData> {
+  async getDashboard(filter?: MarketingDashboardFilter): Promise<MarketingDashboardData> {
     const [
       dashboard,
       dailyChart,
       monthlyChart,
       leadSource,
       topMarketingChannels,
+      leadTrend,
+      expenseTrend,
+      revenueTrend,
+      orderTrend,
     ] = await Promise.all([
-      dashboardRepository.aggregateMarketingDashboard(),
+      dashboardRepository.aggregateMarketingDashboard(filter),
       dashboardRepository.aggregateChartData(),
       dashboardRepository.aggregateChartData(),
       dashboardRepository.aggregateLeadSource(),
       dashboardRepository.aggregateTopMarketingChannels(),
+      dashboardRepository.aggregateLeadTrendSummary(),
+      dashboardRepository.aggregateExpenseTrendSummary(),
+      dashboardRepository.aggregateRevenueTrendSummary(),
+      dashboardRepository.aggregateOrderTrendSummary(filter),
     ]);
 
     const chart: MarketingChartDataV2 = {
@@ -55,6 +64,23 @@ export class MarketingDashboardService {
       })),
     };
 
+    const trend: MarketingTrendSummary = {
+      todayLead: leadTrend.todayLead,
+      monthLead: leadTrend.monthLead,
+      assignedLead: leadTrend.assignedLead,
+      closedLead: leadTrend.closedLead,
+      totalSpent: expenseTrend.totalSpent,
+      roas: expenseTrend.roas,
+      conversionRate: expenseTrend.conversionRate,
+      monthRevenue: revenueTrend.monthRevenue,
+      totalPushed: orderTrend.totalPushed,
+      called: orderTrend.called,
+      notCalled: orderTrend.notCalled,
+      closingRate: orderTrend.closingRate,
+      orderRevenue: orderTrend.totalRevenue,
+      deliveredOk: orderTrend.deliveredOk,
+    };
+
     return {
       summary: {
         todayLead: dashboard.lead.todayLead,
@@ -67,6 +93,8 @@ export class MarketingDashboardService {
       },
       expense: dashboard.expense,
       revenue: dashboard.revenue,
+      order: dashboard.order,
+      trend,
       chart,
       leadSource,
       topMarketing: topMarketingChannels,

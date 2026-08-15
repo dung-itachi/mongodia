@@ -11,6 +11,7 @@
 
 import mongoose, { type SortOrder } from "mongoose";
 import { FacebookPage, type IFacebookPage } from "@/models/FacebookPage";
+import FacebookPageAssignment from "@/models/FacebookPageAssignment";
 
 // ============================================================================
 // Types
@@ -53,11 +54,28 @@ export interface FacebookPageFilter {
   sortOrder?: "asc" | "desc";
 }
 
+export interface MarketingEmployeeRef {
+  _id: string;
+  employeeCode: string;
+  fullName: string;
+}
+
+export interface CurrentAssignmentRef {
+  _id: string;
+  marketingEmployeeId: string | null;
+  marketingEmployee: MarketingEmployeeRef | null;
+  startDate: string;
+  endDate: string | null;
+}
+
 // ============================================================================
-// Mapper
+// Mappers
 // ============================================================================
 
-function mapToPage(doc: IFacebookPage) {
+function mapToPage(
+  doc: IFacebookPage,
+  currentAssignment: CurrentAssignmentRef | null = null
+) {
   return {
     _id: doc._id.toString(),
     code: doc.code,
@@ -73,7 +91,79 @@ function mapToPage(doc: IFacebookPage) {
     isActive: doc.isActive ?? true,
     createdAt: (doc as { createdAt?: Date }).createdAt?.toISOString(),
     updatedAt: (doc as { updatedAt?: Date }).updatedAt?.toISOString(),
+    currentAssignment,
   };
+}
+
+function resolveAssignment(raw: {
+  _id: unknown;
+  startDate?: unknown;
+  endDate?: unknown;
+  marketingEmployeeId?: unknown;
+} | null): CurrentAssignmentRef | null {
+  if (!raw) return null;
+
+  const employee = raw.marketingEmployeeId as unknown as
+    | (MarketingEmployeeRef & { _id: { toString: () => string } })
+    | null;
+
+  return {
+    _id: raw._id.toString(),
+    marketingEmployeeId: employee
+      ? (employee._id.toString?.() ?? String(employee._id))
+      : null,
+    marketingEmployee: employee
+      ? {
+          _id: employee._id.toString?.() ?? String(employee._id),
+          employeeCode: employee.employeeCode,
+          fullName: employee.fullName,
+        }
+      : null,
+    startDate: raw.startDate
+      ? new Date(raw.startDate as Date).toISOString()
+      : "",
+    endDate: raw.endDate ? new Date(raw.endDate as Date).toISOString() : null,
+  };
+}
+
+async function fetchCurrentAssignmentsByPageIds(
+  pageIds: (string | mongoose.Types.ObjectId)[],
+  session?: mongoose.ClientSession
+): Promise<Map<string, CurrentAssignmentRef>> {
+  const map = new Map<string, CurrentAssignmentRef>();
+  if (pageIds.length === 0) return map;
+
+  const docs = await FacebookPageAssignment.find({
+    facebookPageId: { $in: pageIds },
+    isActive: true,
+    endDate: null,
+  })
+    .populate("marketingEmployeeId", "_id employeeCode fullName")
+    .session(session ?? null)
+    .lean();
+
+  for (const a of docs) {
+    const pageId = (a.facebookPageId as { toString: () => string }).toString();
+    map.set(pageId, resolveAssignment(a));
+  }
+
+  return map;
+}
+
+async function fetchCurrentAssignmentByPageId(
+  pageId: string,
+  session?: mongoose.ClientSession
+): Promise<CurrentAssignmentRef | null> {
+  const doc = await FacebookPageAssignment.findOne({
+    facebookPageId: pageId,
+    isActive: true,
+    endDate: null,
+  })
+    .populate("marketingEmployeeId", "_id employeeCode fullName")
+    .session(session ?? null)
+    .lean();
+
+  return resolveAssignment(doc);
 }
 
 // ============================================================================
@@ -143,7 +233,10 @@ export class FacebookPageRepository {
       _id: id,
     }).lean();
     if (!doc) return null;
-    return mapToPage(doc as unknown as IFacebookPage);
+    const currentAssignment = await fetchCurrentAssignmentByPageId(
+      doc._id.toString()
+    );
+    return mapToPage(doc as unknown as IFacebookPage, currentAssignment);
   }
 
   async findByCode(code: string) {
@@ -151,7 +244,10 @@ export class FacebookPageRepository {
       code: code.toUpperCase(),
     }).lean();
     if (!doc) return null;
-    return mapToPage(doc as unknown as IFacebookPage);
+    const currentAssignment = await fetchCurrentAssignmentByPageId(
+      doc._id.toString()
+    );
+    return mapToPage(doc as unknown as IFacebookPage, currentAssignment);
   }
 
   async findAll(params: FacebookPageFilter) {
@@ -169,8 +265,16 @@ export class FacebookPageRepository {
       FacebookPage.countDocuments(filter),
     ]);
 
+    const pageIds = items.map((doc) => doc._id);
+    const assignmentsByPageId = await fetchCurrentAssignmentsByPageIds(pageIds);
+
     return {
-      items: items.map((doc) => mapToPage(doc as unknown as IFacebookPage)),
+      items: items.map((doc) =>
+        mapToPage(
+          doc as unknown as IFacebookPage,
+          assignmentsByPageId.get(doc._id.toString()) ?? null
+        )
+      ),
       total,
       page,
       pageSize,
@@ -188,7 +292,11 @@ export class FacebookPageRepository {
       session,
     }).lean();
     if (!doc) return null;
-    return mapToPage(doc as unknown as IFacebookPage);
+    const currentAssignment = await fetchCurrentAssignmentByPageId(
+      doc._id.toString(),
+      session
+    );
+    return mapToPage(doc as unknown as IFacebookPage, currentAssignment);
   }
 
   async softDelete(

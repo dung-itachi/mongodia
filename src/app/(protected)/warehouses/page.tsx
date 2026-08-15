@@ -10,9 +10,11 @@
  * Main page for warehouse task management.
  */
 
-import { useState, useCallback, useMemo } from "react";
+import {
+  useState, useCallback, useMemo,
+} from "react";
 import { useRouter } from "next/navigation";
-import { message, Dropdown } from "antd";
+import { Button, Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import {
   EyeOutlined,
@@ -25,7 +27,6 @@ import DataTable from "@/components/common/table/DataTable";
 import TableToolbar from "@/components/common/table/TableToolbar";
 import FilterBar from "@/components/common/filters/FilterBar";
 import StatusBadge from "@/components/common/display/StatusBadge";
-import ActionButton from "@/components/common/buttons/ActionButton";
 import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonTable from "@/components/common/overlay/SkeletonTable";
 import PermissionGate from "@/components/common/PermissionGate";
@@ -34,7 +35,9 @@ import {
   useWarehouseTasks,
 } from "@/hooks/useWarehouseTasks";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useWarehouses } from "@/hooks/useWarehouses";
 import { WAREHOUSE_STATUS_LABELS } from "@/constants/warehouseStatus";
+import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 import type {
   WarehouseTaskListItem,
 } from "@/hooks/useWarehouseTasks";
@@ -47,17 +50,21 @@ export default function WarehousesPage() {
   const debouncedKeyword = useDebounce(keyword, 500);
 
   const [status, setStatus] = useState<string | undefined>(undefined);
+  const [warehouseId, setWarehouseId] = useState<string | undefined>(undefined);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  const { warehouses } = useWarehouses();
 
   // Build filter params
   const filterParams = useMemo(() => ({
     keyword: debouncedKeyword,
     status: status as string | undefined,
+    warehouseId,
     page,
     limit: pageSize,
-  }), [debouncedKeyword, status, page, pageSize]);
+  }), [debouncedKeyword, status, warehouseId, page, pageSize]);
 
   // Fetch warehouse tasks
   const { tasks, total, loading, refetch } = useWarehouseTasks(filterParams);
@@ -72,15 +79,37 @@ export default function WarehousesPage() {
   // Table columns
   const columns = useMemo(() => [
     {
-      key: "orderId",
+      key: "orderCode",
       title: "Mã đơn hàng",
-      dataIndex: "orderId",
+      dataIndex: "orderCode",
       width: 180,
-      render: (value: unknown) => (
-        <a onClick={() => router.push(`/warehouses/${value}`)}>
-          {String(value).slice(-8).toUpperCase()}
-        </a>
-      ),
+      render: (value: unknown, record: Record<string, unknown>) => {
+        const task = record as unknown as WarehouseTaskListItem;
+        const orderCode = (value as string | null) || task.orderId.slice(-8).toUpperCase();
+        return (
+          <a onClick={() => router.push(`/warehouses/${task._id}`)}>
+            {orderCode}
+          </a>
+        );
+      },
+    },
+    {
+      key: "warehouse",
+      title: "Kho xử lý",
+      dataIndex: "warehouseName",
+      width: 180,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const task = record as unknown as WarehouseTaskListItem;
+        if (!task.warehouseName) {
+          return <span style={{ color: "#8c8c8c" }}>Chưa gán</span>;
+        }
+        return (
+          <span>
+            {task.warehouseCode ? `${task.warehouseCode} • ` : ""}
+            {task.warehouseName}
+          </span>
+        );
+      },
     },
     {
       key: "warehouseStatus",
@@ -151,8 +180,14 @@ export default function WarehousesPage() {
           {
             key: "view",
             icon: <EyeOutlined />,
-            label: "Xem chi tiết",
+            label: "Xem chi tiết task",
             onClick: () => router.push(`/warehouses/${task._id}`),
+          },
+          {
+            key: "view-order",
+            icon: <EyeOutlined />,
+            label: "Xem đơn hàng",
+            onClick: () => router.push(`/orders/${task.orderId}`),
           },
         ];
 
@@ -160,11 +195,16 @@ export default function WarehousesPage() {
           <Dropdown
             trigger={["click"]}
             menu={{ items: menuItems }}
+            getPopupContainer={() => document.body}
           >
-            <ActionButton
-              type="ghost"
-              icon={<MoreOutlined />}
+            <Button
+              type="text"
               size="small"
+              icon={<MoreOutlined />}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
             />
           </Dropdown>
         );
@@ -230,6 +270,15 @@ export default function WarehousesPage() {
             />
           }
           onRefresh={refetch}
+        />
+
+        <WarehouseQuickPick
+          value={warehouseId}
+          onChange={(next) => {
+            setWarehouseId(next);
+            setPage(1);
+          }}
+          warehouses={warehouses}
         />
 
         {loading ? (

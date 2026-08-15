@@ -234,10 +234,28 @@ export class WarehouseWorkflowService {
     return { items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
   }
 
-  async listReceipts(filters: { warehouseId?: string; page?: number; limit?: number }) {
+  async listReceipts(filters: { warehouseId?: string; search?: string; productId?: string; createdBy?: string; page?: number; limit?: number }) {
     const page = filters.page ?? 1; const limit = filters.limit ?? 20;
     const query: Record<string, unknown> = {};
     if (filters.warehouseId) query.warehouseId = oid(filters.warehouseId, "Warehouse ID");
+    if (filters.createdBy) query.createdBy = oid(filters.createdBy, "Created By");
+
+    // Search by receiptCode (case-insensitive) — pre-query for product IDs since they're nested in items
+    if (filters.search) {
+      const searchRegex = new RegExp(filters.search, "i");
+      const matchingProducts = await Product.find({ $or: [{ name: searchRegex }, { code: searchRegex }], isActive: true }).select("_id").limit(100).lean();
+      const productIds = matchingProducts.map((p) => p._id);
+      const searchConditions: Record<string, unknown>[] = [{ receiptCode: searchRegex }];
+      if (productIds.length) searchConditions.push({ "items.productId": { $in: productIds } });
+      query.$and = [{ $or: searchConditions }];
+    }
+
+    // Filter by a specific product nested in items
+    if (filters.productId) {
+      const productObjectId = oid(filters.productId, "Product ID");
+      query["items.productId"] = productObjectId;
+    }
+
     const [items, total] = await Promise.all([
       WarehouseReceipt.find(query).populate("warehouseId", "_id code name").populate("createdBy", "_id employeeCode fullName").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       WarehouseReceipt.countDocuments(query),

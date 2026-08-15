@@ -120,6 +120,33 @@ export default function QuickProductDrawer({
         return;
       }
 
+      // Validate trùng tên combo trước khi submit
+      const namesNormalized = combosValues
+        .map((c) => (c.comboName || "").trim().toLowerCase())
+        .filter(Boolean);
+      const seen = new Set<string>();
+      const duplicates = new Set<string>();
+      for (const n of namesNormalized) {
+        if (seen.has(n)) duplicates.add(n);
+        seen.add(n);
+      }
+      if (duplicates.size > 0) {
+        const dupLabels = combosValues
+          .map((c) => (c.comboName || "").trim())
+          .filter(
+            (label, idx) =>
+              label &&
+              duplicates.has(label.toLowerCase()) &&
+              namesNormalized.indexOf(label.toLowerCase()) === idx
+          );
+        toast.error(
+          `Lỗi: đã tồn tại tên combo "${dupLabels.join(
+            ", "
+          )}", vui lòng chọn tên combo khác`
+        );
+        return;
+      }
+
       // Tạo product
       const timestamp = Date.now();
       const productCode = productValues.code?.trim() || `P${timestamp}`.slice(-8);
@@ -153,10 +180,9 @@ export default function QuickProductDrawer({
       );
       onSuccess(product._id, product.name, createdCombos);
       onClose();
-    } catch (err) {
-      if (err instanceof Error) {
-        toast.error(err.message);
-      }
+    } catch {
+      // Lỗi đã được useCreateProduct / useCreateCombo / useCreateCategory
+      // xử lý toast. Catch block chỉ để nuốt lỗi nhằm tránh unhandled promise.
     }
   };
 
@@ -178,10 +204,8 @@ export default function QuickProductDrawer({
       form.setFieldValue(["product", "categoryCode"], created.code);
       categoryForm.resetFields();
       setCategoryModalOpen(false);
-    } catch (err) {
-      if (err instanceof Error) {
-        toast.error(err.message);
-      }
+    } catch {
+      // Lỗi đã được useCreateCategory.onError xử lý toast.
     }
   };
 

@@ -10,8 +10,8 @@
 "use client";
 
 import { use, useState, useCallback, useMemo, useEffect } from "react";
-import { Button, Result, Spin, Select } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Button, Result, Spin, Select, App } from "antd";
+import { PlusOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import {
   PageContainer,
   PageHeader,
@@ -39,6 +39,7 @@ export default function ProductCombosPage({ params }: PageProps) {
   const { productId } = use(params);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComboListItem | null>(null);
+  const { modal } = App.useApp();
 
   const { data: product, isLoading: productLoading } = useProductDetail(productId);
   const { data: combosData, isLoading: combosLoading, refetch } = useComboList({
@@ -123,13 +124,43 @@ export default function ProductCombosPage({ params }: PageProps) {
 
   const handleDelete = useCallback(
     (item: ComboListItem) => {
-      deleteMutation.mutate(item._id, {
-        onSuccess: () => {
-          void refetch();
-        },
+      modal.confirm({
+        title: "Xóa combo?",
+        icon: <ExclamationCircleOutlined />,
+        content: (
+          <div>
+            <p>
+              Combo <strong>"{item.name}"</strong> sẽ bị <strong>vô hiệu hóa</strong> (xóa mềm).
+            </p>
+            <p style={{ marginBottom: 4 }}>
+              • Combo sẽ không còn hiển thị trong dropdown tạo đơn / thêm lead mới.
+            </p>
+            <p style={{ marginBottom: 4 }}>
+              • Các đơn hàng <strong>đã tạo trước đó</strong> với combo này vẫn giữ nguyên tên combo và không bị ảnh hưởng.
+            </p>
+            <p style={{ marginBottom: 0, color: "#8c8c8c", fontSize: 12 }}>
+              Số đơn đang tham chiếu combo này sẽ được thống kê sau khi xóa.
+            </p>
+          </div>
+        ),
+        okText: "Xóa combo",
+        cancelText: "Hủy",
+        okButtonProps: { danger: true },
+        onOk: () =>
+          new Promise<void>((resolve, reject) => {
+            deleteMutation.mutate(item._id, {
+              onSuccess: () => {
+                void refetch();
+                resolve();
+              },
+              onError: (err) => {
+                reject(err);
+              },
+            });
+          }),
       });
     },
-    [deleteMutation, refetch]
+    [deleteMutation, refetch, modal]
   );
 
   const handleToggleActive = useCallback(

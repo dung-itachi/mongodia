@@ -19,6 +19,7 @@ import { success, error as errorResponse } from "@/utils/response";
 import { z } from "zod";
 import { canAccessWarehouse } from "@/lib/warehouse-scope";
 import { WarehouseTask } from "@/models/WarehouseTask";
+import { Order } from "@/models/Order";
 
 const changeStatusSchema = z.object({
   status: z.string().min(1, "Status is required"),
@@ -43,14 +44,28 @@ export async function PATCH(
       return errorResponse("ID không hợp lệ", 400);
     }
 
-    // Get task to check warehouse scope
-    const taskDoc = await WarehouseTask.findById(id).select("warehouseId").lean();
+    // Get task → populate orderId to read warehouseId (warehouseId lives on Order, not WarehouseTask)
+    const taskDoc = await WarehouseTask.findById(id)
+      .populate("orderId", "warehouseId")
+      .lean();
     if (!taskDoc) {
       return errorResponse("WarehouseTask không tồn tại", 404);
     }
 
+    const orderRef = taskDoc.orderId as unknown as
+      | { warehouseId?: { toString: () => string } | string | null }
+      | string
+      | null
+      | undefined;
+    const warehouseIdValue =
+      orderRef && typeof orderRef === "object" ? orderRef.warehouseId : undefined;
+    const warehouseIdString =
+      typeof warehouseIdValue === "string"
+        ? warehouseIdValue
+        : warehouseIdValue?.toString?.();
+
     // Check warehouse scope - user must have access to the task's warehouse
-    if (!canAccessWarehouse(currentUser, taskDoc.warehouseId.toString())) {
+    if (!warehouseIdString || !canAccessWarehouse(currentUser, warehouseIdString)) {
       return errorResponse("Bạn không có quyền thao tác với task này", 403);
     }
 

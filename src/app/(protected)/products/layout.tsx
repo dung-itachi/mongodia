@@ -63,7 +63,12 @@ export default function ProductsLayout({ children }: { children: React.ReactNode
   const router = useRouter();
   const pathname = usePathname();
 
-  const activeTab = TABS.find((t) => pathname.startsWith(t.key))?.key ?? "/products";
+  // Tìm tab khớp ưu tiên key dài nhất trước (vd `/products/combos`
+  // phải thắng `/products` khi cả 2 đều khớp `startsWith`).
+  const activeTab =
+    [...TABS]
+      .sort((a, b) => b.key.length - a.key.length)
+      .find((t) => pathname.startsWith(t.key))?.key ?? "/products";
 
   const handleTabChange = (key: string) => {
     router.push(key);

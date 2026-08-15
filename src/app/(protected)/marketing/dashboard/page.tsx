@@ -15,6 +15,11 @@ import {
 } from "@/components/common";
 import { useMarketingDashboard } from "@/hooks/useMarketingDashboard";
 import { useMarketingDashboardExport } from "@/hooks/useMarketingDashboardExport";
+import {
+  useFacebookPages,
+  useMarketingEmployees,
+  useCampaignsForSelect,
+} from "@/hooks/useMarketingExpenseLookups";
 import { buildMarketingStats, type MarketingStatItem } from "./marketing.config";
 import MarketingDashboardFilters from "./MarketingDashboardFilters";
 import MarketingDashboardAdvancedFilters from "./MarketingDashboardAdvancedFilters";
@@ -41,6 +46,11 @@ export default function MarketingDashboardPage() {
 
   const { data, loading, error, refetch } = useMarketingDashboard();
   const { data: exportData } = useMarketingDashboardExport(advancedFilter);
+
+  // Lookup options cho advanced filters (Sprint 7.4 — fix "nodata" dropdowns)
+  const { pages: facebookPageOptions } = useFacebookPages();
+  const { employees: employeeOptions } = useMarketingEmployees();
+  const { campaigns: campaignOptions } = useCampaignsForSelect();
 
   const handlePeriodChange = useCallback((newPeriod: ChartPeriod) => {
     setPeriod(newPeriod);
@@ -166,9 +176,9 @@ export default function MarketingDashboardPage() {
         <MarketingDashboardAdvancedFilters
           filter={advancedFilter}
           onFilterChange={handleFilterChange}
-          facebookPageOptions={[]}
-          employeeOptions={[]}
-          campaignOptions={[]}
+          facebookPageOptions={facebookPageOptions}
+          employeeOptions={employeeOptions}
+          campaignOptions={campaignOptions}
           loading={loading}
         />
 

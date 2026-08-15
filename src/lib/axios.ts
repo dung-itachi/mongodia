@@ -29,9 +29,19 @@ api.interceptors.response.use(
         useAuthStore.getState().logout();
         window.location.href = "/login";
       }
-  
+
+      // Trích xuất message lỗi từ response body để hiển thị tiếng Việt
+      // thay vì chuỗi mặc định "Request failed with status code 400".
+      const serverMessage =
+        error.response?.data?.message ??
+        error.response?.data?.error?.message ??
+        error.response?.data?.errors?.[0]?.message;
+      if (serverMessage && typeof serverMessage === "string") {
+        error.message = serverMessage;
+      }
+
       return Promise.reject(error);
     }
   );
-  
+
 export default api;

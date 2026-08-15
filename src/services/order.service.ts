@@ -286,6 +286,8 @@ export class OrderService {
     const session = await mongoose.startSession();
 
     try {
+      session.startTransaction();
+
       // Update status in repository
       const updatedOrder = await orderRepository.changeStatus(orderId, newStatus, session);
 
@@ -308,11 +310,14 @@ export class OrderService {
 
       // Sprint 6.3: Auto-create WarehouseTask when Order moves to PACKING
       if (newStatus === OrderStatus.PACKING) {
-        await warehouseService.createFromOrder({
-          orderId,
-          employeeId,
-          note: "Tự động tạo task khi đơn chuyển sang PACKING",
-        });
+        await warehouseService.createFromOrder(
+          {
+            orderId,
+            employeeId,
+            note: "Tự động tạo task khi đơn chuyển sang PACKING",
+          },
+          { session }
+        );
       }
 
       await session.commitTransaction();

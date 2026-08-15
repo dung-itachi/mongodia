@@ -287,7 +287,7 @@ export default function VariantPage() {
             sku: item.sku,
             barcode: item.barcode,
             variantValues: getVariantValueIds(item.variantValues),
-            price: item.price,
+            // Sprint 8.x: Variant không còn giá — bỏ price khỏi input.
             cost: item.cost,
             weight: item.weight,
             sortOrder: item.sortOrder,

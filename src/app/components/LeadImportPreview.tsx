@@ -233,7 +233,7 @@ export default function LeadImportPreview() {
     }
 
     const tooltipContent = (
-      <Space direction="vertical" size={2}>
+      <Space orientation="vertical" size={2}>
         {errors.map((e, i) => (
           <span key={`e-${i}`}>
             <strong style={{ color: "#ff7875" }}>Lỗi:</strong> {e.message}{" "}
@@ -300,7 +300,7 @@ export default function LeadImportPreview() {
           return (
             <Tooltip
               title={
-                <Space direction="vertical" size={2}>
+                <Space orientation="vertical" size={2}>
                   {record.errors.map((e, i) => (
                     <span key={i}>• [{e.severity}] {e.message}</span>
                   ))}
@@ -323,7 +323,7 @@ export default function LeadImportPreview() {
         return (
           <Tooltip
             title={
-              <Space direction="vertical" size={2}>
+              <Space orientation="vertical" size={2}>
                 {record.errors.map((e, i) => (
                   <span key={i}>• [{e.severity}] {e.message}</span>
                 ))}
@@ -346,7 +346,7 @@ export default function LeadImportPreview() {
           return <Text type="secondary">-</Text>;
         }
         return (
-          <Space direction="vertical" size={2} style={{ width: "100%" }}>
+          <Space orientation="vertical" size={2} style={{ width: "100%" }}>
             {record.errors.map((e, i) => (
               <Tag
                 key={i}
@@ -515,7 +515,7 @@ export default function LeadImportPreview() {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <Card>
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
           {/* Header */}
           <div>
             <Title level={3} style={{ marginBottom: 4 }}>
@@ -547,7 +547,7 @@ export default function LeadImportPreview() {
             <summary style={{ fontWeight: 600 }}>
               Header Mapping hỗ trợ (nhấn để xem chi tiết)
             </summary>
-            <Space direction="vertical" size="small" style={{ width: "100%", marginTop: 8 }}>
+            <Space orientation="vertical" size="small" style={{ width: "100%", marginTop: 8 }}>
               <div>
                 <Text strong>tên → customerName:</Text>{" "}
                 <Text type="secondary">
@@ -654,7 +654,7 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
               icon={<WarningOutlined />}
               message="Không thể parse dữ liệu"
               description={
-                <Space direction="vertical" size={4}>
+                <Space orientation="vertical" size={4}>
                   <Text strong>Thiếu cột bắt buộc:</Text>
                   <Space size={[4, 4]} wrap>
                     {missingFields.map(f => (

@@ -13,7 +13,14 @@ export async function GET(request: Request) {
     const warehouseId = params.get("warehouseId") ?? undefined;
     if (warehouseId && !canAccessWarehouse(currentUser, warehouseId)) return error("Bạn không có quyền truy cập kho này", 403);
     await connectDB();
-    return success(await warehouseWorkflowService.listReceipts({ warehouseId, page: Number(params.get("page") ?? 1), limit: Math.min(Number(params.get("limit") ?? 20), 100) }));
+    return success(await warehouseWorkflowService.listReceipts({
+      warehouseId,
+      search: params.get("search") ?? undefined,
+      productId: params.get("productId") ?? undefined,
+      createdBy: params.get("createdBy") ?? undefined,
+      page: Number(params.get("page") ?? 1),
+      limit: Math.min(Number(params.get("limit") ?? 20), 100),
+    }));
   } catch (cause) { return error(cause instanceof Error ? cause.message : "Không thể lấy phiếu nhập", 400); }
 }
 

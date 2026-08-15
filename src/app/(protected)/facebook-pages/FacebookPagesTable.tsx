@@ -3,10 +3,10 @@
  */
 
 import { memo } from "react";
-import { Table, Tag, Button, Space, Dropdown, Switch } from "antd";
+import { Table, Tag, Button, Space, Dropdown, Switch, Tooltip } from "antd";
 import type { TablePaginationConfig } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, MoreOutlined, UserOutlined } from "@ant-design/icons";
 import type { FacebookPage } from "@/hooks/useFacebookPages";
 import styles from "./facebook-pages.module.css";
 
@@ -19,6 +19,44 @@ const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Hoạt động",
   INACTIVE: "Không hoạt động",
 };
+
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("vi-VN");
+}
+
+function renderMarketingEmployee(record: FacebookPage) {
+  const assignment = record.currentAssignment;
+  const employee = assignment?.marketingEmployee;
+
+  if (!assignment || !employee) {
+    return <span style={{ color: "#999" }}>Chưa phân công</span>;
+  }
+
+  const tooltipContent = (
+    <div style={{ lineHeight: 1.6 }}>
+      <div>
+        <strong>{employee.employeeCode}</strong> - {employee.fullName}
+      </div>
+      <div>Bắt đầu: {formatDate(assignment.startDate)}</div>
+      <div>
+        Kết thúc:{" "}
+        {assignment.endDate ? formatDate(assignment.endDate) : "Hiện tại"}
+      </div>
+    </div>
+  );
+
+  return (
+    <Tooltip title={tooltipContent} placement="topLeft">
+      <Space size={6}>
+        <UserOutlined style={{ color: "#1677ff" }} />
+        <span style={{ fontWeight: 500 }}>{employee.fullName}</span>
+      </Space>
+    </Tooltip>
+  );
+}
 
 export type FacebookPagesTableProps = {
   data: FacebookPage[];
@@ -103,6 +141,12 @@ function FacebookPagesTableInner({
       ),
     },
     {
+      title: "MKT phụ trách",
+      key: "marketingEmployee",
+      width: 200,
+      render: (_: unknown, record: FacebookPage) => renderMarketingEmployee(record),
+    },
+    {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
@@ -153,7 +197,7 @@ function FacebookPagesTableInner({
         showQuickJumper: true,
         showTotal: (t: number) => `Tổng: ${t}`,
       }}
-      scroll={{ x: 900 }}
+      scroll={{ x: 1100 }}
       size="middle"
     />
   );

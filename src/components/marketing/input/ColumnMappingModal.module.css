@@ -1,0 +1,209 @@
+/* Tabs đặt trong title của Modal — cần reset margin/padding của antd */
+.modeTabs {
+  margin: -4px 0 -12px -20px;
+}
+
+.modeTabs :global(.ant-tabs-nav) {
+  margin-bottom: 0;
+}
+
+.modeTabs :global(.ant-tabs-tab) {
+  padding: 6px 14px !important;
+  font-size: 13px;
+}
+
+.help {
+  background: #f0f5ff;
+  border: 1px solid #adc6ff;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1d39c4;
+}
+
+.warning {
+  margin-top: 6px;
+  color: #d4380d;
+  font-weight: 500;
+}
+
+.handleHint {
+  display: inline-block;
+  padding: 0 4px;
+  background: #f0e6ff;
+  color: #722ed1;
+  border-radius: 3px;
+  font-weight: bold;
+  letter-spacing: -1px;
+}
+
+.modeBadge {
+  display: inline-block;
+  padding: 2px 10px;
+  background: #722ed1;
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  background: #fafafa;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Hàng đang được kéo */
+.rowDragging {
+  opacity: 0.4;
+  background: #f0f0f0;
+  cursor: grabbing;
+}
+
+/*
+ * Drop indicator — line tím 2px chèn giữa 2 hàng (thay vì highlight cả hàng).
+ * - dropIndicatorTop:    line nằm ở mép trên của hàng
+ * - dropIndicatorBottom: line nằm ở mép dưới của hàng
+ *
+ * Sử dụng ::before/::after để không tăng kích thước hàng (position: absolute).
+ */
+.dropIndicatorTop {
+  position: relative;
+}
+
+.dropIndicatorTop::before {
+  content: "";
+  position: absolute;
+  top: -3px; /* chừa gap giữa 2 row */
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #722ed1;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 2;
+  animation: dropPulse 1s ease-in-out infinite;
+}
+
+.dropIndicatorBottom {
+  position: relative;
+}
+
+.dropIndicatorBottom::after {
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #722ed1;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 2;
+  animation: dropPulse 1s ease-in-out infinite;
+}
+
+@keyframes dropPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scaleX(0.97);
+  }
+}
+
+.dragHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 32px;
+  color: #8c8c8c;
+  cursor: grab;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  user-select: none;
+  font-size: 18px;
+  touch-action: none; /* tắt touch scroll khi kéo trên mobile */
+}
+
+.dragHandle:hover {
+  color: #722ed1;
+  background: #f0e6ff;
+}
+
+.dragHandle:active,
+.dragHandle:focus {
+  cursor: grabbing;
+  outline: none;
+  color: #722ed1;
+}
+
+.dragHandle:focus-visible {
+  outline: 2px solid #722ed1;
+  outline-offset: 2px;
+}
+
+.colIndex {
+  font-size: 12px;
+  font-weight: 600;
+  color: #595959;
+  min-width: 50px;
+}
+
+.preview {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.previewLabel {
+  display: block;
+  font-weight: 600;
+  color: #389e0d;
+  margin-bottom: 4px;
+}
+
+.previewValue {
+  display: block;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px;
+  color: #262626;
+  letter-spacing: 0.5px;
+}
+
+.example {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fafafa;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.exampleLabel {
+  color: #8c8c8c;
+  margin-bottom: 4px;
+}
+
+.exampleValue {
+  display: block;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  color: #595959;
+  white-space: pre;
+  overflow-x: auto;
+}

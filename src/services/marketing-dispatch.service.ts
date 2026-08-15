@@ -68,7 +68,7 @@ export class MarketingDispatchService {
    * - Lead đã convert (isConverted=true) → không cho push
    * - Nếu có saleEmployeeId → assign trực tiếp cho sale đó
    * - Nếu không có → tự động assign cho sale có ít leads nhất (round-robin)
-   * - Sau khi push: lead.status = CONTACTED (Sale đã nhận được)
+   * - Sau khi push: lead.status = NEW (Sale mới tiếp nhận, chưa liên hệ)
    */
   async pushLeadsToSale(input: PushLeadInput): Promise<PushLeadResult> {
     const { leadIds, saleEmployeeId, pushedBy } = input;
@@ -132,11 +132,11 @@ export class MarketingDispatchService {
             continue;
           }
 
-          // 4. Update lead: assign sale và chuyển status sang CONTACTED
+          // 4. Update lead: assign sale — status giữ NEW (Sale chưa liên hệ)
           const oldStatus = lead.status;
           lead.saleEmployeeId = new mongoose.Types.ObjectId(targetSaleId);
           lead.assignedAt = new Date();
-          lead.status = LeadStatus.CONTACTED; // Sale đã nhận được lead
+          lead.status = LeadStatus.NEW; // Sale mới tiếp nhận, chưa gọi → NEW
           lead.assignmentType = saleEmployeeId ? "MANUAL" : "AUTO";
 
           await lead.save({ session });

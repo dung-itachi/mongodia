@@ -148,6 +148,10 @@ export const ROLES = [
       // ---- Settings (Exchange Rate) ------------------------------------
       "settings.exchange_rate.view",
       "settings.exchange_rate.update",
+
+      // ---- Settings (Shipping Fee) ------------------------------------
+      "settings.shipping_fee.view",
+      "settings.shipping_fee.update",
     ],
   },
 

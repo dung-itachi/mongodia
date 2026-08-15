@@ -155,15 +155,21 @@ async function updateCombo(
   return response.data.data;
 }
 
-async function deleteCombo(id: string): Promise<void> {
+async function deleteCombo(id: string): Promise<{ affectedOrdersCount: number; message: string }> {
   const response = await api.delete<{
     success: boolean;
     message?: string;
+    data?: { affectedOrdersCount: number } | null;
   }>(`/api/combos/${id}`);
 
   if (!response.data.success) {
     throw new Error(response.data.message ?? "Failed to delete combo");
   }
+
+  return {
+    affectedOrdersCount: response.data.data?.affectedOrdersCount ?? 0,
+    message: response.data.message ?? "Xóa combo thành công",
+  };
 }
 
 // ============================================================================
@@ -234,9 +240,12 @@ export function useDeleteCombo() {
 
   return useMutation({
     mutationFn: deleteCombo,
-    onSuccess: () => {
+    onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ["combo-list"] });
-      toast.success("Xóa combo thành công");
+      void queryClient.invalidateQueries({ queryKey: ["combos-by-product"] });
+      void queryClient.invalidateQueries({ queryKey: ["all-combos"] });
+      // Dùng message từ server (đã chứa cảnh báo affectedOrdersCount)
+      toast.success(result.message ?? "Xóa combo thành công");
     },
     onError: (error: Error) => {
       toast.error(error.message);

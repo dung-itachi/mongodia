@@ -29,6 +29,17 @@ export interface FacebookPage {
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
+  currentAssignment?: {
+    _id: string;
+    marketingEmployeeId: string | null;
+    marketingEmployee: {
+      _id: string;
+      employeeCode: string;
+      fullName: string;
+    } | null;
+    startDate: string;
+    endDate: string | null;
+  } | null;
 }
 
 export interface CreateFacebookPageInput {

@@ -76,12 +76,15 @@ export function useWarehouseMovements(filters: { warehouseId?: string; type?: st
   return { ...result, loading: result.isLoading };
 }
 
-export function useWarehouseReceipts(filters: { warehouseId?: string; page?: number; limit?: number }) {
+export function useWarehouseReceipts(filters: { warehouseId?: string; search?: string; productId?: string; createdBy?: string; page?: number; limit?: number }) {
   const result = useQuery({
     queryKey: ["warehouse-receipts", filters],
     queryFn: () => {
       const params = new URLSearchParams();
       if (filters.warehouseId) params.set("warehouseId", filters.warehouseId);
+      if (filters.search) params.set("search", filters.search);
+      if (filters.productId) params.set("productId", filters.productId);
+      if (filters.createdBy) params.set("createdBy", filters.createdBy);
       if (filters.page) params.set("page", String(filters.page));
       if (filters.limit) params.set("limit", String(filters.limit));
       return callApi(`/api/warehouse/imports?${params.toString()}`);

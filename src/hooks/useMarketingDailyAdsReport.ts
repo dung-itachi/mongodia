@@ -1,14 +1,19 @@
 /**
  * useMarketingDailyAdsReport Hook
- * 
+ *
  * Fetch daily ads report data from MarketingExpenseReport:
  * - Tổng tiêu, Xin sáng, Xin chiều, Xin gấp
  * - Tiền dư, DS, %Ads(xin/DS)
+ *
+ * Filter `marketingEmployeeId` (Sprint 7.4 — ADMIN có thể chọn MKT cụ thể).
+ * Đối với non-GLOBAL user, API tự khoá cứng theo current user.
  */
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import type { ChartPeriod } from "@/types/marketing-dashboard";
+
+export type DailyAdsReportScope = "GLOBAL" | "SELF";
 
 export type DailyAdsReportRow = {
   date: string;
@@ -25,6 +30,8 @@ export type DailyAdsReportRow = {
   totalLeads: number;
   closedLeads: number;
   percentAds: number;
+  firstReportId?: string;
+  reportStatus?: string;
 };
 
 export type DailyAdsReportSummary = {
@@ -42,6 +49,8 @@ export type DailyAdsReportResponse = {
   success: boolean;
   data: {
     period: string;
+    scope: DailyAdsReportScope;
+    effectiveMarketingEmployeeId: string | null;
     dateRange: {
       start: string;
       end: string;
@@ -52,25 +61,60 @@ export type DailyAdsReportResponse = {
   message?: string;
 };
 
-const fetchDailyAdsReport = async (period: ChartPeriod): Promise<DailyAdsReportResponse["data"]> => {
-  const response = await api.get(`/api/marketing/dashboard/daily-ads-report?period=${period}`);
+export type UseMarketingDailyAdsReportFilter = {
+  period?: ChartPeriod;
+  marketingEmployeeId?: string;
+};
+
+const fetchDailyAdsReport = async (
+  filter: UseMarketingDailyAdsReportFilter
+): Promise<DailyAdsReportResponse["data"]> => {
+  const params = new URLSearchParams();
+  if (filter.period) params.set("period", filter.period);
+  if (filter.marketingEmployeeId) {
+    params.set("employeeId", filter.marketingEmployeeId);
+  }
+
+  const response = await api.get(
+    `/api/marketing/dashboard/daily-ads-report?${params.toString()}`
+  );
 
   if (!response.data.success || !response.data.data) {
-    throw new Error(response.data.message || "Failed to fetch daily ads report data");
+    throw new Error(
+      response.data.message || "Failed to fetch daily ads report data"
+    );
   }
 
   return response.data.data;
 };
 
-export function useMarketingDailyAdsReport(period: ChartPeriod = "7d") {
+export type UseMarketingDailyAdsReportReturn = {
+  data: DailyAdsReportResponse["data"] | null;
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+  scope: DailyAdsReportScope | null;
+  effectiveMarketingEmployeeId: string | null;
+};
+
+export function useMarketingDailyAdsReport(
+  filter: UseMarketingDailyAdsReportFilter = {}
+): UseMarketingDailyAdsReportReturn {
+  const { period = "7d", marketingEmployeeId } = filter;
+
   const {
     data,
     isLoading,
     error,
     refetch,
   } = useQuery<DailyAdsReportResponse["data"], Error>({
-    queryKey: ["marketing", "daily-ads-report", period],
-    queryFn: () => fetchDailyAdsReport(period),
+    queryKey: [
+      "marketing",
+      "daily-ads-report",
+      period,
+      marketingEmployeeId ?? null,
+    ],
+    queryFn: () => fetchDailyAdsReport({ period, marketingEmployeeId }),
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
@@ -84,7 +128,11 @@ export function useMarketingDailyAdsReport(period: ChartPeriod = "7d") {
     data: data ?? null,
     loading: isLoading,
     error: error?.message ?? null,
-    refetch,
+    refetch: () => {
+      void refetch();
+    },
+    scope: data?.scope ?? null,
+    effectiveMarketingEmployeeId: data?.effectiveMarketingEmployeeId ?? null,
   };
 }
 

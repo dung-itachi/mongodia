@@ -2,13 +2,16 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { Button, Form, Input, InputNumber, Modal, Select, Space, Table, message } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import CardSection from "@/components/common/cards/CardSection";
 import { useWarehouses } from "@/hooks/useWarehouses";
 import { useGiftList } from "@/hooks/useGifts";
+import { useProducts } from "@/hooks/useProducts";
+import { useEmployees } from "@/hooks/useEmployees";
 import { useCreateReceipt, useWarehouseReceipts } from "@/hooks/useWarehouseWorkflow";
+import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 
 type ItemRow = { itemType: "PRODUCT" | "GIFT"; productId?: string; variantId?: string; giftId?: string; orderedQuantity: number; receivedQuantity: number };
 
@@ -16,10 +19,18 @@ export default function WarehouseReceiptsPage() {
   const { warehouses } = useWarehouses();
   const { data: giftResponse } = useGiftList();
   const gifts = giftResponse?.items ?? [];
+  const { products: productsList = [] } = useProducts();
+  const productsFromApi = productsList ?? [];
+  const { data: employees = [] } = useEmployees({ pageSize: 200 });
   const [products, setProducts] = useState<{ _id: string; code: string; name: string }[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const { data, loading } = useWarehouseReceipts({ page, limit: pageSize });
+  const [warehouseId, setWarehouseId] = useState<string | undefined>(undefined);
+  const [productId, setProductId] = useState<string | undefined>(undefined);
+  const [createdBy, setCreatedBy] = useState<string | undefined>(undefined);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const { data, loading } = useWarehouseReceipts({ warehouseId, search: searchTerm, productId, createdBy, page, limit: pageSize });
   const createReceipt = useCreateReceipt();
 
   const [open, setOpen] = useState(false);
@@ -33,6 +44,20 @@ export default function WarehouseReceiptsPage() {
       .then((data) => setProducts(data?.data?.items ?? []))
       .catch(() => undefined);
   }, [open]);
+
+  const triggerSearch = () => {
+    const trimmed = searchInput.trim();
+    setSearchTerm(trimmed);
+    setPage(1);
+  };
+  const resetFilters = () => {
+    setWarehouseId(undefined);
+    setProductId(undefined);
+    setCreatedBy(undefined);
+    setSearchInput("");
+    setSearchTerm("");
+    setPage(1);
+  };
 
   const reset = () => { form.resetFields(); setItems([]); };
 
@@ -75,6 +100,21 @@ export default function WarehouseReceiptsPage() {
 
   const productOptions = useMemo(() => (products ?? []).map((product: { _id: string; name: string; code: string }) => ({ value: product._id, label: `${product.code} • ${product.name}` })), [products]);
   const giftOptions = useMemo(() => (gifts ?? []).map((gift: { _id: string; name: string }) => ({ value: gift._id, label: gift.name })), [gifts]);
+  const productFilterOptions = useMemo(
+    () => [
+      { value: "", label: "Tất cả sản phẩm" },
+      ...(productsFromApi ?? []).map((p: { _id: string; code: string; name: string }) => ({ value: p._id, label: `${p.code} • ${p.name}` })),
+    ],
+    [productsFromApi]
+  );
+  const creatorFilterOptions = useMemo(
+    () => [
+      { value: "", label: "Tất cả người tạo" },
+      ...(employees ?? []).map((e: { _id: string; employeeCode: string; fullName: string }) => ({ value: e._id, label: `${e.employeeCode} • ${e.fullName}` })),
+    ],
+    [employees]
+  );
+  const hasActiveFilters = Boolean(warehouseId || productId || createdBy || searchTerm);
 
   return (
     <PageContainer>
@@ -85,6 +125,78 @@ export default function WarehouseReceiptsPage() {
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Tạo phiếu nhập</Button>}
       />
       <div className="card">
+        <WarehouseQuickPick
+          value={warehouseId}
+          onChange={(next) => {
+            setWarehouseId(next);
+            setPage(1);
+          }}
+          warehouses={warehouses}
+        />
+        <div style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Input
+            placeholder="Tìm theo mã phiếu hoặc sản phẩm"
+            allowClear
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            onPressEnter={triggerSearch}
+            style={{ width: 360 }}
+          />
+          <Button type="primary" icon={<SearchOutlined />} onClick={triggerSearch}>
+            Tìm kiếm
+          </Button>
+          {searchTerm ? (
+            <Button onClick={() => { setSearchInput(""); setSearchTerm(""); setPage(1); }}>Xóa tìm kiếm</Button>
+          ) : null}
+        </div>
+        <Space style={{ marginBottom: 16 }} size="middle" wrap>
+          <Select
+            allowClear
+            placeholder="Lọc theo kho"
+            style={{ width: 220 }}
+            value={warehouseId}
+            onChange={(value) => {
+              setWarehouseId(value);
+              setPage(1);
+            }}
+            options={[
+              { value: "", label: "Tất cả kho" },
+              ...(warehouses ?? []).map((w: { _id: string; name: string }) => ({
+                value: w._id,
+                label: w.name,
+              })),
+            ]}
+          />
+          <Select
+            allowClear
+            placeholder="Lọc theo sản phẩm"
+            style={{ width: 240 }}
+            value={productId}
+            onChange={(value) => {
+              setProductId(value);
+              setPage(1);
+            }}
+            options={productFilterOptions}
+            showSearch
+            optionFilterProp="label"
+          />
+          <Select
+            allowClear
+            placeholder="Lọc theo người tạo"
+            style={{ width: 240 }}
+            value={createdBy}
+            onChange={(value) => {
+              setCreatedBy(value);
+              setPage(1);
+            }}
+            options={creatorFilterOptions}
+            showSearch
+            optionFilterProp="label"
+          />
+          {hasActiveFilters ? (
+            <Button onClick={resetFilters}>Xóa bộ lọc</Button>
+          ) : null}
+        </Space>
         <Table
           rowKey="_id"
           loading={loading}
@@ -104,7 +216,14 @@ export default function WarehouseReceiptsPage() {
             <Button onClick={() => setItems((current) => [...current, { itemType: "PRODUCT", orderedQuantity: 1, receivedQuantity: 1 }])} icon={<PlusOutlined />} type="dashed" block>
               Thêm dòng
             </Button>
-            <Space direction="vertical" style={{ width: "100%", marginTop: 12 }} size={8}>
+            <div className="receipt-item-headers" style={{ display: "flex", gap: 8, marginTop: 12, marginBottom: 4, fontSize: 12, fontWeight: 600, color: "#475569" }}>
+              <div style={{ width: 120 }}>Loại</div>
+              <div style={{ width: 220 }}>Sản phẩm / Quà tặng</div>
+              <div style={{ width: 120 }}>SL đặt</div>
+              <div style={{ width: 130 }}>SL thực nhận</div>
+              <div style={{ width: 32 }} aria-hidden="true"></div>
+            </div>
+            <Space orientation="vertical" style={{ width: "100%" }} size={8}>
               {items.map((row, index) => (
                 <Space.Compact key={index} style={{ width: "100%" }}>
                   <Select

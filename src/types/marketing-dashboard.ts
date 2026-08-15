@@ -88,6 +88,53 @@ export type MarketingRevenueSummary = {
   orderCount: number;
 };
 
+// ============================================================================
+// Trend Types (Sprint 7.4 — Real computed trend %)
+// ============================================================================
+
+export type MarketingTrend = {
+  /** Phần trăm thay đổi so với kỳ trước. */
+  pctChange: number | null;
+  /** Hướng thay đổi. */
+  direction: "up" | "down" | "neutral";
+};
+
+export type MarketingTrendSummary = {
+  todayLead: MarketingTrend;
+  monthLead: MarketingTrend;
+  assignedLead: MarketingTrend;
+  closedLead: MarketingTrend;
+  totalSpent: MarketingTrend;
+  roas: MarketingTrend;
+  conversionRate: MarketingTrend;
+  monthRevenue: MarketingTrend;
+  totalPushed: MarketingTrend;
+  called: MarketingTrend;
+  notCalled: MarketingTrend;
+  closingRate: MarketingTrend;
+  orderRevenue: MarketingTrend;
+  deliveredOk: MarketingTrend;
+};
+
+// ============================================================================
+// Order Summary (Sprint 7.4 — Order KPIs on Marketing Dashboard)
+// ============================================================================
+
+export type MarketingOrderSummary = {
+  /** Tổng đơn đã đẩy (không tính CANCELLED). */
+  totalPushed: number;
+  /** Số đơn đã "gọi" (Sale đã tiếp xúc khách). */
+  called: number;
+  /** Số đơn chưa gọi (WAIT_CONFIRM). */
+  notCalled: number;
+  /** Số đơn giao thành công (DELIVERED + RECONCILED). */
+  deliveredOk: number;
+  /** Tỉ lệ chốt (%). */
+  closingRate: number;
+  /** Tổng doanh thu (sum totalAmount). */
+  totalRevenue: number;
+};
+
 export type MarketingROASSummary = {
   /** ROAS for this month */
   roas: number;
@@ -171,6 +218,10 @@ export type MarketingDashboardData = {
   expense: MarketingExpenseSummary;
   /** Revenue metrics */
   revenue: MarketingRevenueSummary;
+  /** Order KPIs (Sprint 7.4) */
+  order: MarketingOrderSummary;
+  /** Trend summary (Sprint 7.4 — real computed %) */
+  trend: MarketingTrendSummary;
   /** Chart data */
   chart: MarketingChartDataV2;
   /** Lead source breakdown */
@@ -320,6 +371,12 @@ export type ExportData = {
     roas: number;
     cpa: number;
     conversionRate: number;
+    /** Order KPIs (Sprint 7.4) */
+    totalPushed: number;
+    called: number;
+    notCalled: number;
+    deliveredOk: number;
+    closingRate: number;
   };
   leads: {
     date: string;

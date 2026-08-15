@@ -100,11 +100,21 @@
   border-top: 1px solid #f0f0f0;
 }
 
+.comboHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .comboLabel {
   font-size: 12px;
   font-weight: 600;
   color: #595959;
-  margin-bottom: 8px;
+}
+
+.addComboBtn {
+  padding: 0 8px;
 }
 
 .noCombo {
@@ -281,6 +291,19 @@
 .price {
   font-weight: 700;
   color: #52c41a;
+}
+
+.addressCell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #595959;
+}
+
+.addressEmpty {
+  color: #bfbfbf;
+  font-style: italic;
 }
 
 /* Facebook Page Selector (Sprint 8.6) */

@@ -9,6 +9,7 @@ import CardSection from "@/components/common/cards/CardSection";
 import { useWarehouses } from "@/hooks/useWarehouses";
 import { useGiftList } from "@/hooks/useGifts";
 import { useWarehouseAdjustments, useCreateAdjustment } from "@/hooks/useWarehouseAdjustments";
+import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 
 type AdjustmentRow = {
   itemType: "PRODUCT" | "GIFT";
@@ -281,6 +282,14 @@ export default function WarehouseAdjustmentsPage() {
       />
 
       <div className="card">
+        <WarehouseQuickPick
+          value={warehouseId}
+          onChange={(next) => {
+            setWarehouseId(next);
+            setPage(1);
+          }}
+          warehouses={warehouses}
+        />
         <Space style={{ marginBottom: 12 }}>
           <Select
             allowClear
@@ -366,7 +375,7 @@ export default function WarehouseAdjustmentsPage() {
               Thêm dòng
             </Button>
 
-            <Space direction="vertical" style={{ width: "100%", marginTop: 12 }} size={8}>
+            <Space orientation="vertical" style={{ width: "100%", marginTop: 12 }} size={8}>
               {items.map((row, index) => (
                 <div key={index} style={{ display: "flex", gap: 8, alignItems: "flex-start", width: "100%" }}>
                   <Select

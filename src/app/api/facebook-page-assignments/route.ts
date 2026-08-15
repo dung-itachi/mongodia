@@ -176,11 +176,47 @@ export async function POST(request: Request) {
     const startDate = new Date(data.startDate);
     const endDate = data.endDate ? new Date(data.endDate) : null;
 
-    // Rule 4: Không được có 2 Assignment chồng thời gian
+    // Rule 5 (chạy trước Rule 4): Xử lý assignment hiện tại (endDate = null)
+    // Nếu tạo assignment mới với endDate = null và đã có assignment hiện tại:
+    //   - Auto-close assignment hiện tại với endDate = startDate - 1 ngày
+    //   - Áp dụng cho mọi startDate (>= current.startDate) để hỗ trợ chuyển giao MKT tại thời điểm hiện tại.
+    //   - Riêng trường hợp startDate mới < current.startDate mới báo lỗi.
+    let closingAssignmentId: string | null = null;
+    if (endDate === null) {
+      const currentAssignment = await FacebookPageAssignment.findOne({
+        facebookPageId: data.facebookPageId,
+        endDate: null,
+        isActive: true,
+      });
+
+      if (currentAssignment) {
+        if (startDate < currentAssignment.startDate) {
+          return errorResponse(
+            "Ngày bắt đầu phải lớn hơn hoặc bằng ngày bắt đầu của Assignment hiện tại",
+            409
+          );
+        }
+
+        const newEndDate = new Date(data.startDate);
+        newEndDate.setDate(newEndDate.getDate() - 1);
+
+        await FacebookPageAssignment.updateOne(
+          { _id: currentAssignment._id },
+          { $set: { endDate: newEndDate } }
+        );
+        closingAssignmentId = currentAssignment._id.toString();
+      }
+    }
+
+    // Rule 4: Không được có 2 Assignment chồng thời gian (loại trừ assignment vừa bị auto-close)
     const overlappingFilter: Record<string, unknown> = {
       facebookPageId: data.facebookPageId,
       isActive: true,
     };
+
+    if (closingAssignmentId) {
+      overlappingFilter._id = { $ne: closingAssignmentId };
+    }
 
     if (endDate) {
       overlappingFilter.$or = [
@@ -214,35 +250,6 @@ export async function POST(request: Request) {
         "Facebook Page đã có Assignment trong khoảng thời gian này",
         409
       );
-    }
-
-    // Rule 5: Nếu tạo Assignment mới với endDate = null
-    // thì kiểm tra Assignment hiện tại (endDate = null)
-    if (endDate === null) {
-      const currentAssignment = await FacebookPageAssignment.findOne({
-        facebookPageId: data.facebookPageId,
-        endDate: null,
-        isActive: true,
-      });
-
-      if (currentAssignment) {
-        // Nếu startDate mới <= startDate hiện tại thì không cho tạo
-        if (startDate <= currentAssignment.startDate) {
-          return errorResponse(
-            "Ngày bắt đầu phải lớn hơn ngày bắt đầu của Assignment hiện tại",
-            409
-          );
-        }
-
-        // Nếu startDate mới > startDate hiện tại thì auto-close assignment hiện tại
-        const newEndDate = new Date(data.startDate);
-        newEndDate.setDate(newEndDate.getDate() - 1);
-
-        await FacebookPageAssignment.updateOne(
-          { _id: currentAssignment._id },
-          { $set: { endDate: newEndDate } }
-        );
-      }
     }
 
     const assignment = await FacebookPageAssignment.create({

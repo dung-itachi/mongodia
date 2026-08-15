@@ -5,6 +5,9 @@
  * - selector: (data) => value — no switch needed
  * - formatter: "currency" | "percent" | "number" | "roas" | "cpa"
  * - permission: optional — for role-based visibility
+ *
+ * Sprint 7.4: trend chuyển từ hardcoded ↦ `trendSelector: (data) => TrendValue`
+ * để lấy phần trăm thật từ `data.trend.*` (so sánh kỳ này vs kỳ trước).
  */
 
 import {
@@ -16,13 +19,20 @@ import {
   RiseOutlined,
   PercentageOutlined,
   FundOutlined,
+  ShoppingCartOutlined,
+  PhoneOutlined,
+  PhoneFilled,
+  PieChartOutlined,
+  TruckOutlined,
 } from "@ant-design/icons";
 import type { StatCardProps } from "@/components/common/cards/StatCard";
 import type {
   MarketingSummary,
   MarketingExpenseSummary,
   MarketingRevenueSummary,
+  MarketingOrderSummary,
   MarketingDashboardData,
+  MarketingTrend,
 } from "@/types/marketing-dashboard";
 import { formatNumber } from "@/lib/format";
 
@@ -40,6 +50,8 @@ type CardDataSelector = (data: MarketingDashboardData) => number;
 
 type CardFormatter = "number" | "currency" | "percent" | "roas" | "cpa";
 
+type CardTrendSelector = (data: MarketingDashboardData) => MarketingTrend;
+
 interface CardDefinition {
   key: string;
   title: string;
@@ -50,7 +62,22 @@ interface CardDefinition {
   permission?: CardPermission;
   drillDown?: boolean;
   exportable?: boolean;
-  trend: { value: string; direction: "up" | "down" };
+  trendSelector: CardTrendSelector;
+}
+
+/**
+ * Convert MarketingTrend → StatCard trend (value + direction).
+ * - Nếu pctChange=null → trả về "—" / neutral (không có dữ liệu kỳ trước).
+ */
+function trendToCardTrend(trend: MarketingTrend): NonNullable<StatCardProps["trend"]> {
+  if (trend.pctChange === null) {
+    return { value: "—", direction: "neutral" };
+  }
+  const prefix = trend.pctChange > 0 ? "+" : "";
+  return {
+    value: `${prefix}${trend.pctChange.toFixed(1)}%`,
+    direction: trend.direction,
+  };
 }
 
 /**
@@ -74,7 +101,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     permission: "marketing.dashboard.lead",
     drillDown: true,
     exportable: true,
-    trend: { value: "+5.2%", direction: "up" },
+    trendSelector: (data) => data.trend.todayLead,
   },
   {
     key: "monthLead",
@@ -86,7 +113,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     permission: "marketing.dashboard.lead",
     drillDown: true,
     exportable: true,
-    trend: { value: "+12.5%", direction: "up" },
+    trendSelector: (data) => data.trend.monthLead,
   },
   {
     key: "assignedLead",
@@ -98,7 +125,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     permission: "marketing.dashboard.lead",
     drillDown: true,
     exportable: true,
-    trend: { value: "+3.1%", direction: "up" },
+    trendSelector: (data) => data.trend.assignedLead,
   },
   {
     key: "closedLead",
@@ -110,7 +137,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     permission: "marketing.dashboard.lead",
     drillDown: true,
     exportable: true,
-    trend: { value: "+8.7%", direction: "up" },
+    trendSelector: (data) => data.trend.closedLead,
   },
   // Expense cards
   {
@@ -123,7 +150,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     permission: "marketing.dashboard.expense",
     drillDown: true,
     exportable: true,
-    trend: { value: "-2.3%", direction: "down" },
+    trendSelector: (data) => data.trend.totalSpent,
   },
   {
     key: "roas",
@@ -135,7 +162,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     permission: "marketing.dashboard.expense",
     drillDown: true,
     exportable: true,
-    trend: { value: "+15.4%", direction: "up" },
+    trendSelector: (data) => data.trend.roas,
   },
   // Revenue cards
   {
@@ -148,7 +175,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     permission: "marketing.dashboard.revenue",
     drillDown: true,
     exportable: true,
-    trend: { value: "+22.1%", direction: "up" },
+    trendSelector: (data) => data.trend.monthRevenue,
   },
   // Conversion cards
   {
@@ -161,7 +188,80 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     permission: "marketing.dashboard.expense",
     drillDown: true,
     exportable: true,
-    trend: { value: "+0.6%", direction: "up" },
+    trendSelector: (data) => data.trend.conversionRate,
+  },
+  // ===== Order KPIs (Sprint 7.4 — tính từ collection Orders) =====
+  {
+    key: "totalPushed",
+    title: "Tổng Đã đẩy",
+    icon: <ShoppingCartOutlined />,
+    color: "blue",
+    selector: (data) => data.order.totalPushed,
+    formatter: "number",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.totalPushed,
+  },
+  {
+    key: "called",
+    title: "Đã gọi",
+    icon: <PhoneOutlined />,
+    color: "green",
+    selector: (data) => data.order.called,
+    formatter: "number",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.called,
+  },
+  {
+    key: "notCalled",
+    title: "Chưa gọi",
+    icon: <PhoneFilled />,
+    color: "orange",
+    selector: (data) => data.order.notCalled,
+    formatter: "number",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.notCalled,
+  },
+  {
+    key: "closingRate",
+    title: "Tỉ lệ chốt",
+    icon: <PieChartOutlined />,
+    color: "purple",
+    selector: (data) => data.order.closingRate,
+    formatter: "percent",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.closingRate,
+  },
+  {
+    key: "orderRevenue",
+    title: "Doanh thu (đơn)",
+    icon: <FundOutlined />,
+    color: "green",
+    selector: (data) => data.order.totalRevenue,
+    formatter: "currency",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.orderRevenue,
+  },
+  {
+    key: "deliveredOk",
+    title: "Giao TC",
+    icon: <TruckOutlined />,
+    color: "green",
+    selector: (data) => data.order.deliveredOk,
+    formatter: "number",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.deliveredOk,
   },
 ];
 
@@ -199,6 +299,6 @@ export function buildMarketingStats(data: MarketingDashboardData): MarketingStat
     value: formatCardValue(card.selector(data), card.formatter),
     icon: card.icon,
     color: card.color,
-    trend: card.trend,
+    trend: trendToCardTrend(card.trendSelector(data)),
   }));
 }

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser, UnauthorizedError, ForbiddenError } from "@/lib/auth";
 
 import Combo from "@/models/Combo";
+import Order from "@/models/Order";
 import Product from "@/models/Product";
 
 import {
@@ -236,10 +237,28 @@ export async function DELETE(
       return errorResponse("Không tìm thấy combo", 404);
     }
 
+    if (!combo.isActive) {
+      return errorResponse("Combo đã được xóa trước đó", 400);
+    }
+
+    // Đếm số đơn đang tham chiếu combo (cả ở orderItems[] lẫn comboId top-level)
+    // để client hiển thị confirm dialog trước khi xóa.
+    const affectedOrdersCount = await Order.countDocuments({
+      isActive: true,
+      $or: [{ comboId: combo._id }, { "orderItems.comboId": combo._id }],
+    });
+
     // Soft delete
     await Combo.updateOne({ _id: id }, { $set: { isActive: false } });
 
-    return success(null, "Xóa combo thành công");
+    return success(
+      {
+        affectedOrdersCount,
+      },
+      affectedOrdersCount > 0
+        ? `Đã xóa combo. ${affectedOrdersCount} đơn hàng cũ vẫn giữ nguyên tên combo này và không thể tạo đơn mới với combo đã xóa.`
+        : "Xóa combo thành công"
+    );
   } catch (error) {
     console.error("Delete Combo Error:", error);
     return errorResponse("Không thể xóa combo", 500);

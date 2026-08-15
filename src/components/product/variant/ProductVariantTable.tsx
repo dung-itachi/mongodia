@@ -86,19 +86,8 @@ export default function ProductVariantTable({
         return formatVariantValues(item.variantValues);
       },
     },
-    {
-      key: "price",
-      title: "Giá",
-      dataIndex: "price",
-      width: 120,
-      align: "right",
-      render: (value: unknown) => {
-        if (typeof value === "number") {
-          return `${value.toLocaleString()}₮`;
-        }
-        return "-";
-      },
-    },
+    // Sprint 8.x: Combo giữ giá, biến thể chỉ mô tả SKU/variant values.
+    // Ẩn cột "Giá" vì variant không có giá — giá nằm ở Combo.
     {
       key: "isActive",
       title: "Kích hoạt",

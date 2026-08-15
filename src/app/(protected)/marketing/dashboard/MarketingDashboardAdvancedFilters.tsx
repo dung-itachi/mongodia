@@ -135,6 +135,11 @@ function MarketingDashboardAdvancedFiltersInner({
               options={facebookPageOptions}
               placeholder="Facebook Page"
               allowClear
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
               size="small"
               style={{ width: 160 }}
             />
@@ -149,6 +154,11 @@ function MarketingDashboardAdvancedFiltersInner({
               options={employeeOptions}
               placeholder="Nhân viên Marketing"
               allowClear
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
               size="small"
               style={{ width: 160 }}
             />
@@ -163,6 +173,11 @@ function MarketingDashboardAdvancedFiltersInner({
               options={campaignOptions}
               placeholder="Campaign"
               allowClear
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
               size="small"
               style={{ width: 160 }}
             />
@@ -177,6 +192,11 @@ function MarketingDashboardAdvancedFiltersInner({
               options={LEAD_SOURCE_OPTIONS}
               placeholder="Nguồn Lead"
               allowClear
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
               size="small"
               style={{ width: 140 }}
             />
@@ -191,6 +211,11 @@ function MarketingDashboardAdvancedFiltersInner({
               options={statusOptions}
               placeholder="Trạng thái"
               allowClear
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
               size="small"
               style={{ width: 140 }}
             />

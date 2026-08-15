@@ -15,8 +15,13 @@
 export interface WarehouseTaskListItem {
   _id: string;
   orderId: string;
+  orderCode: string | null;
   warehouseStatus: string;
   assignedEmployeeId: string | null;
+  /** ID kho xử lý đơn (lấy từ Order.warehouseId) */
+  warehouseId: string | null;
+  warehouseName: string | null;
+  warehouseCode: string | null;
   note: string | null;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +60,7 @@ export interface WarehouseTaskFilters {
   limit?: number;
   status?: string;
   assignedEmployeeId?: string;
+  warehouseId?: string;
 }
 
 // ============================================================================
@@ -70,6 +76,7 @@ async function fetchWarehouseTasks(
   if (filters.limit) params.set("limit", String(filters.limit));
   if (filters.status) params.set("status", filters.status);
   if (filters.assignedEmployeeId) params.set("assignedEmployeeId", filters.assignedEmployeeId);
+  if (filters.warehouseId) params.set("warehouseId", filters.warehouseId);
 
   const queryString = params.toString();
   const url = `/api/warehouse/tasks${queryString ? `?${queryString}` : ""}`;

@@ -231,6 +231,7 @@ function NavGroupBlock({
             <>
               <Link
                 href={group.href}
+                prefetch={false}
                 className={`nh-label ${isGroupActive ? "on" : ""}`}
                 aria-label={`Mở ${group.label}`}
                 aria-current={isGroupActive ? "page" : undefined}
@@ -270,7 +271,7 @@ function NavGroupBlock({
 
 function NavItemLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
-    <Link href={item.href} className={`ni ${active ? "on" : ""}`}>
+    <Link href={item.href} prefetch={false} className={`ni ${active ? "on" : ""}`}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
         <g dangerouslySetInnerHTML={{ __html: item.iconSvg }} />
       </svg>

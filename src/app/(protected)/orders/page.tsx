@@ -152,6 +152,9 @@ function OrdersPageInner() {
       message.error(
         error instanceof Error ? error.message : "Chuyển trạng thái thất bại"
       );
+      // Refetch để danh sách phản ánh trạng thái mới nhất trong DB
+      // (tránh user click lại đơn đã đổi trạng thái do call trước lỗi).
+      void refetch();
     } finally {
       setQuickActionLoading(false);
     }

@@ -68,6 +68,7 @@ import { useWarehouses } from "@/hooks/useWarehouses";
 import { useDebounce } from "@/hooks/useDebounce";
 import type { OrderListItem } from "@/types/order";
 import ShipDrawer from "@/components/warehouse/ShipDrawer";
+import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 
 export default function WarehouseShipmentsPage() {
   const router = useRouter();
@@ -169,7 +170,7 @@ export default function WarehouseShipmentsPage() {
         const order = record as unknown as OrderListItem;
         const totals = getOrderItemTotals(order);
         return (
-          <Space direction="vertical" size={0} style={{ textAlign: "center" }}>
+          <Space orientation="vertical" size={0} style={{ textAlign: "center" }}>
             <Tag icon={<ShoppingOutlined />} color="blue">
               {totals.productQuantity}
             </Tag>
@@ -194,7 +195,7 @@ export default function WarehouseShipmentsPage() {
           return <span style={{ color: "#8c8c8c" }}>-</span>;
         }
         return (
-          <Space direction="vertical" size={2}>
+          <Space orientation="vertical" size={2}>
             {totals.hasRANDOMGift && (
               <Tag color="orange" style={{ fontSize: 11 }}>Ngẫu nhiên</Tag>
             )}
@@ -357,6 +358,15 @@ export default function WarehouseShipmentsPage() {
               </PermissionGate>
             </Space>
           }
+        />
+
+        <WarehouseQuickPick
+          value={warehouseId}
+          onChange={(next) => {
+            setWarehouseId(next);
+            setPage(1);
+          }}
+          warehouses={warehouses}
         />
 
         {/* Warehouse Filter */}

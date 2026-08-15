@@ -216,7 +216,9 @@ export async function POST(request: Request) {
       barcode: data.barcode ?? "",
       image: data.image ?? "",
       variantValues: data.variantValues,
-      price: data.price,
+      // Sprint 8.x: Variant KHÔNG có giá — giá nằm ở Combo.
+      // Bỏ qua price từ client, luôn set 0 để giữ tương thích schema.
+      price: 0,
       cost: data.cost ?? 0,
       weight: data.weight ?? 0,
       sortOrder: data.sortOrder ?? 0,

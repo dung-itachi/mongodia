@@ -1,12 +1,22 @@
 /**
  * Daily Ads Report API
- * 
+ *
  * GET - Lấy dữ liệu báo cáo Ads theo ngày
  * POST - Tạo báo cáo Ads nhanh
+ *
+ * Scope (Sprint 7.4 — fix "Báo cáo Ads theo ngày" theo tài khoản đăng nhập):
+ * - MKT (non-GLOBAL): chỉ thấy báo cáo của chính mình (filter `marketingEmployeeId`).
+ * - ADMIN/GLOBAL: thấy tất cả MKT, có thể chọn riêng 1 MKT qua query `employeeId`.
+ * - Order revenue cũng được filter theo cùng scope.
  */
 
 import { connectDB } from "@/lib/mongodb";
-import { getCurrentUser } from "@/lib/auth";
+import {
+  getCurrentUser,
+  UnauthorizedError,
+  ForbiddenError,
+} from "@/lib/auth";
+import { getAccountScope } from "@/lib/account-scope";
 import { success, error as errorResponse } from "@/utils/response";
 import { MarketingExpenseReport } from "@/models/MarketingExpenseReport";
 import { Order } from "@/models/Order";
@@ -22,15 +32,39 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "7d";
-    const employeeId = searchParams.get("employeeId");
+    const employeeIdParam = searchParams.get("employeeId");
+
+    // ----------------------------------------------------------------
+    // Auth & scope
+    // ----------------------------------------------------------------
+    let currentUser;
+    try {
+      currentUser = await getCurrentUser(request);
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        return errorResponse(err.message, 401);
+      }
+      throw err;
+    }
+
+    const scope = getAccountScope(currentUser);
+    const isGlobal = scope === "GLOBAL";
+
+    // Resolve effective marketingEmployeeId filter:
+    // - Non-GLOBAL: khoá cứng theo chính mình.
+    // - GLOBAL: nếu truyền employeeId thì lọc theo; không truyền = tất cả.
+    let effectiveMarketingEmployeeId: string | null = null;
+    if (!isGlobal) {
+      effectiveMarketingEmployeeId = currentUser.employee._id.toString();
+    } else if (employeeIdParam && employeeIdParam.trim()) {
+      effectiveMarketingEmployeeId = employeeIdParam.trim();
+    }
 
     // Calculate date range
     const now = new Date();
     let startDate: Date;
-    let endDate: Date;
+    const endDate: Date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
-    endDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
-    
     switch (period) {
       case "7d":
         startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0, 0, 0, 0));
@@ -45,14 +79,25 @@ export async function GET(request: Request) {
         startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0, 0, 0, 0));
     }
 
-    // Build match filter
+    // Build match filter applying scope
     const matchFilter: Record<string, unknown> = {
       reportDate: { $gte: startDate, $lte: endDate },
       isActive: { $ne: false },
     };
-    
-    if (employeeId) {
-      matchFilter.marketingEmployeeId = employeeId;
+
+    if (effectiveMarketingEmployeeId) {
+      matchFilter.marketingEmployeeId = effectiveMarketingEmployeeId;
+    }
+
+    const orderMatch: Record<string, unknown> = {
+      createdAt: { $gte: startDate, $lte: endDate },
+      isActive: true,
+      revenueEligible: true,
+      status: "DELIVERED",
+      marketingEmployeeId: { $exists: true, $ne: null },
+    };
+    if (effectiveMarketingEmployeeId) {
+      orderMatch.marketingEmployeeId = effectiveMarketingEmployeeId;
     }
 
     // First, get ads report data grouped by date
@@ -92,15 +137,7 @@ export async function GET(request: Request) {
 
     // Get revenue from Order table for each date
     const orderRevenueData = await Order.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate, $lte: endDate },
-          isActive: true,
-          revenueEligible: true,
-          status: "DELIVERED",
-          marketingEmployeeId: { $exists: true, $ne: null },
-        },
-      },
+      { $match: orderMatch },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -161,6 +198,8 @@ export async function GET(request: Request) {
 
     return success({
       period,
+      scope: isGlobal ? "GLOBAL" : "SELF",
+      effectiveMarketingEmployeeId,
       dateRange: {
         start: startDate.toISOString().slice(0, 10),
         end: endDate.toISOString().slice(0, 10),
@@ -174,12 +213,13 @@ export async function GET(request: Request) {
         totalRevenue: totals.totalRevenue,
         totalLeads: totals.totalLeads,
         closedLeads: totals.closedLeads,
-        percentAds: totals.totalRevenue > 0 
-          ? Math.round(((totals.xinSang + totals.xinChieu + totals.xinGap) / totals.totalRevenue) * 10000) / 100 
+        percentAds: totals.totalRevenue > 0
+          ? Math.round(((totals.xinSang + totals.xinChieu + totals.xinGap) / totals.totalRevenue) * 10000) / 100
           : 0,
       },
     });
   } catch (err) {
+    if (err instanceof ForbiddenError) return errorResponse(err.message, 403);
     console.error("Daily Ads Report API Error:", err);
     const errMsg = err instanceof Error ? err.message : String(err);
     return errorResponse(`Không thể lấy dữ liệu báo cáo Ads theo ngày: ${errMsg}`, 500);

@@ -9,6 +9,7 @@ import PageHeader from "@/components/common/layout/PageHeader";
 import { Table, Tag } from "antd";
 import { useWarehouses } from "@/hooks/useWarehouses";
 import { useWarehouseMovements } from "@/hooks/useWarehouseWorkflow";
+import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 import type { WarehouseStockMovementItem } from "@/types/warehouse-history";
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_COLORS, REFERENCE_TYPE_LABELS } from "@/types/warehouse-history";
 import type { WarehouseStockMovementType } from "@/models/WarehouseStockMovement";
@@ -178,6 +179,14 @@ export default function WarehouseMovementsPage() {
         ]}
       />
       <div className="card">
+        <WarehouseQuickPick
+          value={warehouseId}
+          onChange={(next) => {
+            setWarehouseId(next);
+            setPage(1);
+          }}
+          warehouses={warehouses}
+        />
         <Space style={{ marginBottom: 16 }} size="middle" wrap>
           <Input.Search
             placeholder="Tìm sản phẩm, SKU, mã tham chiếu..."

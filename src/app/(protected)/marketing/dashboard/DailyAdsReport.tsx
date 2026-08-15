@@ -1,23 +1,29 @@
 /**
  * Daily Ads Report Component
- * 
+ *
  * 📊 Báo cáo Ads theo ngày
  * Hiển thị bảng chi tiết từ MarketingExpenseReport:
  * - Xin sáng, Xin chiều, Xin gấp (editable)
  * - Tổng tiêu (readonly)
  * - Tiền dư, DS, %Ads
+ *
+ * Sprint 7.4 — Scope theo tài khoản đăng nhập:
+ *  - MKT (non-GLOBAL): API tự khoá cứng theo `marketingEmployeeId = currentUser._id`.
+ *  - ADMIN/GLOBAL: mặc định xem tất cả MKT, có dropdown chọn MKT cụ thể.
  */
 
 import { memo, useState } from "react";
-import { Card, Table, Skeleton, Row, Col, Statistic, Button, Modal, Form, InputNumber, DatePicker, message, Popconfirm, Space } from "antd";
+import { Card, Table, Skeleton, Row, Col, Statistic, Button, Modal, Form, InputNumber, DatePicker, message, Popconfirm, Space, Select } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMarketingDailyAdsReport } from "@/hooks/useMarketingDailyAdsReport";
+import { useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
+import { useAuthStore } from "@/store/auth.store";
 import type { ChartPeriod } from "@/types/marketing-dashboard";
 import { formatNumber } from "@/lib/format";
 import api from "@/lib/axios";
 import styles from "./marketing.module.css";
 import dayjs from "dayjs";
-import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, UserOutlined } from "@ant-design/icons";
 
 export type DailyAdsReportProps = {
   period: ChartPeriod;
@@ -38,8 +44,31 @@ type DailyAdsRow = {
   status: string;
 };
 
+/**
+ * ADMIN (role=ADMIN) hoặc user có wildcard permission "*" được xem tất cả MKT.
+ */
+function isGlobalUser(user: { role: string; permissions: string[] } | null): boolean {
+  if (!user) return false;
+  if (user.role === "ADMIN") return true;
+  return user.permissions.includes("*");
+}
+
 function DailyAdsReportInner({ period }: DailyAdsReportProps) {
-  const { data, loading, error, refetch } = useMarketingDailyAdsReport(period);
+  const user = useAuthStore((state) => state.user);
+  const isGlobal = isGlobalUser(user);
+
+  const [selectedMarketingEmployeeId, setSelectedMarketingEmployeeId] = useState<
+    string | undefined
+  >(undefined);
+
+  const { data, loading, error, refetch, scope } = useMarketingDailyAdsReport({
+    period,
+    marketingEmployeeId: isGlobal ? selectedMarketingEmployeeId : undefined,
+  });
+
+  // Chỉ fetch MKT list khi user là GLOBAL — non-GLOBAL bị khoá cứng rồi.
+  const { employees: marketingEmployeeOptions } = useMarketingEmployees();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingReport, setEditingReport] = useState<DailyAdsRow | null>(null);
@@ -297,21 +326,73 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
     },
   ];
 
+  const showingMktName = isGlobal
+    ? selectedMarketingEmployeeId
+      ? marketingEmployeeOptions.find(
+          (e) => e.value === selectedMarketingEmployeeId
+        )?.label
+      : "Tất cả MKT"
+    : user?.fullName ?? "MKT của bạn";
+
   return (
-    <Card 
+    <Card
       title="📊 Báo cáo Ads theo ngày"
       className={styles["mk-daily-report-card"]}
       extra={
-        <Button type="primary" onClick={() => {
-          setIsEditMode(false);
-          setEditingReport(null);
-          form.resetFields();
-          setIsModalOpen(true);
-        }}>
-          + Thêm báo cáo
-        </Button>
+        <Space size={12}>
+          {isGlobal && (
+            <Space size={8}>
+              <UserOutlined style={{ color: "#8c8c8c" }} />
+              <Select
+                allowClear
+                placeholder="Chọn MKT cụ thể"
+                value={selectedMarketingEmployeeId}
+                onChange={(v) => setSelectedMarketingEmployeeId(v)}
+                options={[
+                  { value: "__all__", label: "Tất cả MKT" },
+                  ...marketingEmployeeOptions,
+                ]}
+                showSearch
+                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  String(option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                size="small"
+                style={{ width: 220 }}
+              />
+            </Space>
+          )}
+          <Button
+            type="primary"
+            onClick={() => {
+              setIsEditMode(false);
+              setEditingReport(null);
+              form.resetFields();
+              setIsModalOpen(true);
+            }}
+          >
+            + Thêm báo cáo
+          </Button>
+        </Space>
       }
     >
+      {/* Sub-header showing scope */}
+      <div
+        style={{
+          marginBottom: 12,
+          fontSize: 13,
+          color: "#595959",
+        }}
+      >
+        Đang xem: <strong>{showingMktName}</strong>
+        {scope === "SELF" && (
+          <span style={{ marginLeft: 8, color: "#8c8c8c" }}>
+            (chỉ báo cáo Ads của bạn)
+          </span>
+        )}
+      </div>
       {/* Summary Stats */}
       <Row gutter={16} className={styles["mk-daily-report-summary"]}>
         <Col span={4}>

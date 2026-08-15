@@ -31,6 +31,7 @@ import {
   SnippetsOutlined,
   TeamOutlined,
   InfoCircleOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import { toast } from "@/components/common/feedback/Toast";
 import CheckCustomerForm from "./CheckCustomerForm";
@@ -49,13 +50,24 @@ import { LeadSource } from "@/constants/leadSource";
 import FacebookPageDrawer from "@/app/(protected)/facebook-pages/FacebookPageDrawer";
 import styles from "./MarketingInputSection.module.css";
 import QuickProductDrawer from "./QuickProductDrawer";
+import QuickComboDrawer from "./QuickComboDrawer";
+import ColumnMappingModal from "./ColumnMappingModal";
+import { useColumnMapping, type ColumnMappings, type InputMode } from "./useColumnMapping";
+import { COLUMN_FIELDS } from "./columnLayouts";
 
 const { TextArea } = Input;
+
+/** Map field key → label ngắn cho placeholder & hint. */
+const COLUMN_FIELD_LABELS: Record<string, string> = Object.fromEntries(
+  COLUMN_FIELDS.map((f) => [f.key, f.label])
+);
 
 export interface StagedLead {
   id: string;
   customerName: string;
   phone: string;
+  /** Optional địa chỉ (Landing mode là cột riêng, Comment mode lấy từ cột 3). */
+  address?: string;
   source: LeadSource;
   productId: string;
   productName: string;
@@ -83,9 +95,27 @@ export default function MarketingInputSection({
   const [selectedFacebookPageId, setSelectedFacebookPageId] = useState<string | null>(null);
   const [facebookPageDrawerOpen, setFacebookPageDrawerOpen] = useState(false);
   const [quickProductDrawerOpen, setQuickProductDrawerOpen] = useState(false);
+  /** Sprint 8.x: Drawer thêm combo nhanh cho sản phẩm đang chọn */
+  const [quickComboDrawerOpen, setQuickComboDrawerOpen] = useState(false);
   const [inputText, setInputText] = useState("");
   const [inputType, setInputType] = useState<"comment" | "ladi">("comment");
   const [stagedLeads, setStagedLeads] = useState<StagedLead[]>([]);
+  /** Sprint 8.x: cấu hình thứ tự cột khi dán (lưu localStorage theo user). */
+  const columnMapping = useColumnMapping();
+  const [columnMappingOpen, setColumnMappingOpen] = useState(false);
+  /**
+   * Draft layout cho CẢ 2 mode (comment + ladi). User có thể switch tab
+   * trong modal để sửa cả 2 cùng lúc; apply khi bấm "Xong".
+   */
+  const [columnMappingDraft, setColumnMappingDraft] = useState<ColumnMappings>(
+    () => ({
+      comment: columnMapping.getLayout("comment"),
+      ladi: columnMapping.getLayout("ladi"),
+    })
+  );
+  /** Tab đang active trong modal (controlled). */
+  const [columnMappingActiveMode, setColumnMappingActiveMode] =
+    useState<InputMode>("comment");
   // Bộ lọc & sắp xếp sản phẩm
   const [productSearch, setProductSearch] = useState("");
   const [productSort, setProductSort] = useState<"newest" | "oldest" | "name-asc" | "name-desc" | "code">("newest");
@@ -202,6 +232,24 @@ export default function MarketingInputSection({
     return productCombos.find((c) => c._id === selectedComboId);
   }, [productCombos, selectedComboId]);
 
+  /** Tên sản phẩm đang được chọn (flat lookup qua categories). */
+  const selectedProductName = useMemo(() => {
+    for (const cat of filteredCategories) {
+      const p = cat.products.find((x) => x._id === selectedProductId);
+      if (p) return p.name;
+    }
+    return "";
+  }, [filteredCategories, selectedProductId]);
+
+  /** Product code của sản phẩm đang chọn (cần cho Combo API). */
+  const selectedProductCode = useMemo(() => {
+    for (const cat of filteredCategories) {
+      const p = cat.products.find((x) => x._id === selectedProductId);
+      if (p) return p.code;
+    }
+    return undefined;
+  }, [filteredCategories, selectedProductId]);
+
   // Stats for cards
   const stats = useMemo(() => {
     const pushedCount = existingLeads.length;
@@ -236,16 +284,17 @@ export default function MarketingInputSection({
   // HANDLERS
   // ============================================================
 
-  // Handle product selection
+  // Handle product selection (toggle: click lại để bỏ chọn)
   const handleSelectProduct = useCallback((productId: string) => {
-    setSelectedProductId(productId);
+    setSelectedProductId((prev) => (prev === productId ? null : productId));
+    // Bỏ combo khi đổi product hoặc bỏ chọn product
     setSelectedComboId(null);
     setComboExpanded(false);
   }, []);
 
-  // Handle combo selection
+  // Handle combo selection (toggle: click lại để bỏ chọn)
   const handleSelectCombo = useCallback((comboId: string) => {
-    setSelectedComboId(comboId);
+    setSelectedComboId((prev) => (prev === comboId ? null : comboId));
   }, []);
 
   // Handle input type change
@@ -281,7 +330,7 @@ export default function MarketingInputSection({
   // Handle manual order add
   const handleManualOrderAdd = useCallback(() => {
     manualOrderForm.validateFields().then((values) => {
-      const { facebookPageId, customerName, phone, productId, comboId } = values;
+      const { facebookPageId, customerName, phone, address, productId, comboId } = values;
 
       if (!facebookPageId) {
         toast.warning("Vui lòng chọn trang Facebook");
@@ -298,6 +347,7 @@ export default function MarketingInputSection({
         id: `staged-${Date.now()}`,
         customerName: customerName || "Khách hàng",
         phone,
+        address: address || undefined,
         source: LeadSource.FACEBOOK_COMMENT,
         productId: productId || "",
         productName: product?.name || combo?.productName || "",
@@ -327,6 +377,14 @@ export default function MarketingInputSection({
     []
   );
 
+  // Handle quick combo created (cho sản phẩm đang chọn)
+  const handleQuickComboCreated = useCallback((comboIds: string[]) => {
+    // Tự chọn combo đầu tiên vừa tạo
+    if (comboIds[0]) {
+      setSelectedComboId(comboIds[0]);
+    }
+  }, []);
+
   // Parse leads from input text - SPRINT 8.5.2 ENHANCED
   const handleParseLeads = useCallback(() => {
     // Chỉ cần chọn Facebook page là được điền (sản phẩm có thể nằm trong form)
@@ -345,19 +403,236 @@ export default function MarketingInputSection({
     let leadIdCounter = Date.now();
     let errorCount = 0;
     let autoDetectCount = 0;
+    /**
+     * Số dòng bị SKIP hoàn toàn (không tạo lead, không có trong staging).
+     * Nguyên nhân thường gặp: thiếu cột phone, hoặc paste từ nguồn làm tab
+     * bị convert thành space (Google Sheets).
+     */
+    let skippedCount = 0;
+    /**
+     * Sample 3 dòng đầu bị skip (để hiển thị trong toast cho user debug).
+     */
+    const skippedSamples: string[] = [];
 
-    // Create combo lookup by price (primary) and by partial name match
+    // Lấy layout cột theo mode hiện tại (do MKT tự cấu hình)
+    const currentLayout = columnMapping.getLayout(inputType);
+
+    // Helper: build object {name, phone, address, combo, product, date, facebookPage}
+    // từ mảng parts theo layout. Field nào không có trong layout → "".
+    function parseRowByLayout(
+      parts: string[]
+    ): Record<string, string> {
+      const out: Record<string, string> = {
+        name: "",
+        phone: "",
+        address: "",
+        combo: "",
+        product: "",
+        date: "",
+        facebookPage: "",
+      };
+      currentLayout.forEach((key, idx) => {
+        out[key] = (parts[idx] || "").trim();
+      });
+      return out;
+    }
+
+    /**
+     * Tách 1 dòng dán thành các cột theo separator.
+     * Thử theo thứ tự:
+     *   1. TAB (`\t`) — Excel, comment Facebook copy-as-text
+     *   2. 2+ spaces (`\s{2,}`) — Google Sheets thường convert tab thành spaces
+     *   3. Nếu cả 2 đều chỉ ra 1 phần tử → giữ nguyên 1 phần tử
+     *
+     * Vấn đề lịch sử: nếu user paste từ Google Sheets mà chỉ thấy 0 lead,
+     * nguyên nhân là Sheets chuyển tab → space, khiến `split("\t")` chỉ ra
+     * 1 cột → phone rỗng → skip toàn bộ dòng.
+     */
+    function splitRow(line: string): string[] {
+      const tabParts = line.split("\t");
+      if (tabParts.length > 1) {
+        return tabParts.map((p) => p.trim());
+      }
+      const spaceParts = line.split(/\s{2,}/);
+      if (spaceParts.length > 1) {
+        return spaceParts.map((p) => p.trim());
+      }
+      // Fallback: giữ nguyên dòng (sẽ fail ở validate phone → báo lỗi)
+      return [line.trim()];
+    }
+
+    /**
+     * Heuristic parser — dùng khi split theo tab/2-space thất bại.
+     *
+     * Logic mới: dùng **productName làm anchor chính** (lấy từ DB).
+     *
+     *   1. Date + optional Time ở đầu (Landing mode)
+     *   2. Tìm productName trong line (sort theo độ dài desc) → out.product
+     *   3. Từ productName match → tìm combo thuộc product đó match với afterPhone
+     *      → out.combo
+     *   4. Tìm phone (8-11 digits) ở giữa line
+     *   5. Trước phone = name (loại bỏ time/time sót nếu có)
+     *   6. Sau phone = address (cắt bỏ comboText nếu đã match ở step 3)
+     *
+     * Ưu điểm: dựa trên dữ liệu DB → không phụ thuộc format pattern cứng.
+     * Combo description match exact (lowercase compare) với combo.name trong DB.
+     */
+    function smartParseRow(
+      line: string,
+      productNames: string[],
+      combosByProductId: Record<string, Array<{ name: string; sellingPrice?: number }>>
+    ): Record<string, string> {
+      const out: Record<string, string> = {
+        name: "",
+        phone: "",
+        address: "",
+        combo: "",
+        product: "",
+        date: "",
+        facebookPage: "",
+      };
+
+      // 1. Date + optional Time ở đầu dòng (Landing mode)
+      const dateTimeMatch = line.match(
+        /^(\d{4}-\d{1,2}-\d{1,2})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\s*/
+      );
+      if (dateTimeMatch) {
+        out.date = dateTimeMatch[1];
+        line = line.substring(dateTimeMatch[0].length).trim();
+      }
+
+      // 2. Tìm productName trong line (anchor chính)
+      const sortedProducts = [...productNames].sort((a, b) => b.length - a.length);
+      let productNameMatch: string | null = null;
+      for (const productName of sortedProducts) {
+        if (line.toLowerCase().includes(productName.toLowerCase())) {
+          productNameMatch = productName;
+          break;
+        }
+      }
+      if (productNameMatch) out.product = productNameMatch;
+
+      // 3. Tìm phone (8-11 digits)
+      const phoneMatch = line.match(/\b(\d{8,11})\b/);
+      if (!phoneMatch) return out;
+      out.phone = phoneMatch[1];
+      const phoneIdx = phoneMatch.index!;
+
+      const beforePhone = line.substring(0, phoneIdx).trim();
+      const afterPhone = line.substring(phoneIdx + phoneMatch[0].length).trim();
+
+      // 4. Từ productName match → tìm combo thuộc product đó match với afterPhone
+      let comboText = "";
+      if (productNameMatch) {
+        for (const combos of Object.values(combosByProductId)) {
+          const sortedCombos = [...combos].sort(
+            (a, b) => b.name.length - a.name.length
+          );
+          for (const c of sortedCombos) {
+            if (afterPhone.toLowerCase().includes(c.name.toLowerCase())) {
+              comboText = c.name;
+              break;
+            }
+          }
+          if (comboText) break;
+        }
+      }
+
+      // 5. Tách name (loại bỏ time sót nếu có)
+      let nameText = beforePhone
+        .replace(/^\d{1,2}:\d{2}(?::\d{2})?\s*/, "")
+        .trim();
+
+      // 6. Tách address từ afterPhone, cắt bỏ comboText nếu match
+      let addressText = afterPhone;
+      if (comboText) {
+        const comboIdx = afterPhone
+          .toLowerCase()
+          .indexOf(comboText.toLowerCase());
+        if (comboIdx !== -1) {
+          addressText = afterPhone.substring(0, comboIdx).trim();
+        }
+      }
+
+      // Fallback: nếu không có combo match và không có productName match
+      // → cắt đến emoji/giá đầu tiên
+      if (!comboText && !productNameMatch) {
+        const comboStart = addressText.match(
+          /[✅📦🎁⭐🌟]|\d[\d,.]*\s*[₮₹$]/
+        );
+        if (comboStart) {
+          const idx = addressText.indexOf(comboStart[0]);
+          addressText = addressText.substring(0, idx).trim();
+        }
+      }
+
+      out.name = nameText;
+      out.address = addressText;
+      out.combo = comboText;
+      return out;
+    }
+
+    // Build product maps để dùng cho smartParseRow (productName là anchor)
+    const productNames = categories.flatMap((c) =>
+      (c.products || []).map((p) => p.name)
+    );
+    // combosByProductId: productId -> [{name, sellingPrice}]
+    const combosByProductId: Record<
+      string,
+      Array<{ name: string; sellingPrice?: number }>
+    > = {};
+    Object.values(comboByNameMap).forEach((combo) => {
+      const pid = combo.productId;
+      if (!pid) return;
+      if (!combosByProductId[pid]) combosByProductId[pid] = [];
+      combosByProductId[pid].push({
+        name: combo.name,
+        sellingPrice: combo.sellingPrice,
+      });
+    });
+
+    /**
+     * Chọn parser: tab-split (chuẩn) nếu được, heuristic (fallback) nếu không.
+     *
+     * - Line bắt đầu bằng `YYYY-MM-DD` (Landing mode date) → dùng smartParseRow
+     *   vì layout chuẩn không có date ở cột 0, nên splitRow sẽ bị dính date+time
+     *   vào name.
+     * - Tab/double-space đủ parts theo layout VÀ KHÔNG bắt đầu bằng date
+     *   → position-based parse (giữ nguyên hành vi hiện tại).
+     * - Ngược lại → heuristic dùng productName làm anchor.
+     *
+     * Đảm bảo luôn parse được kể cả khi paste từ nguồn single-space.
+     */
+    function parseRowSmart(line: string): Record<string, string> {
+      const trimmed = line.trimStart();
+      // Nếu line bắt đầu bằng date (YYYY-MM-DD) → dùng smartParseRow
+      // để tách date+time riêng, tránh dính vào name khi split theo 2-space.
+      if (/^\d{4}-\d{1,2}-\d{1,2}\b/.test(trimmed)) {
+        return smartParseRow(line, productNames, combosByProductId);
+      }
+      const parts = splitRow(line);
+      // Nếu split được nhiều cột → dùng position-based theo layout user đã cấu hình
+      if (parts.length > 1 && parts.length >= Math.min(3, currentLayout.length)) {
+        return parseRowByLayout(parts);
+      }
+      // Fallback: heuristic parse với productName anchor
+      return smartParseRow(line, productNames, combosByProductId);
+    }
+
+    // Create combo lookup by price (primary) and by partial name match.
+    // Lưu ý: mỗi combo đè key của các part > 3 chars. Nếu nhiều combo chung
+    // một part (vd "үнэгүй") thì part đó sẽ trỏ vào combo insert sau.
+    // Vì vậy khi iterate để match, ta sort key DESC theo độ dài để combo name
+    // đầy đủ (length lớn) match trước các part nhỏ.
     const combosByPrice: Record<number, ComboWithProduct> = {};
     const combosByPartialName: Record<string, ComboWithProduct> = {};
-    
+
     Object.values(comboByNameMap).forEach((combo) => {
       if (combo.sellingPrice) {
         combosByPrice[combo.sellingPrice] = combo;
       }
-      // Store partial name matches (lowercase)
       const comboNameLower = combo.name.toLowerCase();
       combosByPartialName[comboNameLower] = combo;
-      // Also store key parts of name
       const parts = comboNameLower.split(/\s+/);
       parts.forEach(part => {
         if (part.length > 3) {
@@ -366,96 +641,268 @@ export default function MarketingInputSection({
       });
     });
 
+    /**
+     * Resolve combo + product cho 1 lead, có tính đến selection của user.
+     *
+     * Ưu tiên:
+     *   1. selectedCombo (nếu có) → dùng luôn, kể cả khi parsedCombo khác
+     *   2. selectedProduct (nếu có) → dùng luôn, kể cả khi parsedProduct khác
+     *   3. Nếu chỉ có product mà chưa có combo → tìm combo thuộc product đó
+     *   4. Auto-detect từ parsed (giống logic cũ) nếu không có selection
+     *
+     * Trả về warnings nếu parsed ≠ selected (để hiển thị toast).
+     */
+    function resolveComboAndProduct(
+      comboInfo: string,
+      productInfo: string
+    ): {
+      combo: ComboWithProduct | undefined;
+      comboError: string | undefined;
+      resolvedProductId: string;
+      resolvedProductName: string;
+      warnings: string[];
+    } {
+      const warnings: string[] = [];
+
+      // ----- Auto-detect combo từ comboInfo -----
+      let autoCombo: ComboWithProduct | undefined;
+      let comboError: string | undefined;
+
+      // Strategy A: price match
+      const priceMatch = comboInfo.match(/(\d[\d,]*)\s*[₮₹$]?/);
+      if (priceMatch) {
+        const price = parseInt(priceMatch[1].replace(/,/g, ""), 10);
+        if (price && combosByPrice[price]) autoCombo = combosByPrice[price];
+      }
+      // Strategy B: tên combo exact/partial — sort keys desc theo độ dài
+      // để match longest name trước (combo name đầy đủ hơn part).
+      if (!autoCombo && comboInfo) {
+        const comboInfoLower = comboInfo.toLowerCase();
+        const sortedKeys = Object.keys(combosByPartialName).sort(
+          (a, b) => b.length - a.length
+        );
+        for (const key of sortedKeys) {
+          if (comboInfoLower.includes(key) || key.includes(comboInfoLower.substring(0, 10))) {
+            autoCombo = combosByPartialName[key];
+            break;
+          }
+        }
+      }
+
+      // ----- Auto-detect product từ productInfo -----
+      let autoProductId = "";
+      let autoProductName = "";
+      if (productInfo) {
+        const productInfoLower = productInfo.toLowerCase();
+        for (const c of Object.values(comboByNameMap)) {
+          const pn = (c.productName || "").toLowerCase();
+          if (pn && productInfoLower.includes(pn)) {
+            autoProductId = c.productId || "";
+            autoProductName = c.productName || "";
+            break;
+          }
+        }
+      }
+
+      // ----- Resolution theo selection của user -----
+      let finalCombo: ComboWithProduct | undefined;
+      let finalProductId = "";
+      let finalProductName = "";
+
+      if (selectedCombo) {
+        // User đã chọn combo → dùng combo đó làm anchor
+        finalCombo = selectedCombo;
+        finalProductId = selectedCombo.productId || "";
+        finalProductName = selectedCombo.productName || "";
+
+        // Nếu parsed product khác với selectedProduct → warn
+        if (selectedProductName && autoProductName &&
+            selectedProductName.toLowerCase() !== autoProductName.toLowerCase()) {
+          warnings.push(
+            `Sản phẩm "${autoProductName}" trong dữ liệu KHÔNG khớp sản phẩm đang chọn "${selectedProductName}"`
+          );
+        }
+        // Nếu parsed combo khác với selectedCombo → warn
+        if (autoCombo && autoCombo._id !== selectedCombo._id) {
+          warnings.push(
+            `Combo "${autoCombo.name}" trong dữ liệu KHÔNG khớp combo đang chọn "${selectedCombo.name}"`
+          );
+        }
+      } else if (selectedProductId && selectedProductName) {
+        // User đã chọn product nhưng chưa chọn combo
+        finalProductId = selectedProductId;
+        finalProductName = selectedProductName;
+
+        // Thử tìm combo thuộc product đang chọn
+        const productCombos = Object.values(comboByNameMap).filter(
+          (c) => c.productId === selectedProductId
+        );
+
+        // Ưu tiên: autoCombo nếu thuộc product đang chọn
+        if (autoCombo && autoCombo.productId === selectedProductId) {
+          finalCombo = autoCombo;
+        } else if (autoCombo && autoCombo.productId &&
+                   autoCombo.productId !== selectedProductId) {
+          // autoCombo thuộc product khác → warn, fallback về combo đầu tiên của product đang chọn
+          warnings.push(
+            `Combo "${autoCombo.name}" thuộc sản phẩm "${autoCombo.productName || "?"}" ` +
+            `KHÔNG khớp sản phẩm đang chọn "${selectedProductName}"`
+          );
+          finalCombo = productCombos[0];
+        } else if (productCombos.length > 0) {
+          finalCombo = productCombos[0];
+        }
+
+        // Nếu parsed product khác → warn
+        if (autoProductName && autoProductName.toLowerCase() !== selectedProductName.toLowerCase()) {
+          warnings.push(
+            `Sản phẩm "${autoProductName}" trong dữ liệu KHÔNG khớp sản phẩm đang chọn "${selectedProductName}"`
+          );
+        }
+      } else {
+        // Không có selection → dùng auto-detect
+        finalCombo = autoCombo;
+        finalProductId = autoProductId;
+        finalProductName = autoProductName;
+
+        // Nếu chỉ có combo mà chưa có product → lấy từ combo
+        if (autoCombo && !finalProductId) {
+          finalProductId = autoCombo.productId || "";
+          finalProductName = autoCombo.productName || "";
+        }
+      }
+
+      // Fallback: nếu vẫn chưa có combo nhưng có productId → lấy combo đầu tiên của product đó
+      if (!finalCombo && finalProductId) {
+        finalCombo = Object.values(comboByNameMap).find(
+          (c) => c.productId === finalProductId
+        );
+      }
+
+      if (!finalCombo) {
+        comboError = "Không tìm thấy combo";
+      }
+
+      return {
+        combo: finalCombo,
+        comboError,
+        resolvedProductId: finalProductId,
+        resolvedProductName: finalProductName,
+        warnings,
+      };
+    }
+
+    // Track warnings từ tất cả lead trong batch
+    const allWarnings: string[] = [];
+
     lines.forEach((line) => {
-      const parts = line.split("\t").map((p) => p.trim());
-
       if (inputType === "comment") {
-        // Format: Name Tab Phone (or just Phone)
-        const phone = parts[0] || "";
-        const name = parts[1] || "";
+        // Format: layout do MKT cấu hình (default: Tên · SĐT · Đ/c · Combo · SP)
+        // Ví dụ:
+        //   Гантуяа Толя	96621013	Баянчандман	✅99,000₮-өөр 4 нь 10 нь үнэгүй	EYE
+        const parsed = parseRowSmart(line);
+        const { name, phone, address, combo: comboInfo, product: productInfo } = parsed;
 
-        if (phone) {
-          // Use selected combo or first available combo for this product
-          const comboToUse = selectedCombo || Object.values(comboByNameMap)[0];
+        if (!phone) {
+          skippedCount++;
+          if (skippedSamples.length < 3) {
+            skippedSamples.push(
+              `[name=${name || "?"}] thiếu phone — line: "${line.substring(0, 60)}${line.length > 60 ? "..." : ""}"`
+            );
+          }
+          return;
+        }
+
+        // ---- Resolve combo + product (có tính đến selection) ----
+        const { combo, comboError, resolvedProductId, resolvedProductName, warnings } =
+          resolveComboAndProduct(comboInfo, productInfo);
+        allWarnings.push(...warnings);
+
+        if (comboError) errorCount++;
+        if (!comboError && combo) autoDetectCount++;
+
+        const finalProductId = combo?.productId || resolvedProductId || "";
+        const finalProductName = combo?.productName || resolvedProductName || "";
+
+        if (combo) {
           newLeads.push({
             id: `staged-${leadIdCounter++}`,
             customerName: name || "Khách hàng",
             phone,
+            address: address || undefined,
             source: LeadSource.FACEBOOK_COMMENT,
-            productId: selectedProductId || "",
-            productName: comboToUse?.productName || "",
-            comboId: comboToUse?._id || "",
-            comboName: comboToUse?.name || "",
-            price: comboToUse?.sellingPrice || 0,
+            productId: finalProductId,
+            productName: finalProductName,
+            comboId: combo._id,
+            comboName: combo.name,
+            price: combo.sellingPrice,
             facebookPageId: selectedFacebookPageId ?? undefined,
             facebookPageName:
               facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
               undefined,
           });
+        } else {
+          // Vẫn push lead với error để user thấy trong staging
+          newLeads.push({
+            id: `staged-${leadIdCounter++}`,
+            customerName: name || "Khách hàng",
+            phone,
+            address: address || undefined,
+            source: LeadSource.FACEBOOK_COMMENT,
+            productId: finalProductId,
+            productName: finalProductName,
+            comboId: "",
+            comboName: "",
+            price: 0,
+            facebookPageId: selectedFacebookPageId ?? undefined,
+            facebookPageName:
+              facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
+              undefined,
+            error: comboError,
+          });
         }
       } else {
-        // Format: Date Tab Name Tab Phone Tab Address Tab ComboInfo
-        // ComboInfo could be: "✅99,000₮-өөр 4 нь 10 нь үнэгүй" or just "99,000"
-        const dateStr = parts[0] || "";
-        const name = parts[1] || "Khách hàng";
-        const phone = parts[2] || "";
-        const address = parts[3] || "";
-        const comboInfo = parts[4] || "";
+        // Format: layout do MKT cấu hình (default: Ngày · Tên · SĐT · Đ/c · Combo · SP)
+        // ComboInfo có thể là: "✅99,000₮-өөр 4 нь 10 нь үнэгүй" hoặc chỉ "99,000"
+        const parsed = parseRowSmart(line);
+        const {
+          name,
+          phone,
+          address,
+          combo: comboInfo,
+          product: productInfo,
+        } = parsed;
 
-        if (!phone) return;
-
-        // Auto-detect combo from comboInfo text
-        let combo: ComboWithProduct | undefined;
-        let comboError: string | undefined;
-
-        // Strategy 1: Look for price pattern in comboInfo (e.g., "99,000₮" or "99,000")
-        const priceMatch = comboInfo.match(/(\d[\d,]*)\s*[₮₹$]?/);
-        if (priceMatch) {
-          const price = parseInt(priceMatch[1].replace(/,/g, ""), 10);
-          if (price && combosByPrice[price]) {
-            combo = combosByPrice[price];
+        if (!phone) {
+          skippedCount++;
+          if (skippedSamples.length < 3) {
+            skippedSamples.push(
+              `[name=${name || "?"}] thiếu phone — line: "${line.substring(0, 60)}${line.length > 60 ? "..." : ""}"`
+            );
           }
+          return;
         }
 
-        // Strategy 2: Look for exact or partial name match in comboInfo
-        if (!combo && comboInfo) {
-          const comboInfoLower = comboInfo.toLowerCase();
-          // Check if any combo name is contained in the combo info
-          for (const [key, c] of Object.entries(combosByPartialName)) {
-            if (comboInfoLower.includes(key) || key.includes(comboInfoLower.substring(0, 10))) {
-              combo = c;
-              break;
-            }
-          }
-        }
+        // ---- Resolve combo + product (có tính đến selection) ----
+        const { combo, comboError, resolvedProductId, resolvedProductName, warnings } =
+          resolveComboAndProduct(comboInfo, productInfo);
+        allWarnings.push(...warnings);
 
-        // Strategy 3: Use selected combo if provided
-        if (!combo && selectedCombo) {
-          combo = selectedCombo;
-        }
+        if (comboError) errorCount++;
+        if (!comboError && combo) autoDetectCount++;
 
-        // Strategy 4: Use first available combo for this product
-        if (!combo) {
-          const availableCombos = Object.values(comboByNameMap).filter(
-            (c) => !c.productId || c.productId === selectedProductId
-          );
-          combo = availableCombos[0];
-        }
-
-        if (!combo) {
-          comboError = "Không tìm thấy combo";
-          errorCount++;
-        }
+        const finalProductId = combo?.productId || resolvedProductId || "";
+        const finalProductName = combo?.productName || resolvedProductName || "";
 
         if (combo) {
-          if (!comboError) autoDetectCount++;
           newLeads.push({
             id: `staged-${leadIdCounter++}`,
             customerName: name,
             phone,
+            address: address || undefined,
             source: LeadSource.LANDING_PAGE,
-            productId: combo.productId || selectedProductId || "",
-            productName: combo.productName || "",
+            productId: finalProductId,
+            productName: finalProductName,
             comboId: combo._id,
             comboName: combo.name,
             price: combo.sellingPrice,
@@ -470,9 +917,10 @@ export default function MarketingInputSection({
             id: `staged-${leadIdCounter++}`,
             customerName: name,
             phone,
+            address: address || undefined,
             source: LeadSource.LANDING_PAGE,
-            productId: "",
-            productName: "",
+            productId: finalProductId,
+            productName: finalProductName,
             comboId: "",
             comboName: "",
             price: 0,
@@ -489,7 +937,21 @@ export default function MarketingInputSection({
     setStagedLeads((prev) => [...prev, ...newLeads]);
     setInputText("");
 
-    if (errorCount > 0) {
+    // Deduplicate warnings (nhiều dòng có cùng lỗi → chỉ hiện 1 lần)
+    const uniqueWarnings = [...new Set(allWarnings)];
+
+    if (skippedCount > 0) {
+      // Báo cụ thể dòng bị skip + gợi ý lý do để user tự debug
+      const sampleText = skippedSamples.join("\n• ");
+      toast.warning(
+        `Đã thêm ${newLeads.length} lead, BỎ QUA ${skippedCount} dòng thiếu phone.\n` +
+          `Mẫu:\n• ${sampleText}\n` +
+          `💡 Phone phải là 8-11 chữ số liên tục (vd "96621013"). ` +
+          `Nếu paste từ nguồn không có tab, hệ thống sẽ tự tìm phone bằng regex — ` +
+          `đảm bảo có ít nhất 1 chuỗi số điện thoại rõ ràng trong dòng.`,
+        { duration: 8 }
+      );
+    } else if (errorCount > 0) {
       toast.warning(
         `Đã thêm ${newLeads.length} lead, có ${errorCount} lỗi không tìm thấy combo`
       );
@@ -498,7 +960,18 @@ export default function MarketingInputSection({
     } else {
       toast.success(`Đã thêm ${newLeads.length} lead vào staging`);
     }
-  }, [inputText, inputType, selectedCombo, selectedProductId, comboByNameMap, selectedFacebookPageId, facebookPages]);
+
+    // Cảnh báo mismatch giữa dữ liệu paste và sản phẩm/combo đang chọn
+    if (uniqueWarnings.length > 0) {
+      const warningText =
+        `⚠ Dữ liệu paste KHÔNG trùng khớp sản phẩm/combo đang chọn:\n` +
+        `• ${uniqueWarnings.slice(0, 3).join("\n• ")}` +
+        (uniqueWarnings.length > 3
+          ? `\n• ... và ${uniqueWarnings.length - 3} cảnh báo khác`
+          : "");
+      toast.warning(warningText, { duration: 8 });
+    }
+  }, [inputText, inputType, selectedCombo, selectedProductId, selectedProductName, comboByNameMap, selectedFacebookPageId, facebookPages]);
 
   // Handle remove staged lead
   const handleRemoveStagedLead = useCallback((id: string) => {
@@ -545,6 +1018,7 @@ export default function MarketingInputSection({
         const result = await createLeadMutation.mutateAsync({
           customerName: lead.customerName,
           phone: lead.phone,
+          address: lead.address, // Sprint 8.x: lưu địa chỉ cùng lead
           sourceType: lead.source,
           // Sprint 8.5.2: Include product/combo info for Order
           productId: lead.productId,
@@ -620,11 +1094,10 @@ export default function MarketingInputSection({
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>① Chọn sản phẩm</span>
             <Button
-              type="link"
+              type="default"
               size="small"
               icon={<PlusOutlined />}
               onClick={() => setQuickProductDrawerOpen(true)}
-              style={{ marginRight: -8 }}
             >
               Thêm nhanh
             </Button>
@@ -748,7 +1221,18 @@ export default function MarketingInputSection({
         {/* Combo Selection - SPRINT 8.5.2: From Product Module */}
         {selectedProductId && (
           <div className={styles.comboSection}>
-            <div className={styles.comboLabel}>Combos (từ MongoDB):</div>
+            <div className={styles.comboHeader}>
+              <span className={styles.comboLabel}>Combos (từ MongoDB):</span>
+              <Button
+                type="link"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() => setQuickComboDrawerOpen(true)}
+                className={styles.addComboBtn}
+              >
+                Thêm combo
+              </Button>
+            </div>
             {combosLoading ? (
               <div className={styles.loading}>Đang tải combos...</div>
             ) : productCombos.length === 0 ? (
@@ -875,6 +1359,15 @@ export default function MarketingInputSection({
         onSuccess={handleQuickProductCreated}
       />
 
+      <QuickComboDrawer
+        open={quickComboDrawerOpen}
+        onClose={() => setQuickComboDrawerOpen(false)}
+        onSuccess={handleQuickComboCreated}
+        productId={selectedProductId}
+        productCode={selectedProductCode}
+        productName={selectedProductName}
+      />
+
       {/* Lead Input */}
       <Card
         title="② Dán số"
@@ -898,7 +1391,7 @@ export default function MarketingInputSection({
             onClick={() => handleInputTypeChange("comment")}
           >
             📝 Comment
-            <div className={styles.inputHint}>Tên + SĐT</div>
+            <div className={styles.inputHint}>Tên · SĐT · Đ/c · Combo · SP</div>
           </button>
           <button
             className={`${styles.inputTab} ${
@@ -907,15 +1400,15 @@ export default function MarketingInputSection({
             onClick={() => handleInputTypeChange("ladi")}
           >
             🌐 Landing
-            <div className={styles.inputHint}>Ngày · Tên · SĐT · Đ/c · Combo</div>
+            <div className={styles.inputHint}>Ngày · Tên · SĐT · Đ/c · Combo · SP</div>
           </button>
         </div>
 
         <TextArea
           placeholder={
             inputType === "comment"
-              ? "Nhập thông tin: Tên\tSĐT\nHoặc chỉ SĐT\n(Sản phẩm & Combo có thể tự detect từ text)"
-              : "Nhập thông tin theo format:\nNgày\tTên\tSĐT\tĐịa chỉ\tCombo\nSản phẩm & Combo sẽ được tự động detect từ text"
+              ? `Nhập: ${columnMapping.getLayout("comment").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: Гантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Sản phẩm & Combo tự detect nếu để trống)`
+              : `Nhập: ${columnMapping.getLayout("ladi").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: 2026-08-15\tГантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Баянчандман = địa chỉ — nằm ngay sau SĐT)`
           }
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
@@ -926,7 +1419,7 @@ export default function MarketingInputSection({
 
         <div className={styles.inputActions}>
           <Popover
-            content={<div style={{ width: 420 }}><FieldOrderPreview inputType={inputType} /></div>}
+            content={<div style={{ width: 520, maxWidth: "90vw" }}><FieldOrderPreview inputType={inputType} /></div>}
             title={null}
             trigger="hover"
             placement="topLeft"
@@ -946,6 +1439,22 @@ export default function MarketingInputSection({
             disabled={!selectedFacebookPageId}
           >
             Dán
+          </Button>
+          <Button
+            icon={<SettingOutlined />}
+            onClick={() => {
+              // Mở modal với layout hiện tại của CẢ 2 mode (sync cả Landing
+              // dù user đang ở tab Comment, để có thể switch và sửa luôn).
+              setColumnMappingDraft({
+                comment: columnMapping.getLayout("comment"),
+                ladi: columnMapping.getLayout("ladi"),
+              });
+              setColumnMappingActiveMode(inputType);
+              setColumnMappingOpen(true);
+            }}
+            title="Cấu hình thứ tự cột khi dán"
+          >
+            Cấu hình cột
           </Button>
           <Button onClick={() => setInputText("")} disabled={!inputText}>
             Xóa
@@ -1098,6 +1607,24 @@ export default function MarketingInputSection({
         }}
       />
 
+      {/* Sprint 8.x: Modal cấu hình thứ tự cột khi dán */}
+      <ColumnMappingModal
+        open={columnMappingOpen}
+        activeMode={columnMappingActiveMode}
+        onActiveModeChange={setColumnMappingActiveMode}
+        mappings={columnMappingDraft}
+        onChange={(mode, next) => {
+          // Cập nhật draft đúng field theo mode đang chỉnh
+          setColumnMappingDraft((prev) => ({ ...prev, [mode]: next }));
+        }}
+        onClose={() => {
+          // Apply draft của CẢ 2 mode vào mapping khi đóng
+          columnMapping.setModeLayout("comment", columnMappingDraft.comment);
+          columnMapping.setModeLayout("ladi", columnMappingDraft.ladi);
+          setColumnMappingOpen(false);
+        }}
+      />
+
       {/* Staging Area */}
       {stagedLeads.length > 0 && (
         <Card
@@ -1157,6 +1684,7 @@ export default function MarketingInputSection({
                   <th>Sản phẩm</th>
                   <th>Tên</th>
                   <th>SĐT</th>
+                  <th>Địa chỉ</th>
                   <th>Combo</th>
                   <th>Giá</th>
                 </tr>
@@ -1200,6 +1728,9 @@ export default function MarketingInputSection({
                       )}
                     </td>
                     <td>{lead.phone}</td>
+                    <td className={styles.addressCell}>
+                      {lead.address || <span className={styles.addressEmpty}>—</span>}
+                    </td>
                     <td>{lead.comboName || "-"}</td>
                     <td className={styles.price}>
                       {lead.price > 0 ? `${lead.price.toLocaleString()}₮` : "-"}

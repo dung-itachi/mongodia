@@ -400,13 +400,11 @@ export const createProductVariantSchema = z.object({
 
   variantValues: z
     .array(z.string())
-    .min(1, "PhÃ¡ÂºÂ£i chÃ¡Â»Ân ÃƒÂ­t nhÃ¡ÂºÂ¥t mÃ¡Â»â„¢t giÃƒÂ¡ trÃ¡Â»â€¹ biÃ¡ÂºÂ¿n thÃ¡Â»Æ’"),
+    .min(1, "Vui long chon it nhat mot gia tri bien the"), // fixed-line-403
 
-  price: z
-    .number({
-      message: "GiÃƒÂ¡ phÃ¡ÂºÂ£i lÃƒÂ  sÃ¡Â»â€˜",
-    })
-    .min(0, "GiÃƒÂ¡ khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c ÃƒÂ¢m"),
+  // Sprint 8.x: Variant KHÔNG có giá bán — giá nằm ở Combo.
+  // Field price bị bỏ khỏi validator; backend luôn set price=0 khi tạo/sửa.
+  // Giữ comment để trace lý do nếu sau này cần khôi phục.
 
   cost: z.number().default(0),
 

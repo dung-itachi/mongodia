@@ -5,9 +5,11 @@
  */
 
 import { Spin } from "antd";
-import { ReactNode } from "react";
+import { CSSProperties, ReactNode } from "react";
 
 export type StatTrend = "up" | "down" | "neutral";
+
+export type StatSize = "default" | "compact";
 
 export type StatColor =
   | "blue"
@@ -39,6 +41,8 @@ export type StatCardProps = {
   prefix?: string;
   /** Optional click handler for drill-down */
   onClick?: () => void;
+  /** Size variant: default (140px) or compact (88px). */
+  size?: StatSize;
 };
 
 const colorMap: Record<StatColor, { bg: string; text: string; border: string }> = {
@@ -48,6 +52,44 @@ const colorMap: Record<StatColor, { bg: string; text: string; border: string }> 
   orange: { bg: "#fff7e6", text: "#fa8c16", border: "#ffd591" },
   purple: { bg: "#f9f0ff", text: "#722ed1", border: "#d3adf7" },
   default: { bg: "#fafafa", text: "#595959", border: "#d9d9d9" },
+};
+
+const sizeMap: Record<
+  StatSize,
+  {
+    minHeight: number;
+    padding: string;
+    titleSize: number;
+    titleMb: number;
+    valueSize: number;
+    trendSize: number;
+    trendMt: number;
+    iconSize: number;
+    iconBox: number;
+  }
+> = {
+  default: {
+    minHeight: 140,
+    padding: "16px",
+    titleSize: 14,
+    titleMb: 8,
+    valueSize: 28,
+    trendSize: 12,
+    trendMt: 8,
+    iconSize: 24,
+    iconBox: 48,
+  },
+  compact: {
+    minHeight: 88,
+    padding: "12px 14px",
+    titleSize: 12,
+    titleMb: 2,
+    valueSize: 20,
+    trendSize: 11,
+    trendMt: 4,
+    iconSize: 16,
+    iconBox: 32,
+  },
 };
 
 export default function StatCard({
@@ -60,8 +102,10 @@ export default function StatCard({
   suffix,
   prefix,
   onClick,
+  size = "default",
 }: StatCardProps) {
   const colors = colorMap[color];
+  const sz = sizeMap[size];
 
   const trendColor =
     trend?.direction === "up"
@@ -75,30 +119,33 @@ export default function StatCard({
 
   if (loading) {
     return (
-      <div className="card" style={{ minHeight: 140 }}>
+      <div className="card" style={{ minHeight: sz.minHeight }}>
         <div
           style={{
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            height: 100,
+            height: sz.minHeight - 32,
           }}
         >
-          <Spin />
+          <Spin size={size === "compact" ? "small" : "default"} />
         </div>
       </div>
     );
   }
 
+  const wrapStyle: CSSProperties = {
+    borderLeft: `4px solid ${colors.border}`,
+    minHeight: sz.minHeight,
+    padding: sz.padding,
+    cursor: onClick ? "pointer" : "default",
+    transition: "box-shadow 0.2s ease",
+  };
+
   return (
     <div
       className="card"
-      style={{
-        borderLeft: `4px solid ${colors.border}`,
-        minHeight: 140,
-        cursor: onClick ? "pointer" : "default",
-        transition: "box-shadow 0.2s ease",
-      }}
+      style={wrapStyle}
       onClick={onClick}
       onMouseEnter={(e) => {
         if (onClick) {
@@ -111,23 +158,29 @@ export default function StatCard({
         }
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <div style={{ flex: 1 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontSize: 14,
+              fontSize: sz.titleSize,
               color: "#8c8c8c",
-              marginBottom: 8,
+              marginBottom: sz.titleMb,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             {title}
           </div>
           <div
             style={{
-              fontSize: 28,
+              fontSize: sz.valueSize,
               fontWeight: 600,
               color: "#262626",
               lineHeight: 1.2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             {prefix}
@@ -137,9 +190,9 @@ export default function StatCard({
           {trend && (
             <div
               style={{
-                fontSize: 12,
+                fontSize: sz.trendSize,
                 color: trendColor,
-                marginTop: 8,
+                marginTop: sz.trendMt,
               }}
             >
               {trendIcon} {trend.value}
@@ -149,15 +202,16 @@ export default function StatCard({
         {icon && (
           <div
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 8,
+              width: sz.iconBox,
+              height: sz.iconBox,
+              borderRadius: size === "compact" ? 6 : 8,
               backgroundColor: colors.bg,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: colors.text,
-              fontSize: 24,
+              fontSize: sz.iconSize,
+              flexShrink: 0,
             }}
           >
             {icon}

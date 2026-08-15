@@ -93,7 +93,8 @@ export default function ProductVariantForm({
           barcode: editingItem.barcode ?? "",
           image: editingItem.image ?? "",
           variantValues: getVariantValueIds(editingItem.variantValues),
-          price: editingItem.price,
+          // Sprint 8.x: Variant KHÔNG có giá — giá nằm ở Combo.
+          // Giữ nguyên field ẩn để không phá schema; chỉ ẩn khỏi UI.
           cost: editingItem.cost ?? 0,
           weight: editingItem.weight ?? 0,
           sortOrder: editingItem.sortOrder ?? 0,
@@ -186,18 +187,23 @@ export default function ProductVariantForm({
           </Checkbox.Group>
         </Form.Item>
 
-        <Form.Item
-          name="price"
-          label="Giá bán"
-          rules={[{ required: true, message: "Vui lòng nhập giá" }]}
+        {/* Sprint 8.x: Variant KHÔNG có giá bán — giá nằm ở Combo.
+            Field price vẫn tồn tại trong schema (luôn = 0) để không phá
+            dữ liệu cũ; backend tự gán 0 khi tạo/sửa. */}
+        <div
+          style={{
+            padding: "8px 12px",
+            marginBottom: 16,
+            background: "#fafafa",
+            border: "1px dashed #d9d9d9",
+            borderRadius: 4,
+            color: "#8c8c8c",
+            fontSize: 12,
+          }}
         >
-          <InputNumber
-            min={0}
-            style={{ width: "100%" }}
-            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-            parser={(value) => Number(value?.replace(/,/g, "") || 0) as 0}
-          />
-        </Form.Item>
+          💡 Biến thể không có giá bán — giá được cấu hình trong{" "}
+          <strong>Combo</strong> theo sản phẩm.
+        </div>
 
         <Form.Item name="cost" label="Giá vốn">
           <InputNumber

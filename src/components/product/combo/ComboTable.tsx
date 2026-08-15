@@ -13,7 +13,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { Switch, Popconfirm, Image, Tag } from "antd";
+import { Switch, Image, Tag } from "antd";
 import { EditOutlined, DeleteOutlined, GiftOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
@@ -169,18 +169,12 @@ export default function ComboTable({
               style={{ color: "#1890ff", cursor: "pointer", fontSize: 16 }}
               onClick={() => onEdit(item)}
             />
-            <Popconfirm
-              title="Xóa combo?"
-              description="Combo sẽ bị vô hiệu hóa."
-              onConfirm={() => onDelete(item)}
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-            >
-              <DeleteOutlined
-                style={{ color: "#ff4d4f", cursor: "pointer", fontSize: 16 }}
-              />
-            </Popconfirm>
+            {/* Confirm dialog thật được handle ở ComboPage (modal.confirm) để
+                hiển thị đầy đủ cảnh báo + đếm số đơn bị ảnh hưởng. */}
+            <DeleteOutlined
+              style={{ color: "#ff4d4f", cursor: "pointer", fontSize: 16 }}
+              onClick={() => onDelete(item)}
+            />
           </div>
         );
       },

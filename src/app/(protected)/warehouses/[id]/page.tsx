@@ -12,7 +12,9 @@
 
 import { use, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Row, Col, Table, message, Dropdown, Space, Modal } from "antd";
+import {
+  Row, Col, Table, App, Dropdown, Space, Modal, Button,
+} from "antd";
 import type { TableColumnsType } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -25,7 +27,6 @@ import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import CardSection from "@/components/common/cards/CardSection";
 import StatusBadge from "@/components/common/display/StatusBadge";
-import ActionButton from "@/components/common/buttons/ActionButton";
 import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonCard from "@/components/common/overlay/SkeletonCard";
 import PermissionGate from "@/components/common/PermissionGate";
@@ -47,6 +48,7 @@ interface PageProps {
 export default function WarehouseDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const { message: messageApi } = App.useApp();
 
   // Fetch warehouse task
   const { task, histories, loading, error, refetch } = useWarehouseTask(id);
@@ -76,16 +78,16 @@ export default function WarehouseDetailPage({ params }: PageProps) {
         id,
         data: { status: statusTarget },
       });
-      message.success("Đổi trạng thái thành công");
+      messageApi.success("Đổi trạng thái thành công");
       setConfirmVisible(false);
       setStatusTarget(null);
       await refetch();
     } catch (err) {
-      message.error(err instanceof Error ? err.message : "Đổi trạng thái thất bại");
+      messageApi.error(err instanceof Error ? err.message : "Đổi trạng thái thất bại");
     } finally {
       setConfirmLoading(false);
     }
-  }, [id, statusTarget, statusMutation, refetch]);
+  }, [id, statusTarget, statusMutation, refetch, messageApi]);
 
   // Format date
   const formatDate = useCallback((dateStr: string) => {
@@ -170,11 +172,11 @@ export default function WarehouseDetailPage({ params }: PageProps) {
 
   return (
     <PageContainer>
-      <LoadingOverlay fullScreen text="Đang tải..." />
+      {loading && !task && <LoadingOverlay fullScreen text="Đang tải..." />}
 
       <PageHeader
         title="Chi tiết Warehouse Task"
-        subtitle={`Task #${task._id.slice(-8).toUpperCase()}`}
+        subtitle={`Task #${task._id.slice(-8).toUpperCase()} • Đơn ${task.orderCode ?? task.orderId.slice(-8).toUpperCase()}`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },
           { label: "Kho", href: "/warehouses" },
@@ -186,12 +188,18 @@ export default function WarehouseDetailPage({ params }: PageProps) {
               <Dropdown
                 trigger={["click"]}
                 menu={{ items: statusMenuItems }}
+                getPopupContainer={() => document.body}
               >
-                <ActionButton
+                <Button
                   type="primary"
                   icon={<DownOutlined />}
-                  label="Hành động"
-                />
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  Hành động
+                </Button>
               </Dropdown>
             )}
           </PermissionGate>
@@ -238,12 +246,33 @@ export default function WarehouseDetailPage({ params }: PageProps) {
               <Col span={12}>
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 4 }}>
-                    Order ID
+                    Mã đơn hàng
                   </div>
                   <div>
                     <a onClick={() => router.push(`/orders/${task.orderId}`)}>
-                      {task.orderId.slice(-8).toUpperCase()}
+                      {task.orderCode ?? task.orderId.slice(-8).toUpperCase()}
                     </a>
+                  </div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 4 }}>
+                    Kho xử lý
+                  </div>
+                  <div>
+                    {task.warehouseName ? (
+                      <span>
+                        <strong>{task.warehouseName}</strong>
+                        {task.warehouseCode ? (
+                          <span style={{ color: "#8c8c8c", marginLeft: 6 }}>
+                            ({task.warehouseCode})
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : (
+                      <span style={{ color: "#8c8c8c" }}>Chưa gán kho</span>
+                    )}
                   </div>
                 </div>
               </Col>

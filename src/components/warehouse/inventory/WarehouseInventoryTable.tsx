@@ -1,7 +1,12 @@
 "use client";
 
-import { Tag } from "antd";
+import { useState } from "react";
+import { Button, Tag, Tooltip } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 import DataTable, { type Column } from "@/components/common/table/DataTable";
+import AdjustInventoryModal from "@/components/warehouse/inventory/AdjustInventoryModal";
+import { useAuthStore } from "@/store/auth.store";
+import { hasPermission } from "@/lib/permission";
 import type { NormalizedInventoryItem } from "@/hooks/useWarehouseInventory";
 
 export interface WarehouseInventoryTableProps {
@@ -13,6 +18,7 @@ export interface WarehouseInventoryTableProps {
     total: number;
     onChange: (page: number, pageSize: number) => void;
   };
+  onAdjusted?: () => void;
 }
 
 type TableRecord = Record<string, unknown>;
@@ -38,7 +44,13 @@ export default function WarehouseInventoryTable({
   data,
   loading,
   pagination,
+  onAdjusted,
 }: WarehouseInventoryTableProps) {
+  const [editingItem, setEditingItem] = useState<NormalizedInventoryItem | null>(null);
+  const permissions = useAuthStore((state) => state.user?.permissions) ?? [];
+  const canAdjust = hasPermission(permissions, "warehouse.adjust") ||
+    hasPermission(permissions, "inventory-adjustment.create");
+
   const columns: Column[] = [
     {
       key: "warehouse",
@@ -150,20 +162,54 @@ export default function WarehouseInventoryTable({
       width: 150,
       render: (value: unknown) => formatDateTime(value as string | Date | undefined | null),
     },
+    {
+      key: "actions",
+      title: "Hành động",
+      width: 110,
+      fixed: "right" as const,
+      align: "center" as const,
+      render: (_: unknown, record: TableRecord) => {
+        if (!canAdjust) return null;
+        const item = record as unknown as NormalizedInventoryItem;
+        return (
+          <Tooltip title="Sửa số lượng tồn kho">
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => setEditingItem(item)}
+            >
+              Sửa
+            </Button>
+          </Tooltip>
+        );
+      },
+    },
   ];
 
   const tableData = data as unknown as TableRecord[];
 
   return (
-    <DataTable
-      columns={columns}
-      data={tableData}
-      loading={loading}
-      rowKey="itemId"
-      pagination={pagination}
-      scroll={{ x: 1300 }}
-      size="middle"
-      emptyText="Không có dữ liệu tồn kho"
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={tableData}
+        loading={loading}
+        rowKey="itemId"
+        pagination={pagination}
+        scroll={{ x: 1400 }}
+        size="middle"
+        emptyText="Không có dữ liệu tồn kho"
+      />
+      <AdjustInventoryModal
+        open={Boolean(editingItem)}
+        item={editingItem}
+        onClose={() => setEditingItem(null)}
+        onSuccess={() => {
+          setEditingItem(null);
+          onAdjusted?.();
+        }}
+      />
+    </>
   );
 }

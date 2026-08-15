@@ -480,4 +480,14 @@ export const PERMISSIONS = [
     code: "settings.exchange_rate.update",
     name: "Update Exchange Rate",
   },
+
+  // Sprint Settings — Shipping Fee
+  {
+    code: "settings.shipping_fee.view",
+    name: "View Shipping Fee",
+  },
+  {
+    code: "settings.shipping_fee.update",
+    name: "Update Shipping Fee",
+  },
 ];

@@ -11,6 +11,7 @@ import { useWarehouseInventory, type WarehouseInventoryFilters } from "@/hooks/u
 import { useWarehouseInventorySelectors } from "@/hooks/useWarehouseInventory";
 import WarehouseInventoryFiltersComponent from "@/components/warehouse/inventory/WarehouseInventoryFilters";
 import WarehouseInventoryTable from "@/components/warehouse/inventory/WarehouseInventoryTable";
+import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 
 const { Text } = Typography;
 const DEFAULT_PAGE_SIZE = 20;
@@ -78,6 +79,14 @@ export default function WarehouseInventoryPage() {
             }
           />
 
+          <WarehouseQuickPick
+            value={filters.warehouseId}
+            onChange={(warehouseId) =>
+              handleFilterChange({ ...filters, warehouseId, page: 1 })
+            }
+            warehouses={selectors.warehouses}
+          />
+
           <WarehouseInventoryFiltersComponent
             filters={filters}
             onChange={handleFilterChange}
@@ -91,6 +100,7 @@ export default function WarehouseInventoryPage() {
           <WarehouseInventoryTable
             data={items}
             loading={loading}
+            onAdjusted={handleRefresh}
             pagination={{
               current: filters.page ?? 1,
               pageSize: filters.limit ?? DEFAULT_PAGE_SIZE,

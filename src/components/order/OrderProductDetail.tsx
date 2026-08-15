@@ -439,7 +439,7 @@ function GiftSelectionSection({
         style={{ marginBottom: 16 }}
         disabled={disabled}
       >
-        <Space direction="vertical">
+        <Space orientation="vertical">
           <Radio value="RANDOM">
             <Space>
               <QuestionOutlined />
