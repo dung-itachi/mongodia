@@ -139,7 +139,7 @@ async function loadCustomers(): Promise<Map<string, QuickOrderCustomerRef>> {
     customerCode: string;
     fullName: string;
     phone: string;
-    address?: { street?: string; province?: string; district?: string };
+    address?: { street?: string };
   }>) {
     if (!d.phone) continue;
     const phoneKey = d.phone.trim();
@@ -148,11 +148,7 @@ async function loadCustomers(): Promise<Map<string, QuickOrderCustomerRef>> {
       customerCode: d.customerCode,
       fullName: d.fullName,
       phone: d.phone,
-      address: d.address
-        ? [d.address.street, d.address.district, d.address.province]
-            .filter(Boolean)
-            .join(", ")
-        : undefined,
+      address: d.address ? d.address.street : undefined,
       isActive: true,
     });
   }

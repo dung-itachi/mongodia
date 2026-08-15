@@ -16,6 +16,9 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     customerId?: string;
     marketingEmployee?: { _id: string; employeeCode: string; name: string };
     saleEmployee?: { _id: string; employeeCode: string; name: string };
+    combo?: { _id: string; code: string; name: string };
+    product?: { _id: string; code: string; name: string };
+    facebookPage?: { _id: string; code: string; name: string };
     isConverted?: boolean;
     orderId?: string;
     convertedAt?: Date;
@@ -29,12 +32,16 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     phone2: lead.phone2,
     email: lead.email,
     facebookLink: lead.facebookLink,
+    address: lead.address,
     source: lead.sourceType as LeadSource,
     sourceLabel: LEAD_SOURCE_LABELS[lead.sourceType as LeadSource],
     status: lead.status,
     statusLabel: LEAD_STATUS_LABELS[lead.status],
     marketingEmployee: leadAny.marketingEmployee,
     saleEmployee: leadAny.saleEmployee,
+    combo: leadAny.combo,
+    product: leadAny.product,
+    facebookPage: leadAny.facebookPage,
     note: lead.note,
     isDuplicate: lead.isDuplicate,
     // Sprint 5.7 — Lead Convert
@@ -112,9 +119,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       phone: parsed.data.phone ?? undefined,
       phone2: parsed.data.phone2 ?? undefined,
       address: parsed.data.address ?? undefined,
-      province: parsed.data.province ?? undefined,
-      district: parsed.data.district ?? undefined,
-      ward: parsed.data.ward ?? undefined,
       sourceType: sourceTypeValue,
       facebookPageId: parsed.data.facebookPageId ?? undefined,
       facebookPageAssignmentId: parsed.data.facebookPageAssignmentId ?? undefined,

@@ -1,51 +1,22 @@
 /**
  * ==================================================
- * INVENTORY REPOSITORY (DEPRECATED)
+ * INVENTORY REPOSITORY — READ-ONLY LEGACY READS
  * ==================================================
  *
- * @deprecated
- * This repository is DEPRECATED. It writes to the legacy
- * Inventory collection instead of WarehouseInventory (SoT).
+ * Phase 8D-3: All mutation methods removed (decreaseStock, increaseStock,
+ * createMovement, findProductStock, findProductVariant).
  *
- * Replacement mapping:
- *   decreaseStock → NOT NEEDED (use orderShipmentService or stockEngine)
- *   increaseStock → NOT NEEDED (use warehouseWorkflowService)
+ * Only the two read methods remain because they have ACTIVE PRODUCTION
+ * callers (via the read methods of inventory.service.ts):
+ *   - findMovements     → /api/inventory/movements
+ *                         /api/warehouse/tasks/[id]/inventory
+ *   - findMovementById  → /api/inventory/movements/[id]
  *
- * Phase 5 Audit: These methods are only called by deprecated
- * inventoryService methods, which are themselves unused.
- *
- * This repository is kept for backward compatibility and should
- * NOT be used for new stock operations.
+ * They read from the legacy `InventoryMovement` collection.
  */
 
 import mongoose from "mongoose";
-import Inventory from "@/models/Inventory";
-import ProductVariant from "@/models/ProductVariant";
-import { InventoryMovement, type IInventoryMovement, MovementType } from "@/models/InventoryMovement";
-
-// ============================================================================
-// Types
-// ============================================================================
-
-export interface StockItem {
-  warehouseId: string;
-  productVariantId: string;
-  quantity: number;
-  availableQuantity: number;
-}
-
-export interface MovementData {
-  warehouseId: mongoose.Types.ObjectId;
-  orderId: mongoose.Types.ObjectId;
-  warehouseTaskId: mongoose.Types.ObjectId;
-  productVariantId?: mongoose.Types.ObjectId;
-  sku: string;
-  productName: string;
-  quantity: number;
-  type: MovementType;
-  employeeId: mongoose.Types.ObjectId;
-  note?: string;
-}
+import { InventoryMovement, type IInventoryMovement } from "@/models/InventoryMovement";
 
 // ============================================================================
 // Mapper
@@ -73,115 +44,6 @@ function mapMovement(doc: IInventoryMovement) {
 // ============================================================================
 
 export class InventoryRepository {
-  /**
-   * Find product stock in a warehouse
-   */
-  async findProductStock(
-    warehouseId: string,
-    productVariantId: string
-  ): Promise<StockItem | null> {
-    const doc = await Inventory.findOne({
-      warehouseId: new mongoose.Types.ObjectId(warehouseId),
-      productVariantId: new mongoose.Types.ObjectId(productVariantId),
-    }).lean();
-
-    if (!doc) return null;
-
-    return {
-      warehouseId: doc.warehouseId.toString(),
-      productVariantId: doc.productVariantId.toString(),
-      quantity: doc.quantity,
-      availableQuantity: doc.availableQuantity,
-    };
-  }
-
-  /**
-   * Decrease stock quantity (called within a transaction)
-   *
-   * @deprecated Write to WarehouseInventory instead using stockEngine or orderShipmentService.
-   * This method writes to legacy Inventory collection instead of WarehouseInventory (SoT).
-   * Phase 5 Audit: Only called by deprecated inventoryService methods.
-   */
-  async decreaseStock(
-    warehouseId: string,
-    productVariantId: string,
-    quantity: number,
-    session?: mongoose.ClientSession
-  ): Promise<StockItem | null> {
-    const doc = await Inventory.findOneAndUpdate(
-      {
-        warehouseId: new mongoose.Types.ObjectId(warehouseId),
-        productVariantId: new mongoose.Types.ObjectId(productVariantId),
-        availableQuantity: { $gte: quantity },
-      },
-      {
-        $inc: {
-          quantity: -quantity,
-          availableQuantity: -quantity,
-        },
-      },
-      { new: true, session }
-    ).lean();
-
-    if (!doc) return null;
-
-    return {
-      warehouseId: doc.warehouseId.toString(),
-      productVariantId: doc.productVariantId.toString(),
-      quantity: doc.quantity,
-      availableQuantity: doc.availableQuantity,
-    };
-  }
-
-  /**
-   * Increase stock quantity (called within a transaction)
-   *
-   * @deprecated Write to WarehouseInventory instead using warehouseWorkflowService.
-   * This method writes to legacy Inventory collection instead of WarehouseInventory (SoT).
-   * Phase 5 Audit: Only called by deprecated inventoryService methods.
-   */
-  async increaseStock(
-    warehouseId: string,
-    productVariantId: string,
-    quantity: number,
-    session?: mongoose.ClientSession
-  ): Promise<StockItem | null> {
-    const doc = await Inventory.findOneAndUpdate(
-      {
-        warehouseId: new mongoose.Types.ObjectId(warehouseId),
-        productVariantId: new mongoose.Types.ObjectId(productVariantId),
-      },
-      {
-        $inc: {
-          quantity: quantity,
-          availableQuantity: quantity,
-        },
-      },
-      { new: true, session }
-    ).lean();
-
-    if (!doc) return null;
-
-    return {
-      warehouseId: doc.warehouseId.toString(),
-      productVariantId: doc.productVariantId.toString(),
-      quantity: doc.quantity,
-      availableQuantity: doc.availableQuantity,
-    };
-  }
-
-  /**
-   * Create a movement record (called within a transaction)
-   */
-  async createMovement(
-    data: MovementData,
-    session?: mongoose.ClientSession
-  ) {
-    const movement = new InventoryMovement(data);
-    const doc = await movement.save({ session });
-    return mapMovement(doc);
-  }
-
   /**
    * Find movements by warehouse ID with pagination
    */
@@ -223,15 +85,6 @@ export class InventoryRepository {
     const doc = await InventoryMovement.findById(id).lean();
     if (!doc) return null;
     return mapMovement(doc as IInventoryMovement);
-  }
-
-  /**
-   * Find product variant by ID
-   */
-  async findProductVariant(id: string) {
-    return ProductVariant.findById(id)
-      .populate("productId", "_id code name")
-      .lean();
   }
 }
 

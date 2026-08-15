@@ -6,7 +6,7 @@
  */
 
 import { memo, useMemo } from "react";
-import { Button, Space, Tag } from "antd";
+import { Button, Space, Tag, Badge } from "antd";
 import { PhoneOutlined, SwapOutlined, UserSwitchOutlined } from "@ant-design/icons";
 import { DataTable, StatusBadge } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
@@ -139,10 +139,25 @@ function SaleLeadTableInner({
         key: "status",
         title: "Trạng thái",
         dataIndex: "status",
-        width: 140,
-        render: (value: unknown) => (
-          <StatusBadge status={String(value)} />
-        ),
+        width: 160,
+        render: (value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as SaleLead;
+          const noAnswerCount = lead.noAnswerCount ?? 0;
+          return (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+              <StatusBadge status={String(value)} />
+              {noAnswerCount > 0 && (
+                <Tag
+                  color={noAnswerCount >= 3 ? "red" : "gold"}
+                  style={{ fontSize: 11, margin: 0, lineHeight: "18px" }}
+                  title={`Đã gọi ${noAnswerCount} lần không nghe máy`}
+                >
+                  📵 K nghe: {noAnswerCount}
+                </Tag>
+              )}
+            </div>
+          );
+        },
       },
       {
         key: "actions",
@@ -151,18 +166,35 @@ function SaleLeadTableInner({
         align: "center" as const,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
+          const noAnswerCount = lead.noAnswerCount ?? 0;
           return (
             <div className={styles.actionGroup}>
-              {/* No Answer Button */}
-              <Button
+              {/* No Answer Button with badge */}
+              <Badge
+                count={noAnswerCount}
+                offset={[-4, 2]}
                 size="small"
-                danger={lead.status === LeadStatus.NO_ANSWER}
-                type={lead.status === LeadStatus.NO_ANSWER ? "primary" : "default"}
-                onClick={() => onUpdateStatus(lead, LeadStatus.NO_ANSWER)}
-                disabled={lead.status === LeadStatus.CLOSED}
+                style={{
+                  backgroundColor: noAnswerCount >= 3 ? "#ff4d4f" : "#faad14",
+                  boxShadow: "0 0 0 1px #fff",
+                  fontSize: 10,
+                }}
               >
-                K nghe
-              </Button>
+                <Button
+                  size="small"
+                  danger={lead.status === LeadStatus.NO_ANSWER}
+                  type={lead.status === LeadStatus.NO_ANSWER ? "primary" : "default"}
+                  onClick={() => onUpdateStatus(lead, LeadStatus.NO_ANSWER)}
+                  disabled={lead.status === LeadStatus.CLOSED}
+                  title={
+                    noAnswerCount > 0
+                      ? `Đã gọi ${noAnswerCount} lần không nghe${noAnswerCount >= 3 ? " - CẢNH BÁO!" : ""}`
+                      : "Chuyển sang trạng thái Không nghe máy"
+                  }
+                >
+                  K nghe
+                </Button>
+              </Badge>
 
               {/* Potential Button */}
               <Button
@@ -192,8 +224,9 @@ function SaleLeadTableInner({
                 type={lead.status === LeadStatus.LOST ? "primary" : "default"}
                 onClick={() => onUpdateStatus(lead, LeadStatus.LOST)}
                 disabled={lead.status === LeadStatus.CLOSED}
+                title="Không mua - Khách từ chối, không có nhu cầu"
               >
-                Mất
+                Không mua
               </Button>
 
               {/* Convert Button */}
@@ -236,6 +269,19 @@ function SaleLeadTableInner({
         onChange: (keys: React.Key[]) => {
           onSelectionChange(keys as string[]);
         },
+        columnTitle: (
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "help",
+            }}
+            title="Phân công - Tick chọn các đơn rồi dùng thanh công cụ phía trên để phân công cho nhân viên Sale"
+          >
+            Phân công
+          </div>
+        ),
+        width: 90,
       }
     : undefined;
 

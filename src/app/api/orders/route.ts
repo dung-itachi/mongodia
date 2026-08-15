@@ -61,6 +61,24 @@ async function generateOrderCode(
   return `OD${year}${month}${day}${sequence}`;
 }
 
+async function generateCustomerCode(
+  session: mongoose.ClientSession
+): Promise<string> {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+
+  const counter = await Counter.findByIdAndUpdate(
+    `customer_${year}${month}${day}`,
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true, session }
+  ) as unknown as { seq: number };
+
+  const sequence = (counter.seq || 1).toString().padStart(5, "0");
+  return `KH${year}${month}${day}${sequence}`;
+}
+
 // ==================================================
 // GET /api/orders - List with search/filter/sort
 // ==================================================
@@ -84,11 +102,36 @@ export async function GET(request: Request) {
     const orderType = searchParams.get("orderType") ?? "";
     const orderSource = searchParams.get("orderSource") ?? "";
     const warehouseId = searchParams.get("warehouseId") ?? "";
+    const customerId = searchParams.get("customerId") ?? "";
+    const saleEmployeeIdParam = searchParams.get("saleEmployeeId") ?? "";
+    const marketingEmployeeIdParam = searchParams.get("marketingEmployeeId") ?? "";
     const revenueLockedParam = searchParams.get("revenueLocked");
     const createdFrom = searchParams.get("createdFrom") ?? "";
     const createdTo = searchParams.get("createdTo") ?? "";
 
     const filter: Record<string, unknown> = { isActive: true };
+
+    // ---- Filter by customerId -----------------------------------------
+    if (customerId) {
+      if (mongoose.Types.ObjectId.isValid(customerId)) {
+        filter.customerId = new mongoose.Types.ObjectId(customerId);
+      } else {
+        // Bad id → return empty list early
+        return success({ items: [], total: 0, page, limit, totalPages: 1 });
+      }
+    }
+
+    if (saleEmployeeIdParam) {
+      if (mongoose.Types.ObjectId.isValid(saleEmployeeIdParam)) {
+        filter.saleEmployeeId = new mongoose.Types.ObjectId(saleEmployeeIdParam);
+      }
+    }
+
+    if (marketingEmployeeIdParam) {
+      if (mongoose.Types.ObjectId.isValid(marketingEmployeeIdParam)) {
+        filter.marketingEmployeeId = new mongoose.Types.ObjectId(marketingEmployeeIdParam);
+      }
+    }
 
     // ---- Search: orderCode / customerName / phone ---------------------
     if (keyword) {
@@ -224,9 +267,16 @@ export async function POST(request: Request) {
     }
 
     // ---- Reference existence checks ------------------------------------
+    // Auto-create customer nếu thiếu customerId (kèm customerName + customerPhone)
+    let resolvedCustomerId: mongoose.Types.ObjectId | null = data.customerId
+      ? new mongoose.Types.ObjectId(data.customerId)
+      : null;
+
     const [customer, lead, product, productVariant, combo, warehouse, marketing, sale] =
       await Promise.all([
-        Customer.exists({ _id: data.customerId }),
+        resolvedCustomerId
+          ? Customer.exists({ _id: resolvedCustomerId })
+          : Promise.resolve(null),
         data.leadId ? Lead.exists({ _id: data.leadId }) : null,
         data.productId ? Product.exists({ _id: data.productId }) : null,
         data.productVariantId
@@ -242,7 +292,8 @@ export async function POST(request: Request) {
           : null,
       ]);
 
-    if (!customer) return errorResponse("Khách hàng không tồn tại", 400);
+    if (resolvedCustomerId && !customer)
+      return errorResponse("Khách hàng không tồn tại", 400);
     if (data.leadId && !lead) return errorResponse("Lead không tồn tại", 400);
     if (data.productId && !product)
       return errorResponse("Sản phẩm không tồn tại", 400);
@@ -263,6 +314,42 @@ export async function POST(request: Request) {
 
     session.startTransaction();
 
+    // Auto-create customer nếu thiếu customerId
+    if (!resolvedCustomerId) {
+      if (!data.customerName) {
+        await session.abortTransaction();
+        return errorResponse("Tên khách hàng là bắt buộc khi không có mã khách", 400);
+      }
+      if (!data.customerPhone) {
+        await session.abortTransaction();
+        return errorResponse("Số điện thoại khách hàng là bắt buộc khi không có mã khách", 400);
+      }
+      const newCustomerCode = await generateCustomerCode(session);
+      const employee = currentUser.employee as unknown as {
+        _id: mongoose.Types.ObjectId;
+        teamId?: mongoose.Types.ObjectId | null;
+      };
+      // Lấy marketingEmployeeId từ payload nếu có, ngược lại fallback về currentUser
+      const marketingEmployeeId = data.marketingEmployeeId
+        ? new mongoose.Types.ObjectId(data.marketingEmployeeId)
+        : employee._id;
+      const docInput: Record<string, unknown> = {
+        customerCode: newCustomerCode,
+        fullName: data.customerName,
+        phone: data.customerPhone as string,
+        marketingEmployeeId,
+        saleEmployeeId: data.saleEmployeeId
+          ? new mongoose.Types.ObjectId(data.saleEmployeeId)
+          : undefined,
+        teamId: employee.teamId ?? undefined,
+        status: "ACTIVE",
+        createdBy: employee._id,
+        isActive: true,
+      };
+      const [createdCustomer] = await Customer.create([docInput], { session });
+      resolvedCustomerId = createdCustomer._id as mongoose.Types.ObjectId;
+    }
+
     const orderCode = await generateOrderCode(session);
 
     // Sprint Settings: snapshot exchange rate (1 USD → MNT) at order
@@ -273,7 +360,7 @@ export async function POST(request: Request) {
       [
         {
           orderCode,
-          customerId: data.customerId,
+          customerId: resolvedCustomerId,
           customerName: data.customerName,
           customerPhone: data.customerPhone || undefined,
           leadId: data.leadId || undefined,
@@ -324,9 +411,6 @@ export async function POST(request: Request) {
                 receiverName: data.shipping.receiverName,
                 receiverPhone: data.shipping.receiverPhone,
                 address: data.shipping.address,
-                province: data.shipping.province || undefined,
-                district: data.shipping.district || undefined,
-                ward: data.shipping.ward || undefined,
                 trackingNumber: data.shipping.trackingNumber || undefined,
                 carrier: data.shipping.carrier || undefined,
                 estimatedDelivery: data.shipping.estimatedDelivery

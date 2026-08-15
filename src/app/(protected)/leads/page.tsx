@@ -9,7 +9,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { message } from "antd";
+import { App } from "antd";
 import {
   PhoneOutlined,
 } from "@ant-design/icons";
@@ -33,23 +33,26 @@ import type { OrderItem } from "@/types/variant";
 import { LeadStatus } from "@/constants/leadStatus";
 import SaleLeadsToolbar from "@/components/sale/leads/SaleLeadsToolbar";
 import SaleLeadTable from "@/components/sale/leads/SaleLeadTable";
+import LeadStatusLegend from "@/components/sale/leads/LeadStatusLegend";
 import { useAuthStore } from "@/store/auth.store";
 import styles from "@/components/sale/leads/sale-leads.module.css";
 
 export default function SaleLeadsPage() {
   // Get user role from auth store
   const user = useAuthStore((state) => state.user);
+  const { message } = App.useApp();
   const roleCode = typeof user?.role === 'string' ? user.role : user?.role?.code;
   const isAdminOrManager = roleCode === "ADMIN" || roleCode === "MANAGER";
 
   // State
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit, setLimit] = useState(20);
   const [convertingLead, setConvertingLead] = useState<SaleLead | null>(null);
   const [reassigningLead, setReassigningLead] = useState<SaleLead | null>(null);
   // Row selection for bulk operations
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   // Queries
   const { leads, total, loading, refetch } = useSaleLeads({
@@ -118,8 +121,10 @@ export default function SaleLeadsPage() {
     });
   }, [convertingLead, convertMutation, refetch]);
 
-  const handlePageChange = useCallback((newPage: number, _newLimit: number) => {
+  const handlePageChange = useCallback((newPage: number, newLimit: number) => {
     setPage(newPage);
+    setLimit(newLimit);
+    setSelectedKeys([]);
   }, []);
 
   // Handle reassign (Admin/Manager only)
@@ -193,6 +198,7 @@ export default function SaleLeadsPage() {
           }}
           loading={loading}
           total={total}
+          onShowLegend={() => setLegendOpen(true)}
         />
 
         {/* Bulk Reassign Toolbar - Only for Admin/Manager */}
@@ -256,6 +262,11 @@ export default function SaleLeadsPage() {
         lead={reassigningLead}
         onClose={() => setReassigningLead(null)}
         onSuccess={handleReassignSuccess}
+      />
+
+      <LeadStatusLegend
+        open={legendOpen}
+        onClose={() => setLegendOpen(false)}
       />
     </PageContainer>
   );

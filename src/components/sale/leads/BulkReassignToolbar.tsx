@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Button, Select, Space, Spin, message, Modal } from "antd";
+import { Button, Select, Space, Spin, App, Modal } from "antd";
 import { UserSwitchOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import api from "@/lib/axios";
 
@@ -29,6 +29,7 @@ export default function BulkReassignToolbar({
   onClearSelection,
   onSuccess,
 }: BulkReassignToolbarProps) {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);

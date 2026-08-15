@@ -17,9 +17,6 @@ import { CustomerStatus } from "@/models/Customer";
 
 const addressSchema = z.object({
   street: z.string().max(500).optional(),
-  province: z.string().max(100).optional(),
-  district: z.string().max(100).optional(),
-  ward: z.string().max(100).optional(),
 }).optional();
 
 export type AddressInput = z.infer<typeof addressSchema>;

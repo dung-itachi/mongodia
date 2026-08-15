@@ -61,11 +61,7 @@ import {
 type ShippingPayload = {
   receiverName: string;
   receiverPhone: string;
-  address: string;
-  province?: string;
-  district?: string;
-  ward?: string;
-  trackingNumber?: string;
+  address: string;  trackingNumber?: string;
   carrier?: string;
   estimatedDelivery?: Date;
   actualDelivery?: Date;
@@ -207,9 +203,6 @@ async function ensureCustomer(args: {
         marketingEmployeeId: args.marketingEmployeeId,
         address: {
           street: "",
-          province: "",
-          district: "",
-          ward: "",
         },
         gender: "other",
         isActive: true,
@@ -305,9 +298,6 @@ function buildOrderSpecs(args: {
     receiverName: "Nguyễn Văn Nhận",
     receiverPhone: "0987654321",
     address: "123 Nguyễn Trãi, Phường Thanh Xuân",
-    province: "Hà Nội",
-    district: "Thanh Xuân",
-    ward: "Thanh Xuân Trung",
     trackingNumber: `VNPOST${Math.floor(100000000 + Math.random() * 900000000)}`,
     carrier: "VNPost",
     estimatedDelivery: new Date(baseDate.getTime() + 2 * DAY_MS),
@@ -320,9 +310,6 @@ function buildOrderSpecs(args: {
     receiverName: "Trần Thị Nhận",
     receiverPhone: "0987654322",
     address: "456 Lê Lợi, Phường Bến Nghé",
-    province: "TP. Hồ Chí Minh",
-    district: "Quận 1",
-    ward: "Bến Nghé",
     trackingNumber: `JNT${Math.floor(100000000 + Math.random() * 900000000)}`,
     carrier: "J&T Express",
     estimatedDelivery: new Date(baseDate.getTime() + 3 * DAY_MS),
@@ -1440,9 +1427,6 @@ export async function seedOrders() {
             receiverName: spec.shipping.receiverName,
             receiverPhone: spec.shipping.receiverPhone,
             address: spec.shipping.address,
-            province: spec.shipping.province,
-            district: spec.shipping.district,
-            ward: spec.shipping.ward,
             trackingNumber: spec.shipping.trackingNumber ?? "",
             carrier: spec.shipping.carrier ?? "",
             estimatedDelivery: spec.shipping.estimatedDelivery,

@@ -80,14 +80,6 @@ async function getOrderService() {
 }
 
 /**
- * Lazy import InventoryService to avoid circular dependency.
- */
-async function getInventoryService() {
-  const { inventoryService } = await import("@/services/inventory.service");
-  return inventoryService;
-}
-
-/**
  * Get full order document with orderItems and warehouseId.
  * Uses the Order model directly to avoid going through orderService.
  */

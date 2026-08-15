@@ -98,9 +98,6 @@ export interface OrderShippingResponse {
   receiverName: string;
   receiverPhone: string;
   address: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   trackingNumber?: string;
   carrier?: string;
   estimatedDelivery?: string;
@@ -270,9 +267,6 @@ function mapShipping(s: IOrderShipping | undefined): OrderShippingResponse | und
     receiverName: s.receiverName,
     receiverPhone: s.receiverPhone,
     address: s.address,
-    province: s.province,
-    district: s.district,
-    ward: s.ward,
     trackingNumber: s.trackingNumber,
     carrier: s.carrier,
     estimatedDelivery: s.estimatedDelivery?.toISOString(),
@@ -340,7 +334,40 @@ function mapOrderSummary(summary: IOrderSummary | undefined): OrderSummaryRespon
   };
 }
 
+function extractPopulatedProductAndCombo(order: IOrder): {
+  product?: { _id: string; code: string; name: string };
+  combo?: { _id: string; code: string; name: string };
+} {
+  const out: {
+    product?: { _id: string; code: string; name: string };
+    combo?: { _id: string; code: string; name: string };
+  } = {};
+
+  const product = (order as unknown as { productId?: unknown }).productId;
+  if (product && typeof product === "object" && "name" in (product as Record<string, unknown>)) {
+    const p = product as { _id: { toString(): string }; code: string; name: string };
+    out.product = {
+      _id: p._id.toString(),
+      code: p.code,
+      name: p.name,
+    };
+  }
+
+  const combo = (order as unknown as { comboId?: unknown }).comboId;
+  if (combo && typeof combo === "object" && "name" in (combo as Record<string, unknown>)) {
+    const c = combo as { _id: { toString(): string }; code: string; name: string };
+    out.combo = {
+      _id: c._id.toString(),
+      code: c.code,
+      name: c.name,
+    };
+  }
+
+  return out;
+}
+
 export function mapOrder(order: IOrder): OrderResponse {
+  const populated = extractPopulatedProductAndCombo(order);
   return {
     _id: order._id.toString(),
     orderCode: order.orderCode,
@@ -353,6 +380,8 @@ export function mapOrder(order: IOrder): OrderResponse {
     productVariantId: order.productVariantId?.toString(),
     productSnapshot: order.productSnapshot,
     comboSnapshot: order.comboSnapshot,
+    product: populated.product,
+    combo: populated.combo,
     quantity: order.quantity,
     unitPrice: order.unitPrice,
     totalAmount: order.totalAmount,
@@ -403,6 +432,8 @@ export function mapOrderList(
     "marketingEmployeeId",
     "saleEmployeeId",
     "warehouseId",
+    "productId",
+    "comboId",
   ]
 ): OrderListItem[] {
   return orders.map((order) => {

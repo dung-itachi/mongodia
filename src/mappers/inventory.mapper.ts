@@ -1,9 +1,11 @@
 /**
  * ==================================================
- * Inventory Mapper
+ * Inventory Mapper (WarehouseInventory-backed)
  * ==================================================
  *
- * Convert IInventoryHistory (Mongoose Document) → InventoryHistoryResponse (DTO).
+ * Convert WarehouseInventory (Mongoose Document) → InventoryListItem (DTO).
+ *
+ * Source of truth: WarehouseInventory collection (itemType: "PRODUCT").
  *
  * KHÔNG truy cập DB.
  * KHÔNG rule logic.
@@ -230,14 +232,14 @@ export interface InventoryListItem {
   updatedAt: string;
 }
 
-/** Map inventory list item from populated Inventory document. */
+/** Map inventory list item from populated WarehouseInventory document. */
 export function mapInventoryList(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   item: any
 ): InventoryListItem {
   const warehouse = item.warehouseId as Record<string, unknown> | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const productVariant = (item.productVariantId as any) as Record<string, unknown> | null;
+  const productVariant = (item.variantId as any) as Record<string, unknown> | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const product = (productVariant?.productId as any) as Record<string, unknown> | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -38,11 +38,7 @@ export interface OrderPaymentPayload {
 export interface OrderShippingPayload {
   receiverName: string;
   receiverPhone: string;
-  address: string;
-  province?: string;
-  district?: string;
-  ward?: string;
-  trackingNumber?: string;
+  address: string;  trackingNumber?: string;
   carrier?: string;
   estimatedDelivery?: string | null;
   actualDelivery?: string | null;
@@ -99,9 +95,6 @@ function canonicalShipping(
     receiverName: normaliseString(s.receiverName),
     receiverPhone: normaliseString(s.receiverPhone),
     address: normaliseString(s.address),
-    province: normaliseString(s.province),
-    district: normaliseString(s.district),
-    ward: normaliseString(s.ward),
     trackingNumber: normaliseString(s.trackingNumber),
     carrier: normaliseString(s.carrier),
     estimatedDelivery: normaliseDate(

@@ -15,6 +15,7 @@ import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LEAD_STATUS_LABELS, LeadStatus } from "@/constants/leadStatus";
 import { MARKETING_LEAD_ACTION_LABELS } from "@/constants/marketing";
 import type { MarketingLead } from "@/types/marketing-lead";
+import { LEAD_STATUS_BADGE_MAPPING } from "@/components/common/display/StatusBadge";
 import styles from "./marketing-input.module.css";
 
 export type MarketingLeadTableProps = {
@@ -71,8 +72,21 @@ function MarketingLeadTableInner({
         render: (value: unknown) => value ? String(value) : <span className={styles["mi-muted-text"]}>-</span>,
       },
       {
+        key: "product",
+        title: "Sản phẩm",
+        width: 200,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const product = (record as unknown as MarketingLead).product;
+          return product ? (
+            <span className={styles["mi-combo-text"]}>{product.name}</span>
+          ) : (
+            <span className={styles["mi-muted-text"]}>-</span>
+          );
+        },
+      },
+      {
         key: "combo",
-        title: "Combo",
+        title: "Combo SP",
         width: 200,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const combo = (record as unknown as MarketingLead).combo;
@@ -107,9 +121,13 @@ function MarketingLeadTableInner({
         key: "status",
         title: "Trạng thái",
         dataIndex: "status",
-        width: 100,
+        width: 130,
         render: (value: unknown) => (
-          <StatusBadge status={LEAD_STATUS_LABELS[value as LeadStatus] ?? String(value)} />
+          <StatusBadge
+            status={String(value)}
+            showIcon
+            mapping={LEAD_STATUS_BADGE_MAPPING}
+          />
         ),
       },
       {
@@ -155,7 +173,7 @@ function MarketingLeadTableInner({
       pagination={false}
       rowKey="_id"
       size="small"
-      scroll={{ x: 1200 }}
+      scroll={{ x: 1500 }}
       rowSelection={rowSelection}
     />
   );

@@ -1,7 +1,7 @@
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 
-import Inventory from "@/models/Inventory";
+import WarehouseInventory from "@/models/WarehouseInventory";
 import ProductVariant from "@/models/ProductVariant";
 
 import {
@@ -38,14 +38,17 @@ export async function GET(request: Request) {
     const productVariantId = searchParams.get("productVariantId") ?? "";
     const search = searchParams.get("search") ?? "";
 
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = {
+      itemType: "PRODUCT",
+      isActive: true,
+    };
 
     if (warehouseId) {
       filter.warehouseId = warehouseId;
     }
 
     if (productVariantId) {
-      filter.productVariantId = productVariantId;
+      filter.variantId = productVariantId;
     }
 
     if (search) {
@@ -61,7 +64,7 @@ export async function GET(request: Request) {
           .select("_id")
           .lean();
 
-        filter.productVariantId = {
+        filter.variantId = {
           $in: variants.map((v) => v._id),
         };
       }
@@ -70,9 +73,9 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
 
     const [items, total] = await Promise.all([
-      Inventory.find(filter)
+      WarehouseInventory.find(filter)
         .populate({
-          path: "productVariantId",
+          path: "variantId",
           populate: [
             {
               path: "productId",
@@ -90,11 +93,11 @@ export async function GET(request: Request) {
         .skip(skip)
         .limit(limit)
         .lean(),
-      Inventory.countDocuments(filter),
+      WarehouseInventory.countDocuments(filter),
     ]);
 
     return success({
-      items: items.map(mapInventoryList),
+      items: items.map((item) => mapInventoryList(item)),
       total,
       page,
       limit,

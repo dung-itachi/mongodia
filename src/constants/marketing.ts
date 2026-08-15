@@ -3,13 +3,9 @@ import { LeadStatus, LEAD_STATUS_LABELS } from "@/constants/leadStatus";
 
 export { LEAD_SOURCE_LABELS, LEAD_STATUS_LABELS };
 
-export const LEAD_STATUS_OPTIONS = [
-  { value: LeadStatus.NEW, label: LEAD_STATUS_LABELS[LeadStatus.NEW] },
-  { value: LeadStatus.CONTACTED, label: LEAD_STATUS_LABELS[LeadStatus.CONTACTED] },
-  { value: LeadStatus.ASSIGNED, label: LEAD_STATUS_LABELS[LeadStatus.ASSIGNED] },
-  { value: LeadStatus.CLOSED, label: LEAD_STATUS_LABELS[LeadStatus.CLOSED] },
-  { value: LeadStatus.CANCELLED, label: LEAD_STATUS_LABELS[LeadStatus.CANCELLED] },
-];
+export const LEAD_STATUS_OPTIONS = (Object.values(LeadStatus) as LeadStatus[]).map(
+  (status) => ({ value: status, label: LEAD_STATUS_LABELS[status] })
+);
 
 export const LEAD_SOURCE_OPTIONS = Object.values(LeadSource).map((source) => ({
   value: source,

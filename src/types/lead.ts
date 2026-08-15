@@ -22,9 +22,6 @@ export interface Lead {
   phone2?: string;
   email?: string;
   address?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   sourceType: SourceType;
   facebookPageId?: string;
   facebookPageAssignmentId?: string;
@@ -47,6 +44,11 @@ export interface Lead {
     name: string;
   };
   combo?: {
+    _id: string;
+    code: string;
+    name: string;
+  };
+  product?: {
     _id: string;
     code: string;
     name: string;
@@ -127,9 +129,6 @@ export interface CreateLeadInput {
   phone2?: string;
   email?: string;
   address?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   sourceType: SourceType;
   facebookPageId?: string;
   facebookPageAssignmentId?: string;
@@ -170,9 +169,6 @@ export interface UpdateLeadInput {
   phone2?: string;
   email?: string;
   address?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   sourceType?: SourceType;
   facebookPageId?: string;
   facebookPageAssignmentId?: string;

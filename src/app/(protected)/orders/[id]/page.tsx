@@ -11,7 +11,7 @@
 
 import { use, useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Row, Col, Table, message, Button, Dropdown, Space, Form, Input, Modal } from "antd";
+import { Row, Col, Table, message, Button, Dropdown, Space, Form, Input, Modal, Checkbox } from "antd";
 import type { TableColumnsType } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -56,16 +56,36 @@ export default function OrderDetailPage({ params }: PageProps) {
   const editOpen = searchParams.get("mode") === "edit";
   const [editLoading, setEditLoading] = useState(false);
 
+  // Sprint 6.x: Watch checkbox "Cần giao hàng" để ẩn/hiện nhóm thông tin giao hàng
+  const needShipping = Form.useWatch("needShipping", editForm);
+
   useEffect(() => {
     if (!order || !editOpen) return;
+
+    const hasShipping =
+      Boolean(order.shipping?.receiverName) ||
+      Boolean(order.shipping?.receiverPhone) ||
+      Boolean(order.shipping?.address) ||
+      Boolean(order.shipping?.carrier) ||
+      Boolean(order.shipping?.trackingNumber);
 
     editForm.resetFields();
     editForm.setFieldsValue({
       customerName: order.customerName ?? "",
       customerPhone: order.customerPhone ?? "",
       note: order.note ?? "",
-      receiverName: order.shipping?.receiverName ?? "",
-      receiverPhone: order.shipping?.receiverPhone ?? "",
+      // UX: Nếu đơn đã có thông tin giao hàng → fill giá trị thật.
+      //     Nếu chưa có → mặc định Người nhận/SĐT người nhận = Tên/SĐT khách
+      //     để tránh cảm giác "thừa ô" và người dùng không phải nhập lại.
+      needShipping: hasShipping,
+      receiverName:
+        order.shipping?.receiverName ||
+        order.customerName ||
+        "",
+      receiverPhone:
+        order.shipping?.receiverPhone ||
+        order.customerPhone ||
+        "",
       address: order.shipping?.address ?? "",
       carrier: order.shipping?.carrier ?? "",
       trackingNumber: order.shipping?.trackingNumber ?? "",
@@ -121,15 +141,12 @@ export default function OrderDetailPage({ params }: PageProps) {
 
   const handleEditSave = useCallback(async () => {
     const values = await editForm.validateFields();
-    const hasShippingDetails = [
-      values.receiverName,
-      values.receiverPhone,
-      values.address,
-      values.carrier,
-      values.trackingNumber,
-    ].some((value) => Boolean(value));
 
-    if (hasShippingDetails && (!values.receiverName?.trim() || !values.receiverPhone?.trim() || !values.address?.trim())) {
+    // Sprint 6.x: user tick / bỏ tick "Cần giao hàng" → quyết định có
+    // gửi lại block shipping hay xoá block shipping hiện có.
+    const needShipping = Boolean(values.needShipping);
+
+    if (needShipping && (!values.receiverName?.trim() || !values.receiverPhone?.trim() || !values.address?.trim())) {
       message.error("Vui lòng nhập đủ người nhận, số điện thoại và địa chỉ giao hàng");
       return;
     }
@@ -142,7 +159,8 @@ export default function OrderDetailPage({ params }: PageProps) {
           customerName: values.customerName.trim(),
           customerPhone: values.customerPhone?.trim() || undefined,
           note: values.note?.trim() || undefined,
-          shipping: hasShippingDetails
+          // null = xoá block giao hàng; undefined = giữ nguyên (không đụng đến).
+          shipping: needShipping
             ? {
                 receiverName: values.receiverName?.trim() || "",
                 receiverPhone: values.receiverPhone?.trim() || "",
@@ -152,8 +170,8 @@ export default function OrderDetailPage({ params }: PageProps) {
                 shippingFee: Number(values.shippingFee ?? 0),
                 shippingFeeCurrency: order?.shipping?.shippingFeeCurrency ?? order?.currency ?? "VND",
               }
-            : undefined,
-          summaryShippingFee: Number(values.shippingFee ?? 0),
+            : null,
+          summaryShippingFee: needShipping ? Number(values.shippingFee ?? 0) : 0,
         },
       });
       message.success("Cập nhật đơn hàng thành công");
@@ -221,16 +239,33 @@ export default function OrderDetailPage({ params }: PageProps) {
 
   const productColumns: TableColumnsType<OrderItem> = [
     {
-      title: "Combo / chi tiết",
+      title: "Combo / Sản phẩm",
       key: "combo",
       render: (_: unknown, item: OrderItem) => {
         const totalProducts = item.comboQuantity * item.packageQuantity;
         const totalGifts = item.comboQuantity * item.giftQuantity;
         const details = item.details ?? [];
         const gifts = item.giftSelections ?? [];
+        // Hiển thị TÁCH comboName và productName khi cả 2 tồn tại.
+        // Trước đây: chỉ show comboName || productName (1 dòng) → dễ mất thông tin sản phẩm.
+        const hasCombo = Boolean(item.comboName);
+        const hasProduct = Boolean(item.productName);
         return (
           <Space direction="vertical" size={4} style={{ width: "100%" }}>
-            <strong>{item.comboName || item.productName}</strong>
+            {hasCombo && (
+              <span>
+                <strong>Combo:</strong> {item.comboName}
+                {item.comboCode && (
+                  <span style={{ color: "#8c8c8c", marginLeft: 4 }}>({item.comboCode})</span>
+                )}
+              </span>
+            )}
+            {hasProduct && (
+              <span>
+                <strong>Sản phẩm:</strong> {item.productName}
+              </span>
+            )}
+            {!hasCombo && !hasProduct && <strong>-</strong>}
             <span style={{ color: "#8c8c8c" }}>
               {item.comboQuantity} combo x {item.packageQuantity} SP = {totalProducts} SP
             </span>
@@ -599,6 +634,33 @@ export default function OrderDetailPage({ params }: PageProps) {
                     </>
                   ) : null}
                 />
+              ) : order.product || order.combo ? (
+                <Row gutter={[16, 8]}>
+                  {order.product && (
+                    <Col xs={24} sm={12}>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Sản phẩm</div>
+                      <div style={{ fontWeight: 500 }}>{order.product.name}</div>
+                      {order.product.code && (
+                        <div style={{ fontSize: 12, color: "#8c8c8c" }}>Mã: {order.product.code}</div>
+                      )}
+                    </Col>
+                  )}
+                  {order.combo && (
+                    <Col xs={24} sm={12}>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Combo sản phẩm</div>
+                      <div style={{ fontWeight: 500 }}>{order.combo.name}</div>
+                      {order.combo.code && (
+                        <div style={{ fontSize: 12, color: "#8c8c8c" }}>Mã: {order.combo.code}</div>
+                      )}
+                    </Col>
+                  )}
+                  {typeof order.quantity === "number" && (
+                    <Col xs={24} sm={12}>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Số lượng</div>
+                      <div>{order.quantity}</div>
+                    </Col>
+                  )}
+                </Row>
               ) : (
                 <div style={{ textAlign: "center", color: "#8c8c8c", padding: 24 }}>
                   Chưa có sản phẩm
@@ -651,12 +713,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                   </Col>
                   <Col xs={24}>
                     <div style={{ color: "#8c8c8c", fontSize: 12 }}>Địa chỉ</div>
-                    <div>{[
-                      order.shipping.address,
-                      order.shipping.ward,
-                      order.shipping.district,
-                      order.shipping.province,
-                    ].filter(Boolean).join(", ") || "-"}</div>
+                    <div>{order.shipping.address || "-"}</div>
                   </Col>
                   <Col xs={24} sm={12}>
                     <div style={{ color: "#8c8c8c", fontSize: 12 }}>Phí ship</div>
@@ -862,30 +919,79 @@ export default function OrderDetailPage({ params }: PageProps) {
           <Form.Item name="customerPhone" label="Số điện thoại">
             <Input maxLength={20} />
           </Form.Item>
-          <Form.Item name="receiverName" label="Người nhận">
-            <Input maxLength={200} />
+          {/* Tóm tắt sản phẩm/combo đang sửa — read-only để người dùng
+              biết mình đang sửa đơn có sản phẩm nào. */}
+          {(order.product || order.combo) && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                background: "#fafafa",
+                border: "1px solid #f0f0f0",
+                borderRadius: 6,
+              }}
+            >
+              <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 6 }}>Sản phẩm của đơn</div>
+              {order.combo && (
+                <div>
+                  <strong>Combo:</strong> {order.combo.name}
+                  {order.combo.code && <span style={{ color: "#8c8c8c" }}> ({order.combo.code})</span>}
+                </div>
+              )}
+              {order.product && (
+                <div>
+                  <strong>Sản phẩm:</strong> {order.product.name}
+                  {order.product.code && <span style={{ color: "#8c8c8c" }}> ({order.product.code})</span>}
+                </div>
+              )}
+              <div style={{ fontSize: 12, color: "#8c8c8c", marginTop: 4 }}>
+                Để đổi sản phẩm/combo, vui lòng xoá đơn và tạo đơn mới.
+              </div>
+            </div>
+          )}
+          <Form.Item name="needShipping" valuePropName="checked" style={{ marginBottom: 12 }}>
+            <Checkbox>Cần giao hàng</Checkbox>
           </Form.Item>
-          <Form.Item name="receiverPhone" label="SĐT người nhận">
-            <Input maxLength={20} />
-          </Form.Item>
-          <Form.Item name="address" label="Địa chỉ giao hàng">
-            <Input.TextArea rows={2} maxLength={500} />
-          </Form.Item>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item name="carrier" label="Đơn vị vận chuyển">
-                <Input maxLength={100} />
+          {needShipping && (
+            <>
+              <Form.Item
+                name="receiverName"
+                label="Người nhận"
+                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập người nhận" }]}
+              >
+                <Input maxLength={200} />
               </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="trackingNumber" label="Mã vận đơn">
-                <Input maxLength={100} />
+              <Form.Item
+                name="receiverPhone"
+                label="SĐT người nhận"
+                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập số điện thoại người nhận" }]}
+              >
+                <Input maxLength={20} />
               </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="shippingFee" label="Phí vận chuyển">
-            <Input type="number" min={0} step={1000} />
-          </Form.Item>
+              <Form.Item
+                name="address"
+                label="Địa chỉ giao hàng"
+                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập địa chỉ giao hàng" }]}
+              >
+                <Input.TextArea rows={2} maxLength={500} />
+              </Form.Item>
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item name="carrier" label="Đơn vị vận chuyển">
+                    <Input maxLength={100} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="trackingNumber" label="Mã vận đơn">
+                    <Input maxLength={100} />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item name="shippingFee" label="Phí vận chuyển">
+                <Input type="number" min={0} step={1000} />
+              </Form.Item>
+            </>
+          )}
           <Form.Item name="note" label="Ghi chú">
             <Input.TextArea rows={3} maxLength={1000} />
           </Form.Item>

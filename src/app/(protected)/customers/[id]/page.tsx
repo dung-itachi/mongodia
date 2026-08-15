@@ -229,9 +229,6 @@ export default function CustomerDetailPage({ params }: PageProps) {
                       {customer.address ? (
                         <div className="space-y-1">
                           {customer.address.street && <p>{customer.address.street}</p>}
-                          {customer.address.ward && <p>Phường/Xã: {customer.address.ward}</p>}
-                          {customer.address.district && <p>Quận/Huyện: {customer.address.district}</p>}
-                          {customer.address.province && <p>Tỉnh/Thành phố: {customer.address.province}</p>}
                         </div>
                       ) : (
                         <p className="text-gray-500">Chưa có địa chỉ</p>

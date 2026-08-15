@@ -24,7 +24,7 @@ const STATUS_OPTIONS: { value: LeadStatus | "all"; label: string }[] = [
   { value: LeadStatus.QUALIFIED, label: "Đủ điều kiện" },
   { value: LeadStatus.POTENTIAL, label: "Tiềm năng" },
   { value: LeadStatus.CLOSED, label: "Đã chốt" },
-  { value: LeadStatus.LOST, label: "Mất" },
+  { value: LeadStatus.LOST, label: "Không mua" },
 ];
 
 export default function MarketingLeadTrackingToolbar({

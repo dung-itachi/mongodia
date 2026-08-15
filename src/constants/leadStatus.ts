@@ -22,7 +22,7 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   [LeadStatus.NO_ANSWER]: "Không nghe máy",
   [LeadStatus.POTENTIAL]: "Tiềm năng",
   [LeadStatus.CLOSED]: "Đã chốt",
-  [LeadStatus.LOST]: "Mất",
+  [LeadStatus.LOST]: "Không mua",
   [LeadStatus.ORDER_CREATED]: "Đã tạo đơn",
   [LeadStatus.REJECTED]: "Từ chối",
   [LeadStatus.CANCELLED]: "Hủy",

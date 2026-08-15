@@ -7,6 +7,7 @@ import {
   InventoryTransactionType,
   InventoryReferenceType,
 } from "@/constants/inventoryStatus";
+import { LeadStatus } from "@/constants/leadStatus";
 
 export const loginSchema = z.object({
   username: z
@@ -722,6 +723,7 @@ export const createFacebookPageAssignmentSchema = z
 // Lead schemas
 const VIETNAMESE_PHONE_REGEX = /^(0[0-9]{9,10})$/;
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const FLEXIBLE_PHONE_REGEX = /^[0-9+\s().-]{8,20}$/;
 
 const facebookLinkSchema = z
   .string()
@@ -780,24 +782,6 @@ export const createLeadSchema = z.object({
     .string()
     .trim()
     .max(500, "Ã„ÂÃ¡Â»â€¹a chÃ¡Â»â€° tÃ¡Â»â€˜i Ã„â€˜a 500 kÃƒÂ½ tÃ¡Â»Â±")
-    .optional(),
-
-  province: z
-    .string()
-    .trim()
-    .max(100, "TÃ¡Â»â€°nh/ThÃƒÂ nh phÃ¡Â»â€˜ tÃ¡Â»â€˜i Ã„â€˜a 100 kÃƒÂ½ tÃ¡Â»Â±")
-    .optional(),
-
-  district: z
-    .string()
-    .trim()
-    .max(100, "QuÃ¡ÂºÂ­n/HuyÃ¡Â»â€¡n tÃ¡Â»â€˜i Ã„â€˜a 100 kÃƒÂ½ tÃ¡Â»Â±")
-    .optional(),
-
-  ward: z
-    .string()
-    .trim()
-    .max(100, "PhÃ†Â°Ã¡Â»Âng/XÃƒÂ£ tÃ¡Â»â€˜i Ã„â€˜a 100 kÃƒÂ½ tÃ¡Â»Â±")
     .optional(),
 
   sourceType: z.enum([
@@ -865,16 +849,7 @@ export const createLeadSchema = z.object({
     .min(0, "TrÃ¡Â»Âng lÃ†Â°Ã¡Â»Â£ng Ã†Â°Ã¡Â»â€ºc tÃƒÂ­nh khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c ÃƒÂ¢m")
     .optional(),
 
-  status: z.enum([
-    "NEW",
-    "ASSIGNED",
-    "PROCESSING",
-    "NO_ANSWER",
-    "POTENTIAL",
-    "REJECTED",
-    "ORDER_CREATED",
-    "CANCELLED",
-  ]).optional().default("NEW"),
+  status: z.nativeEnum(LeadStatus).optional().default(LeadStatus.NEW),
 
   latestRemark: z
     .string()
@@ -919,39 +894,21 @@ export const updateLeadSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "SÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡")
+    .regex(FLEXIBLE_PHONE_REGEX, "Phone invalid 1")
     .optional()
     .or(z.literal("")),
 
   phone2: z
     .string()
     .trim()
-    .regex(VIETNAMESE_PHONE_REGEX, "SÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i 2 khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡")
+    .regex(FLEXIBLE_PHONE_REGEX, "Phone invalid 2")
     .optional()
     .or(z.literal("")),
 
   address: z
     .string()
     .trim()
-    .max(500, "Ã„ÂÃ¡Â»â€¹a chÃ¡Â»â€° tÃ¡Â»â€˜i Ã„â€˜a 500 kÃƒÂ½ tÃ¡Â»Â±")
-    .optional(),
-
-  province: z
-    .string()
-    .trim()
-    .max(100, "TÃ¡Â»â€°nh/ThÃƒÂ nh phÃ¡Â»â€˜ tÃ¡Â»â€˜i Ã„â€˜a 100 kÃƒÂ½ tÃ¡Â»Â±")
-    .optional(),
-
-  district: z
-    .string()
-    .trim()
-    .max(100, "QuÃ¡ÂºÂ­n/HuyÃ¡Â»â€¡n tÃ¡Â»â€˜i Ã„â€˜a 100 kÃƒÂ½ tÃ¡Â»Â±")
-    .optional(),
-
-  ward: z
-    .string()
-    .trim()
-    .max(100, "PhÃ†Â°Ã¡Â»Âng/XÃƒÂ£ tÃ¡Â»â€˜i Ã„â€˜a 100 kÃƒÂ½ tÃ¡Â»Â±")
+    .max(500, "Address max 500 chars")
     .optional(),
 
   sourceType: z.enum([
@@ -1025,16 +982,7 @@ export const updateLeadSchema = z.object({
     .min(0, "TrÃ¡Â»Âng lÃ†Â°Ã¡Â»Â£ng Ã†Â°Ã¡Â»â€ºc tÃƒÂ­nh khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c ÃƒÂ¢m")
     .optional(),
 
-  status: z.enum([
-    "NEW",
-    "ASSIGNED",
-    "PROCESSING",
-    "NO_ANSWER",
-    "POTENTIAL",
-    "REJECTED",
-    "ORDER_CREATED",
-    "CANCELLED",
-  ]).optional(),
+  status: z.nativeEnum(LeadStatus).optional(),
 
   latestRemark: z
     .string()
@@ -1175,9 +1123,6 @@ const orderShippingSchema = z.object({
     .trim()
     .min(1, "Ã„ÂÃ¡Â»â€¹a chÃ¡Â»â€° giao hÃƒÂ ng lÃƒÂ  bÃ¡ÂºÂ¯t buÃ¡Â»â„¢c")
     .max(500),
-  province: z.string().max(100).optional(),
-  district: z.string().max(100).optional(),
-  ward: z.string().max(100).optional(),
   trackingNumber: z.string().max(100).optional(),
   carrier: z.string().max(100).optional(),
   estimatedDelivery: z.string().datetime().optional().nullable(),
@@ -1243,13 +1188,14 @@ const orderItemSchema = z.object({
 export const createOrderSchema = z.object({
   customerId: z
     .string()
-    .regex(OBJECT_ID_REGEX_ORDER, "Customer khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡")
-    .min(1, "Customer lÃƒÂ  bÃ¡ÂºÂ¯t buÃ¡Â»â„¢c"),
+    .regex(OBJECT_ID_REGEX_ORDER, "Customer không hợp lệ")
+    .optional()
+    .nullable(),
 
   customerName: z
     .string()
     .trim()
-    .min(1, "TÃƒÂªn khÃƒÂ¡ch hÃƒÂ ng lÃƒÂ  bÃ¡ÂºÂ¯t buÃ¡Â»â„¢c")
+    .min(1, "Tên khách hàng là bắt buộc")
     .max(200),
 
   customerPhone: z.string().max(20).optional(),

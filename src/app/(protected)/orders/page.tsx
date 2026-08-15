@@ -13,12 +13,13 @@ import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { message, Dropdown, Button, Space } from "antd";
 import {
-  PlusOutlined,
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
-  UploadOutlined,
+  CheckCircleOutlined,
+  InboxOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -27,16 +28,15 @@ import DataTable from "@/components/common/table/DataTable";
 import TableToolbar from "@/components/common/table/TableToolbar";
 import FilterBar from "@/components/common/filters/FilterBar";
 import StatusBadge from "@/components/common/display/StatusBadge";
-import ActionButton from "@/components/common/buttons/ActionButton";
 import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonTable from "@/components/common/overlay/SkeletonTable";
-import PermissionGate from "@/components/common/PermissionGate";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
 
-import { useOrders, useDeleteOrder } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder, useChangeOrderStatus } from "@/hooks/useOrders";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ORDER_STATUS_LABELS } from "@/constants/orderStatus";
 import type { OrderStatus } from "@/constants/orderStatus";
+import { STATUS_ACTIONS } from "@/configs/order-status.config";
 import type { OrderListItem } from "@/types/order";
 
 export default function OrdersPage() {
@@ -74,6 +74,14 @@ function OrdersPageInner() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Quick action state (for ?status=CONFIRMED)
+  const [quickActionTarget, setQuickActionTarget] = useState<{
+    order: OrderListItem;
+    targetStatus: string;
+    label: string;
+  } | null>(null);
+  const [quickActionLoading, setQuickActionLoading] = useState(false);
+
   // Build filter params
   const filterParams = useMemo(() => ({
     keyword: debouncedKeyword,
@@ -89,6 +97,12 @@ function OrdersPageInner() {
 
   // Delete mutation
   const deleteMutation = useDeleteOrder();
+
+  // Status change mutation
+  const changeStatusMutation = useChangeOrderStatus();
+
+  // Show quick action buttons only for CONFIRMED status
+  const showQuickActions = status === "CONFIRMED";
 
   const handleFilterChange = useCallback((values: Record<string, unknown>) => {
     if (values.status !== undefined) {
@@ -109,6 +123,56 @@ function OrdersPageInner() {
       giftQuantity: items.reduce((sum, item) => sum + item.comboQuantity * item.giftQuantity, 0),
     };
   }, []);
+
+  // Handle quick status change (open confirm dialog)
+  const handleQuickAction = useCallback(
+    (order: OrderListItem, targetStatus: string, label: string) => {
+      setQuickActionTarget({ order, targetStatus, label });
+    },
+    []
+  );
+
+  // Confirm quick status change
+  const handleConfirmQuickAction = useCallback(async () => {
+    if (!quickActionTarget) return;
+
+    setQuickActionLoading(true);
+    try {
+      await changeStatusMutation.mutateAsync({
+        id: quickActionTarget.order._id,
+        data: { status: quickActionTarget.targetStatus },
+      });
+      const targetLabel =
+        ORDER_STATUS_LABELS[quickActionTarget.targetStatus as OrderStatus] ??
+        quickActionTarget.targetStatus;
+      message.success(`Đã chuyển đơn sang "${targetLabel}"`);
+      setQuickActionTarget(null);
+      void refetch();
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : "Chuyển trạng thái thất bại"
+      );
+    } finally {
+      setQuickActionLoading(false);
+    }
+  }, [quickActionTarget, changeStatusMutation, refetch]);
+
+  // Handle delete
+  const handleDelete = useCallback(async () => {
+    if (!deleteId) return;
+
+    setDeleteLoading(true);
+    try {
+      await deleteMutation.mutateAsync(deleteId);
+      message.success("Xóa đơn hàng thành công");
+      setDeleteId(null);
+      void refetch();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "Xóa đơn hàng thất bại");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [deleteId, deleteMutation, refetch]);
 
   // Table columns
   const columns = useMemo(() => [
@@ -147,6 +211,32 @@ function OrdersPageInner() {
       title: "Combo",
       width: 200,
       render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).comboName,
+    },
+    {
+      key: "product",
+      title: "Sản phẩm",
+      width: 180,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const order = record as unknown as OrderListItem;
+        const productName = order.product?.name;
+        if (productName) {
+          return <span>{productName}</span>;
+        }
+        return <span style={{ color: "#bfbfbf" }}>-</span>;
+      },
+    },
+    {
+      key: "comboProduct",
+      title: "Combo sản phẩm",
+      width: 180,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const order = record as unknown as OrderListItem;
+        const comboName = order.combo?.name;
+        if (comboName) {
+          return <span>{comboName}</span>;
+        }
+        return <span style={{ color: "#bfbfbf" }}>-</span>;
+      },
     },
     {
       key: "comboQuantity",
@@ -228,10 +318,67 @@ function OrdersPageInner() {
     {
       key: "actions",
       title: "Thao tác",
-      width: 100,
+      width: showQuickActions ? 280 : 100,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
         const order = record as unknown as OrderListItem;
+
+        // Khi filter theo status=CONFIRMED, hiển thị thẳng các nút chức năng thay vì chỉ nút 3 chấm
+        if (showQuickActions) {
+          const actions = STATUS_ACTIONS[order.status] ?? [];
+          // Chỉ hiển thị các action forward trong status hiện tại của order
+          const renderableActions = order.status === "CONFIRMED" ? actions : [];
+
+          return (
+            <Space
+              size={6}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <Button
+                type="text"
+                icon={<EyeOutlined />}
+                size="small"
+                aria-label="Xem chi tiết"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/orders/${order._id}`);
+                }}
+              >
+                Xem
+              </Button>
+              {renderableActions.map((action) => {
+                const isDanger = action.color === "red";
+                const icon =
+                  action.targetStatus === "PACKING" ? (
+                    <InboxOutlined />
+                  ) : action.targetStatus === "CANCELLED" ? (
+                    <StopOutlined />
+                  ) : (
+                    <CheckCircleOutlined />
+                  );
+                return (
+                  <Button
+                    key={action.targetStatus}
+                    type={isDanger ? "default" : "primary"}
+                    danger={isDanger}
+                    icon={icon}
+                    size="small"
+                    aria-label={action.label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleQuickAction(order, action.targetStatus, action.label);
+                    }}
+                  >
+                    {action.label}
+                  </Button>
+                );
+              })}
+            </Space>
+          );
+        }
+
+        // Mặc định: dropdown menu 3 chấm
         return (
           <Dropdown
             trigger={["click"]}
@@ -273,24 +420,7 @@ function OrdersPageInner() {
         );
       },
     },
-  ], [router, orders, getOrderItemTotals]);
-
-  // Handle delete
-  const handleDelete = useCallback(async () => {
-    if (!deleteId) return;
-
-    setDeleteLoading(true);
-    try {
-      await deleteMutation.mutateAsync(deleteId);
-      message.success("Xóa đơn hàng thành công");
-      setDeleteId(null);
-      void refetch();
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : "Xóa đơn hàng thất bại");
-    } finally {
-      setDeleteLoading(false);
-    }
-  }, [deleteId, deleteMutation, refetch]);
+  ], [router, orders, getOrderItemTotals, showQuickActions, handleQuickAction]);
 
   // Pagination config
   const pagination = useMemo(() => ({
@@ -345,28 +475,10 @@ function OrdersPageInner() {
       <PageHeader
         title={pageTitle}
         subtitle={`${total} đơn hàng`}
-        breadcrumb={[
+          breadcrumb={[
           { label: "Trang chủ", href: "/" },
           { label: "Đơn hàng" },
         ]}
-          actions={
-          <PermissionGate permission="order.create">
-            <Space>
-              <ActionButton
-                type="ghost"
-                icon={<UploadOutlined />}
-                label="Nhập nhanh"
-                onClick={() => router.push("/orders/quick-import")}
-              />
-              <ActionButton
-                type="primary"
-                icon={<PlusOutlined />}
-                label="Tạo đơn"
-                onClick={() => router.push("/orders/new")}
-              />
-            </Space>
-          </PermissionGate>
-        }
       />
 
       <div className="card">
@@ -376,24 +488,6 @@ function OrdersPageInner() {
           searchPlaceholder="Tìm mã đơn, tên khách hàng..."
           onRefresh={() => void refetch()}
           loading={loading}
-          actions={
-            <PermissionGate permission="order.create">
-              <Space>
-                <ActionButton
-                  type="ghost"
-                  icon={<UploadOutlined />}
-                  label="Nhập nhanh"
-                  onClick={() => router.push("/orders/quick-import")}
-                />
-                <ActionButton
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  label="Tạo đơn"
-                  onClick={() => router.push("/orders/new")}
-                />
-              </Space>
-            </PermissionGate>
-          }
         />
 
         <FilterBar
@@ -412,16 +506,6 @@ function OrdersPageInner() {
                 ? "Không tìm thấy đơn hàng nào phù hợp với bộ lọc"
                 : "Bắt đầu bằng cách tạo đơn hàng mới"
             }
-            action={
-              <PermissionGate permission="order.create">
-                <ActionButton
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  label="Tạo đơn"
-                  onClick={() => router.push("/orders/new")}
-                />
-              </PermissionGate>
-            }
           />
         ) : (
           <DataTable
@@ -430,7 +514,7 @@ function OrdersPageInner() {
             loading={loading}
             pagination={pagination}
             rowKey="_id"
-            scroll={{ x: 1450 }}
+            scroll={{ x: 1810 }}
             onRow={(record) => ({
               onClick: () => router.push(`/orders/${record._id as string}`),
               style: { cursor: "pointer" },
@@ -448,6 +532,25 @@ function OrdersPageInner() {
         loading={deleteLoading}
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={!!quickActionTarget}
+        title={`${quickActionTarget?.label ?? ""} đơn hàng`}
+        content={
+          quickActionTarget
+            ? `Bạn có chắc chắn muốn ${quickActionTarget.label.toLowerCase()} đơn hàng ${
+                quickActionTarget.order.orderCode
+              }?`
+            : ""
+        }
+        type={
+          quickActionTarget?.targetStatus === "CANCELLED" ? "delete" : "warning"
+        }
+        confirmText={quickActionTarget?.label ?? "Xác nhận"}
+        loading={quickActionLoading}
+        onConfirm={handleConfirmQuickAction}
+        onCancel={() => setQuickActionTarget(null)}
       />
     </PageContainer>
   );

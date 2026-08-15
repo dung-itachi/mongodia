@@ -55,6 +55,8 @@ export interface SaleLead {
   };
   assignedAt: string;
   isConverted: boolean;
+  /** Sprint X: Số lần chuyển sang trạng thái "Không nghe máy" (NO_ANSWER). */
+  noAnswerCount?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -20,9 +20,6 @@ export { CustomerStatus } from "@/types/customer";
 
 export interface IAddress {
   street?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
 }
 
 // ============================================================================
@@ -63,9 +60,6 @@ export interface ICustomer extends Document {
 const AddressSchema = new Schema<IAddress>(
   {
     street: { type: String, default: "" },
-    province: { type: String, default: "" },
-    district: { type: String, default: "" },
-    ward: { type: String, default: "" },
   },
   { _id: false }
 );

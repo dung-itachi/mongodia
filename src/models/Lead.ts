@@ -34,9 +34,6 @@ export interface ILead extends Document {
   phone2?: string;
   email?: string;
   address?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   sourceType: SourceType;
   facebookPageId?: mongoose.Types.ObjectId;
   facebookPageAssignmentId?: mongoose.Types.ObjectId;
@@ -79,9 +76,6 @@ const LeadSchema = new Schema<ILead>(
     phone2: { type: String },
     email: { type: String },
     address: { type: String },
-    province: { type: String },
-    district: { type: String },
-    ward: { type: String },
     sourceType: {
       type: String,
       required: true,

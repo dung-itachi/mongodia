@@ -228,6 +228,7 @@ export interface OrderFilter {
   orderType?: OrderType;
   orderSource?: OrderSource;
   saleEmployeeId?: string;
+  marketingEmployeeId?: string;
   customerId?: string;
   warehouseId?: string;
   revenueLocked?: boolean;
@@ -267,7 +268,7 @@ export interface OrderDetailResponse {
 // ============================================================================
 
 export interface CreateOrderInput {
-  customerId: string;
+  customerId?: string;
   customerName: string;
   customerPhone?: string;
   leadId?: string;
@@ -358,9 +359,6 @@ export interface CreateShippingInput {
   receiverName?: string;
   receiverPhone?: string;
   address?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   trackingNumber?: string;
   carrier?: string;
   estimatedDelivery?: string;
@@ -373,9 +371,6 @@ export interface OrderShipping {
   receiverName: string;
   receiverPhone: string;
   address: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   trackingNumber?: string;
   carrier?: string;
   estimatedDelivery?: string;

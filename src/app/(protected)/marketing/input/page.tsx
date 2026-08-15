@@ -101,8 +101,26 @@ export default function MarketingInputPage() {
     (data: LeadFormData) => {
       if (!editingLead) return;
 
+      // Filter out empty string values for optional ObjectId fields
+      // so that opening edit form doesn't wipe existing productId/comboId
+      // when user hasn't touched the dropdown.
+      const cleanedData: Record<string, unknown> = { ...data };
+      const optionalObjectIdFields = [
+        "facebookPageId",
+        "comboId",
+        "productId",
+        "categoryId",
+        "marketingEmployeeId",
+        "saleEmployeeId",
+      ];
+      for (const field of optionalObjectIdFields) {
+        if (cleanedData[field] === "" || cleanedData[field] === undefined) {
+          delete cleanedData[field];
+        }
+      }
+
       updateMutation.mutate(
-        { id: editingLead._id, data: data as unknown as Record<string, unknown> },
+        { id: editingLead._id, data: cleanedData },
         {
           onSuccess: () => {
             void message.success("Cập nhật lead thành công");

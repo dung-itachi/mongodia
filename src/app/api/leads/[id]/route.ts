@@ -194,21 +194,6 @@ export async function PUT(
       updateData.address = data.address || undefined;
     }
 
-    // province
-    if (data.province !== undefined) {
-      updateData.province = data.province || undefined;
-    }
-
-    // district
-    if (data.district !== undefined) {
-      updateData.district = data.district || undefined;
-    }
-
-    // ward
-    if (data.ward !== undefined) {
-      updateData.ward = data.ward || undefined;
-    }
-
     // sourceType
     if (data.sourceType !== undefined) {
       updateData.sourceType = data.sourceType;

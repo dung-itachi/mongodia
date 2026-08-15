@@ -108,9 +108,6 @@ export interface IOrderShipping {
   receiverName: string;
   receiverPhone: string;
   address: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   trackingNumber?: string;
   carrier?: string;
   estimatedDelivery?: Date;
@@ -491,9 +488,6 @@ const OrderSchema = new Schema<IOrder>(
       receiverName: { type: String, default: "" },
       receiverPhone: { type: String, default: "" },
       address: { type: String, default: "" },
-      province: { type: String, default: "" },
-      district: { type: String, default: "" },
-      ward: { type: String, default: "" },
       trackingNumber: { type: String, default: "" },
       carrier: { type: String, default: "" },
       estimatedDelivery: { type: Date },

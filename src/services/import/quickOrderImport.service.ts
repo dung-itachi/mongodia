@@ -153,8 +153,6 @@ async function createCustomerForQuickOrder(
     phone: phone.trim(),
     address: {
       street: addressParts[0] || "",
-      district: addressParts[1] || "",
-      province: addressParts[2] || "",
     },
     status: CustomerStatus.ACTIVE,
     isActive: true,

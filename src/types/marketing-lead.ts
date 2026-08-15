@@ -40,6 +40,12 @@ export interface MarketingLead {
     code: string;
     name: string;
   };
+  /** Sản phẩm (Product) đính kèm Lead. */
+  product?: {
+    _id: string;
+    code: string;
+    name: string;
+  };
   /** Facebook Page (Sprint 8.6). */
   facebookPage?: {
     _id: string;

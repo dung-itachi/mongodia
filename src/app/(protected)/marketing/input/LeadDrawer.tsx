@@ -5,8 +5,8 @@
  * Uses react-hook-form + Zod so create/edit share one validation contract.
  */
 
-import { memo, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { memo, useEffect, useMemo } from "react";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DrawerForm, FormSection, FormField } from "@/components/common";
 import { Select, Input } from "antd";
@@ -15,6 +15,7 @@ import type { SelectProps } from "antd";
 import { defaultLeadForm, marketingLeadFormSchema, type MarketingLeadForm } from "@/validators/marketing-lead.validator";
 import type { MarketingLead } from "@/types/marketing-lead";
 import { useActiveFacebookPages } from "@/hooks/useFacebookPages";
+import { useProducts, useCombosByProduct, type ComboItem } from "@/hooks/useProducts";
 
 const { TextArea } = Input;
 
@@ -36,18 +37,47 @@ function LeadDrawerInner({
   onSubmit,
 }: LeadDrawerProps) {
   const isEdit = !!lead;
-  const { control, handleSubmit, reset, formState: { errors } } =
+  const { control, handleSubmit, reset, resetField, formState: { errors } } =
     useForm<LeadFormData>({
     resolver: zodResolver(marketingLeadFormSchema),
     defaultValues: defaultLeadForm,
+    mode: "onSubmit",
   });
+
+  // Watch productId to filter combos by selected product
+  const watchedProductId = useWatch({ control, name: "productId" });
+  const watchedComboId = useWatch({ control, name: "comboId" });
 
   // Sprint 8.6: Load active Facebook Pages for the page dropdown
   const { pages: facebookPages, loading: pagesLoading } = useActiveFacebookPages();
 
+  // Sprint 9.x: Load active Products for the product dropdown
+  const { products, loading: productsLoading } = useProducts();
+
+  // Sprint 9.x: Combos filtered by selected product (Sprint 9.x enhancement)
+  // If no product selected, load all combos (existing behavior).
+  const { combos: rawCombos, loading: combosLoading } = useCombosByProduct(
+    watchedProductId && watchedProductId.trim() !== "" ? watchedProductId : null
+  );
+
+  // Stable reference for combos array (avoid useEffect re-runs)
+  const filteredCombos = useMemo(() => rawCombos, [rawCombos]);
+
   const facebookPageOptions: SelectProps["options"] = facebookPages.map((p) => ({
     value: p._id,
     label: `${p.name} (${p.code})`,
+  }));
+
+  const productOptions: SelectProps["options"] = products
+    .filter((p) => p.isActive !== false)
+    .map((p) => ({
+      value: p._id,
+      label: `${p.name} (${p.code})`,
+    }));
+
+  const comboOptions: SelectProps["options"] = filteredCombos.map((c) => ({
+    value: c._id,
+    label: `${c.name} (${c.code})`,
   }));
 
   useEffect(() => {
@@ -66,10 +96,26 @@ function LeadDrawerInner({
             status: lead.status,
             note: lead.note ?? "",
             facebookPageId: lead.facebookPage?._id ?? "",
+            comboId: lead.combo?._id ?? "",
+            productId: lead.product?._id ?? "",
+            address: lead.address ?? "",
           }
         : defaultLeadForm
     );
   }, [lead, open, reset]);
+
+  // Reset comboId if it no longer belongs to the filtered combo list
+  // (e.g., user changes product and previous combo doesn't belong to new product)
+  // Skip if productId is unset (then combos API would be disabled -> empty filteredCombos is expected)
+  useEffect(() => {
+    if (!watchedComboId || watchedComboId.trim() === "") return;
+    if (!watchedProductId || watchedProductId.trim() === "") return;
+    if (combosLoading) return;
+    const exists = filteredCombos.some((c) => c._id === watchedComboId);
+    if (!exists && filteredCombos.length > 0) {
+      resetField("comboId");
+    }
+  }, [filteredCombos, watchedComboId, watchedProductId, combosLoading, resetField]);
 
   const handleClose = () => {
     reset(defaultLeadForm);
@@ -80,7 +126,7 @@ function LeadDrawerInner({
     <DrawerForm
       open={open}
       title={isEdit ? "Sửa Lead" : "Thêm Lead"}
-      width={520}
+      width={560}
       loading={loading}
       onClose={handleClose}
       onSubmit={handleSubmit(onSubmit)}
@@ -164,6 +210,63 @@ function LeadDrawerInner({
                 options={LEAD_STATUS_OPTIONS as SelectProps["options"]}
                 placeholder="Chọn trạng thái"
                 status={errors.status ? "error" : undefined}
+              />
+            )}
+          />
+        </FormField>
+
+        <FormField label="Sản phẩm" error={errors.productId?.message}>
+          <Controller
+            name="productId"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                style={{ width: "100%" }}
+                allowClear
+                loading={productsLoading}
+                options={productOptions}
+                placeholder={productsLoading ? "Đang tải..." : "Chọn sản phẩm (không bắt buộc)"}
+                showSearch
+                optionFilterProp="label"
+                notFoundContent={productsLoading ? null : "Chưa có sản phẩm nào"}
+              />
+            )}
+          />
+        </FormField>
+
+        <FormField label="Combo sản phẩm" error={errors.comboId?.message}>
+          <Controller
+            name="comboId"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                style={{ width: "100%" }}
+                allowClear
+                loading={combosLoading}
+                options={comboOptions}
+                placeholder={combosLoading ? "Đang tải..." : "Chọn combo (không bắt buộc)"}
+                showSearch
+                optionFilterProp="label"
+                notFoundContent={combosLoading ? null : "Chưa có combo nào"}
+              />
+            )}
+          />
+        </FormField>
+      </FormSection>
+
+      <FormSection title="Địa chỉ">
+        <FormField label="Địa chỉ" error={errors.address?.message}>
+          <Controller
+            name="address"
+            control={control}
+            render={({ field }) => (
+              <TextArea
+                {...field}
+                placeholder="Nhập địa chỉ (Mông Cổ / các nước khác không phân cấp)"
+                rows={2}
+                autoSize={{ minRows: 2, maxRows: 4 }}
               />
             )}
           />

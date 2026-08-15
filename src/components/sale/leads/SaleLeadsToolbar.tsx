@@ -5,7 +5,7 @@
  */
 
 import { Button } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
+import { ReloadOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { LeadStatus } from "@/constants/leadStatus";
 import styles from "./sale-leads.module.css";
 
@@ -17,6 +17,7 @@ export interface SaleLeadsToolbarProps {
   onRefresh: () => void;
   loading?: boolean;
   total: number;
+  onShowLegend?: () => void;
 }
 
 const STATUS_OPTIONS: { value: LeadStatus | "all"; label: string }[] = [
@@ -27,7 +28,7 @@ const STATUS_OPTIONS: { value: LeadStatus | "all"; label: string }[] = [
   { value: LeadStatus.QUALIFIED, label: "Đủ điều kiện" },
   { value: LeadStatus.POTENTIAL, label: "Tiềm năng" },
   { value: LeadStatus.CLOSED, label: "Đã chốt" },
-  { value: LeadStatus.LOST, label: "Mất" },
+  { value: LeadStatus.LOST, label: "Không mua" },
 ];
 
 export default function SaleLeadsToolbar({
@@ -38,6 +39,7 @@ export default function SaleLeadsToolbar({
   onRefresh,
   loading,
   total,
+  onShowLegend,
 }: SaleLeadsToolbarProps) {
   return (
     <div className={styles.toolbar}>
@@ -59,6 +61,15 @@ export default function SaleLeadsToolbar({
 
       <div className={styles.toolbarRight}>
         <span className={styles.totalCount}>Tổng: {total}</span>
+        {onShowLegend && (
+          <Button
+            icon={<QuestionCircleOutlined />}
+            onClick={onShowLegend}
+            title="Xem ý nghĩa các trạng thái"
+          >
+            Trạng thái
+          </Button>
+        )}
         <Button
           icon={<ReloadOutlined />}
           onClick={onRefresh}

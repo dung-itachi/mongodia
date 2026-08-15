@@ -24,9 +24,6 @@ export interface LeadResponse {
   phone?: string;
   phone2?: string;
   address?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
   sourceType: SourceType;
   sourceTypeLabel: string;
   facebookPageId?: string;
@@ -124,9 +121,6 @@ export function mapLead(lead: ILead): LeadResponse {
     phone: lead.phone,
     phone2: lead.phone2,
     address: lead.address,
-    province: lead.province,
-    district: lead.district,
-    ward: lead.ward,
     sourceType: lead.sourceType,
     sourceTypeLabel: SOURCE_TYPE_LABELS[lead.sourceType],
     facebookPageId: lead.facebookPageId?.toString(),

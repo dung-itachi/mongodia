@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import {
   PageContainer,
@@ -18,8 +18,10 @@ import {
   EmptyState,
   SkeletonTable,
 } from "@/components/common";
+import { useAntApp } from "@/providers/AntdProvider";
 import {
   useMarketingLeads,
+  useCreateLead,
   useUpdateLead,
   useDeleteLead,
   type MarketingLeadFilters,
@@ -32,6 +34,7 @@ import type { LeadFormData } from "@/app/(protected)/marketing/input/LeadDrawer"
 import { LeadDetailView } from "@/components/marketing/leads/LeadDetailView";
 
 export default function MarketingOrdersPage() {
+  const { message } = useAntApp();
   const [filters, setFilters] = useState<MarketingLeadFilters>({
     page: 1,
     limit: 20,
@@ -46,6 +49,7 @@ export default function MarketingOrdersPage() {
   const { leads, total, page, loading, error, refetch } =
     useMarketingLeads(filters);
 
+  const createMutation = useCreateLead();
   const updateMutation = useUpdateLead();
   const deleteMutation = useDeleteLead();
 
@@ -70,12 +74,45 @@ export default function MarketingOrdersPage() {
     setDrawerOpen(true);
   }, []);
 
+  const handleCreateLead = useCallback(
+    (data: LeadFormData) => {
+      createMutation.mutate(data as unknown as Record<string, unknown>, {
+        onSuccess: () => {
+          void message.success("Tạo lead thành công");
+          setDrawerOpen(false);
+        },
+        onError: (err) => {
+          void message.error(`Lỗi: ${err.message}`);
+        },
+      });
+    },
+    [createMutation]
+  );
+
   const handleUpdateLead = useCallback(
     (data: LeadFormData) => {
       if (!editingLead) return;
 
+      // Filter out empty string values for optional ObjectId fields
+      // so that opening edit form doesn't wipe existing productId/comboId
+      // when user hasn't touched the dropdown.
+      const cleanedData: Record<string, unknown> = { ...data };
+      const optionalObjectIdFields = [
+        "facebookPageId",
+        "comboId",
+        "productId",
+        "categoryId",
+        "marketingEmployeeId",
+        "saleEmployeeId",
+      ];
+      for (const field of optionalObjectIdFields) {
+        if (cleanedData[field] === "" || cleanedData[field] === undefined) {
+          delete cleanedData[field];
+        }
+      }
+
       updateMutation.mutate(
-        { id: editingLead._id, data: data as unknown as Record<string, unknown> },
+        { id: editingLead._id, data: cleanedData },
         {
           onSuccess: () => {
             void message.success("Cập nhật lead thành công");
@@ -201,10 +238,10 @@ export default function MarketingOrdersPage() {
 
       <LeadDrawer
         open={drawerOpen}
-        loading={updateMutation.isPending}
+        loading={createMutation.isPending || updateMutation.isPending}
         lead={editingLead}
         onClose={handleDrawerClose}
-        onSubmit={handleUpdateLead}
+        onSubmit={editingLead ? handleUpdateLead : handleCreateLead}
       />
 
       <ConfirmDialog

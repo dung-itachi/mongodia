@@ -11,7 +11,17 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Card, Button, Input, Select, Form, Modal, Space, InputNumber } from "antd";
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  Form,
+  Modal,
+  Space,
+  InputNumber,
+  Popover,
+} from "antd";
 import {
   SendOutlined,
   ClearOutlined,
@@ -19,8 +29,13 @@ import {
   PlusOutlined,
   SearchOutlined,
   SnippetsOutlined,
+  TeamOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import { toast } from "@/components/common/feedback/Toast";
+import CheckCustomerForm from "./CheckCustomerForm";
+import BatchCheckCustomersModal from "./BatchCheckCustomersModal";
+import FieldOrderPreview from "./FieldOrderPreview";
 import {
   useProductsByCategory,
   useCombosWithProduct,
@@ -80,6 +95,8 @@ export default function MarketingInputSection({
   /** Sprint 8.7: Manual order input */
   const [manualOrderOpen, setManualOrderOpen] = useState(false);
   const [manualOrderForm] = Form.useForm();
+  /** Check khách loạt — dùng từ staging sau khi parse leads. */
+  const [batchCheckOpen, setBatchCheckOpen] = useState(false);
 
   // ============================================================
   // QUERIES - Fetch from Product Module
@@ -198,6 +215,22 @@ export default function MarketingInputSection({
     const errorCount = stagedLeads.filter((l) => l.error).length;
     return { pushedCount, stagingCount, commentCount, ladiCount, errorCount };
   }, [existingLeads, stagedLeads]);
+
+  /** Unique SĐT từ staging (dùng cho "Check khách loạt"). */
+  const stagingPhones = useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const lead of stagedLeads) {
+      const raw = (lead.phone ?? "").trim();
+      if (!raw) continue;
+      const key = raw.replace(/[\s.-]/g, "");
+      if (!seen.has(key)) {
+        seen.add(key);
+        ordered.push(raw);
+      }
+    }
+    return ordered;
+  }, [stagedLeads]);
 
   // ============================================================
   // HANDLERS
@@ -553,6 +586,9 @@ export default function MarketingInputSection({
 
   return (
     <div className={styles.container}>
+      {/* Check khách — form tra cứu độc lập, đặt ở trên cùng */}
+      <CheckCustomerForm />
+
       {/* Stats Cards */}
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
@@ -889,13 +925,21 @@ export default function MarketingInputSection({
         />
 
         <div className={styles.inputActions}>
-          <Button
-            type="primary"
-            onClick={handleParseLeads}
-            disabled={!selectedFacebookPageId || !inputText.trim()}
+          <Popover
+            content={<div style={{ width: 420 }}><FieldOrderPreview inputType={inputType} /></div>}
+            title={null}
+            trigger="hover"
+            placement="topLeft"
           >
-            Phân loại
-          </Button>
+            <Button
+              type="primary"
+              icon={<InfoCircleOutlined />}
+              onClick={handleParseLeads}
+              disabled={!selectedFacebookPageId || !inputText.trim()}
+            >
+              Phân loại
+            </Button>
+          </Popover>
           <Button
             icon={<SnippetsOutlined />}
             onClick={handlePasteFromClipboard}
@@ -1076,6 +1120,15 @@ export default function MarketingInputSection({
             <div className={styles.stagingActions}>
               <Button
                 size="small"
+                icon={<TeamOutlined />}
+                onClick={() => setBatchCheckOpen(true)}
+                disabled={stagingPhones.length === 0}
+                title="Tra cứu tất cả SĐT trong staging để biết khách cũ / khách mới"
+              >
+                Check khách loạt ({stagingPhones.length})
+              </Button>
+              <Button
+                size="small"
                 icon={<ClearOutlined />}
                 onClick={handleClearAll}
               >
@@ -1158,6 +1211,13 @@ export default function MarketingInputSection({
           </div>
         </Card>
       )}
+
+      {/* Check khách loạt — modal tra cứu nhiều SĐT cùng lúc */}
+      <BatchCheckCustomersModal
+        open={batchCheckOpen}
+        phones={stagingPhones}
+        onClose={() => setBatchCheckOpen(false)}
+      />
     </div>
   );
 }

@@ -496,6 +496,33 @@ export class MarketingDispatchService {
 
     const skip = (page - 1) * limit;
 
+    // Get lead IDs for history count query
+    const leadIds = await Lead.find(filter).select("_id").lean();
+
+    // Count NO_ANSWER occurrences per lead
+    const noAnswerCounts = await LeadHistory.aggregate([
+      {
+        $match: {
+          leadId: { $in: leadIds.map((l) => l._id) },
+          action: LeadAction.STATUS_CHANGED,
+          newValue: LeadStatus.NO_ANSWER,
+        },
+      },
+      {
+        $group: {
+          _id: "$leadId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const noAnswerMap = new Map(
+      noAnswerCounts.map((item: { _id: unknown; count: number }) => [
+        (item._id as mongoose.Types.ObjectId).toString(),
+        item.count,
+      ])
+    );
+
     const [items, total] = await Promise.all([
       Lead.find(filter)
         .populate("marketingEmployeeId", "_id employeeCode name")
@@ -528,6 +555,7 @@ export class MarketingDispatchService {
         saleEmployeeId: doc.saleEmployeeId,
         assignedAt: doc.assignedAt,
         isConverted: doc.isConverted,
+        noAnswerCount: noAnswerMap.get(doc._id.toString()) || 0,
         facebookPage: doc.facebookPageId && typeof doc.facebookPageId === "object" && "name" in doc.facebookPageId
           ? {
               _id: (doc.facebookPageId as { _id: { toString(): string } })._id.toString(),

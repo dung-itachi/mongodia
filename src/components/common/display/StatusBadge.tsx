@@ -18,6 +18,7 @@ import {
   WalletOutlined,
   StopOutlined,
   WarningOutlined,
+  UserSwitchOutlined,
 } from "@ant-design/icons";
 
 /**
@@ -35,6 +36,7 @@ const ICON_MAP: Record<string, ReactNode> = {
   WalletOutlined: <WalletOutlined />,
   StopOutlined: <StopOutlined />,
   WarningOutlined: <WarningOutlined />,
+  UserSwitchOutlined: <UserSwitchOutlined />,
 };
 
 export type StatusConfig = {
@@ -70,9 +72,6 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   // Pending statuses
   pending: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ duyệt" },
   PENDING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ xử lý", icon: ICON_MAP.ClockCircleOutlined },
-  PROCESSING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Đang xử lý" },
-  NEW: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Mới" },
-  ASSIGNED: { color: "#722ed1", backgroundColor: "#f9f0ff", label: "Đã giao" },
 
   // Success statuses
   success: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Thành công" },
@@ -91,6 +90,18 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   REJECTED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Bị từ chối", icon: ICON_MAP.StopOutlined },
   FAILED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Giao thất bại", icon: ICON_MAP.WarningOutlined },
 
+  // Lead statuses (Marketing)
+  NEW: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Mới", icon: ICON_MAP.InboxOutlined },
+  CONTACTED: { color: "#13c2c2", backgroundColor: "#e6fffb", label: "Đã liên hệ", icon: ICON_MAP.CheckOutlined },
+  QUALIFIED: { color: "#722ed1", backgroundColor: "#f9f0ff", label: "Đủ điều kiện", icon: ICON_MAP.CheckCircleOutlined },
+  ASSIGNED: { color: "#722ed1", backgroundColor: "#f9f0ff", label: "Đã phân công", icon: ICON_MAP.UserSwitchOutlined },
+  PROCESSING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Đang xử lý", icon: ICON_MAP.ClockCircleOutlined },
+  NO_ANSWER: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Không nghe máy" },
+  POTENTIAL: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Tiềm năng", icon: ICON_MAP.WarningOutlined },
+  CLOSED: { color: "#2f54eb", backgroundColor: "#e6f4ff", label: "Đã chốt", icon: ICON_MAP.CheckCircleOutlined },
+  LOST: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Không mua", icon: ICON_MAP.CloseCircleOutlined },
+  ORDER_CREATED: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đã tạo đơn", icon: ICON_MAP.WalletOutlined },
+
   // Error statuses
   error: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Lỗi" },
   ERROR: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Lỗi" },
@@ -101,11 +112,28 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   // Other common statuses
   draft: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Bản nháp" },
   DRAFT: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Bản nháp" },
-  CLOSED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã chốt" },
   PENDING_PAYMENT: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ thanh toán" },
-  NO_ANSWER: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Không nghe máy" },
-  POTENTIAL: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Tiềm năng" },
-  ORDER_CREATED: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đã tạo đơn" },
+};
+
+/**
+ * Lead-status specific badge mapping (Marketing context).
+ * Exported so the LeadTable can use the lead-specific color/icon set
+ * without inheriting colors from order/inventory statuses.
+ */
+export const LEAD_STATUS_BADGE_MAPPING: Record<string, StatusConfig> = {
+  NEW: DEFAULT_STATUS_MAPPING.NEW,
+  CONTACTED: DEFAULT_STATUS_MAPPING.CONTACTED,
+  QUALIFIED: DEFAULT_STATUS_MAPPING.QUALIFIED,
+  ASSIGNED: DEFAULT_STATUS_MAPPING.ASSIGNED,
+  PROCESSING: DEFAULT_STATUS_MAPPING.PROCESSING,
+  NO_ANSWER: DEFAULT_STATUS_MAPPING.NO_ANSWER,
+  POTENTIAL: DEFAULT_STATUS_MAPPING.POTENTIAL,
+  CLOSED: DEFAULT_STATUS_MAPPING.CLOSED,
+  LOST: DEFAULT_STATUS_MAPPING.LOST,
+  ORDER_CREATED: DEFAULT_STATUS_MAPPING.ORDER_CREATED,
+  // Lead-specific labels (overrides Order "Đã hủy" / "Bị từ chối")
+  REJECTED: { ...DEFAULT_STATUS_MAPPING.REJECTED, label: "Từ chối" },
+  CANCELLED: { ...DEFAULT_STATUS_MAPPING.CANCELLED, label: "Hủy" },
 };
 
 export default function StatusBadge({

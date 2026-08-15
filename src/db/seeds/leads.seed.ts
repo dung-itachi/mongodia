@@ -79,9 +79,6 @@ async function ensureCustomer(args: {
         marketingEmployeeId: args.marketingEmployeeId,
         address: {
           street: args.address?.street ?? "",
-          province: args.address?.province ?? "",
-          district: args.address?.district ?? "",
-          ward: args.address?.ward ?? "",
         },
         gender: "other",
         isActive: true,

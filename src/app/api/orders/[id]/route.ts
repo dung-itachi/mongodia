@@ -424,9 +424,6 @@ export async function PATCH(
             receiverName: data.shipping.receiverName,
             receiverPhone: data.shipping.receiverPhone,
             address: data.shipping.address,
-            province: data.shipping.province || undefined,
-            district: data.shipping.district || undefined,
-            ward: data.shipping.ward || undefined,
             trackingNumber: data.shipping.trackingNumber || undefined,
             carrier: data.shipping.carrier || undefined,
             estimatedDelivery: data.shipping.estimatedDelivery

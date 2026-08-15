@@ -88,11 +88,7 @@ export interface UpdateOrderData {
   shipping?: {
     receiverName: string;
     receiverPhone: string;
-    address: string;
-    province?: string;
-    district?: string;
-    ward?: string;
-    trackingNumber?: string;
+    address: string;    trackingNumber?: string;
     carrier?: string;
     estimatedDelivery?: Date;
     actualDelivery?: Date;

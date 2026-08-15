@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, message } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined, ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from "@ant-design/icons";
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import CardSection from "@/components/common/cards/CardSection";
@@ -19,10 +19,33 @@ type AdjustmentRow = {
   reason: string;
 };
 
+type Direction = "INCREASE" | "DECREASE" | "NEUTRAL";
+
 const TYPE_LABELS: Record<string, { label: string; color: string }> = {
   PRODUCT: { label: "Sản phẩm", color: "blue" },
   GIFT: { label: "Quà tặng", color: "green" },
 };
+
+const DIRECTION_META: Record<Direction, { label: string; color: string; sign: "+" | "-" | "±"; icon: React.ReactNode }> = {
+  INCREASE: { label: "Tăng", color: "green", sign: "+", icon: <ArrowUpOutlined /> },
+  DECREASE: { label: "Giảm", color: "red", sign: "-", icon: <ArrowDownOutlined /> },
+  NEUTRAL: { label: "Không đổi", color: "default", sign: "±", icon: <MinusOutlined /> },
+};
+
+function readDirection(row: Record<string, unknown>): Direction {
+  const value = row.direction;
+  if (value === "INCREASE" || value === "DECREASE" || value === "NEUTRAL") return value;
+  // Backward-compatibility fallback: derive from `changeSigned` if present
+  const signed = Number(row.changeSigned ?? 0);
+  if (signed > 0) return "INCREASE";
+  if (signed < 0) return "DECREASE";
+  return "NEUTRAL";
+}
+
+function formatQuantity(value: unknown): string {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n.toLocaleString("vi-VN") : "0";
+}
 
 export default function WarehouseAdjustmentsPage() {
   const { warehouses } = useWarehouses();
@@ -132,12 +155,64 @@ export default function WarehouseAdjustmentsPage() {
         },
       },
       {
-        title: "Số lượng",
-        dataIndex: "quantity",
-        width: 120,
+        title: "Hướng điều chỉnh",
+        key: "direction",
+        width: 170,
+        filterMultiple: false,
+        filters: [
+          { text: "Tăng", value: "INCREASE" },
+          { text: "Giảm", value: "DECREASE" },
+          { text: "Không đổi", value: "NEUTRAL" },
+        ],
+        onFilter: (value: unknown, row: Record<string, unknown>) =>
+          readDirection(row) === value,
+        render: (_: unknown, row: Record<string, unknown>) => {
+          const direction = readDirection(row);
+          const meta = DIRECTION_META[direction];
+          return (
+            <Tag color={meta.color} icon={meta.icon}>
+              {meta.label}
+            </Tag>
+          );
+        },
+      },
+      {
+        title: "Trước → Sau",
+        key: "beforeAfter",
+        width: 200,
         align: "right" as const,
-        key: "quantity",
-        render: (value: unknown) => Number(value ?? 0),
+        render: (_: unknown, row: Record<string, unknown>) => {
+          const beforeRaw = row.beforeQuantity;
+          const afterRaw = row.afterQuantity;
+          const before = typeof beforeRaw === "number" ? beforeRaw : Number(beforeRaw ?? 0);
+          const after = typeof afterRaw === "number" ? afterRaw : Number(afterRaw ?? 0);
+          if (!Number.isFinite(before) && !Number.isFinite(after)) return "-";
+          const direction = readDirection(row);
+          const color = direction === "INCREASE" ? "#52c41a" : direction === "DECREASE" ? "#f5222d" : "#8c8c8c";
+          return (
+            <span style={{ fontFamily: "monospace", color }}>
+              {formatQuantity(before)} → {formatQuantity(after)}
+            </span>
+          );
+        },
+      },
+      {
+        title: "Số lượng thay đổi",
+        key: "change",
+        width: 150,
+        align: "right" as const,
+        render: (_: unknown, row: Record<string, unknown>) => {
+          const direction = readDirection(row);
+          const meta = DIRECTION_META[direction];
+          const signed = row.changeSigned !== undefined
+            ? Number(row.changeSigned)
+            : Number(row.quantity ?? 0) * (direction === "DECREASE" ? -1 : direction === "INCREASE" ? 1 : 0);
+          return (
+            <span style={{ color: meta.color === "default" ? "#8c8c8c" : meta.color, fontWeight: 600 }}>
+              {meta.sign}{formatQuantity(Math.abs(signed))}
+            </span>
+          );
+        },
       },
       {
         title: "Người thực hiện",

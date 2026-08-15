@@ -22,9 +22,6 @@ export enum CustomerStatus {
 
 export interface Address {
   street?: string;
-  province?: string;
-  district?: string;
-  ward?: string;
 }
 
 // ============================================================================

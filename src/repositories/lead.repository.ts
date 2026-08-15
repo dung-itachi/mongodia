@@ -31,6 +31,7 @@ function mapToLead(doc: ILead) {
     marketingEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
     saleEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
     comboId?: { _id: { toString(): string }; code: string; name: string };
+    productId?: { _id: { toString(): string }; code: string; name: string };
     facebookPageId?: { _id: { toString(): string }; code: string; name: string };
   };
 
@@ -45,9 +46,6 @@ function mapToLead(doc: ILead) {
     phone2: doc.phone2,
     email: doc.email,
     address: doc.address,
-    province: doc.province,
-    district: doc.district,
-    ward: doc.ward,
     sourceType: doc.sourceType,
     facebookPageId: doc.facebookPageId?.toString(),
     facebookPageAssignmentId: doc.facebookPageAssignmentId?.toString(),
@@ -76,6 +74,13 @@ function mapToLead(doc: ILead) {
           _id: rawDoc.comboId._id.toString(),
           code: rawDoc.comboId.code,
           name: rawDoc.comboId.name,
+        }
+      : undefined,
+    product: rawDoc.productId && typeof rawDoc.productId === "object" && "code" in rawDoc.productId
+      ? {
+          _id: rawDoc.productId._id.toString(),
+          code: rawDoc.productId.code,
+          name: rawDoc.productId.name,
         }
       : undefined,
     facebookPage: rawDoc.facebookPageId && typeof rawDoc.facebookPageId === "object" && "code" in rawDoc.facebookPageId
@@ -206,8 +211,61 @@ export class LeadRepository {
    * Update a lead by ID
    */
   async update(id: string, data: UpdateLeadInput) {
-    const doc = await Lead.findByIdAndUpdate(id, data, { new: true })
+    // Normalize comboId: empty string → unset; valid string → ObjectId
+    const updateData: Record<string, unknown> = { ...data };
+    if ("comboId" in updateData) {
+      const comboId = updateData.comboId;
+      if (!comboId || (typeof comboId === "string" && comboId.trim() === "")) {
+        updateData.comboId = null;
+      } else if (typeof comboId === "string" && mongoose.Types.ObjectId.isValid(comboId)) {
+        updateData.comboId = new mongoose.Types.ObjectId(comboId);
+      }
+    }
+    if ("facebookPageId" in updateData) {
+      const pageId = updateData.facebookPageId;
+      if (!pageId || (typeof pageId === "string" && pageId.trim() === "")) {
+        updateData.facebookPageId = null;
+      } else if (typeof pageId === "string" && mongoose.Types.ObjectId.isValid(pageId)) {
+        updateData.facebookPageId = new mongoose.Types.ObjectId(pageId);
+      }
+    }
+    if ("marketingEmployeeId" in updateData) {
+      const empId = updateData.marketingEmployeeId;
+      if (!empId || (typeof empId === "string" && empId.trim() === "")) {
+        updateData.marketingEmployeeId = null;
+      } else if (typeof empId === "string" && mongoose.Types.ObjectId.isValid(empId)) {
+        updateData.marketingEmployeeId = new mongoose.Types.ObjectId(empId);
+      }
+    }
+    if ("saleEmployeeId" in updateData) {
+      const empId = updateData.saleEmployeeId;
+      if (!empId || (typeof empId === "string" && empId.trim() === "")) {
+        updateData.saleEmployeeId = null;
+      } else if (typeof empId === "string" && mongoose.Types.ObjectId.isValid(empId)) {
+        updateData.saleEmployeeId = new mongoose.Types.ObjectId(empId);
+      }
+    }
+    if ("categoryId" in updateData) {
+      const catId = updateData.categoryId;
+      if (!catId || (typeof catId === "string" && catId.trim() === "")) {
+        updateData.categoryId = null;
+      } else if (typeof catId === "string" && mongoose.Types.ObjectId.isValid(catId)) {
+        updateData.categoryId = new mongoose.Types.ObjectId(catId);
+      }
+    }
+    if ("productId" in updateData) {
+      const prodId = updateData.productId;
+      if (!prodId || (typeof prodId === "string" && prodId.trim() === "")) {
+        updateData.productId = null;
+      } else if (typeof prodId === "string" && mongoose.Types.ObjectId.isValid(prodId)) {
+        updateData.productId = new mongoose.Types.ObjectId(prodId);
+      }
+    }
+    updateData.updatedAt = new Date();
+
+    const doc = await Lead.findByIdAndUpdate(id, updateData, { new: true })
       .populate("comboId", "_id code name")
+      .populate("productId", "_id code name")
       .populate("facebookPageId", "_id code name")
       .lean();
     if (!doc) return null;
@@ -254,6 +312,7 @@ export class LeadRepository {
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
       .populate("comboId", "_id code name")
+      .populate("productId", "_id code name")
       .populate("facebookPageId", "_id code name")
       .lean();
     if (!doc) return null;
@@ -289,6 +348,7 @@ export class LeadRepository {
         .populate("marketingEmployeeId", "_id employeeCode name")
         .populate("saleEmployeeId", "_id employeeCode name")
         .populate("comboId", "_id code name")
+        .populate("productId", "_id code name")
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
         .skip(skip)
@@ -572,6 +632,7 @@ export class LeadRepository {
       .populate("marketingEmployeeId", "_id employeeCode name")
       .populate("saleEmployeeId", "_id employeeCode name")
       .populate("comboId", "_id code name")
+      .populate("productId", "_id code name")
       .populate("facebookPageId", "_id code name")
       .lean();
     if (!doc) return null;
@@ -595,6 +656,7 @@ export class LeadRepository {
         .populate("marketingEmployeeId", "_id employeeCode name")
         .populate("saleEmployeeId", "_id employeeCode name")
         .populate("comboId", "_id code name")
+        .populate("productId", "_id code name")
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
         .skip(skip)
@@ -630,6 +692,7 @@ export class LeadRepository {
         .populate("saleEmployeeId", "_id employeeCode name")
         .populate("convertedOrderId", "_id orderCode totalAmount status")
         .populate("comboId", "_id code name")
+        .populate("productId", "_id code name")
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
         .skip(skip)

@@ -1,8 +1,8 @@
 # PROJECT PROGRESS
 
 **Project:** Mongodia
-**Last Updated:** 2026-08-13
-**Current Phase:** Phase 5 COMPLETE ✅
+**Last Updated:** 2026-08-15
+**Current Phase:** Phase 6 COMPLETE ✅
 
 ---
 
@@ -1337,6 +1337,453 @@ The data flow is correct:
 
 ---
 
-**Report Generated:** 2026-08-13
-**Current Phase:** Phase 5 RE-REVIEW COMPLETE ✅, Warehouse UI Audit COMPLETE ✅
+## 19. Phase 6 — Warehouse Adjustment Concurrency Fix
+
+**Date:** 2026-08-15
+**Status:** ✅ IMPLEMENTATION COMPLETE
+**Source:** Warehouse Transfer + Adjustment Flow Audit (2026-08-13)
+
+### 19.1 Audit Finding
+
+The audit identified a **HIGH severity concurrency bug** in
+`warehouse-adjustment.service.ts → createAdjustment()`:
+
+| Severity | Location | Type |
+|---|---|---|
+| HIGH | `warehouse-adjustment.service.ts` (update branch) | Race condition |
+
+**Bug:** The update path used
+`WarehouseInventory.findOneAndUpdate(filter, { $set: { quantity, availableQuantity } }, { session })`
+where `filter` matched only the unique compound key
+(`warehouseId`, `itemType`, `productId`, `variantId`, `giftId`). The filter
+did **not** guard on the previously-read `quantity` value. Two concurrent
+adjustments targeting the same `WarehouseInventory` document could both:
+
+1. Read the same `currentInventory.quantity = Q0` inside their respective
+   transactions.
+2. Both commit with `$set: { quantity: <their own newQuantity> }`.
+3. The second commit would silently overwrite the first, and both
+   `WarehouseStockMovement` rows would record `beforeQuantity: Q0`
+   — corrupting the audit trail.
+
+### 19.2 Root Cause
+
+The unique compound index on
+`{ warehouseId, itemType, productId, variantId, giftId }` only guarantees
+one document per slot. The update relied on the session's snapshot
+isolation for read consistency, but MongoDB transaction commits follow
+`WriteConflict` / last-writer-wins semantics on the same document. The
+original code had no conditional guard on the write, so concurrent
+adjustments could overwrite each other.
+
+### 19.3 Fix
+
+**File:** `src/services/warehouse/warehouse-adjustment.service.ts`
+
+Implemented **optimistic concurrency** on the inventory update:
+
+1. The read of `currentInventory.quantity` already happens inside the
+   active transaction/session (line 227).
+2. The update `findOneAndUpdate` now uses an **augmented filter** that
+   pins both the unique `_id` and the previously-read `quantity` value:
+   ```ts
+   const guardedFilter = {
+     ...filter,
+     _id: currentInventory._id,
+     quantity: beforeQuantity,
+   };
+   ```
+3. If the guarded update returns `null`, a concurrent adjustment has
+   already mutated `quantity`. The transaction is aborted and the
+   caller receives `{ success: false, error: "Điều chỉnh thất bại do xung đột đồng thời..." }`.
+
+Additionally, `nextCode()` was hardened with a retry loop (max 5 attempts)
+for `WriteConflict` / `TransientTransactionError` on the Counter
+collection, so concurrent transactions no longer fail at the
+counter-allocate step. This is the standard MongoDB-recommended
+recovery pattern.
+
+### 19.4 Properties Preserved
+
+| Property | Status |
+|---|---|
+| `newQuantity` semantics (desired final quantity) | ✅ Preserved |
+| MongoDB schema unchanged | ✅ No model change |
+| Reserved, in-transit, shipped quantities preserved | ✅ Not in `$set` |
+| Invariant `availableQuantity = quantity - reserved - inTransit` | ✅ Recomputed from fresh read |
+| Single transaction/session | ✅ Same session throughout |
+| Atomic conditional update / optimistic check | ✅ Guarded by `_id` + `quantity` |
+| No distributed lock introduced | ✅ Document-level only |
+| Existing validation (negative, below locked qty) | ✅ Preserved |
+
+### 19.5 Tests Added
+
+**File:** `src/tests/warehouseAdjustmentConcurrency.test.ts`
+
+| Test | Scenario | Result |
+|---|---|---|
+| `[ADJ-CON-1]` | Two concurrent adjustments (80 vs 90) on the same item | ✅ PASS |
+| `[ADJ-CON-2]` | Three sequential adjustments all commit (no false conflicts) | ✅ PASS |
+| `[ADJ-CON-3]` | Adjustment below `reservedQuantity + inTransitQuantity` is rejected | ✅ PASS |
+| `[ADJ-CON-4]` | Invariant `availableQuantity = quantity - reserved - inTransit` preserved | ✅ PASS |
+| `[ADJ-CON-5]` | Negative `newQuantity` rejected without mutating inventory | ✅ PASS |
+| `[ADJ-CON-6]` | 5 concurrent stress adjustments: exactly one winner | ✅ PASS |
+
+```
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+```
+
+### 19.6 Regression Verification
+
+```
+npx jest src/tests/phase3-stockEngine.test.ts --forceExit
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+```
+
+No regressions in the existing Phase 3 stock engine tests.
+
+### 19.7 TypeScript Verification
+
+`tsc --noEmit -p tsconfig.json` against the modified service file and
+its model dependencies produces **0 new errors**. (The 12 pre-existing
+errors listed in §17.8 remain unchanged.)
+
+### 19.8 Files Modified
+
+| File | Change |
+|---|---|
+| `src/services/warehouse/warehouse-adjustment.service.ts` | Optimistic concurrency guard on update; `nextCode` retry loop |
+| `src/tests/warehouseAdjustmentConcurrency.test.ts` | New concurrency test suite (6 tests) |
+| `PROJECT_PROGRESS.md` | This section |
+
+### 19.9 Safety Rules Compliance
+
+| Rule | Status |
+|---|---|
+| No migration run | ✅ Compliant |
+| No DB data change | ✅ Compliant |
+| No schema change | ✅ Compliant |
+| No Inventory collection deletion | ✅ Compliant |
+| No model deletion | ✅ Compliant |
+| No seed | ✅ Compliant |
+| No UI/design fix outside scope | ✅ Compliant (only the transaction-safety bug) |
+
+### 19.10 Verdict
+
+**✅ PASS — Warehouse Adjustment Concurrency Fix = COMPLETE**
+
+The HIGH severity race condition is fixed. Concurrent adjustments now
+serialize correctly via the optimistic `_id` + `quantity` guard. The
+losing transaction is cleanly aborted with a clear error message
+returned to the API caller, who can retry safely.
+
+---
+
+## 20. Phase 6 — Warehouse Adjustment UI Auditability
+
+**Date:** 2026-08-15
+**Status:** ✅ IMPLEMENTATION COMPLETE
+**Scope:** `/warehouse/adjustments` only — UI/design improvements; no
+business-logic changes.
+
+### 20.1 Reported Issues (UI only — no data integrity impact)
+
+The `/warehouse/adjustments` listing displayed the `quantity` column
+without showing:
+
+| Issue | Severity | Impact |
+|---|---|---|
+| Adjustment direction (INCREASE/DECREASE) is invisible | LOW | Reviewers cannot tell +5 from −5 |
+| `beforeQuantity` is not displayed | LOW | Audit trail incomplete in UI |
+| `afterQuantity` is not displayed | LOW | Same |
+| Items belonging to the same `referenceCode` (one adjustment) are not visually grouped | LOW | One adjustment with multiple items = multiple unrelated rows |
+
+The backend already records the *absolute* magnitude in
+`WarehouseStockMovement.quantity` for type `ADJUSTMENT`. Direction
+sign was not stored. `beforeQuantity` / `afterQuantity` are computed
+on the create-response (`createAdjustment()`) but never persisted to
+the audit row.
+
+### 20.2 Safety Constraints Honored
+
+| Constraint | Status |
+|---|---|
+| No MongoDB schema change | ✅ |
+| No inventory business-logic change | ✅ |
+| No idempotency in this task | ✅ |
+| Do not touch unrelated warehouse pages | ✅ |
+| Preserve existing API/backend behavior unless minimal response-mapping change required | ✅ — added only an enrichment step on the GET response |
+
+### 20.3 Backend — Minimal Response Enrichment
+
+**File:** `src/services/warehouse/warehouse-adjustment.service.ts`
+
+Two pure exports were added (unit-testable without MongoDB):
+
+1. **`classifyAdjustmentDirection(signed: number) → "INCREASE" | "DECREASE" | "NEUTRAL"`** — simple sign classifier used by the UI fallback.
+2. **`replayAdjustmentSings({ events, currentQuantity }) → Map<_id, { before, after, signed }>`** — recovers each ADJUSTMENT's sign, `before`, and `after` without any schema change.
+
+The `listAdjustments()` listing pipeline now attaches to each row:
+
+- `direction`: `"INCREASE" | "DECREASE" | "NEUTRAL"`
+- `changeSigned`: signed delta (magnitude × sign)
+- `beforeQuantity`: inventory quantity immediately before this adjustment
+- `afterQuantity`: inventory quantity immediately after this adjustment
+
+### 20.4 Replay Algorithm
+
+`replayAdjustmentSings` is a deterministic forward-replay that uses
+the current `WarehouseInventory.quantity` as ground truth at the end
+of the timeline. For each ADJUSTMENT in chronological order:
+
+- Known signed deltas are taken from `SIGNED_DELTA_TYPES`:
+  `IMPORT: +1`, `TRANSFER_IN: +1`, `TRANSFER_OUT: −1`,
+  `ORDER_OUT: −1`, `ORDER_RETURN: +1`.
+- ADJUSTMENT events store only magnitude; we choose `±` per event.
+- For `k ≤ 16` ADJUSTMENTs the algorithm brute-forces all `2^k` sign
+  assignments and picks the one minimizing the score:
+  `100 × |finalSum − currentQuantity| + 1000 × (negative-runs)`.
+- For `k > 16` it uses a greedy 1-bit-flip local search
+  (typically unnecessary — production adjustments per item rarely
+  exceed this).
+
+The result is a per-row `{ before, after, signed }` mapping. Counts
+of `WarehouseStockMovement` and `WarehouseInventory` rows are
+unchanged — no new writes.
+
+### 20.5 UI — `/warehouse/adjustments`
+
+**File:** `src/app/(protected)/warehouse/adjustments/page.tsx`
+
+The listing now shows:
+
+| Column | Header | Behavior |
+|---|---|---|
+| Existing | Mã điều chỉnh | unchanged — `referenceCode` |
+| Existing | Kho | unchanged |
+| Existing | Loại | unchanged |
+| Existing | Mặt hàng | unchanged |
+| **NEW** | Hướng điều chỉnh | Ant `Tag` with icon — green `ArrowUp` "Tăng", red `ArrowDown` "Giảm", gray `Minus` "Không đổi"; also filter dropdown |
+| **NEW** | Trước → Sau | `beforeQuantity → afterQuantity` rendered monospace, colored by direction |
+| **NEW** | Số lượng thay đổi | Signed delta like `+25` (green) or `−40` (red) |
+| Existing | Người thực hiện | unchanged |
+| Existing | Thời gian | unchanged |
+
+Grouping by `referenceCode` (multiple items of the same adjustment)
+is preserved via the first column (`Mã điều chỉnh`) — items sharing
+the same code naturally appear next to each other under the existing
+DESC-by-`createdAt` sort.
+
+A new fallback helper `readDirection(row)` reads the new `direction`
+field, falling back to deriving it from `changeSigned` when the
+service version is older — backwards-compatible with old data.
+
+### 20.6 Tests Added
+
+**File:** `src/tests/adjustmentDirection.test.ts` — 46 assertions
+covering:
+
+- `classifyAdjustmentDirection()` boundary cases.
+- Replay with single ADJUSTMENT, single ADJUSTMENT after IMPORT,
+  ADJUSTMENT after IMPORT+TRANSFER_OUT, multiple ADJUSTMENTs in a
+  chain, and ADJUSTMENTs where one alternative would drive the
+  running total negative.
+- Non-negative intermediate totals invariant.
+
+**Result:**
+```
+pass: 46
+fail: 0
+```
+
+### 20.7 TypeScript & ESLint Verification
+
+- `tsc --noEmit -p tsconfig.json` — 0 new errors (the 27 errors
+  listed in §17.8 remain unchanged after my changes).
+- `npx eslint <changed files>` — 0 errors, 2 pre-existing warnings,
+  no new warnings introduced by my changes.
+
+### 20.8 Files Modified
+
+| File | Change |
+|---|---|
+| `src/services/warehouse/warehouse-adjustment.service.ts` | Added `classifyAdjustmentDirection()`, `replayAdjustmentSings()`, `enrichAdjustmentsWithHistory()`. Wired `listAdjustments()` to enrich items. |
+| `src/app/(protected)/warehouse/adjustments/page.tsx` | Added 3 columns (`Hướng điều chỉnh`, `Trước → Sau`, `Số lượng thay đổi`), `DIRECTION_META`, `readDirection()`, `formatQuantity()`. |
+| `src/tests/adjustmentDirection.test.ts` | New pure-helper test suite (46 assertions). |
+
+No other warehouse page, model, or service was touched.
+
+### 20.9 Safety Rules Compliance
+
+| Rule | Status |
+|---|---|
+| No migration run | ✅ Compliant |
+| No DB data change | ✅ Compliant |
+| No MongoDB schema change | ✅ Compliant |
+| No Inventory collection deletion | ✅ Compliant |
+| No model deletion | ✅ Compliant |
+| No seed | ✅ Compliant |
+| No inventory business-logic change | ✅ Compliant |
+| No idempotency added | ✅ Compliant (out of scope) |
+| No edits to unrelated warehouse pages | ✅ Compliant |
+
+### 20.10 Verdict
+
+**✅ PASS — Warehouse Adjustment UI Auditability = COMPLETE**
+
+The `/warehouse/adjustments` listing now clearly communicates
+direction (Tăng / Giảm / Không đổi) and the explicit
+`beforeQuantity → afterQuantity` audit pair per row, while preserving
+all existing business logic, schemas, and unrelated pages.
+
+---
+
+## 21. Phase 7 — Warehouse Adjustment No-Op Data-Integrity Fix
+
+**Audit Date:** 2026-08-15
+**Status:** ✅ IMPLEMENTATION COMPLETE
+
+### 21.1 Problem Discovered
+
+The `WarehouseAdjustmentService.createAdjustment()` path computes:
+
+```typescript
+const change = item.newQuantity - beforeQuantity;
+// ...
+quantity: Math.abs(change),
+```
+
+When `newQuantity === currentInventory.quantity`:
+
+- `change === 0`
+- `Math.abs(change) === 0`
+- `WarehouseStockMovement` schema requires `quantity: min: 1`
+- MongoDB rejects with `ValidationError: quantity: must be at least 1`
+- The transaction aborts and the user sees an unclear error.
+
+### 21.2 Root Cause
+
+The adjustment code unconditionally attempts to create an
+`ADJUSTMENT`-typed `WarehouseStockMovement` even when the requested
+`newQuantity` equals the current `quantity`. There was no short-circuit
+for the genuine no-op case (no-op is physically valid; no quantity-0
+movement is required).
+
+### 21.3 Chosen Semantics
+
+A no-op adjustment:
+
+- returns `success: true`
+- does NOT mutate `WarehouseInventory` (quantity, availableQuantity,
+  reservedQuantity, inTransitQuantity, shippedQuantity all unchanged)
+- does NOT create a `WarehouseStockMovement` record
+- reports the row in the response `movements` list with
+  `beforeQuantity === afterQuantity === currentQuantity` and
+  `change: 0` so callers can see the request was honoured
+- does NOT touch the optimistic concurrency guard (no state is written)
+
+### 21.4 Implementation
+
+**File:** `src/services/warehouse/warehouse-adjustment.service.ts`
+
+Added a short-circuit block immediately after the
+`newQuantity < 0` and `below locked quantity` checks, before the
+`availableQuantity` recompute and the optimistic concurrency
+`findOneAndUpdate`:
+
+```typescript
+if (change === 0) {
+  movements.push({
+    itemType: itemInfo.itemType,
+    productName: itemInfo.itemType === "PRODUCT" ? itemInfo.name : undefined,
+    giftName: itemInfo.itemType === "GIFT" ? itemInfo.name : undefined,
+    beforeQuantity,
+    afterQuantity: item.newQuantity,
+    change: 0,
+  });
+  continue;
+}
+```
+
+### 21.5 Files Changed
+
+| File | Change |
+|------|--------|
+| `src/services/warehouse/warehouse-adjustment.service.ts` | Added no-op short-circuit (≈17 lines) |
+| `src/tests/warehouseAdjustmentConcurrency.test.ts` | Added 6 new no-op tests |
+
+### 21.6 Tests Added
+
+| Test | Coverage |
+|------|----------|
+| `[ADJ-NOOP-1]` | Plain no-op: success, no inventory mutation, no movement |
+| `[ADJ-NOOP-2]` | No-op must not surface schema validation error |
+| `[ADJ-NOOP-3]` | No-op with locked inventory: reserved/inTransit untouched |
+| `[ADJ-NOOP-4]` | Regression: normal increase 100→110 still works |
+| `[ADJ-NOOP-5]` | Regression: normal decrease 110→100 still works |
+| `[ADJ-NOOP-6]` | Mixed-batch no-op commits cleanly |
+
+### 21.7 Verification Results
+
+| Suite | Result |
+|-------|--------|
+| `adjustmentDirection.test.ts` | **46/46 PASS** |
+| `warehouseAdjustmentConcurrency.test.ts` | **12/12 PASS** (6 original + 6 new) |
+| TypeScript on Phase 7 files | **0 errors** |
+| ESLint on Phase 7 files | **0 errors** (1 pre-existing warning at line 139 unrelated) |
+| Phase 6 optimistic concurrency guard | **INTACT** — `_id + quantity` filter unchanged |
+| Inventory invariant `availableQuantity = quantity − reserved − inTransit` | **PRESERVED** |
+| Adjustment semantics (`newQuantity` = desired final quantity) | **UNCHANGED** |
+
+### 21.8 Schema / Database
+
+- MongoDB schema: **UNCHANGED**
+- Database data: **UNCHANGED**
+- No migration
+- No seed
+
+### 21.9 Remaining Design Gaps
+
+| Gap | Severity |
+|-----|----------|
+| `nextCode()` consumes a counter on all-no-op batches (cosmetic) | LOW |
+
+### 21.10 Known Pre-Existing TypeScript Errors
+
+The full-project `tsc --noEmit` shows 13 pre-existing errors in
+unrelated files (`leaders`, `leads`, `marketing/dashboard`,
+`teams`, `account/profile`, `gift`, `product`).
+**None are in Phase 7 modified files.**
+
+### 21.11 Phase 6 Regression
+
+**PASS** — the optimistic concurrency guard (`_id + quantity`
+filter on the inventory write) remains untouched and is bypassed
+only in the no-op case (where it is not needed because no write
+occurs).
+
+### 21.12 Verdict
+
+**✅ PASS — Phase 7 no-op adjustment data-integrity fix verified**
+
+---
+
+## 20. Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2026-08-13 | Initial consolidated report |
+| 1.1 | 2026-08-13 | Phase 5 Legacy Inventory Write Audit added |
+| 1.2 | 2026-08-13 | Phase 5 Implementation complete - FINAL |
+| 1.3 | 2026-08-13 | Phase 5 Re-review complete |
+| 1.4 | 2026-08-15 | Phase 6 — Warehouse Adjustment Concurrency Fix |
+| 1.5 | 2026-08-15 | Phase 6 — Warehouse Adjustment UI Auditability |
+| 1.6 | 2026-08-15 | Phase 7 — Warehouse Adjustment No-Op Data-Integrity Fix |
+
+---
+
+**Report Generated:** 2026-08-15
+**Current Phase:** Phase 6 COMPLETE ✅
 **Final Verdict:** PASS

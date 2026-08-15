@@ -1,0 +1,266 @@
+/**
+ * CustomerLookup Styles (Sprint — Marketing Input "Check customer")
+ *
+ * Compact, reusable styles for the customer lookup modal.
+ * Designed to be embedded from any page (marketing input, orders,
+ * etc.) without conflict with parent styles.
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ============================================================
+ * Search bar (top of the modal)
+ * ============================================================ */
+.searchBar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.searchInput {
+  flex: 1;
+}
+
+/* ============================================================
+ * Empty / Loading / Not Found states
+ * ============================================================ */
+.statusBox {
+  padding: 32px 16px;
+  text-align: center;
+  background: #fafafa;
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+  color: #595959;
+}
+
+.notFoundBox {
+  border-color: #ffa940;
+  background: #fff7e6;
+  color: #874d00;
+}
+
+.notFoundTitle {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.notFoundHint {
+  font-size: 13px;
+  color: #874d00;
+}
+
+/* ============================================================
+ * Customer header card
+ * ============================================================ */
+.customerHeader {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f5ff, #f9fbff);
+  border: 1px solid #d6e4ff;
+  border-radius: 8px;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #1890ff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.customerMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.customerNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.customerName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #262626;
+}
+
+.customerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 13px;
+  color: #595959;
+}
+
+.customerMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.customerMetaItem strong {
+  color: #262626;
+}
+
+/* ============================================================
+ * Statistics row
+ * ============================================================ */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.statCard {
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1890ff;
+  line-height: 1.2;
+}
+
+.statValue.warning {
+  color: #fa8c16;
+}
+
+.statValue.success {
+  color: #52c41a;
+}
+
+.statLabel {
+  font-size: 11px;
+  color: #8c8c8c;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+ * Sections
+ * ============================================================ */
+.section {
+  margin-top: 8px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #595959;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.4px;
+}
+
+/* ============================================================
+ * Order history table
+ * ============================================================ */
+.orderList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.orderItem {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  transition: all 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.orderItem:hover {
+  border-color: #1890ff;
+  background: #f0f8ff;
+}
+
+.orderMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.orderCode {
+  font-weight: 600;
+  color: #1890ff;
+  font-size: 13px;
+}
+
+.orderCombo {
+  font-size: 12px;
+  color: #595959;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orderDate {
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
+.orderAmount {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
+}
+
+.orderAmountValue {
+  font-weight: 700;
+  color: #52c41a;
+  font-size: 14px;
+}
+
+.orderFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.orderFooterText {
+  font-size: 12px;
+  color: #8c8c8c;
+}

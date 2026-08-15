@@ -7,8 +7,8 @@ export const marketingLeadFormSchema = z.object({
   phone: z
     .string()
     .trim()
-    .min(1, "Số điện thoại là bắt buộc")
-    .regex(/^[0-9+\s().-]{8,20}$/, "Số điện thoại không hợp lệ"),
+    .min(8, "Số điện thoại tối thiểu 8 ký tự")
+    .max(20, "Số điện thoại tối đa 20 ký tự"),
   email: z
     .string()
     .trim()
@@ -24,6 +24,25 @@ export const marketingLeadFormSchema = z.object({
     .trim()
     .optional()
     .or(z.literal("")),
+  /** Combo ID — optional. Empty string is treated as unset. */
+  comboId: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+  /** Product ID — optional. Empty string is treated as unset. */
+  productId: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+  /** Free-text address (Sprint 9.x). */
+  address: z
+    .string()
+    .trim()
+    .max(500, "Địa chỉ tối đa 500 ký tự")
+    .optional()
+    .or(z.literal("")),
 });
 
 export type MarketingLeadForm = z.infer<typeof marketingLeadFormSchema>;
@@ -36,4 +55,7 @@ export const defaultLeadForm: MarketingLeadForm = {
   status: LeadStatus.NEW,
   note: "",
   facebookPageId: "",
+  comboId: "",
+  productId: "",
+  address: "",
 };

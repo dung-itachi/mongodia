@@ -24,12 +24,12 @@ import Product from "@/models/Product";
 import Category from "@/models/Category";
 import Combo from "@/models/Combo";
 import ProductVariant from "@/models/ProductVariant";
-import Inventory from "@/models/Inventory";
+import WarehouseInventory from "@/models/WarehouseInventory";
 import { Order } from "@/models/Order";
 import Warehouse from "@/models/Warehouse";
 import { InventoryHistory } from "@/models/InventoryHistory";
 import { OrderStatus } from "@/constants/orderStatus";
-import { InventoryTransactionType, InventoryAction } from "@/constants/inventoryStatus";
+import { InventoryTransactionType } from "@/constants/inventoryStatus";
 
 import { success, error as errorResponse } from "@/utils/response";
 
@@ -144,23 +144,28 @@ export async function GET(request: Request) {
       variantByProduct.get(productId)!.push(variant._id.toString());
     }
 
-    // Build variant filter for inventory query
+    // Build filter for WarehouseInventory (source of truth).
+    // We query by the variants that belong to the loaded products,
+    // filter to itemType: "PRODUCT" (gift inventory is excluded here).
     const inventoryFilter: Record<string, unknown> = {
-      productVariantId: { $in: variantIds },
+      itemType: "PRODUCT",
+      variantId: { $in: variantIds },
+      isActive: true,
     };
     if (warehouseId) {
       inventoryFilter.warehouseId = warehouseId;
     }
 
-    // Fetch inventory records
-    const inventories = await Inventory.find(inventoryFilter)
+    // Fetch inventory records (WarehouseInventory is the SoT).
+    const inventories = await WarehouseInventory.find(inventoryFilter)
       .populate({ path: "warehouseId", select: "code name" })
       .lean();
 
     // Build inventory map: variantId -> warehouseId -> inventory
     const inventoryByVariantWarehouse = new Map<string, Map<string, typeof inventories[0]>>();
     for (const inv of inventories) {
-      const variantId = inv.productVariantId.toString();
+      if (!inv.variantId) continue;
+      const variantId = inv.variantId.toString();
       const warehouseIdStr = (inv.warehouseId as unknown as { _id: string })._id.toString();
       if (!inventoryByVariantWarehouse.has(variantId)) {
         inventoryByVariantWarehouse.set(variantId, new Map());

@@ -1,0 +1,209 @@
+/* BatchCheckCustomersModal Styles
+ *
+ * Modal hiển thị kết quả tra cứu khách hàng loạt từ staging list.
+ * Chia thành 3 section: Khách cũ (có đơn), Khách cũ (chưa có đơn), Khách mới.
+ */
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .summaryRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.summaryCard {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  background: #fff;
+  text-align: center;
+}
+
+.summaryCard.found {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+.summaryCard.notFound {
+  background: #fff7e6;
+  border-color: #ffd591;
+}
+
+.summaryCard.withOrders {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+}
+
+.summaryCard.failed {
+  background: #fff1f0;
+  border-color: #ffa39e;
+}
+
+.summaryValue {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #262626;
+}
+
+.summaryCard.found .summaryValue { color: #52c41a; }
+.summaryCard.notFound .summaryValue { color: #fa8c16; }
+.summaryCard.withOrders .summaryValue { color: #1890ff; }
+.summaryCard.failed .summaryValue { color: #ff4d4f; }
+
+.summaryLabel {
+  font-size: 11px;
+  color: #8c8c8c;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.searchInput {
+  margin-bottom: 16px;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+.sectionTitle.found {
+  background: #f6ffed;
+  color: #389e0d;
+}
+
+.sectionTitle.notFound {
+  background: #fff7e6;
+  color: #d46b08;
+}
+
+.sectionTitle.withOrders {
+  background: #e6f7ff;
+  color: #096dd9;
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.item:hover {
+  border-color: #1890ff;
+  background: #fafcff;
+}
+
+.itemMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.itemHeaderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.itemPhone {
+  font-weight: 700;
+  color: #262626;
+  font-family: "Menlo", "Monaco", monospace;
+  font-size: 13px;
+}
+
+.itemName {
+  font-weight: 600;
+  color: #262626;
+}
+
+.itemMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 12px;
+  color: #595959;
+}
+
+.itemMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.itemMetaItem strong {
+  color: #262626;
+}
+
+.itemAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1890ff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.itemAvatar.notFound {
+  background: #d9d9d9;
+  color: #595959;
+}
+
+.itemActions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.notFoundEmpty {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 24px;
+  font-size: 13px;
+}
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: #8c8c8c;
+}

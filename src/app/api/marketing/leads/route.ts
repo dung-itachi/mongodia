@@ -12,12 +12,22 @@ import type { CreateLeadInput, Lead } from "@/types/lead";
 import type { MarketingLead, MarketingLeadListResponse } from "@/types/marketing-lead";
 
 function mapMarketingLead(lead: Lead): MarketingLead {
-  const combo = (lead as Lead & { comboId?: { _id: string; code: string; name: string } }).comboId;
+  const leadAny = lead as Lead & {
+    customerId?: string;
+    marketingEmployee?: { _id: string; employeeCode: string; name: string };
+    saleEmployee?: { _id: string; employeeCode: string; name: string };
+    combo?: { _id: string; code: string; name: string };
+    product?: { _id: string; code: string; name: string };
+    facebookPage?: { _id: string; code: string; name: string };
+    isConverted?: boolean;
+    orderId?: string;
+    convertedAt?: Date;
+  };
   return {
     _id: lead._id,
     leadCode: lead.leadCode,
     customerName: lead.customerName,
-    customerId: (lead as Lead & { customerId?: string }).customerId,
+    customerId: leadAny.customerId,
     phone: lead.phone,
     phone2: lead.phone2,
     email: lead.email,
@@ -27,22 +37,17 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     sourceLabel: LEAD_SOURCE_LABELS[lead.sourceType as LeadSource],
     status: lead.status,
     statusLabel: LEAD_STATUS_LABELS[lead.status],
-    marketingEmployee: (lead as Lead & { marketingEmployee?: { _id: string; employeeCode: string; name: string } }).marketingEmployee,
-    saleEmployee: (lead as Lead & { saleEmployee?: { _id: string; employeeCode: string; name: string } }).saleEmployee,
-    combo: combo ? { _id: combo._id, code: combo.code, name: combo.name } : undefined,
-    facebookPage: (lead as Lead & { facebookPage?: { _id: string; code: string; name: string } }).facebookPage
-      ? {
-          _id: (lead as Lead & { facebookPage: { _id: string; code: string; name: string } }).facebookPage._id,
-          code: (lead as Lead & { facebookPage: { _id: string; code: string; name: string } }).facebookPage.code,
-          name: (lead as Lead & { facebookPage: { _id: string; code: string; name: string } }).facebookPage.name,
-        }
-      : undefined,
+    marketingEmployee: leadAny.marketingEmployee,
+    saleEmployee: leadAny.saleEmployee,
+    combo: leadAny.combo,
+    product: leadAny.product,
+    facebookPage: leadAny.facebookPage,
     note: lead.note,
     isDuplicate: lead.isDuplicate,
     // Sprint 5.7 — Lead Convert
-    isConverted: (lead as Lead & { isConverted?: boolean }).isConverted ?? false,
-    orderId: (lead as Lead & { orderId?: string }).orderId,
-    convertedAt: (lead as Lead & { convertedAt?: Date }).convertedAt?.toISOString(),
+    isConverted: leadAny.isConverted ?? false,
+    orderId: leadAny.orderId,
+    convertedAt: leadAny.convertedAt?.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
   };
@@ -142,9 +147,6 @@ export async function POST(request: Request) {
       phone: parsed.data.phone ?? undefined,
       phone2: parsed.data.phone2 ?? undefined,
       address: parsed.data.address ?? undefined,
-      province: parsed.data.province ?? undefined,
-      district: parsed.data.district ?? undefined,
-      ward: parsed.data.ward ?? undefined,
       sourceType: sourceTypeValue,
       facebookPageId: parsed.data.facebookPageId ?? undefined,
       facebookPageAssignmentId: parsed.data.facebookPageAssignmentId ?? undefined,

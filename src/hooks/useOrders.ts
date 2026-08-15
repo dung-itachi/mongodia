@@ -29,6 +29,7 @@ async function fetchOrders(filters: OrderFilter): Promise<OrderListResponse> {
   if (filters.orderType) params.set("orderType", filters.orderType);
   if (filters.orderSource) params.set("orderSource", filters.orderSource);
   if (filters.saleEmployeeId) params.set("saleEmployeeId", filters.saleEmployeeId);
+  if (filters.marketingEmployeeId) params.set("marketingEmployeeId", filters.marketingEmployeeId);
   if (filters.customerId) params.set("customerId", filters.customerId);
   if (filters.warehouseId) params.set("warehouseId", filters.warehouseId);
   if (filters.revenueLocked !== undefined) params.set("revenueLocked", String(filters.revenueLocked));

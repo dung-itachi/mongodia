@@ -25,11 +25,7 @@ export interface CreateCustomerData {
   gender?: "male" | "female" | "other";
   birthday?: Date;
   address?: {
-    street?: string;
-    province?: string;
-    district?: string;
-    ward?: string;
-  };
+    street?: string;  };
   facebook?: string;
   zalo?: string;
   note?: string;
@@ -48,11 +44,7 @@ export interface UpdateCustomerData {
   gender?: "male" | "female" | "other";
   birthday?: Date;
   address?: {
-    street?: string;
-    province?: string;
-    district?: string;
-    ward?: string;
-  };
+    street?: string;  };
   facebook?: string;
   zalo?: string;
   note?: string;

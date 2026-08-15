@@ -10,10 +10,8 @@
  *
  *   - `InsufficientStockError`          → 409 Conflict
  *   - `InsufficientReservedStockError`  → 409 Conflict
- *   - `InventoryNotFoundError`          → 404 Not Found
  *   - `WarehouseNotFoundError`          → 404 Not Found
  *   - `InvalidStockInputError`          → 400 Bad Request
- *   - `UnsupportedActionError`          → 400 Bad Request
  *
  * Các error đều carry `context` (metadata) để UI / log truy vết.
  * KHÔNG tự throw `Error` thường trong Stock Engine.
@@ -95,52 +93,6 @@ export class InsufficientReservedStockError extends StockEngineError {
 }
 
 /**
- * Throw khi `quantity < |adjustChange|` (ADJUST giảm / OUT).
- *
- * → 409 Conflict.
- */
-export class InsufficientQuantityError extends StockEngineError {
-  public readonly name = "InsufficientQuantityError";
-  public readonly code = "INSUFFICIENT_QUANTITY";
-  public readonly statusCode = 409;
-
-  constructor(context: {
-    warehouseId?: string;
-    productVariantId?: string;
-    comboId?: string;
-    quantity: number;
-    requestedQuantity: number;
-  }) {
-    super(
-      `Không đủ tồn tổng. Tồn: ${context.quantity}, yêu cầu: ${context.requestedQuantity}`,
-      context
-    );
-  }
-}
-
-/**
- * Throw khi Inventory row không tồn tại trong kho (RESERVE / OUT / UNRESERVE / TRANSFER_OUT).
- *
- * → 404 Not Found.
- */
-export class InventoryNotFoundError extends StockEngineError {
-  public readonly name = "InventoryNotFoundError";
-  public readonly code = "INVENTORY_NOT_FOUND";
-  public readonly statusCode = 404;
-
-  constructor(context: {
-    warehouseId: string;
-    productVariantId?: string;
-    comboId?: string;
-  }) {
-    super(
-      `Không tìm thấy Inventory row trong kho. Cần nhập kho trước khi thực hiện thao tác này.`,
-      context
-    );
-  }
-}
-
-/**
  * Throw khi WarehouseId không tồn tại / không active.
  *
  * → 404 Not Found.
@@ -167,20 +119,5 @@ export class InvalidStockInputError extends StockEngineError {
 
   constructor(message: string, context: Record<string, unknown> = {}) {
     super(message, context);
-  }
-}
-
-/**
- * Throw khi caller truyền action không được hỗ trợ (vd: ADJUST phải qua adjustStock riêng).
- *
- * → 400 Bad Request.
- */
-export class UnsupportedActionError extends StockEngineError {
-  public readonly name = "UnsupportedActionError";
-  public readonly code = "UNSUPPORTED_ACTION";
-  public readonly statusCode = 400;
-
-  constructor(context: { action: string }) {
-    super(`Action không được hỗ trợ: ${context.action}`, context);
   }
 }

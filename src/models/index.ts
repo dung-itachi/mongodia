@@ -31,12 +31,8 @@ export { default as GiftInventoryHistory } from "./GiftInventoryHistory";
 
 export { default as Inventory } from "./Inventory";
 
-export { default as InventoryAdjustment } from "./InventoryAdjustment";
-
 // InventoryHistory uses named export
 export { InventoryHistory } from "./InventoryHistory";
-
-export { default as InventoryTransaction } from "./InventoryTransaction";
 
 // Lead uses named export
 export { Lead } from "./Lead";
