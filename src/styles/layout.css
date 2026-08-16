@@ -22,15 +22,13 @@
   min-width: 0;
 }
 
-/* Force main content to respect sidebar width on desktop */
+/* Ensure the desktop sidebar doesn't double-count against the content area.
+   The shell already sizes `.main` via flex (sibling to the 228px sidebar), so
+   `.content` only needs width:100% — leave it to flex to fit the parent. */
 @media screen and (min-width: 769px) {
   .main {
     margin-left: 0 !important;
     padding-left: 0 !important;
-  }
-
-  .content {
-    width: calc(100% - 228px) !important;
   }
 }
 

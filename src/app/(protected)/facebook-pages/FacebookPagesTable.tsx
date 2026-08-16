@@ -151,6 +151,7 @@ function FacebookPagesTableInner({
       dataIndex: "description",
       key: "description",
       ellipsis: true,
+      minWidth: 260,
     },
     {
       title: "Thao tác",
@@ -197,7 +198,8 @@ function FacebookPagesTableInner({
         showQuickJumper: true,
         showTotal: (t: number) => `Tổng: ${t}`,
       }}
-      scroll={{ x: 1100 }}
+      scroll={{ x: "max-content" }}
+      tableLayout="auto"
       size="middle"
     />
   );

@@ -112,10 +112,87 @@ export async function GET(request: Request) {
           totalOrders: { $sum: 1 },
           totalRevenue: { $sum: "$totalAmount" },
           avgOrderValue: { $avg: "$totalAmount" },
+          // Sprint X.Y — Daily breakdown theo status (Số đẩy / Đã gọi / Chốt / Giao / TC)
+          pushed: { $sum: 1 }, // Số đẩy = tất cả orders không CANCELLED/RETURNED
+          called: {
+            $sum: {
+              $cond: [
+                { $ne: ["$status", OrderStatus.WAIT_CONFIRM] },
+                1,
+                0,
+              ],
+            },
+          },
+          closed: {
+            $sum: {
+              $cond: [
+                {
+                  $in: [
+                    "$status",
+                    [
+                      OrderStatus.CONFIRMED,
+                      OrderStatus.PACKING,
+                      OrderStatus.SHIPPING,
+                      OrderStatus.DELIVERED,
+                      OrderStatus.RETURNED,
+                      OrderStatus.RECONCILED,
+                    ],
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          shipped: {
+            $sum: {
+              $cond: [
+                {
+                  $in: [
+                    "$status",
+                    [
+                      OrderStatus.SHIPPING,
+                      OrderStatus.DELIVERED,
+                      OrderStatus.RECONCILED,
+                    ],
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          deliveredOk: {
+            $sum: {
+              $cond: [
+                {
+                  $in: [
+                    "$status",
+                    [OrderStatus.DELIVERED, OrderStatus.RECONCILED],
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
         },
       },
       { $sort: { _id: 1 } },
-      { $project: { _id: 0, date: "$_id", totalOrders: 1, totalRevenue: 1, avgOrderValue: 1 } },
+      {
+        $project: {
+          _id: 0,
+          date: "$_id",
+          totalOrders: 1,
+          totalRevenue: 1,
+          avgOrderValue: 1,
+          pushed: 1,
+          called: 1,
+          closed: 1,
+          shipped: 1,
+          deliveredOk: 1,
+        },
+      },
     ]);
 
     // Fetch Ads Expense Data by day
@@ -159,7 +236,25 @@ export async function GET(request: Request) {
     ]);
 
     // Merge data by date
-    const dateMap = new Map<string, { date: string; revenue: number; orders: number; avgOrder: number; adsSpent: number; adsRevenue: number; leads: number; closedLeads: number; roas: number }>();
+    const dateMap = new Map<
+      string,
+      {
+        date: string;
+        revenue: number;
+        orders: number;
+        avgOrder: number;
+        adsSpent: number;
+        adsRevenue: number;
+        leads: number;
+        closedLeads: number;
+        roas: number;
+        pushed: number;
+        called: number;
+        closed: number;
+        shipped: number;
+        deliveredOk: number;
+      }
+    >();
 
     // Initialize all dates in range
     const cursor = new Date(startDate);
@@ -175,6 +270,11 @@ export async function GET(request: Request) {
         leads: 0,
         closedLeads: 0,
         roas: 0,
+        pushed: 0,
+        called: 0,
+        closed: 0,
+        shipped: 0,
+        deliveredOk: 0,
       });
       cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
@@ -186,6 +286,11 @@ export async function GET(request: Request) {
         existing.revenue = item.totalRevenue;
         existing.orders = item.totalOrders;
         existing.avgOrder = Math.round(item.avgOrderValue);
+        existing.pushed = item.pushed ?? 0;
+        existing.called = item.called ?? 0;
+        existing.closed = item.closed ?? 0;
+        existing.shipped = item.shipped ?? 0;
+        existing.deliveredOk = item.deliveredOk ?? 0;
       }
     }
 
@@ -212,8 +317,25 @@ export async function GET(request: Request) {
         totalAdsRevenue: acc.totalAdsRevenue + day.adsRevenue,
         totalLeads: acc.totalLeads + day.leads,
         totalClosedLeads: acc.totalClosedLeads + day.closedLeads,
+        totalPushed: acc.totalPushed + day.pushed,
+        totalCalled: acc.totalCalled + day.called,
+        totalClosed: acc.totalClosed + day.closed,
+        totalShipped: acc.totalShipped + day.shipped,
+        totalDeliveredOk: acc.totalDeliveredOk + day.deliveredOk,
       }),
-      { totalRevenue: 0, totalOrders: 0, totalAdsSpent: 0, totalAdsRevenue: 0, totalLeads: 0, totalClosedLeads: 0 }
+      {
+        totalRevenue: 0,
+        totalOrders: 0,
+        totalAdsSpent: 0,
+        totalAdsRevenue: 0,
+        totalLeads: 0,
+        totalClosedLeads: 0,
+        totalPushed: 0,
+        totalCalled: 0,
+        totalClosed: 0,
+        totalShipped: 0,
+        totalDeliveredOk: 0,
+      }
     );
 
     return success({
@@ -234,9 +356,15 @@ export async function GET(request: Request) {
         totalAdsRevenue: totals.totalAdsRevenue,
         totalLeads: totals.totalLeads,
         totalClosedLeads: totals.totalClosedLeads,
-        overallROAS: totals.totalAdsSpent > 0
-          ? Math.round((totals.totalAdsRevenue / totals.totalAdsSpent) * 100) / 100
-          : 0,
+        overallROAS:
+          totals.totalAdsSpent > 0
+            ? Math.round((totals.totalAdsRevenue / totals.totalAdsSpent) * 100) / 100
+            : 0,
+        totalPushed: totals.totalPushed,
+        totalCalled: totals.totalCalled,
+        totalClosed: totals.totalClosed,
+        totalShipped: totals.totalShipped,
+        totalDeliveredOk: totals.totalDeliveredOk,
       },
     });
   } catch (err) {

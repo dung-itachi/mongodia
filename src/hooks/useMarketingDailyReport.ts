@@ -29,6 +29,12 @@ export type DailyReportItem = {
   leads: number;
   closedLeads: number;
   roas: number;
+  /** Sprint X.Y — Order status breakdown theo ngày */
+  pushed: number;
+  called: number;
+  closed: number;
+  shipped: number;
+  deliveredOk: number;
 };
 
 export type DailyReportSummary = {
@@ -41,6 +47,12 @@ export type DailyReportSummary = {
   totalLeads: number;
   totalClosedLeads: number;
   overallROAS: number;
+  /** Sprint X.Y — Order status totals */
+  totalPushed: number;
+  totalCalled: number;
+  totalClosed: number;
+  totalShipped: number;
+  totalDeliveredOk: number;
 };
 
 export type DailyReportResponse = {

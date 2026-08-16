@@ -73,6 +73,203 @@
   min-height: 300px;
 }
 
+/* ============================================================
+   MKT Overview Banner (Sprint X.Y — Tổng quan MKT)
+   - Design: pink dải ngang theo theme mongolia-crm (7)
+   ============================================================ */
+.mk-overview-banner {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #c62828;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.mk-overview-banner-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.mk-overview-banner-value {
+  font-weight: 700;
+}
+
+.mk-overview-banner-pct {
+  background: #ef9a9a;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #b71c1c;
+  font-weight: 800;
+}
+
+.mk-overview-banner-sep {
+  color: #d0a0a8;
+  user-select: none;
+}
+
+.mk-overview-banner-skeleton {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
+  border-radius: 8px;
+  height: 38px;
+  margin-bottom: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mk-overview-banner-skeleton::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: mk-shimmer 1.4s infinite;
+}
+
+@keyframes mk-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ============================================================
+   Chi phí Ads Card
+   ============================================================ */
+.mk-ads-cost-card {
+  min-height: 100px;
+}
+
+.mk-ads-cost-body {
+  font-size: 12px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mk-ads-cost-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.mk-ads-cost-label {
+  color: var(--muted, #8c8c8c);
+}
+
+.mk-ads-cost-value-morning {
+  color: var(--accent, #1890ff);
+  font-weight: 700;
+}
+
+.mk-ads-cost-value-afternoon {
+  color: var(--purple, #722ed1);
+  font-weight: 700;
+}
+
+.mk-ads-cost-value-urgent {
+  color: var(--red, #ff4d4f);
+  font-weight: 700;
+}
+
+.mk-ads-cost-value-roas {
+  color: var(--green, #52c41a);
+  font-weight: 700;
+}
+
+/* ============================================================
+   Best Product Card
+   ============================================================ */
+.mk-best-product-card {
+  min-height: 100px;
+}
+
+.mk-best-product-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mk-best-product-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mk-best-product-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent, #1890ff);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mk-best-product-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #262626;
+}
+
+.mk-best-product-count {
+  color: var(--accent, #1890ff);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Daily Revenue table — bar chart column (Sprint X.Y)
+   ============================================================ */
+.mk-daily-bar-wrap {
+  background: #f0f0f0;
+  border-radius: 3px;
+  height: 14px;
+  overflow: hidden;
+  min-width: 80px;
+}
+
+.mk-daily-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.mk-daily-bar-fill--has-rev {
+  background: var(--green, #52c41a);
+}
+
+.mk-daily-bar-fill--no-rev {
+  background: var(--line, #d9d9d9);
+  min-width: 4px;
+}
+
 /* Chart styles */
 .mk-chart {
   display: flex;

@@ -9,10 +9,13 @@
  *  - MKT (non-GLOBAL): API tự khoá cứng theo `marketingEmployeeId = currentUser._id`.
  *  - ADMIN/GLOBAL: mặc định xem tất cả MKT, có dropdown chọn MKT cụ thể.
  *  - User ADMIN không chọn = xem tất cả; chọn 1 MKT = lọc riêng MKT đó.
+ *
+ * Sprint X.Y — Mở rộng bảng với các cột theo thiết kế mongolia-crm (7):
+ *   Ngày | Số đẩy | Đã gọi | Chốt | Giao | TC | DS ₮ | DS ₫ | Biểu đồ
  */
 
-import { memo, useState } from "react";
-import { Card, Table, Skeleton, Row, Col, Statistic, Select, Space } from "antd";
+import { memo, useMemo, useState } from "react";
+import { Card, Table, Skeleton, Row, Col, Statistic, Select, Space, Empty } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { UserOutlined } from "@ant-design/icons";
 import { useMarketingDailyReport } from "@/hooks/useMarketingDailyReport";
@@ -33,6 +36,11 @@ type DailyRevenueRow = {
   revenue: number;
   orders: number;
   avgOrder: number;
+  pushed: number;
+  called: number;
+  closed: number;
+  shipped: number;
+  deliveredOk: number;
 };
 
 /**
@@ -52,13 +60,39 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
     string | undefined
   >(undefined);
 
-  const { data, loading, error, scope } = useMarketingDailyReport({
+  const { data, loading, error, refetch, scope } = useMarketingDailyReport({
     period,
     marketingEmployeeId: isGlobal ? selectedMarketingEmployeeId : undefined,
   });
 
   // Chỉ fetch MKT list khi user là GLOBAL — non-GLOBAL bị khoá cứng rồi.
   const { employees: marketingEmployeeOptions } = useMarketingEmployees();
+
+  const tableData: DailyRevenueRow[] = useMemo(() => {
+    if (!data) return [];
+    return data.data.map((item, index) => {
+      const dateParts = item.date.split("-");
+      return {
+        key: item.date || String(index),
+        date: item.date,
+        dateDisplay: `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`,
+        revenue: item.revenue,
+        orders: item.orders,
+        avgOrder: item.avgOrder,
+        pushed: item.pushed ?? 0,
+        called: item.called ?? 0,
+        closed: item.closed ?? 0,
+        shipped: item.shipped ?? 0,
+        deliveredOk: item.deliveredOk ?? 0,
+      };
+    });
+  }, [data]);
+
+  // Max revenue để scale biểu đồ bar
+  const maxRevenue = useMemo(
+    () => Math.max(...tableData.map((r) => r.revenue), 1),
+    [tableData]
+  );
 
   if (loading) {
     return (
@@ -84,53 +118,120 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
     );
   }
 
-  const tableData: DailyRevenueRow[] = data.data.map((item, index) => {
-    const dateParts = item.date.split("-");
-    return {
-      key: item.date || String(index),
-      date: item.date,
-      dateDisplay: `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`,
-      revenue: item.revenue,
-      orders: item.orders,
-      avgOrder: item.avgOrder,
-    };
-  });
+  const summary = data.summary;
 
   const columns: ColumnsType<DailyRevenueRow> = [
     {
       title: "Ngày",
       dataIndex: "dateDisplay",
       key: "dateDisplay",
-      width: 120,
+      width: 110,
       fixed: "left",
-      render: (text: string) => <span style={{ fontWeight: 500 }}>{text}</span>,
-    },
-    {
-      title: "Doanh thu",
-      dataIndex: "revenue",
-      key: "revenue",
-      width: 180,
-      align: "right",
-      render: (value: number) => (
-        <span style={{ color: "#13c2c2", fontWeight: 600, fontSize: "14px" }}>
-          {formatNumber(value)}
+      align: "left",
+      render: (text: string) => (
+        <span style={{ fontWeight: 600, fontSize: 12, whiteSpace: "nowrap" }}>
+          {text}
         </span>
       ),
     },
     {
-      title: "Số đơn hàng",
-      dataIndex: "orders",
-      key: "orders",
-      width: 140,
+      title: "Số đẩy",
+      dataIndex: "pushed",
+      key: "pushed",
+      width: 90,
+      align: "center",
+      render: (value: number) => (
+        <span style={{ fontWeight: 700, color: "#1890ff" }}>{value}</span>
+      ),
+    },
+    {
+      title: "Đã gọi",
+      dataIndex: "called",
+      key: "called",
+      width: 90,
       align: "center",
     },
     {
-      title: "Giá trị TB/đơn",
-      dataIndex: "avgOrder",
-      key: "avgOrder",
-      width: 160,
+      title: "Chốt",
+      dataIndex: "closed",
+      key: "closed",
+      width: 80,
+      align: "center",
+      render: (value: number) => (
+        <span style={{ fontWeight: 700, color: "#52c41a" }}>{value}</span>
+      ),
+    },
+    {
+      title: "Giao",
+      dataIndex: "shipped",
+      key: "shipped",
+      width: 80,
+      align: "center",
+    },
+    {
+      title: "TC",
+      dataIndex: "deliveredOk",
+      key: "deliveredOk",
+      width: 80,
+      align: "center",
+      render: (value: number) => (
+        <span style={{ fontWeight: 700, color: "#13c2c2" }}>{value}</span>
+      ),
+    },
+    {
+      title: "DS ₮",
+      dataIndex: "revenue",
+      key: "revenueMnt",
+      width: 130,
       align: "right",
-      render: (value: number) => formatNumber(value),
+      render: (value: number) =>
+        value > 0 ? (
+          <span style={{ color: "#fa8c16", fontWeight: 700 }}>
+            {formatNumber(value)}₮
+          </span>
+        ) : (
+          <span style={{ color: "#bfbfbf" }}>-</span>
+        ),
+    },
+    {
+      title: "DS ₫",
+      dataIndex: "revenue",
+      key: "revenueVnd",
+      width: 140,
+      align: "right",
+      render: (value: number) =>
+        value > 0 ? (
+          <span style={{ color: "#52c41a", fontWeight: 700 }}>
+            {formatNumber(value)}₫
+          </span>
+        ) : (
+          <span style={{ color: "#bfbfbf" }}>-</span>
+        ),
+    },
+    {
+      title: "Biểu đồ",
+      key: "chart",
+      width: 140,
+      render: (_, record) => {
+        const pct =
+          record.revenue > 0
+            ? Math.max((record.revenue / maxRevenue) * 100, 4)
+            : 0;
+        const hasRev = record.revenue > 0;
+        return (
+          <div className={styles["mk-daily-bar-wrap"]}>
+            <div
+              className={
+                hasRev
+                  ? `${styles["mk-daily-bar-fill"]} ${styles["mk-daily-bar-fill--has-rev"]}`
+                  : `${styles["mk-daily-bar-fill"]} ${styles["mk-daily-bar-fill--no-rev"]}`
+              }
+              style={{ width: `${pct}%` }}
+              aria-label={`Doanh thu ${formatNumber(record.revenue)}`}
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -144,7 +245,14 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
 
   return (
     <Card
-      title="📈 Doanh số theo ngày"
+      title={
+        <span>
+          📈 Doanh số theo ngày
+          <small style={{ marginLeft: 8, color: "#8c8c8c", fontWeight: 400 }}>
+            {tableData.length} ngày · {summary.totalPushed} số · {summary.totalClosed} chốt · {summary.totalDeliveredOk} TC
+          </small>
+        </span>
+      }
       className={styles["mk-daily-report-card"]}
       extra={
         isGlobal ? (
@@ -191,41 +299,103 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
 
       {/* Summary Stats */}
       <Row gutter={16} className={styles["mk-daily-report-summary"]}>
-        <Col span={8}>
+        <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="Tổng doanh thu"
-            value={data.summary.totalRevenue}
+            title="Tổng DS"
+            value={summary.totalRevenue}
             formatter={(value) => formatNumber(Number(value))}
-            styles={{ content: { color: "#13c2c2", fontSize: "22px" } }}
+            styles={{ content: { color: "#fa8c16", fontSize: "20px" } }}
           />
         </Col>
-        <Col span={8}>
+        <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="Số đơn hàng"
-            value={data.summary.totalOrders}
-            styles={{ content: { fontSize: "22px" } }}
+            title="Số đẩy"
+            value={summary.totalPushed}
+            styles={{ content: { color: "#1890ff", fontSize: "20px" } }}
           />
         </Col>
-        <Col span={8}>
+        <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="TB doanh thu/ngày"
-            value={data.summary.avgDailyRevenue}
-            formatter={(value) => formatNumber(Number(value))}
-            styles={{ content: { fontSize: "22px" } }}
+            title="Đã gọi"
+            value={summary.totalCalled}
+            styles={{ content: { fontSize: "20px" } }}
+          />
+        </Col>
+        <Col xs={12} sm={8} md={4}>
+          <Statistic
+            title="Chốt"
+            value={summary.totalClosed}
+            styles={{ content: { color: "#52c41a", fontSize: "20px" } }}
+          />
+        </Col>
+        <Col xs={12} sm={8} md={4}>
+          <Statistic
+            title="Giao"
+            value={summary.totalShipped}
+            styles={{ content: { fontSize: "20px" } }}
+          />
+        </Col>
+        <Col xs={12} sm={8} md={4}>
+          <Statistic
+            title="TC"
+            value={summary.totalDeliveredOk}
+            styles={{ content: { color: "#13c2c2", fontSize: "20px" } }}
           />
         </Col>
       </Row>
 
       {/* Daily Table */}
-      <Table
-        columns={columns}
-        dataSource={tableData}
-        pagination={false}
-        size="small"
-        scroll={{ x: 500 }}
-        className={styles["mk-daily-report-table"]}
-        bordered
-      />
+      {tableData.length === 0 ? (
+        <Empty description="Chưa có dữ liệu doanh số" />
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={tableData}
+          pagination={false}
+          size="small"
+          scroll={{ x: 900 }}
+          className={styles["mk-daily-report-table"]}
+          bordered
+          summary={(rows) => {
+            const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
+            return (
+              <Table.Summary.Row
+                style={{ background: "#f8fafd", fontWeight: 700, fontSize: 12 }}
+              >
+                <Table.Summary.Cell index={0} align="left">
+                  Tổng
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={1} align="center">
+                  <span style={{ color: "#1890ff" }}>{summary.totalPushed}</span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="center">
+                  {summary.totalCalled}
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="center">
+                  <span style={{ color: "#52c41a" }}>{summary.totalClosed}</span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={4} align="center">
+                  {summary.totalShipped}
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={5} align="center">
+                  <span style={{ color: "#13c2c2" }}>{summary.totalDeliveredOk}</span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={6} align="right">
+                  <span style={{ color: "#fa8c16" }}>
+                    {formatNumber(totalRevenue)}₮
+                  </span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={7} align="right">
+                  <span style={{ color: "#52c41a" }}>
+                    {formatNumber(totalRevenue)}₫
+                  </span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={8} />
+              </Table.Summary.Row>
+            );
+          }}
+        />
+      )}
     </Card>
   );
 }
