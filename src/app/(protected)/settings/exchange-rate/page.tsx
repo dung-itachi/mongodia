@@ -98,7 +98,7 @@ export default function ExchangeRateSettingsPage() {
 
       <Row gutter={16}>
         <Col xs={24} lg={14}>
-          <PermissionGate permission="settings.exchange_rate.update">
+          <PermissionGate permission="system-settings.manage">
             <Card
               title={
                 <Space>

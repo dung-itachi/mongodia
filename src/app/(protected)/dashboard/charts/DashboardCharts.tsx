@@ -2,11 +2,16 @@
  * DashboardCharts Component (Sprint 4.4 — Dashboard Polish)
  *
  * Container component that aggregates all dashboard charts.
- * Uses useDashboardCharts hook (React Query).
+ * Uses useDashboardCharts hook (React Query) with `range` filter
+ * để áp dụng cho `TopMarketingChart`.
+ *
+ * Filter Day / Week / Month ở `TopMarketingChart` sẽ trigger refetch
+ * với query key thay đổi → hook tự fetch lại từ API.
+ *
  * Memoized to prevent re-renders when other widgets update.
  */
 
-import { memo } from "react";
+import { memo, useState, useCallback } from "react";
 import {
   CardSection,
   SkeletonCard,
@@ -14,6 +19,7 @@ import {
 } from "@/components/common";
 import { BarChartOutlined } from "@ant-design/icons";
 import { useDashboardCharts } from "@/hooks/useDashboardCharts";
+import type { TopMarketingRange } from "@/types/dashboard-chart";
 import DashboardErrorState from "../DashboardErrorState";
 import PipelineChart from "./PipelineChart";
 import RevenueChart from "./RevenueChart";
@@ -23,7 +29,12 @@ import TopMarketingChart from "./TopMarketingChart";
 import styles from "../dashboard.module.css";
 
 function DashboardChartsInner() {
-  const { data, loading, error, refetch } = useDashboardCharts();
+  const [range, setRange] = useState<TopMarketingRange>("month");
+  const { data, loading, error, refetch } = useDashboardCharts({ range });
+
+  const handleRangeChange = useCallback((next: TopMarketingRange) => {
+    setRange(next);
+  }, []);
 
   if (loading) {
     return (
@@ -63,7 +74,11 @@ function DashboardChartsInner() {
         <LeadSourceChart data={data.leadSource} />
         <TopSaleChart data={data.topSale} />
       </div>
-      <TopMarketingChart data={data.topMarketing} />
+      <TopMarketingChart
+        data={data.topMarketing}
+        range={range}
+        onRangeChange={handleRangeChange}
+      />
     </div>
   );
 }

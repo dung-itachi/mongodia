@@ -1,0 +1,287 @@
+/* roles-tree.css — Phase 9 Permission Tree page */
+
+.rpt-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (max-width: 960px) {
+  .rpt-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rpt-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+}
+
+.rpt-sidebar-search {
+  margin-bottom: 8px;
+}
+
+.rpt-role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 600px;
+  padding-right: 4px;
+}
+
+.rpt-role-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: 0.12s;
+}
+
+.rpt-role-item:hover {
+  background: var(--accent-s, #f0f5ff);
+}
+
+.rpt-role-item.active {
+  border-color: var(--accent, #1890ff);
+  background: var(--accent-s, #f0f5ff);
+}
+
+.rpt-role-item .rpt-role-code {
+  font-size: 10px;
+  color: var(--muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.rpt-role-item .rpt-role-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #222);
+}
+
+.rpt-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 480px;
+}
+
+.rpt-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rpt-summary-count {
+  font-size: 12px;
+  color: var(--muted, #888);
+}
+
+.rpt-summary-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted, #888);
+  margin-left: auto;
+}
+
+.rpt-summary-stats strong {
+  color: var(--ink, #222);
+}
+
+.rpt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.rpt-toolbar .rpt-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.rpt-unsaved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #fa8c16;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.rpt-wildcard-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #fffbe6 0%, #fff7e6 100%);
+  border: 1px solid #ffe58f;
+  font-size: 12px;
+  color: #874d00;
+}
+
+.rpt-wildcard-banner strong {
+  color: #874d00;
+}
+
+.rpt-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rpt-module {
+  border: 1px solid var(--line, #eee);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.rpt-module-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--line2, #f5f5f5);
+  cursor: pointer;
+  user-select: none;
+}
+
+.rpt-module-h:hover {
+  background: var(--accent-s, #f0f5ff);
+}
+
+.rpt-module-h .rpt-caret {
+  font-size: 10px;
+  width: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted, #888);
+  transition: transform 0.12s ease;
+}
+
+.rpt-module-h.open .rpt-caret {
+  transform: rotate(90deg);
+}
+
+.rpt-module-h .rpt-module-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #222);
+}
+
+.rpt-module-h .rpt-module-count {
+  font-size: 10px;
+  color: var(--muted, #888);
+  margin-left: auto;
+}
+
+.rpt-permissions {
+  display: flex;
+  flex-direction: column;
+}
+
+.rpt-permission-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 28px;
+  border-top: 1px solid var(--line, #eee);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.rpt-permission-row:hover {
+  background: var(--line2, #fafafa);
+}
+
+.rpt-permission-row .rpt-perm-name {
+  font-size: 11px;
+  color: var(--ink, #222);
+  flex: 1;
+}
+
+.rpt-permission-row .rpt-perm-code {
+  font-size: 10px;
+  color: var(--muted, #888);
+  font-family: monospace;
+}
+
+.rpt-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1.5px solid var(--muted, #bbb);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.rpt-checkbox.full {
+  background: var(--accent, #1890ff);
+  border-color: var(--accent, #1890ff);
+  color: #fff;
+}
+
+.rpt-checkbox.none {
+  background: #fff;
+  border-color: var(--muted, #bbb);
+}
+
+.rpt-checkbox.partial {
+  background: #fff;
+  border-color: var(--accent, #1890ff);
+  color: var(--accent, #1890ff);
+}
+
+.rpt-checkbox.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.rpt-checkbox.compact {
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+}
+
+.rpt-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--muted, #888);
+  font-size: 12px;
+}
+
+.rpt-search-highlight {
+  background: #fff566;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+
+.rpt-filter-empty {
+  text-align: center;
+  padding: 16px;
+  color: var(--muted, #888);
+  font-size: 11px;
+}

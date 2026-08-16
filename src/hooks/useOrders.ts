@@ -215,3 +215,73 @@ export function useChangeOrderStatus() {
     },
   });
 }
+
+/**
+ * Toggle cờ "đã gọi xác nhận" của Order (Sprint — Confirm-call gate).
+ *
+ * PATCH /api/orders/:id/confirm-call
+ * Body (optional): { value: boolean }. Nếu bỏ trống → server toggle.
+ */
+interface ToggleConfirmCallInput {
+  id: string;
+  value?: boolean;
+}
+
+async function toggleOrderConfirmCall(
+  id: string,
+  data: { value?: boolean } = {}
+): Promise<OrderListItem> {
+  const response = await api.patch(`/api/orders/${id}/confirm-call`, data);
+  return response.data.data;
+}
+
+export function useToggleOrderConfirmCall() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, value }: ToggleConfirmCallInput) =>
+      toggleOrderConfirmCall(id, value === undefined ? {} : { value }),
+    // Optimistic update để UI phản hồi tức thì trước khi server trả về.
+    onMutate: async ({ id, value }) => {
+      await queryClient.cancelQueries({ queryKey: ["orders"] });
+      const snapshots = queryClient.getQueriesData<OrderListResponse>({
+        queryKey: ["orders"],
+      });
+      queryClient.setQueriesData<OrderListResponse>(
+        { queryKey: ["orders"] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.map((item) =>
+              item._id === id
+                ? {
+                    ...item,
+                    isCalledForConfirmation:
+                      typeof value === "boolean"
+                        ? value
+                        : !(item.isCalledForConfirmation ?? false),
+                  }
+                : item
+            ),
+          };
+        }
+      );
+      return { snapshots };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback nếu server lỗi.
+      if (context?.snapshots) {
+        for (const [key, snap] of context.snapshots) {
+          queryClient.setQueryData(key, snap);
+        }
+      }
+    },
+    onSettled: (_data, _err, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["orders"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["order", variables.id],
+      });
+    },
+  });
+}

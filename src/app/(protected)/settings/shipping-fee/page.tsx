@@ -108,7 +108,7 @@ export default function ShippingFeeSettingsPage() {
 
       <Row gutter={16}>
         <Col xs={24} lg={14}>
-          <PermissionGate permission="settings.shipping_fee.update">
+          <PermissionGate permission="system-settings.manage">
             <Card
               title={
                 <Space>

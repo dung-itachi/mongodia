@@ -2,36 +2,52 @@
  * Dashboard Types (Sprint 4.1 - Dashboard Foundation)
  *
  * Type definitions for Dashboard data.
+ * All values are aggregated từ Lead + Order collections (real data only).
  */
 
+export type DashboardTrend = {
+  /** % thay đổi so với kỳ trước (cùng độ dài). Ví dụ: 12.5 nghĩa là +12.5% */
+  percent: number;
+  /** Hướng thay đổi. */
+  direction: "up" | "down" | "flat";
+};
+
 export type DashboardSummary = {
-  /** Total number of leads */
+  /** Tổng số Lead (mọi status, không bao gồm CANCELLED/REJECTED). */
   totalLeads: number;
-  /** Number of leads that were converted to orders */
+  /** Tổng số Lead đã chốt (CLOSED + ORDER_CREATED). */
   closedLeads: number;
-  /** Number of orders currently being shipped */
+  /** Số đơn hàng đang vận chuyển (SHIPPING). */
   shippingOrders: number;
-  /** Number of orders successfully delivered */
+  /** Số đơn hàng đã giao (DELIVERED + RECONCILED). */
   deliveredOrders: number;
-  /** Number of orders that were returned/cancelled */
+  /** Số đơn hàng bị hoàn/trả (RETURNED). */
   returnedOrders: number;
-  /** Total revenue */
+  /** Số đơn hàng bị hủy (CANCELLED). */
+  cancelledOrders: number;
+  /** Tổng doanh thu (sum totalAmount của các đơn không CANCELLED). */
   revenue: number;
+  /** Tổng số đơn hàng (mọi status, bao gồm CANCELLED). */
+  totalOrders: number;
+  /** Thay đổi doanh thu so với kỳ trước (cùng độ dài). */
+  trend: DashboardTrend;
 };
 
 export type DashboardPipeline = {
-  /** New leads */
+  /** Lead mới (NEW) */
   new: number;
-  /** Contacted leads (KNM) */
+  /** Lead đã liên hệ (CONTACTED + QUALIFIED + ASSIGNED + PROCESSING) */
   contacted: number;
-  /** Closed deals */
+  /** Lead đã chốt (CLOSED + ORDER_CREATED) */
   closed: number;
-  /** Orders being shipped */
+  /** Đơn hàng đang giao (SHIPPING) */
   shipping: number;
-  /** Orders delivered successfully */
+  /** Đơn hàng đã giao thành công (DELIVERED + RECONCILED) */
   delivered: number;
-  /** Orders returned/cancelled */
+  /** Đơn hàng hoàn/trả (RETURNED) */
   returned: number;
+  /** Đơn hàng đã hủy (CANCELLED) */
+  cancelled: number;
 };
 
 export type DashboardResponse = {

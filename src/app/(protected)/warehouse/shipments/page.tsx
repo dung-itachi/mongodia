@@ -219,6 +219,7 @@ export default function WarehouseShipmentsPage() {
     {
       key: "status",
       title: "Trạng thái",
+      dataIndex: "status",
       width: 140,
       render: (value: unknown) => <StatusBadge status={String(value)} />,
     },

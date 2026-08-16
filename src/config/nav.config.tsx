@@ -28,6 +28,8 @@ export type NavItem = {
   standalone?: boolean;
   /** Permission required to show this item. */
   permission?: string;
+  /** Any-of permissions. If present, the user needs at least one. */
+  permissions?: string[];
 };
 
 export type NavGroup = {
@@ -41,6 +43,11 @@ export type NavGroup = {
    * expanding/collapsing the group). Sprint 8.6 — group "Đơn hàng" → /orders.
    */
   href?: string;
+  /**
+   * Group key from `modules.ts` (e.g. "MKT", "SALE", "WAREHOUSE").
+   * Used by the role switcher to filter the sidebar by view-as role.
+   */
+  groupKey?: string;
   items: NavItem[];
 };
 
@@ -57,9 +64,7 @@ function moduleToNavItem(module: ModuleDefinition): NavItem {
     standalone: module.standalone,
     permission: module.permission,
   };
-}
-
-/**
+}/**
  * Build NAV_GROUPS from modules.ts.
  * This is the GENERATED navigation structure.
  */
@@ -78,6 +83,7 @@ function buildNavGroups(): NavGroup[] {
         label: groupDef.label,
         iconSvg: groupDef.icon,
         href: groupDef.href,
+        groupKey: groupDef.key,
         items: modulesInGroup.map(moduleToNavItem),
       });
     }

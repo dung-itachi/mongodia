@@ -246,10 +246,16 @@ export function useDeleteProduct() {
 async function fetchProductManagement(params?: {
   warehouseId?: string;
   keyword?: string;
+  categoryCode?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }): Promise<ProductManagementResponse> {
   const searchParams = new URLSearchParams();
   if (params?.warehouseId) searchParams.set("warehouseId", params.warehouseId);
   if (params?.keyword) searchParams.set("keyword", params.keyword);
+  if (params?.categoryCode) searchParams.set("categoryCode", params.categoryCode);
+  if (params?.dateFrom) searchParams.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) searchParams.set("dateTo", params.dateTo);
 
   const url = `/api/products/management${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const response = await api.get<{
@@ -267,6 +273,9 @@ async function fetchProductManagement(params?: {
 export function useProductManagement(params?: {
   warehouseId?: string;
   keyword?: string;
+  categoryCode?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }) {
   return useQuery({
     queryKey: ["product-management", params],

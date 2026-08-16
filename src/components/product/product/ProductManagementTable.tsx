@@ -8,33 +8,31 @@
  * - Trạng thái
  * - Thao tác: Sửa, Combo, Xóa
  *
- * Combo không còn được quản lý inline trong form sản phẩm. Nhấn nút "Combo" để
- * mở trang /products/[productId]/combos.
+ * Bộ lọc (tìm kiếm theo tên, danh mục, kho, khoảng ngày) đã được
+ * chuyển lên ProductPage và áp dụng ở API. Table chỉ nhận dữ liệu
+ * đã lọc kèm `selectedWarehouseId` để highlight chỉ số tồn kho.
  */
 
 "use client";
 
 import { useCallback } from "react";
-import { Switch, Popconfirm, Tag, Tooltip, Select } from "antd";
+import { Switch, Popconfirm, Tag, Tooltip } from "antd";
 import { EditOutlined, DeleteOutlined, GiftOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
 import type {
   ProductManagementItem,
-  WarehouseInfo,
   ComboListItem,
 } from "@/hooks/useProductCrud";
 
 interface ProductManagementTableProps {
   data: ProductManagementItem[];
-  warehouses: WarehouseInfo[];
   loading?: boolean;
   onEdit: (item: ProductManagementItem) => void;
   onDelete: (item: ProductManagementItem) => void;
   onToggleActive?: (item: ProductManagementItem) => void;
   onOpenCombos?: (item: ProductManagementItem) => void;
   selectedWarehouseId?: string;
-  onWarehouseChange?: (warehouseId: string) => void;
 }
 
 function formatDate(dateStr: string | null): string {
@@ -61,14 +59,12 @@ function ComboTag({ combo }: { combo: ComboListItem }) {
 
 export default function ProductManagementTable({
   data,
-  warehouses,
   loading,
   onEdit,
   onDelete,
   onToggleActive,
   onOpenCombos,
   selectedWarehouseId,
-  onWarehouseChange,
 }: ProductManagementTableProps) {
   const getCategoryName = useCallback((category: ProductManagementItem["category"]) => {
     if (typeof category === "object" && category !== null) {
@@ -342,20 +338,18 @@ export default function ProductManagementTable({
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
-        <span style={{ fontWeight: 500 }}>Kho:</span>
-        <Select
-          allowClear
-          placeholder="Tất cả kho"
-          style={{ width: 200 }}
-          value={selectedWarehouseId || undefined}
-          onChange={(value) => onWarehouseChange?.(value || "")}
-          options={warehouses.map((w) => ({
-            value: w._id,
-            label: `${w.code} - ${w.name}`,
-          }))}
-        />
-        <span style={{ color: "#999", fontSize: 12 }}>{data.length} sản phẩm</span>
+      <div
+        style={{
+          marginBottom: 12,
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <span style={{ color: "#999", fontSize: 12 }}>
+          {data.length} sản phẩm
+        </span>
       </div>
 
       <DataTable
@@ -364,7 +358,7 @@ export default function ProductManagementTable({
         loading={loading}
         rowKey="_id"
         pagination={false}
-        emptyText="Chưa có sản phẩm nào"
+        emptyText="Không có sản phẩm nào phù hợp với bộ lọc"
         scroll={{ y: 500, x: 1400 }}
       />
     </div>

@@ -1,0 +1,175 @@
+/**
+ * Orders Page Styles
+ *
+ * Class-prefix: `recon-` cho Reconciliation (Đối soát) panel.
+ */
+
+.recon-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ============================================================
+   Stats grid (4 cards)
+   ============================================================ */
+.recon-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .recon-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.recon-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s, transform 0.2s;
+  min-height: 78px;
+}
+
+.recon-stat-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.recon-stat-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.recon-stat-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.recon-stat-card-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #262626;
+}
+
+.recon-stat-card-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  font-weight: 500;
+}
+
+/* Color tones */
+.recon-stat-card--green .recon-stat-card-icon {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.recon-stat-card--orange .recon-stat-card-icon {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.recon-stat-card--purple .recon-stat-card-icon {
+  background: #f9f0ff;
+  color: #722ed1;
+}
+
+.recon-stat-card--blue .recon-stat-card-icon {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+/* ============================================================
+   Reconciliation card (table + bulk button)
+   ============================================================ */
+.recon-card {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.recon-card--green {
+  border-left: 4px solid #52c41a;
+}
+
+.recon-card--orange {
+  border-left: 4px solid #fa8c16;
+}
+
+.recon-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+}
+
+.recon-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #262626;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recon-card-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recon-card-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 8px;
+  background: #f0f0f0;
+  color: #595959;
+  font-weight: 700;
+  font-size: 12px;
+  border-radius: 11px;
+}
+
+.recon-card--green .recon-card-count {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.recon-card--orange .recon-card-count {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.recon-card-body {
+  padding: 12px 18px 16px;
+}

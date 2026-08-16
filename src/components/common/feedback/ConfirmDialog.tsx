@@ -6,11 +6,17 @@
 
 import { Modal } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { ReactNode } from "react";
 
 export type ConfirmDialogProps = {
   open: boolean;
   title: string;
-  content: string;
+  /**
+   * Body content. Accepts a plain string (legacy callers) or any
+   * ReactNode — Phase 9 extends this so the role-permission save
+   * dialog can show a structured diff.
+   */
+  content: ReactNode;
   type?: "delete" | "warning" | "confirm";
   confirmText?: string;
   cancelText?: string;
@@ -74,7 +80,7 @@ export default function ConfirmDialog({
       confirmLoading={loading}
       okButtonProps={{ danger: getOkButtonDanger() }}
     >
-      <p style={{ margin: "16px 0", color: "#595959" }}>{content}</p>
+      <div style={{ margin: "16px 0", color: "#595959" }}>{content}</div>
     </Modal>
   );
 }

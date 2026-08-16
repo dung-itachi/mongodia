@@ -11,7 +11,7 @@
 
 import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { message, Dropdown, Button, Space } from "antd";
+import { message, Dropdown, Button, Space, Checkbox, Tooltip } from "antd";
 import {
   EyeOutlined,
   EditOutlined,
@@ -20,6 +20,7 @@ import {
   CheckCircleOutlined,
   InboxOutlined,
   StopOutlined,
+  PhoneOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -32,12 +33,21 @@ import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonTable from "@/components/common/overlay/SkeletonTable";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
 
-import { useOrders, useDeleteOrder, useChangeOrderStatus } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder, useChangeOrderStatus, useToggleOrderConfirmCall } from "@/hooks/useOrders";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ORDER_STATUS_LABELS } from "@/constants/orderStatus";
 import type { OrderStatus } from "@/constants/orderStatus";
 import { STATUS_ACTIONS } from "@/configs/order-status.config";
 import type { OrderListItem } from "@/types/order";
+import ReconciliationPanel from "./reconciliation/ReconciliationPanel";
+
+/**
+ * Khi URL `?status=RECONCILED` thì hiển thị giao diện Đối soát
+ * (panel riêng) thay vì danh sách bảng mặc định.
+ */
+function isReconciliationView(status: string | undefined): boolean {
+  return status?.toUpperCase() === "RECONCILED";
+}
 
 export default function OrdersPage() {
   return (
@@ -101,6 +111,9 @@ function OrdersPageInner() {
   // Status change mutation
   const changeStatusMutation = useChangeOrderStatus();
 
+  // Toggle cờ "đã gọi xác nhận" — chỉ dùng cho status=CONFIRMED
+  const toggleConfirmCallMutation = useToggleOrderConfirmCall();
+
   // Show quick action buttons only for CONFIRMED status
   const showQuickActions = status === "CONFIRMED";
 
@@ -116,11 +129,18 @@ function OrdersPageInner() {
 
   const getOrderItemTotals = useCallback((order: OrderListItem) => {
     const items = order.orderItems ?? [];
+    const mntSubtotal = items.reduce((sum, item) => sum + (item.subtotal ?? 0), 0)
+      || (order.totalAmount ?? 0);
+    const rate = order.exchangeRate ?? 7;
+    const vndSubtotal = mntSubtotal * rate;
     return {
       comboName: items.map((item) => item.comboName || item.productName).filter(Boolean).join(", ") || order.combo?.name || order.product?.name || "-",
       comboQuantity: items.reduce((sum, item) => sum + (item.comboQuantity ?? item.quantity ?? 0), 0) || order.quantity,
       productQuantity: items.reduce((sum, item) => sum + item.comboQuantity * item.packageQuantity, 0),
       giftQuantity: items.reduce((sum, item) => sum + item.comboQuantity * item.giftQuantity, 0),
+      mntSubtotal,
+      vndSubtotal,
+      rate,
     };
   }, []);
 
@@ -184,14 +204,7 @@ function OrdersPageInner() {
       title: "Mã đơn",
       dataIndex: "orderCode",
       width: 140,
-      render: (value: unknown) => (
-        <a onClick={() => {
-          const order = orders.find(o => o.orderCode === value);
-          if (order) router.push(`/orders/${order._id}`);
-        }}>
-          {String(value)}
-        </a>
-      ),
+      render: (value: unknown) => <span>{String(value)}</span>,
     },
     {
       key: "customerName",
@@ -263,6 +276,40 @@ function OrdersPageInner() {
       render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).giftQuantity || "-",
     },
     {
+      key: "amountMNT",
+      title: "Số tiền (MNT)",
+      width: 140,
+      align: "right" as const,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const order = record as unknown as OrderListItem;
+        const mnt = getOrderItemTotals(order).mntSubtotal;
+        const formatted = new Intl.NumberFormat("en-US", {
+          maximumFractionDigits: 0,
+        }).format(mnt);
+        return <span style={{ fontWeight: 500 }}>{formatted} ₮</span>;
+      },
+    },
+    {
+      key: "amountVND",
+      title: "Số tiền (VND quy đổi)",
+      width: 160,
+      align: "right" as const,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const order = record as unknown as OrderListItem;
+        const { vndSubtotal, rate } = getOrderItemTotals(order);
+        const formatter = new Intl.NumberFormat("vi-VN", {
+          style: "currency",
+          currency: "VND",
+          maximumFractionDigits: 0,
+        });
+        return (
+          <Tooltip title={`Tỷ giá: 1 MNT = ${rate} VND`}>
+            <span style={{ fontWeight: 500 }}>{formatter.format(vndSubtotal)}</span>
+          </Tooltip>
+        );
+      },
+    },
+    {
       key: "saleEmployee",
       title: "Sale",
       dataIndex: "saleEmployee",
@@ -288,6 +335,52 @@ function OrdersPageInner() {
       render: (value: unknown) => (
         <StatusBadge status={String(value)} />
       ),
+    },
+    {
+      // Cột "Xác nhận gọi" — chỉ hiển thị khi đang filter CONFIRMED.
+      key: "confirmCall",
+      title: (
+        <Tooltip title="Đánh dấu đã gọi điện xác nhận với khách trước khi đóng gói">
+          <span>Xác nhận</span>
+        </Tooltip>
+      ),
+      dataIndex: "isCalledForConfirmation",
+      width: 110,
+      align: "center" as const,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const order = record as unknown as OrderListItem;
+        const checked = order.isCalledForConfirmation === true;
+        return (
+          <Tooltip
+            title={
+              checked
+                ? "Đã gọi xác nhận (click để bỏ)"
+                : "Chưa gọi xác nhận — click để đánh dấu"
+            }
+          >
+            <Checkbox
+              checked={checked}
+              disabled={!showQuickActions || toggleConfirmCallMutation.isPending}
+              onChange={async (e) => {
+                try {
+                  await toggleConfirmCallMutation.mutateAsync({
+                    id: order._id,
+                    value: e.target.checked,
+                  });
+                } catch (err) {
+                  message.error(
+                    err instanceof Error
+                      ? err.message
+                      : "Không thể cập nhật xác nhận"
+                  );
+                }
+              }}
+            >
+              {checked ? "Đã gọi" : "Chưa gọi"}
+            </Checkbox>
+          </Tooltip>
+        );
+      },
     },
     {
       key: "totalAmount",
@@ -321,7 +414,7 @@ function OrdersPageInner() {
     {
       key: "actions",
       title: "Thao tác",
-      width: showQuickActions ? 280 : 100,
+      width: showQuickActions ? 320 : 100,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
         const order = record as unknown as OrderListItem;
@@ -352,6 +445,9 @@ function OrdersPageInner() {
               </Button>
               {renderableActions.map((action) => {
                 const isDanger = action.color === "red";
+                const isPacking = action.targetStatus === "PACKING";
+                // Gate "Đóng gói" — chỉ enable khi đã tick xác nhận gọi.
+                const gatingBlock = isPacking && !order.isCalledForConfirmation;
                 const icon =
                   action.targetStatus === "PACKING" ? (
                     <InboxOutlined />
@@ -360,7 +456,7 @@ function OrdersPageInner() {
                   ) : (
                     <CheckCircleOutlined />
                   );
-                return (
+                const button = (
                   <Button
                     key={action.targetStatus}
                     type={isDanger ? "default" : "primary"}
@@ -368,13 +464,31 @@ function OrdersPageInner() {
                     icon={icon}
                     size="small"
                     aria-label={action.label}
+                    disabled={gatingBlock}
                     onClick={(e) => {
+                      if (gatingBlock) {
+                        e.stopPropagation();
+                        message.warning(
+                          "Cần đánh dấu 'Đã gọi xác nhận' trước khi đóng gói"
+                        );
+                        return;
+                      }
                       e.stopPropagation();
                       handleQuickAction(order, action.targetStatus, action.label);
                     }}
                   >
                     {action.label}
                   </Button>
+                );
+                return gatingBlock ? (
+                  <Tooltip
+                    key={action.targetStatus}
+                    title="Tick 'Đã gọi xác nhận' ở cột Xác nhận trước"
+                  >
+                    <span>{button}</span>
+                  </Tooltip>
+                ) : (
+                  button
                 );
               })}
             </Space>
@@ -423,7 +537,7 @@ function OrdersPageInner() {
         );
       },
     },
-  ], [router, orders, getOrderItemTotals, showQuickActions, handleQuickAction]);
+  ], [router, orders, getOrderItemTotals, showQuickActions, handleQuickAction, toggleConfirmCallMutation]);
 
   // Pagination config
   const pagination = useMemo(() => ({
@@ -469,9 +583,28 @@ function OrdersPageInner() {
   // Title dynamic theo status filter (từ URL ?status=...)
   const pageTitle = useMemo(() => {
     if (!status) return "Đơn hàng";
+    if (isReconciliationView(status)) return "Đối soát đơn hàng";
     const label = ORDER_STATUS_LABELS[status as OrderStatus];
     return label ? `Đơn hàng · ${label}` : "Đơn hàng";
   }, [status]);
+
+  // Khi URL ?status=RECONCILED → render ReconciliationPanel (giao diện riêng)
+  if (isReconciliationView(status)) {
+    return (
+      <PageContainer>
+        <PageHeader
+          title={pageTitle}
+          subtitle="Đối soát các đơn DELIVERED & RETURNED sang RECONCILED"
+          breadcrumb={[
+            { label: "Trang chủ", href: "/" },
+            { label: "Đơn hàng" },
+            { label: "Đối soát" },
+          ]}
+        />
+        <ReconciliationPanel />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
@@ -493,14 +626,17 @@ function OrdersPageInner() {
           loading={loading}
         />
 
-        <FilterBar
-          items={customFilterItems}
-          values={filterValues}
-          onChange={handleFilterChange}
-        />
+        <div style={{ marginBottom: 16 }}>
+          <FilterBar
+            items={customFilterItems}
+            values={filterValues}
+            onChange={handleFilterChange}
+            loading={loading}
+          />
+        </div>
 
         {loading ? (
-          <SkeletonTable rows={10} columns={7} />
+          <SkeletonTable rows={10} columns={13} />
         ) : orders.length === 0 ? (
           <EmptyState
             title="Chưa có đơn hàng"
@@ -517,11 +653,7 @@ function OrdersPageInner() {
             loading={loading}
             pagination={pagination}
             rowKey="_id"
-            scroll={{ x: 1810 }}
-            onRow={(record) => ({
-              onClick: () => router.push(`/orders/${record._id as string}`),
-              style: { cursor: "pointer" },
-            })}
+            scroll={{ x: 2240 }}
           />
         )}
       </div>

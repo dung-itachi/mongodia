@@ -1,7 +1,7 @@
 import Permission from "@/models/Permission";
 import { PERMISSIONS } from "@/constants/permissions";
 
-const MODULE_MAP: Record<string, string> = {
+export const MODULE_MAP: Record<string, string> = {
   "dashboard.view": "Dashboard",
 
   "employee.view": "Employee",
@@ -33,6 +33,9 @@ const MODULE_MAP: Record<string, string> = {
   "role.create": "Role",
   "role.update": "Role",
   "role.delete": "Role",
+
+  // Phase 9 — Role-Permission Tree (RBAC management)
+  "role.permission.manage": "Role",
 
   "area.view": "Area",
   "area.create": "Area",
@@ -141,6 +144,10 @@ const MODULE_MAP: Record<string, string> = {
   // Sprint Settings — Shipping Fee
   "settings.shipping_fee.view": "Setting",
   "settings.shipping_fee.update": "Setting",
+
+  // System Settings — module-level gate (Phase 8 — Permission Audit)
+  "system-settings.view": "Setting",
+  "system-settings.manage": "Setting",
 };
 
 export async function seedPermissions() {

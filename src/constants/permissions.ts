@@ -88,6 +88,16 @@ export const PERMISSIONS = [
     name: "Delete Role",
   },
 
+  // Phase 9 — Role-Permission Tree (RBAC management)
+  // Lets the holder READ and WRITE the role↔permission mapping via
+  // /api/roles/[id]/permissions and view the Permission Tree UI.
+  // Intentionally NOT granted to MANAGER by default — only ADMIN can
+  // change RBAC.
+  {
+    code: "role.permission.manage",
+    name: "Manage Role Permissions",
+  },
+
 
   // Area
 {
@@ -489,5 +499,37 @@ export const PERMISSIONS = [
   {
     code: "settings.shipping_fee.update",
     name: "Update Shipping Fee",
+  },
+
+  // System Settings — Module-level gate (Phase 8 — Permission Audit)
+  // `system-settings.view` is required to open the Cài đặt hệ thống module
+  //   (covers both /settings/exchange-rate and /settings/shipping-fee).
+  // `system-settings.manage` is required to mutate any setting (PUT).
+  // Users who only have `system-settings.view` can browse but not edit.
+  {
+    code: "system-settings.view",
+    name: "View System Settings",
+  },
+  {
+    code: "system-settings.manage",
+    name: "Manage System Settings",
+  },
+
+  // Notification
+  {
+    code: "notification.view",
+    name: "View Notifications",
+  },
+  {
+    code: "notification.read",
+    name: "Mark Notification as Read",
+  },
+  {
+    code: "notification.readAll",
+    name: "Mark All Notifications as Read",
+  },
+  {
+    code: "notification.manage",
+    name: "Manage Notifications",
   },
 ];

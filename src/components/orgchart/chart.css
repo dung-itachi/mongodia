@@ -1,0 +1,450 @@
+/* =====================================================================
+ * Organization Chart (Horizontal / Top-Down)
+ * =====================================================================
+ *
+ * Notes:
+ *  - The chart is rendered DOM-first (no SVG layout engine). Each node
+ *    is a `<div>` and connectors are absolutely positioned SVG paths.
+ *  - Pan & zoom is applied via CSS `transform: translate(...) scale(...)`
+ *    on the inner canvas. The outer `.org-chart-viewport` is the scroll
+ *    container; it gets `overflow: auto` so the chart can extend beyond
+ *    the viewport horizontally/vertically without being squeezed.
+ *  - The `:focus` outline is removed because the canvas is navigated via
+ *    drag/wheel, not keyboard traversal.
+ * ===================================================================== */
+
+.org-chart {
+  --org-node-w: 220px;
+  --org-node-min-h: 96px;
+  --org-row-gap: 56px;
+  --org-col-gap: 28px;
+  --org-color-admin: #fde68a;
+  --org-color-admin-border: #f59e0b;
+  --org-color-manager: #dbeafe;
+  --org-color-manager-border: #2563eb;
+  --org-color-leader: #dcfce7;
+  --org-color-leader-border: #16a34a;
+  --org-color-employee: #f1f5f9;
+  --org-color-employee-border: #94a3b8;
+
+  position: relative;
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.org-chart-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.org-chart-toolbar .org-chart-search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 360px;
+}
+
+.org-chart-toolbar .org-chart-spacer {
+  flex: 1;
+}
+
+.org-chart-viewport {
+  position: relative;
+  width: 100%;
+  height: 70vh;
+  min-height: 480px;
+  overflow: auto;
+  /* Allow large canvas to be panned without showing selection. */
+  user-select: none;
+  cursor: grab;
+  background:
+    radial-gradient(circle, rgba(15, 23, 42, 0.06) 1px, transparent 1px) 0 0 / 24px 24px,
+    #f1f5f9;
+}
+
+.org-chart-viewport.is-grabbing {
+  cursor: grabbing;
+}
+
+.org-chart-canvas {
+  position: relative;
+  width: 4000px;
+  height: 3000px;
+  transform-origin: 0 0;
+  /* The transform is set inline via React to keep math centralized. */
+  will-change: transform;
+}
+
+.org-chart-tree {
+  position: absolute;
+  inset: 0;
+  /* Children positioned absolutely via inline styles (computed in JS). */
+}
+
+/* -------------------------------------------------------------------------
+ * Node card
+ * ------------------------------------------------------------------------- */
+.org-node {
+  position: absolute;
+  width: var(--org-node-w);
+  min-height: var(--org-node-min-h);
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  transition: box-shadow 120ms ease, transform 120ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.org-node:hover {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.org-node.is-highlighted {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.18), 0 4px 12px rgba(15, 23, 42, 0.1);
+  animation: org-pulse 1.2s ease-in-out 1;
+}
+
+@keyframes org-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4), 0 4px 12px rgba(15, 23, 42, 0.1);
+  }
+  60% {
+    box-shadow: 0 0 0 12px rgba(245, 158, 11, 0), 0 4px 12px rgba(15, 23, 42, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 4px 12px rgba(15, 23, 42, 0.1);
+  }
+}
+
+.org-node-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+.org-node-role.role-ADMIN {
+  background: var(--org-color-admin);
+  color: #92400e;
+  border: 1px solid var(--org-color-admin-border);
+}
+
+.org-node-role.role-MANAGER {
+  background: var(--org-color-manager);
+  color: #1e40af;
+  border: 1px solid var(--org-color-manager-border);
+}
+
+.org-node-role.role-LEADER {
+  background: var(--org-color-leader);
+  color: #166534;
+  border: 1px solid var(--org-color-leader-border);
+}
+
+.org-node-role.role-EMPLOYEE,
+.org-node-role.role-SALE,
+.org-node-role.role-MKT,
+.org-node-role.role-WAREHOUSE {
+  background: var(--org-color-employee);
+  color: #334155;
+  border: 1px solid var(--org-color-employee-border);
+}
+
+.org-node-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 14px;
+  line-height: 1.25;
+  /* Two-line clamp keeps all node cards equal height. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.org-node-code {
+  color: #64748b;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", monospace;
+}
+
+.org-node-meta {
+  color: #475569;
+  font-size: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.org-node-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.org-node-toggle {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 2;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.org-node-toggle:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* -------------------------------------------------------------------------
+ * "Thêm cùng cấp / cấp dưới" hover buttons (ADMIN-only).
+ *
+ * Each add button + its descriptive tooltip live inside a
+ * `.org-node-add-slot` wrapper that is absolutely positioned on the
+ * card edge:
+ *
+ *   - Sibling button (+)    → left edge, 6px in.
+ *   - Child button    (↓)   → right edge, 6px in.
+ *
+ * The vertical centre (`top: 50%` + `translateY(-50%)`) keeps the
+ * 20×20 button clear of the role pill (top) and the meta row
+ * (bottom). Each slot contains:
+ *
+ *   - the button itself (`.org-node-add`)
+ *   - the tooltip popup (`.org-node-add-tip`) which extends out to
+ *     the right (sibling) or left (child) of the slot.
+ *
+ * Visibility is driven by TWO layers of triggers:
+ *
+ *   1. `.org-node:hover` (PRIMARY) — fires as soon as the cursor
+ *      enters the card body. This is what makes the buttons reveal
+ *      immediately on hover without the cursor having to find the
+ *      tiny 20×20 slot first.
+ *   2. `.org-node-add-slot:hover` (SECONDARY) — once the cursor is on
+ *      the button or tooltip body, the slot stays hovered and keeps
+ *      the whole group revealed while the cursor travels across the
+ *      gap between them.
+ *
+ * `.org-node:has(.org-node-add:hover)` is a belt-and-braces safety
+ * net: it keeps the card in hover-state while the cursor is on the
+ * button, even if a future layout change widens the gap between card
+ * and button.
+ *
+ * Earlier revisions placed the buttons outside the card (cursor left
+ * the card mid-travel) or at the bottom corners (overlapped the meta
+ * row) — both were replaced by this inside-edge, vertically-centred
+ * placement.
+ * ------------------------------------------------------------------------- */
+.org-node-add-slot {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  z-index: 3;
+}
+
+.org-node-add-slot--sibling {
+  left: 6px;
+}
+
+.org-node-add-slot--child {
+  right: 6px;
+}
+
+.org-node-add {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  opacity: 0;
+  transform: scale(0.85);
+  pointer-events: none;
+  transition: opacity 140ms ease, transform 140ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.org-node:hover .org-node-add,
+.org-node:focus-within .org-node-add,
+.org-node-add-slot:hover .org-node-add,
+.org-node-add-slot:focus-within .org-node-add,
+.org-node:has(.org-node-add:hover) .org-node-add,
+.org-node:has(.org-node-add:focus-visible) .org-node-add {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.org-node-add:hover {
+  background: #ecfeff;
+  border-color: #0891b2;
+  color: #0e7490;
+}
+
+/* -------------------------------------------------------------------------
+ * Tooltip popup — rendered via React portal into document.body so it
+ * escapes any ancestor `overflow: hidden` (notably `.org-chart`
+ * which is a scroll container). Positioned via CSS variables
+ * `--tip-x` / `--tip-y` set inline by JS from the trigger's
+ * `getBoundingClientRect()`.
+ *
+ * Layout:
+ *   - `position: fixed` so the browser does not clip against
+ *     intermediate ancestors.
+ *   - `--tip-y` is the vertical centre of the trigger button; the
+ *     tooltip is vertically centred against that line via
+ *     `translateY(-50%)`.
+ *   - `--tip-x` is set by JS to anchor the tip's edge (`calc(... -
+ *     6px)` gives a small visual gap from the button).
+ *
+ * Visibility is driven by the `data-side` attribute (set on the
+ * portal root) AND the `.org-node-add-slot:hover`/`focus-within`
+ * triggers on the source. Whenever the source slot is hovered or
+ * focused, JS keeps the portal mounted and emits `data-visible`.
+ * ------------------------------------------------------------------------- */
+.org-node-add-tip {
+  position: fixed;
+  top: var(--tip-y, 50%);
+  left: var(--tip-x, 0);
+  transform: translateY(-50%) scale(0.96);
+  width: 200px;
+  padding: 8px 10px;
+  background: #0f172a;
+  color: #f1f5f9;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.22);
+  font-size: 12px;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: normal;
+  z-index: 9999;
+}
+
+.org-node-add-tip[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.org-node-add-tip-title {
+  font-weight: 600;
+  color: #fff;
+  font-size: 12px;
+}
+
+.org-node-add-tip-desc {
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.org-node-add-tip-desc b {
+  color: #fff;
+  font-weight: 600;
+}
+
+.org-node-row {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+/* -------------------------------------------------------------------------
+ * Connectors (SVG overlay)
+ * ------------------------------------------------------------------------- */
+.org-chart-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.org-chart-svg path {
+  fill: none;
+  stroke: #94a3b8;
+  stroke-width: 1.5;
+}
+
+.org-chart-svg path.is-highlighted {
+  stroke: #f59e0b;
+  stroke-width: 2;
+}
+
+/* -------------------------------------------------------------------------
+ * Responsive guards — never squeeze the tree, just allow scroll
+ * ------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .org-chart-viewport {
+    height: 60vh;
+  }
+
+  .org-chart-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .org-chart-toolbar .org-chart-search {
+    max-width: none;
+  }
+}

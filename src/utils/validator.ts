@@ -786,11 +786,9 @@ export const createLeadSchema = z.object({
     "LANDING_PAGE",
     "FACEBOOK_COMMENT",
     "FACEBOOK_INBOX",
-    "TIKTOK",
-    "ZALO",
     "OTHER",
   ], {
-    message: "NguÃ¡Â»â€œn khÃƒÂ´ng hÃ¡Â»Â£p lÃ¡Â»â€¡",
+    message: "Nguồn không hợp lệ",
   }),
 
   facebookPageId: z
@@ -913,8 +911,6 @@ export const updateLeadSchema = z.object({
     "LANDING_PAGE",
     "FACEBOOK_COMMENT",
     "FACEBOOK_INBOX",
-    "TIKTOK",
-    "ZALO",
     "OTHER",
   ]).optional(),
 

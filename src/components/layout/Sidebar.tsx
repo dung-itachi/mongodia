@@ -19,7 +19,37 @@ import {
   type NavGroup,
 } from "@/config/nav.config";
 import { useAuthStore } from "@/store/auth.store";
-import { hasPermission } from "@/lib/permission";
+import { hasAnyPermission } from "@/lib/permission";
+
+/**
+ * Map role-switcher code → set of `NavGroupKey` (from modules.ts) that should
+ * be visible when the user "views as" that role. `admin` is a superset and
+ * shows everything. Other roles restrict the sidebar to the groups that the
+ * role works with day-to-day, plus shared groups (Dashboard, Orders, …).
+ *
+ * Persisted in localStorage under `sb-role` so the choice survives reloads.
+ */
+const ROLE_VISIBLE_GROUPS: Record<
+  (typeof ROLES)[number]["code"],
+  ReadonlyArray<string>
+> = {
+  admin: [
+    "DASHBOARD",
+    "MKT",
+    "SALE",
+    "CUSTOMERS",
+    "ORDERS",
+    "PRODUCTS",
+    "ACCOUNTS",
+    "WAREHOUSE",
+    "SETTINGS",
+  ],
+  mkt: ["DASHBOARD", "MKT"],
+  sale: ["DASHBOARD", "SALE", "CUSTOMERS", "ORDERS", "PRODUCTS"],
+  kho: ["DASHBOARD", "WAREHOUSE", "ORDERS"],
+};
+
+const ROLE_STORAGE_KEY = "sb-role";
 
 type Props = {
   /** True when the mobile overlay should be shown. */
@@ -65,9 +95,31 @@ export default function Sidebar({
   const [lang, setLang] = useState<(typeof LANGUAGES)[number]["code"]>(
     DEFAULT_LANG
   );
-  const [role, setRole] = useState<(typeof ROLES)[number]["code"]>(
-    DEFAULT_ROLE
-  );
+  const [role, setRoleState] = useState<(typeof ROLES)[number]["code"]>(() => {
+    // Read persisted "view-as role" from localStorage so the choice survives
+    // page reloads. Falls back to the default role when storage is empty or
+    // contains an unknown value.
+    if (typeof window === "undefined") return DEFAULT_ROLE;
+    try {
+      const stored = window.localStorage.getItem(ROLE_STORAGE_KEY);
+      if (stored && ROLES.some((r) => r.code === stored)) {
+        return stored as (typeof ROLES)[number]["code"];
+      }
+    } catch {
+      /* ignore — localStorage may be unavailable */
+    }
+    return DEFAULT_ROLE;
+  });
+  const setRole = (next: (typeof ROLES)[number]["code"]) => {
+    setRoleState(next);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(ROLE_STORAGE_KEY, next);
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
   // Derive class from props (controlled state from AppShell)
   const asideClass = [
@@ -78,15 +130,30 @@ export default function Sidebar({
     .filter(Boolean)
     .join(" ");
 
-  // Filter groups and items by permission
+  // Filter groups and items by permission AND by the role-switcher filter.
+  // The role switcher is a *view* filter — it scopes which nav groups are
+  // shown without changing the actual session permissions.
   const userPermissions = user?.permissions ?? [];
   const visibleGroups = NAV_GROUPS.map((group) => {
-    const visibleItems = group.items.filter(
-      (item) =>
-        !item.permission || hasPermission(userPermissions, item.permission)
-    );
+    const visibleItems = group.items.filter((item) => {
+      if (item.permissions && item.permissions.length > 0) {
+        return hasAnyPermission(userPermissions, item.permissions);
+      }
+      if (item.permission) {
+        return hasAnyPermission(userPermissions, [item.permission]);
+      }
+      return true;
+    });
     return { ...group, items: visibleItems };
-  }).filter((group) => group.items.length > 0);
+  })
+    .filter((group) => {
+      // Role-switcher filter: only keep groups whose `groupKey` is in the
+      // role's allow-list. Admin sees everything; other roles see a slice.
+      const allowed = ROLE_VISIBLE_GROUPS[role];
+      if (!allowed) return true;
+      return allowed.includes(group.groupKey ?? "");
+    })
+    .filter((group) => group.items.length > 0);
 
   const handleLogout = () => {
     logout();

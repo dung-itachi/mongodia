@@ -36,11 +36,20 @@ import {
 } from "@/hooks/useWarehouseTasks";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useWarehouses } from "@/hooks/useWarehouses";
+import { useWarehouseInventoryOverview } from "@/hooks/useWarehouseInventoryOverview";
 import { WAREHOUSE_STATUS_LABELS } from "@/constants/warehouseStatus";
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 import type {
   WarehouseTaskListItem,
 } from "@/hooks/useWarehouseTasks";
+
+import WarehouseStatsGrid from "./WarehouseStatsGrid";
+import WarehouseOverviewCard from "./WarehouseOverviewCard";
+import WarehouseOverviewFilters, {
+  type WarehouseOverviewStockFilter,
+} from "./WarehouseOverviewFilters";
+import QuickCreateProductDrawer from "./QuickCreateProductDrawer";
+import styles from "./warehouses.module.css";
 
 export default function WarehousesPage() {
   const router = useRouter();
@@ -56,6 +65,43 @@ export default function WarehousesPage() {
   const [pageSize, setPageSize] = useState(20);
 
   const { warehouses } = useWarehouses();
+  // Filter state cho section "Quản lý kho" (WarehouseOverviewCard)
+  const [overviewSearch, setOverviewSearch] = useState("");
+  const debouncedOverviewSearch = useDebounce(overviewSearch, 300);
+  const [overviewWarehouseId, setOverviewWarehouseId] = useState<
+    string | undefined
+  >(undefined);
+  const [overviewStock, setOverviewStock] =
+    useState<WarehouseOverviewStockFilter>("all");
+
+  const {
+    data: overview,
+    loading: overviewLoading,
+    refetch: refetchOverview,
+  } = useWarehouseInventoryOverview({
+    warehouseId: overviewWarehouseId,
+  });
+
+  // Client-side filter cho search + stock (server đã filter theo warehouseId)
+  const filteredOverviewItems = useMemo(() => {
+    const items = overview?.items ?? [];
+    const keyword = debouncedOverviewSearch.trim().toLowerCase();
+    return items.filter((item) => {
+      if (
+        keyword &&
+        !item.productCode.toLowerCase().includes(keyword) &&
+        !item.productName.toLowerCase().includes(keyword)
+      ) {
+        return false;
+      }
+      if (overviewStock === "in_stock" && item.stock <= 0) return false;
+      if (overviewStock === "out_of_stock" && item.stock !== 0) return false;
+      if (overviewStock === "low_stock" && (item.stock <= 0 || item.stock > 10))
+        return false;
+      return true;
+    });
+  }, [overview?.items, debouncedOverviewSearch, overviewStock]);
+  const [addProductOpen, setAddProductOpen] = useState(false);
 
   // Build filter params
   const filterParams = useMemo(() => ({
@@ -258,7 +304,59 @@ export default function WarehousesPage() {
         ]}
       />
 
+      {/* Sprint X.Y — Tổng quan kho (theo mongolia-crm (7).html) */}
+      <WarehouseStatsGrid
+        totals={overview?.totals ?? {
+          productCount: 0,
+          stock: 0,
+          shipping: 0,
+          returning: 0,
+          delivered: 0,
+          returned: 0,
+        }}
+        loading={overviewLoading}
+      />
+
       <div className="card">
+        <div className={styles["wh-section-head"]} style={{ padding: "12px 16px 0" }}>
+          <h2>📦 Quản lý kho</h2>
+          <Button type="primary" onClick={() => setAddProductOpen(true)}>
+            + Tạo SP nhanh
+          </Button>
+        </div>
+        <div style={{ padding: "8px 16px 16px" }}>
+          <WarehouseOverviewFilters
+            value={{
+              search: overviewSearch,
+              warehouseId: overviewWarehouseId,
+              stock: overviewStock,
+            }}
+            onChange={(next) => {
+              setOverviewSearch(next.search);
+              setOverviewWarehouseId(next.warehouseId);
+              setOverviewStock(next.stock);
+            }}
+            onRefresh={refetchOverview}
+            refreshing={overviewLoading}
+            warehouses={warehouses}
+          />
+          <WarehouseOverviewCard
+            items={filteredOverviewItems}
+            loading={overviewLoading}
+            activeWarehouseId={overviewWarehouseId}
+          />
+        </div>
+      </div>
+
+      <QuickCreateProductDrawer
+        open={addProductOpen}
+        onClose={() => setAddProductOpen(false)}
+        onSuccess={() => {
+          refetchOverview();
+        }}
+      />
+
+      <div className="card" style={{ marginTop: 16 }}>
         <TableToolbar
           searchValue={keyword}
           onSearchChange={setKeyword}

@@ -27,6 +27,10 @@ export type LeadDrawerProps = {
   lead?: MarketingLead | null;
   onClose: () => void;
   onSubmit: (data: LeadFormData) => void;
+  /** Title shown when creating a new lead. Defaults to "Thêm Lead". */
+  createTitle?: string;
+  /** Title shown when editing an existing lead. Defaults to "Sửa Lead". */
+  editTitle?: string;
 };
 
 function LeadDrawerInner({
@@ -35,6 +39,8 @@ function LeadDrawerInner({
   lead,
   onClose,
   onSubmit,
+  createTitle = "Thêm Lead",
+  editTitle = "Sửa Lead",
 }: LeadDrawerProps) {
   const isEdit = !!lead;
   const { control, handleSubmit, reset, resetField, formState: { errors } } =
@@ -125,7 +131,7 @@ function LeadDrawerInner({
   return (
     <DrawerForm
       open={open}
-      title={isEdit ? "Sửa Lead" : "Thêm Lead"}
+      title={isEdit ? editTitle : createTitle}
       width={560}
       loading={loading}
       onClose={handleClose}

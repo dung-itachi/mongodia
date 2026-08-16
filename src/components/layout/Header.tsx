@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useSidebar } from "@/components/layout/AppShell";
 import { useAuthStore } from "@/store/auth.store";
 import { usePathname } from "next/navigation";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import {
   MODULES,
   NAV_GROUPS,
@@ -164,8 +165,9 @@ export default function Header() {
         <input id="sq" type="text" disabled />
       </div>
 
-      {/* Right cluster: date + user identity */}
+      {/* Right cluster: bell + date + user identity */}
       <div className="tbr">
+        <NotificationBell />
         <div className="cnt" id="tDate" title="Hôm nay">
           <span id="cntLbl">📅</span> <b id="tc">{today}</b>
         </div>

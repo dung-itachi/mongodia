@@ -4,8 +4,11 @@
  *
  * Returns/updates the active shipping fee (system currency MNT) used as
  * the global baseline when aggregating order revenue: `combo total +
- * shipping fee`. Requires `settings.shipping_fee.view` to read and
- * `settings.shipping_fee.update` to write.
+ * shipping fee`.
+ *
+ * Authorization (Phase 8 — Permission Audit):
+ *   - GET requires `system-settings.view` (or legacy `settings.shipping_fee.view`)
+ *   - PUT requires `system-settings.manage` (or legacy `settings.shipping_fee.update`)
  *
  * IMPORTANT: Writing a new shipping fee does NOT recalculate any existing
  * Order documents. Each Order carries its own snapshot (`summary.shippingFee`,
@@ -25,7 +28,12 @@ export async function GET(request: Request) {
   try {
     const currentUser = await getCurrentUser(request);
 
-    if (!currentUser.permissions.includes("settings.shipping_fee.view")) {
+    const hasView =
+      currentUser.permissions.includes("*") ||
+      currentUser.permissions.includes("system-settings.view") ||
+      currentUser.permissions.includes("system-settings.manage") ||
+      currentUser.permissions.includes("settings.shipping_fee.view");
+    if (!hasView) {
       return errorResponse("Bạn không có quyền xem phí ship", 403);
     }
 
@@ -41,7 +49,11 @@ export async function PUT(request: Request) {
   try {
     const currentUser = await getCurrentUser(request);
 
-    if (!currentUser.permissions.includes("settings.shipping_fee.update")) {
+    const hasManage =
+      currentUser.permissions.includes("*") ||
+      currentUser.permissions.includes("system-settings.manage") ||
+      currentUser.permissions.includes("settings.shipping_fee.update");
+    if (!hasManage) {
       return errorResponse("Bạn không có quyền cập nhật phí ship", 403);
     }
 

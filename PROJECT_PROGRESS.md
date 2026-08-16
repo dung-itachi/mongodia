@@ -1781,9 +1781,375 @@ occurs).
 | 1.4 | 2026-08-15 | Phase 6 — Warehouse Adjustment Concurrency Fix |
 | 1.5 | 2026-08-15 | Phase 6 — Warehouse Adjustment UI Auditability |
 | 1.6 | 2026-08-15 | Phase 7 — Warehouse Adjustment No-Op Data-Integrity Fix |
+| 1.7 | 2026-08-16 | Phase 8 — System Configuration Permission Audit |
+| 1.8 | 2026-08-16 | Phase 9 — Role & Permission Tree UI (RBAC management) |
 
 ---
 
-**Report Generated:** 2026-08-15
-**Current Phase:** Phase 6 COMPLETE ✅
+**Report Generated:** 2026-08-16
+**Current Phase:** Phase 9 COMPLETE ✅
 **Final Verdict:** PASS
+
+---
+
+## 22. Phase 8 — System Configuration Permission Audit
+
+### 22.1 Scope
+
+The "Cấu hình hệ thống" (System Settings) module — currently exposing
+`/settings/exchange-rate` (Tỷ giá) and `/settings/shipping-fee` (Phí ship) —
+had no dedicated module-level permission gate. Both sub-pages only
+checked the legacy per-resource codes (`settings.exchange_rate.*` /
+`settings.shipping_fee.*`).
+
+This phase introduces two module-level permission codes, wires the
+module registry and the API authorization layer to them, and adds
+regression tests for the five canonical scenarios.
+
+### 22.2 Permissions added
+
+| Code | Meaning |
+|------|---------|
+| `system-settings.view` | Can open the Cấu hình hệ thống module and read data |
+| `system-settings.manage` | Can mutate any setting (implying `view`) |
+
+Per spec §3, `system-settings.manage` implicitly grants module access.
+A user with only `system-settings.view` can browse and read but is
+denied every mutation.
+
+### 22.3 Implementation
+
+#### 22.3.1 Permission registry & seed
+
+- `src/constants/permissions.ts` — appends the two new codes.
+- `src/db/seeds/permissions.seed.ts` — registers the new codes under
+  the existing `Setting` module group so existing seed runs continue
+  to upsert them idempotently.
+- `src/constants/roles.ts` — MANAGER role is granted both
+  `system-settings.view` and `system-settings.manage`. ADMIN keeps the
+  `*` wildcard. No other role is granted these codes (preserves the
+  "admin/manager only" policy).
+- Legacy codes (`settings.exchange_rate.*`, `settings.shipping_fee.*`)
+  are **kept** so previously-deployed roles continue to work
+  without re-seed.
+
+#### 22.3.2 Module registry (`src/config/modules.ts`)
+
+The two SETTINGS items now declare both:
+
+```ts
+permission: "system-settings.view",
+permissions: ["system-settings.view", "system-settings.manage"]
+```
+
+The `permissions` (plural) array is interpreted as any-of in the
+permission helper layer. This implements the spec §3 implication
+without changing the existing single-permission check used by every
+other module.
+
+#### 22.3.3 New `hasAnyPermission` helper
+
+`src/lib/permission.ts` gains a small helper alongside the existing
+`hasPermission`:
+
+```ts
+hasAnyPermission(userPerms, ["system-settings.view", "system-settings.manage"])
+  → returns true when the user has any of the listed codes (or "*").
+```
+
+No new authorization mechanism is introduced — it reuses the exact
+same array-iteration semantics already used by `hasPermission`.
+
+#### 22.3.4 Sidebar / AuthGuard
+
+`src/components/layout/Sidebar.tsx` and
+`src/components/auth/AuthGuard.tsx` were updated to honor the new
+`permissions?: string[]` field on `NavItem` / `RoutePermission`:
+
+- If `permissions` is set → any-of check.
+- Otherwise → single-permission check (unchanged).
+
+This means a user with only `system-settings.view` sees the module;
+a user with only `system-settings.manage` also sees the module
+(per spec §3); a user with neither gets the SETTINGS group filtered
+out of the sidebar and a `/403` from AuthGuard if they deep-link.
+
+#### 22.3.5 API authorization
+
+Both endpoints
+(`src/app/api/settings/exchange-rate/route.ts`,
+`src/app/api/settings/shipping-fee/route.ts`) were updated to:
+
+- GET requires `system-settings.view` (or `system-settings.manage`,
+  or wildcard, or the legacy `settings.{exchange_rate,shipping_fee}.view`).
+- PUT requires `system-settings.manage` (or wildcard, or the legacy
+  `settings.{exchange_rate,shipping_fee}.update`).
+
+The legacy fallback is intentional so existing MANAGER/ADMIN users
+who already had only the old codes do not break. New role assignments
+should use the module-level codes.
+
+#### 22.3.6 Frontend UI gates
+
+Both settings pages wrap their mutation cards in
+`<PermissionGate permission="system-settings.manage">` so users without
+`manage` see only the read-only "Thông tin hiện tại" panel. No data
+or layout change — purely visibility.
+
+### 22.4 Tests Added — `src/tests/systemSettingsPermissions.test.ts`
+
+19 assertions across 4 describe blocks. All pass.
+
+| Test | Coverage |
+|------|----------|
+| `[SS-G]` | Both new codes exist in `PERMISSIONS` constants + legacy codes preserved |
+| `[SS-A]` | No permission → helper denies both codes |
+| `[SS-B]` | view-only → view allowed, mutation denied |
+| `[SS-C]` | Legacy view code alone → reads succeed, mutation denied |
+| `[SS-D]` | manage → mutation allowed + module access (any-of) |
+| `[SS-D-via-view]` | manage-only → sidebar still shows the SETTINGS group |
+| `[SS-E]` | wildcard `*` → all checks pass |
+| `[SS-F]` | Modules registry declares both `permission` and `permissions` array |
+| `[SS-H]` | Sidebar hides SETTINGS group when neither code is present |
+| `[SS-I]` | Sidebar keeps SETTINGS group when only `view` is present |
+| API mirror | Five cases (no perm / view-only / legacy view / manage / wildcard) for both endpoints |
+
+### 22.5 Files Changed
+
+| File | Change |
+|------|--------|
+| `src/constants/permissions.ts` | +2 permission codes |
+| `src/db/seeds/permissions.seed.ts` | +2 module-map entries |
+| `src/constants/roles.ts` | MANAGER gains 2 new codes (legacy codes retained) |
+| `src/lib/permission.ts` | + `hasAnyPermission` helper |
+| `src/config/modules.ts` | SETTINGS items: `permission` + `permissions[]`; `ModuleDefinition` extends optional `permissions` |
+| `src/config/nav.config.tsx` | `NavItem` extends optional `permissions[]` |
+| `src/config/routePermissions.ts` | `RoutePermission` extends optional `permissions[]` |
+| `src/components/layout/Sidebar.tsx` | Sidebar filter honors `permissions[]` via `hasAnyPermission` |
+| `src/components/auth/AuthGuard.tsx` | Route guard honors `permissions[]` via `hasAnyPermission` |
+| `src/app/api/settings/exchange-rate/route.ts` | GET → `system-settings.view`, PUT → `system-settings.manage` (legacy fallback) |
+| `src/app/api/settings/shipping-fee/route.ts` | Same as above |
+| `src/app/(protected)/settings/exchange-rate/page.tsx` | UI gate → `system-settings.manage` |
+| `src/app/(protected)/settings/shipping-fee/page.tsx` | UI gate → `system-settings.manage` |
+| `src/tests/systemSettingsPermissions.test.ts` | NEW — 19 tests |
+
+### 22.6 Schema / Database / Migration
+
+- MongoDB schema: **UNCHANGED**
+- Database data: **UNCHANGED**
+- No migration
+- No seed required to be re-run for existing deployments because
+  legacy permission codes continue to satisfy the API checks.
+- Re-running `npm run seed` will idempotently register the two new
+  permission documents under module `Setting`.
+
+### 22.7 Final Verification
+
+| Suite | Result |
+|-------|--------|
+| `systemSettingsPermissions.test.ts` | **19/19 PASS** |
+| `adjustmentDirection.test.ts` (regression) | **46/46 PASS** (unaffected) |
+| TypeScript on Phase 8 files | **0 errors** |
+| TypeScript project-wide | 22 pre-existing errors in unrelated files (leaders/leads/marketing-dashboard/teams/account-profile/gift/product/combos/categories — all unchanged by this phase) |
+
+### 22.8 Business Logic Invariants
+
+- Exchange rate snapshot semantics on existing Orders: **INTACT** (API routes do not touch Order documents).
+- Shipping fee snapshot semantics on existing Orders: **INTACT**.
+- `Setting` model schema and storage: **INTACT**.
+- `/api/settings/*` request/response shape: **UNCHANGED** (only the
+  authorization layer was updated).
+
+### 22.9 Verdict
+
+**✅ PASS — Phase 8 System Configuration permission audit complete**
+
+---
+
+## 23. Phase 9 — Role & Permission Tree UI (RBAC management)
+
+### 23.1 Scope
+
+Build a Permission Tree page at `/roles` (replacing the legacy
+"Coming Soon" placeholder) so ADMIN can visually inspect and
+edit `role → module → permission` assignments, with full support
+for the ADMIN wildcard invariant.
+
+**Hard rules followed:**
+- No new permission paradigm — reuse existing registry / module /
+  helper pattern.
+- Do not break Phase 7 or Phase 8 invariants.
+- ADMIN wildcard stays as `"*"`. Never enumerated.
+- All API + UI mutations protected by authorization.
+
+### 23.2 Audit findings (concrete)
+
+| File | Status | Notes |
+|------|--------|-------|
+| `src/constants/permissions.ts` | ✅ Reuse | Flat `{ code, name }` registry. |
+| `src/constants/roles.ts` | ✅ Reuse | ADMIN uses wildcard `["*"]`. |
+| `src/db/seeds/permissions.seed.ts` | ✏️ +1 code | Added `MODULE_MAP` `export`. |
+| `src/lib/permission.ts` | ✅ Reuse | `hasPermission` / `hasAnyPermission`. |
+| `src/models/Role.ts` | ✅ Reuse | `code/name/description/isActive` (no embedded perms). |
+| `src/models/RolePermission.ts` | ✅ Reuse | Junction table `{ roleId, permissionId }`. |
+| `src/config/modules.ts` | ✏️ +1 entry | New `roles-tree` module, gated `role.permission.manage`. |
+| `src/config/nav.config.tsx` | ✅ Reuse | Auto-picks up new module; sidebar hidden if user lacks the gate. |
+| `src/config/routePermissions.ts` | ✅ Reuse | Auto-picks up the module for `AuthGuard`. |
+| `src/components/auth/AuthGuard.tsx` | ✅ Reuse | Phase 8 already supports `permissions[]`. |
+| `src/components/layout/Sidebar.tsx` | ✅ Reuse | Phase 8 already supports `permissions[]`. |
+| `src/app/api/roles/[id]/route.ts` | ✅ Reuse | Existing GET/PUT/DELETE only edits role metadata. |
+| Existing UI | ✅ Replaced | `/roles` was a `PlaceholderPage` "Coming Soon". |
+
+**Gap discovered**: there was NO API endpoint to read or write the
+`RolePermission` junction table. Phase 9 fills that gap with
+`GET /api/permissions`, `GET /api/roles/[id]/permissions`, and
+`PUT /api/roles/[id]/permissions`.
+
+### 23.3 Architecture decisions
+
+1. **ONE new permission code** (`role.permission.manage`)
+   following the existing `<resource>.<action>` convention.
+   Registered in `constants/permissions.ts` and seeded in
+   `db/seeds/permissions.seed.ts`. MANAGER intentionally does
+   **not** receive it — RBAC management stays ADMIN-only.
+
+2. **Reuse existing route**: `/roles` (existing placeholder in
+   `breadcrumb.config.ts` and `ACCOUNTS` group).
+
+3. **New module entry** `roles-tree` in `config/modules.ts` →
+   drives both sidebar visibility and the `AuthGuard` route gate.
+
+4. **Three new backend endpoints**, all gated by the new code:
+
+   | Method + Path | Purpose |
+   |----------------|---------|
+   | GET  /api/permissions | Permission catalog grouped by module. |
+   | GET  /api/roles/[id]/permissions | Read role's permission set + wildcard flag. |
+   | PUT  /api/roles/[id]/permissions | Replace role's permission set (atomic, audited). |
+
+5. **Seed safety**: `db/seeds/roles.seed.ts` left untouched —
+   re-running it would clobber runtime edits. Edits flow through
+   the new API exclusively.
+
+### 23.4 UI structure
+
+Two-pane layout on `/roles`:
+
+- **Left** — Roles sidebar with search.
+  Each row shows `code` + `name` and uses the project's existing
+  `.card`, `.btn-*` and `--accent` design system tokens.
+
+- **Right** — Permission Tree for the selected role.
+  - Role header card with `code`, granted/total count, and module
+    full/partial/none counters.
+  - ADMIN renders a `⭐ FULL ACCESS` banner and the tree is
+    read-only. No checkboxes are editable.
+  - Toolbar: search box, **Expand all** / **Collapse all**, dirty-
+    state indicator, **Reset** / **Save** buttons (Save disabled
+    when role is ADMIN or no edits).
+  - Each module bucket shows a tri-state checkbox (`☑ / ☐ / ▣`),
+    collapses its permission rows, and a row counter
+    (`granted / total`).
+  - Each permission row has a tri-state checkbox, the
+    human-readable name, and the code.
+
+  Save opens a `ConfirmDialog` listing all added/removed codes
+  before submitting to the API.
+
+### 23.5 Permission model
+
+The tree is **derived** from existing registries:
+- `PERMISSIONS` (`constants/permissions.ts`) → list of codes.
+- `MODULE_MAP` (seed) → code → module group name. Re-exported
+  via `src/lib/permission-modules.ts` so the seed and the new
+  API/UI share **the same** source of truth. No duplication.
+
+The `MODULE_MAP` constant in the seed was previously `const` —
+Phase 9 promoted it to `export` without changing its contents
+or the seed's idempotent upsert behaviour.
+
+### 23.6 Tests
+
+`src/tests/rolePermissionTree.test.ts` (NEW) — 44 pure unit tests:
+
+| Block | Coverage |
+|-------|----------|
+| `[RP-F]` Module registry wires `roles-tree` under ACCOUNTS |
+| `[RP-G]` Code is in `PERMISSIONS` + bucketed under Role in `MODULE_MAP` |
+| `[RP-C]` Catalog groups by module + Setting/Role groupings |
+| `[RP-A]` ADMIN wildcard preservation + `resolveRolePermissionSet` |
+| `[RP-B]` Tri-state derivation (full / partial / none / wildcard override) |
+| `[RP-H]` `togglePermissionCode` + `toggleBucketCodes` immutability + determinism |
+| `[RP-D]` `findUnknownPermissions` rejects unknown codes |
+| `[RP-E]` API authorization mirror (403 / wildcard / legacy role codes not sufficient) |
+| `[RP-E-PUT]` PUT input validation mirror (object / array / wildcard / unknown / empty / known) |
+| `[RP-I]` Regression — `system-settings.*` still in catalog + SETTINGS modules still wired |
+| `[RP-G-ROLE]` MANAGER lacks `role.permission.manage`; ADMIN uses `"*"` |
+
+`src/tests/systemSettingsPermissions.test.ts` (regression) — still
+**19/19 PASS**.
+
+### 23.7 Files changed
+
+**Added**
+- `src/lib/permission-modules.ts` — `PERMISSION_MODULE_MAP` re-export,
+  `getPermissionsGroupedByModule`, `findUnknownPermissions`,
+  `resolveRolePermissionSet`, `computeTriState`, `togglePermissionCode`,
+  `toggleBucketCodes`.
+- `src/lib/role-audit.ts` — `writeRoleAudit` mirroring
+  `writeAccountAudit`. AuditLog `module = "ROLE"`, action
+  `"UPDATE_ROLE_PERMISSIONS"`.
+- `src/app/api/permissions/route.ts` — `GET` permission catalog.
+- `src/app/api/roles/[id]/permissions/route.ts` — `GET` + `PUT`
+  role↔permission mapping with validation, atomic session
+  transaction, and audit.
+- `src/hooks/usePermissionsCatalog.ts`,
+  `src/hooks/useRoleList.ts`,
+  `src/hooks/useRolePermissions.ts` — React Query data hooks.
+- `src/app/(protected)/roles/PermissionTreePage.tsx` — client tree UI.
+- `src/styles/roles-tree.css` — scoped tree styles, imported via
+  `custom.css`.
+- `src/tests/rolePermissionTree.test.ts` — 44 unit assertions.
+
+**Modified**
+- `src/constants/permissions.ts` — registered `role.permission.manage`.
+- `src/db/seeds/permissions.seed.ts` — added `role.permission.manage`
+  to `MODULE_MAP`; promoted the `const` to `export const`.
+- `src/config/modules.ts` — added `roles-tree` module
+  (route `/roles`, gate `role.permission.manage`, group `ACCOUNTS`).
+- `src/components/common/feedback/ConfirmDialog.tsx` — widened
+  `content` to `ReactNode` (Phase 9 needs structured diff).
+- `src/app/(protected)/roles/page.tsx` — replaces placeholder with
+  wrapper that reads auth and renders `PermissionTreePage`.
+- `src/styles/custom.css` — imports the new `roles-tree.css`.
+
+### 23.8 Database changes
+
+- The `Permission` collection gets ONE new document
+  (`role.permission.manage`, module `Role`) via the existing
+  idempotent seed (`updateOne(..., { upsert: true })`).
+- `RolePermission` rows for non-ADMIN roles can be replaced via
+  the new API. ADMIN's junction rows are NEVER touched.
+- `roles.seed.ts` left untouched (would clobber edits).
+
+### 23.9 Known limitations
+
+- ADMIN's per-permission edit UI is intentionally disabled. The
+  tree below the banner is read-only.
+- `useUpdateRolePermissions` lacks a 403-aware toast on
+  `getCurrentUser` failure paths; relies on the API
+  envelope pattern.
+- Pagination / role groups: not in scope. Roles are loaded once.
+
+### 23.10 TypeScript + test results
+
+| Suite | Result |
+|-------|--------|
+| `src/tests/rolePermissionTree.test.ts` | **44/44 PASS** |
+| `src/tests/systemSettingsPermissions.test.ts` (regression) | **19/19 PASS** |
+| TypeScript on Phase 9 files | **0 new errors** |
+| TypeScript project-wide | same 22 pre-existing errors as Phase 8 (unrelated files) |
+
+**✅ PASS — Phase 9 Role & Permission Tree UI complete**
+
+---

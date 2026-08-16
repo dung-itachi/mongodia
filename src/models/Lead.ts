@@ -5,8 +5,6 @@ export const SOURCE_TYPES = [
   "LANDING_PAGE",
   "FACEBOOK_COMMENT",
   "FACEBOOK_INBOX",
-  "TIKTOK",
-  "ZALO",
   "OTHER",
 ] as const;
 
@@ -16,8 +14,6 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   LANDING_PAGE: "Landing Page",
   FACEBOOK_COMMENT: "Facebook Comment",
   FACEBOOK_INBOX: "Facebook Inbox",
-  TIKTOK: "TikTok",
-  ZALO: "Zalo",
   OTHER: "Khác",
 };
 

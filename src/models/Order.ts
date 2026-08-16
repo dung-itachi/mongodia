@@ -210,6 +210,13 @@ export interface IOrder extends Document {
   status: OrderStatus;
   /** Khách đã chuyển khoản trước hay chưa (PREPAID_PRIORITY rule). */
   isPrepaid: boolean;
+  /**
+   * Sale đã gọi điện xác nhận đơn với khách chưa.
+   * Áp dụng cho status CONFIRMED — trước khi chuyển sang PACKING,
+   * bắt buộc tick cờ này.
+   * Mặc định `false`. Được toggle qua PATCH /api/orders/:id/confirm-call.
+   */
+  isCalledForConfirmation: boolean;
 
   // ---- Classification -------------------------------------------------
   /**
@@ -385,6 +392,12 @@ const OrderSchema = new Schema<IOrder>(
     },
 
     isPrepaid: { type: Boolean, default: false },
+    /**
+     * Sale đã gọi xác nhận đơn với khách chưa.
+     * Toggle qua PATCH /api/orders/:id/confirm-call.
+     * Default `false` (backward-compatible với đơn cũ).
+     */
+    isCalledForConfirmation: { type: Boolean, default: false },
 
     orderType: {
       type: String,

@@ -33,11 +33,17 @@ export type TopSaleItem = {
 };
 
 export type TopMarketingItem = {
+  /** Marketing employee ID (ObjectId string) */
+  employeeId: string;
   /** Marketing person name */
   name: string;
-  /** Number of leads */
-  count: number;
+  /** Doanh thu từ đơn hàng (tổng totalAmount của các đơn MKT này phụ trách). */
+  revenue: number;
+  /** Số đơn hàng trong kỳ. */
+  orders: number;
 };
+
+export type TopMarketingRange = "day" | "week" | "month";
 
 export type DashboardChartsData = {
   pipeline: PipelineChartItem[];

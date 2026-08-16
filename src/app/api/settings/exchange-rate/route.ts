@@ -3,8 +3,11 @@
  * PUT /api/settings/exchange-rate
  *
  * Returns/updates the active exchange rate (1 MNT → VND) used for Order
- * snapshotting and revenue reporting. Requires `settings.exchange_rate.view`
- * to read and `settings.exchange_rate.update` to write.
+ * snapshotting and revenue reporting.
+ *
+ * Authorization (Phase 8 — Permission Audit):
+ *   - GET requires `system-settings.view` (or legacy `settings.exchange_rate.view`)
+ *   - PUT requires `system-settings.manage` (or legacy `settings.exchange_rate.update`)
  *
  * IMPORTANT: Writing a new rate does NOT recalculate any existing Order
  * documents. Each Order carries its own snapshot (`exchangeRate`,
@@ -26,7 +29,12 @@ export async function GET(request: Request) {
   try {
     const currentUser = await getCurrentUser(request);
 
-    if (!currentUser.permissions.includes("settings.exchange_rate.view")) {
+    const hasView =
+      currentUser.permissions.includes("*") ||
+      currentUser.permissions.includes("system-settings.view") ||
+      currentUser.permissions.includes("system-settings.manage") ||
+      currentUser.permissions.includes("settings.exchange_rate.view");
+    if (!hasView) {
       return errorResponse("Bạn không có quyền xem tỷ giá", 403);
     }
 
@@ -42,7 +50,11 @@ export async function PUT(request: Request) {
   try {
     const currentUser = await getCurrentUser(request);
 
-    if (!currentUser.permissions.includes("settings.exchange_rate.update")) {
+    const hasManage =
+      currentUser.permissions.includes("*") ||
+      currentUser.permissions.includes("system-settings.manage") ||
+      currentUser.permissions.includes("settings.exchange_rate.update");
+    if (!hasManage) {
       return errorResponse("Bạn không có quyền cập nhật tỷ giá", 403);
     }
 

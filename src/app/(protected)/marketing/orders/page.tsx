@@ -191,6 +191,7 @@ export default function MarketingOrdersPage() {
           onPushToSale={() => {}}
           selectedCount={0}
           loading={loading}
+          createLabel="Thêm đơn hàng"
         />
 
         {loading && leads.length === 0 ? (
@@ -205,10 +206,10 @@ export default function MarketingOrdersPage() {
           />
         ) : leads.length === 0 ? (
           <EmptyState
-            title="Chưa có lead nào"
-            description="Bắt đầu bằng cách tạo lead mới"
+            title="Chưa có đơn hàng nào"
+            description="Bắt đầu bằng cách tạo đơn hàng mới"
             action={
-              <button onClick={() => setDrawerOpen(true)}>Tạo Lead</button>
+              <button onClick={() => setDrawerOpen(true)}>Tạo đơn hàng</button>
             }
           />
         ) : (
@@ -242,6 +243,8 @@ export default function MarketingOrdersPage() {
         lead={editingLead}
         onClose={handleDrawerClose}
         onSubmit={editingLead ? handleUpdateLead : handleCreateLead}
+        createTitle="Thêm đơn hàng"
+        editTitle="Sửa đơn hàng"
       />
 
       <ConfirmDialog

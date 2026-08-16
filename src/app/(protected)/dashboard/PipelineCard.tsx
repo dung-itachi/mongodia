@@ -25,6 +25,7 @@ const STAGE_COLORS: Record<keyof DashboardPipeline, string> = {
   shipping: "#fa8c16",
   delivered: "#52c41a",
   returned: "#ff4d4f",
+  cancelled: "#8c8c8c",
 };
 
 const STAGE_LABELS: Record<keyof DashboardPipeline, string> = {
@@ -34,6 +35,7 @@ const STAGE_LABELS: Record<keyof DashboardPipeline, string> = {
   shipping: "Đang giao",
   delivered: "Giao TC",
   returned: "Hoàn hàng",
+  cancelled: "Đã hủy",
 };
 
 export default function PipelineCard({ pipeline }: PipelineCardProps) {

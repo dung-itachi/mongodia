@@ -156,8 +156,6 @@ const ALLOWED_SOURCE_TYPES = new Set([
   "LANDING_PAGE",
   "FACEBOOK_COMMENT",
   "FACEBOOK_INBOX",
-  "TIKTOK",
-  "ZALO",
   "OTHER",
 ]);
 

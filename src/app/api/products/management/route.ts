@@ -4,6 +4,7 @@
  * ==================================================
  *
  * Sprint 8.4.1 - Product Management
+ * Sprint 8.4.2 - Added category & date filters
  *
  * Lấy danh sách sản phẩm kèm thông tin:
  * - Combo count (số lượng combo của sản phẩm)
@@ -15,10 +16,14 @@
  * Query params:
  * - warehouseId: Lọc theo kho cụ thể (optional)
  * - keyword: Tìm kiếm theo mã/tên sản phẩm
+ * - categoryCode: Lọc theo danh mục (theo code)
+ * - dateFrom: Lọc sản phẩm có ngày nhập gần nhất >= dateFrom (YYYY-MM-DD)
+ * - dateTo: Lọc sản phẩm có ngày nhập gần nhất <= dateTo (YYYY-MM-DD)
  */
 
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
+import { Types } from "mongoose";
 
 import Product from "@/models/Product";
 import Category from "@/models/Category";
@@ -83,6 +88,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const warehouseId = searchParams.get("warehouseId") ?? undefined;
     const keyword = searchParams.get("keyword") ?? "";
+    const categoryCode = searchParams.get("categoryCode") ?? "";
+    const dateFrom = searchParams.get("dateFrom") ?? "";
+    const dateTo = searchParams.get("dateTo") ?? "";
 
     // Get all warehouses for inventory stats
     const warehouses = await Warehouse.find({ isActive: true })
@@ -92,6 +100,27 @@ export async function GET(request: Request) {
       warehouses.map((w) => [w._id.toString(), { _id: w._id.toString(), code: w.code, name: w.name }])
     );
 
+    // Resolve categoryCode -> categoryId(s) for filtering
+    let categoryIdsFilter: Types.ObjectId[] | null = null;
+    if (categoryCode) {
+      const categoryDocs = await Category.find({ code: categoryCode })
+        .select("_id")
+        .lean();
+      categoryIdsFilter = categoryDocs.map((c) => c._id);
+      if (categoryIdsFilter.length === 0) {
+        // No matching category → no product can match
+        return success({
+          items: [],
+          total: 0,
+          warehouses: warehouses.map((w) => ({
+            _id: w._id.toString(),
+            code: w.code,
+            name: w.name,
+          })),
+        });
+      }
+    }
+
     // Build product filter
     const productFilter: Record<string, unknown> = { isActive: true };
     if (keyword) {
@@ -99,6 +128,9 @@ export async function GET(request: Request) {
         { code: { $regex: keyword, $options: "i" } },
         { name: { $regex: keyword, $options: "i" } },
       ];
+    }
+    if (categoryIdsFilter) {
+      productFilter.categoryId = { $in: categoryIdsFilter };
     }
 
     // Fetch all products
@@ -276,7 +308,7 @@ export async function GET(request: Request) {
         let totalImported = 0;
         let totalCurrent = 0;
         let lastImportDate: string | null = null;
-        let lastWarehouseReceiptDate: string | null = null;
+        const lastWarehouseReceiptDate: string | null = null;
 
         for (const variantId of productVariantIds) {
           const variantInventory = inventoryByVariantWarehouse.get(variantId)?.get(wid);
@@ -345,9 +377,33 @@ export async function GET(request: Request) {
       };
     });
 
+    // Apply date filter (lastImportDate) – ranges are inclusive of the day.
+    // dateFrom/dateTo are YYYY-MM-DD strings; convert to ISO boundaries.
+    const dateFromMs = dateFrom ? Date.parse(`${dateFrom}T00:00:00.000Z`) : null;
+    const dateToMs = dateTo ? Date.parse(`${dateTo}T23:59:59.999Z`) : null;
+    const filteredItems =
+      dateFromMs !== null || dateToMs !== null
+        ? items.filter((item) => {
+            // Determine the product's "last import date" to compare against.
+            // Use the selected warehouse if given, otherwise the max across all warehouses.
+            let lastImportIso: string | null = null;
+            for (const stats of Object.values(item.inventoryByWarehouse)) {
+              if (!stats.lastImportDate) continue;
+              if (!lastImportIso || stats.lastImportDate > lastImportIso) {
+                lastImportIso = stats.lastImportDate;
+              }
+            }
+            if (!lastImportIso) return false;
+            const ms = Date.parse(lastImportIso);
+            if (dateFromMs !== null && ms < dateFromMs) return false;
+            if (dateToMs !== null && ms > dateToMs) return false;
+            return true;
+          })
+        : items;
+
     return success({
-      items,
-      total: items.length,
+      items: filteredItems,
+      total: filteredItems.length,
       warehouses: warehouses.map((w) => ({
         _id: w._id.toString(),
         code: w.code,

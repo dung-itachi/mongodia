@@ -7,7 +7,7 @@ import api from "@/lib/axios";
 export type Account = {
   _id: string; employeeCode: string; username: string; fullName: string; email: string; phone?: string; avatar?: string;
   bankName?: string; bankAccountNumber?: string; bankAccountHolder?: string;
-  isActive: boolean; role?: { code: string; name: string }; team?: { code: string; name: string; departmentId?: { code: string; name: string } }; department?: { code: string; name: string }; leader?: { _id: string; employeeCode: string; fullName: string }; createdAt?: string; updatedAt?: string; permissions?: string[];
+  isActive: boolean; role?: { code: string; name: string }; team?: { _id?: string; code: string; name: string; departmentId?: { code: string; name: string } }; department?: { code: string; name: string }; leader?: { _id: string; employeeCode: string; fullName: string }; createdAt?: string; updatedAt?: string; permissions?: string[];
 };
 export type AccountFilters = { search?: string; role?: string; teamId?: string; leaderId?: string; isActive?: boolean; page?: number; pageSize?: number };
 export type AccountInput = { username?: string; password?: string; fullName: string; email?: string; phone?: string; avatar?: string; roleCode?: string; teamId?: string | null; leaderId?: string | null; isActive?: boolean; bankName?: string; bankAccountNumber?: string; bankAccountHolder?: string };

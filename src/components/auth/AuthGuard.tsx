@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Spin } from "antd";
 import { useAuthStore } from "@/store/auth.store";
-import { hasPermission } from "@/lib/permission";
+import { hasAnyPermission } from "@/lib/permission";
 import { getRoutePermission } from "@/config/routePermissions";
 import api from "@/lib/axios";
 
@@ -123,7 +123,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     const routePermission = getRoutePermission(pathname);
     if (routePermission) {
       const userPermissions = user?.permissions;
-      const hasAccess = hasPermission(userPermissions, routePermission.permission);
+      const codes = routePermission.permissions ?? [routePermission.permission];
+      const hasAccess = hasAnyPermission(userPermissions, codes);
       if (!hasAccess) {
         router.replace("/403");
       }
@@ -166,7 +167,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const routePermission = getRoutePermission(pathname);
   if (routePermission) {
     const userPermissions = user?.permissions;
-    const hasAccess = hasPermission(userPermissions, routePermission.permission);
+    const codes = routePermission.permissions ?? [routePermission.permission];
+    const hasAccess = hasAnyPermission(userPermissions, codes);
     if (!hasAccess) {
       return (
         <div

@@ -191,7 +191,7 @@ export async function seedLeads() {
     phone: string;
     customerName: string;
     facebookLink?: string;
-    sourceType: "LANDING_PAGE" | "FACEBOOK_COMMENT" | "FACEBOOK_INBOX" | "TIKTOK" | "ZALO" | "OTHER";
+    sourceType: "LANDING_PAGE" | "FACEBOOK_COMMENT" | "FACEBOOK_INBOX" | "OTHER";
     facebookPageId?: string;
     marketingEmployeeId: string;
     saleEmployeeId?: string;
@@ -278,7 +278,7 @@ export async function seedLeads() {
     {
       phone: "0912345002",
       customerName: "Trần Thanh Phong",
-      sourceType: "TIKTOK",
+      sourceType: "FACEBOOK_COMMENT",
       facebookPageId: idOf(fbIphone),
       marketingEmployeeId: idOf(mktA),
       saleEmployeeId: idOf(saleC),
@@ -334,7 +334,7 @@ export async function seedLeads() {
     {
       phone: "0987000005",
       customerName: "Hoàng Thị Mai",
-      sourceType: "ZALO",
+      sourceType: "LANDING_PAGE",
       facebookPageId: idOf(fbIphone),
       marketingEmployeeId: idOf(mktB),
       saleEmployeeId: idOf(saleC),
@@ -383,7 +383,7 @@ export async function seedLeads() {
     {
       phone: "0987000011",
       customerName: "Nguyễn Thị Thu",
-      sourceType: "TIKTOK",
+      sourceType: "FACEBOOK_COMMENT",
       facebookPageId: idOf(fbLaptop),
       marketingEmployeeId: idOf(mktB),
       comboId: idOf(combo2),

@@ -84,7 +84,6 @@ export default function FilterBar({
         display: "flex",
         flexWrap: "wrap",
         gap: 12,
-        marginBottom: 16,
       }}
     >
       {items.map(renderFilterItem)}

@@ -21,6 +21,8 @@ export type MarketingLeadToolbarProps = {
   onPushToSale: () => void;
   selectedCount: number;
   loading?: boolean;
+  /** Label for the primary create button. Defaults to "Thêm Lead". */
+  createLabel?: string;
 };
 
 function MarketingLeadToolbarInner({
@@ -31,6 +33,7 @@ function MarketingLeadToolbarInner({
   onPushToSale,
   selectedCount,
   loading,
+  createLabel = "Thêm Lead",
 }: MarketingLeadToolbarProps) {
   const [searchValue, setSearchValue] = useState(filters.keyword ?? "");
 
@@ -123,7 +126,7 @@ function MarketingLeadToolbarInner({
         <ActionButton
           type="primary"
           icon={<PlusOutlined />}
-          label="Thêm Lead"
+          label={createLabel}
           onClick={onCreate}
         />
       </div>

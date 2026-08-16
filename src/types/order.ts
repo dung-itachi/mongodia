@@ -154,6 +154,8 @@ export interface OrderListItem {
   status: OrderStatus;
   statusLabel: string;
   isPrepaid: boolean;
+  /** Sale đã gọi điện xác nhận với khách chưa. Default `false`. */
+  isCalledForConfirmation?: boolean;
 
   // Classification
   orderType: OrderType;

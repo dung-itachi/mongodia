@@ -3,6 +3,7 @@
  */
 
 import { DatePicker } from "antd";
+import dayjs, { type Dayjs } from "dayjs";
 import type { FilterItem } from "../types";
 
 type DateRangeFilterItem = Extract<FilterItem, { type: "dateRange" }>;
@@ -20,16 +21,14 @@ export default function FilterDateRange({
   value,
   onChange,
 }: FilterDateRangeProps) {
+  const rangeValue: [Dayjs, Dayjs] | undefined =
+    value?.[0] && value?.[1]
+      ? [dayjs(value[0]), dayjs(value[1])]
+      : undefined;
+
   return (
     <RangePicker
-      value={
-        value
-          ? [
-              value[0] ? undefined : undefined,
-              value[1] ? undefined : undefined,
-            ]
-          : undefined
-      }
+      value={rangeValue}
       onChange={(dates) => {
         if (dates && dates[0] && dates[1]) {
           onChange([

@@ -163,6 +163,8 @@ export interface OrderResponse {
   status: OrderStatus;
   statusLabel: string;
   isPrepaid: boolean;
+  /** Sale đã gọi điện xác nhận với khách chưa. Default `false`. */
+  isCalledForConfirmation: boolean;
 
   // ---- Classification ----------------------------------------------
   orderType: OrderType;
@@ -397,6 +399,7 @@ export function mapOrder(order: IOrder): OrderResponse {
     status: order.status as OrderStatus,
     statusLabel: ORDER_STATUS_LABELS[order.status as OrderStatus],
     isPrepaid: order.isPrepaid,
+    isCalledForConfirmation: order.isCalledForConfirmation ?? false,
     orderType: order.orderType as OrderType,
     orderTypeLabel: ORDER_TYPE_LABELS[order.orderType as OrderType],
     orderSource: order.orderSource as OrderSource,

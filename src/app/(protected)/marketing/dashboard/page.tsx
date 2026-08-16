@@ -263,8 +263,15 @@ export default function MarketingDashboardPage() {
           )}
         </div>
 
-        {/* Chi phí Ads (Tổng / Xin sáng / Xin chiều / Xin gấp) + Best Products */}
+        {/* 🏆 Top sản phẩm bán chạy + 💰 Chi phí Ads */}
         <div className={styles["mk-charts-grid"]}>
+          <BestSellingProductsCard
+            bestProducts={(bestProducts?.data ?? []).map((p) => ({
+              name: p.name,
+              count: p.count,
+            }))}
+            loading={!bestProducts}
+          />
           <MktAdsCostCard
             totalSpent={totalSpent}
             totalMorning={totalMorning}
@@ -273,14 +280,13 @@ export default function MarketingDashboardPage() {
             totalRevenue={summary?.totalRevenue ?? 0}
             loading={!adsReport}
           />
-          <BestSellingProductsCard
-            bestProducts={(bestProducts?.data ?? []).map((p) => ({
-              name: p.name,
-              count: p.count,
-            }))}
-            loading={!bestProducts}
-          />
         </div>
+
+        {/* Doanh số theo ngày */}
+        <DailyRevenueReport period={period} />
+
+        {/* Báo cáo Ads theo ngày */}
+        <DailyAdsReport period={period} />
 
         {/* Basic Period Filter */}
         <MarketingDashboardFilters period={period} onPeriodChange={handlePeriodChange} />
@@ -307,12 +313,6 @@ export default function MarketingDashboardPage() {
             });
           }}
         />
-
-        {/* Daily Report - Doanh số theo ngày */}
-        <DailyRevenueReport period={period} />
-
-        {/* Daily Report - Báo cáo Ads theo ngày */}
-        <DailyAdsReport period={period} />
 
         {/* Ranking */}
         <MarketingDashboardRanking

@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Avatar, Button, Divider, Drawer, Form, Input, Popconfirm, Select, Space, Table, Tag, Typography } from "antd";
+import { Avatar, Button, Drawer, Form, Input, Popconfirm, Space, Table, Tag, Typography } from "antd";
 import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useAuthStore } from "@/store/auth.store";
-import { useAccounts, useCreateAccount, useDisableAccount, useResetPassword, useUpdateAccount, type Account, type AccountInput } from "@/hooks/useAccounts";
+import { useAccounts, useDisableAccount, useResetPassword, useUpdateAccount, type Account, type AccountInput } from "@/hooks/useAccounts";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useTeams } from "@/hooks/useTeams";
 import { useEmployees } from "@/hooks/useEmployees";
+import AccountCreateDrawer from "@/components/accounts/AccountCreateDrawer";
 
 export default function AccountsPage() {
   const user = useAuthStore((state) => state.user);
@@ -23,7 +24,6 @@ export default function AccountsPage() {
   const [mode, setMode] = useState<"view" | "edit" | "create">("create");
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [draftData, setDraftData] = useState<AccountInput | null>(null);
-  const [form] = Form.useForm<AccountInput & { departmentCode?: string }>();
   const [passwordForm] = Form.useForm<{ newPassword: string }>();
 
   const { data, isLoading, error, refetch } = useAccounts({ search, pageSize: 100 });
@@ -31,7 +31,6 @@ export default function AccountsPage() {
   const { data: teamsData } = useTeams();
   const { data: employeesData } = useEmployees({ pageSize: 100 });
 
-  const create = useCreateAccount();
   const update = useUpdateAccount();
   const disable = useDisableAccount();
   const reset = useResetPassword();
@@ -81,19 +80,12 @@ export default function AccountsPage() {
   const openCreate = () => {
     setSelected(null);
     setMode("create");
-    if (draftData) {
-      form.setFieldsValue(draftData);
-    } else {
-      form.resetFields();
-    }
     setOpen(true);
   };
   const openView = (account: Account) => { setSelected(account); setMode("view"); setOpen(true); };
   const openEdit = (account: Account) => {
-    setDraftData(null);
     setSelected(account);
     setMode("edit");
-    form.setFieldsValue({ ...account, roleCode: account.role?.code });
     setOpen(true);
   };
 
@@ -106,7 +98,7 @@ export default function AccountsPage() {
     { title: "Email", dataIndex: "email" },
     { title: "Phone", dataIndex: "phone" },
     { title: "Role", render: (_: unknown, item: Account) => <Tag color="blue">{item.role?.code ?? "-"}</Tag>, width: 110 },
-    { title: "Department", render: (_: unknown, item: Account) => <Tag color="purple">{item.department?.name ?? item.team?.departmentId?.name ?? "-"}</Tag>, width: 130 },
+    { title: "Department", render: (_: unknown, item: Account) => <Tag color="purple">{item.department?.name ?? item.team?.code ?? "-"}</Tag>, width: 130 },
     { title: "Team", dataIndex: "team", render: (_: unknown, item: Account) => item.team?.code ?? "-" },
     { title: "Leader", render: (_: unknown, item: Account) => item.leader?.fullName ?? "-" },
     { title: "Trạng thái", render: (_: unknown, item: Account) => <Tag color={item.isActive ? "green" : "red"}>{item.isActive ? "Hoạt động" : "Đã khóa"}</Tag>, width: 110 },
@@ -123,21 +115,10 @@ export default function AccountsPage() {
     },
   ], [canUpdate, canDisable, canResetPassword, disable, passwordForm]);
 
-  const submit = (values: AccountInput) => {
-    if (mode === "create") {
-      create.mutate(values, {
-        onSuccess: () => {
-          setDraftData(null);
-          form.resetFields();
-          setOpen(false);
-        },
-      });
-    } else if (selected) {
-      update.mutate({ id: selected._id, input: values }, { onSuccess: () => setOpen(false) });
-    }
+  const handleSaved = () => {
+    setDraftData(null);
+    setOpen(false);
   };
-
-  const drawerTitle = mode === "create" ? "Tạo tài khoản" : mode === "edit" ? "Cập nhật tài khoản" : "Chi tiết tài khoản";
 
   return (
     <div style={{ padding: 24 }}>
@@ -155,67 +136,19 @@ export default function AccountsPage() {
           <Table rowKey="_id" loading={isLoading} dataSource={data?.items ?? []} columns={columns} pagination={{ total: data?.total, pageSize: 100, showTotal: (total) => `Tổng ${total} tài khoản` }} scroll={{ x: 1400 }} />
         </div>
       </Space>
-      <Drawer
-        title={drawerTitle}
+
+      <AccountCreateDrawer
         open={open}
-        onClose={() => {
-          if (mode === "create") {
-            const values = form.getFieldsValue(true);
-            setDraftData(values);
-          }
-          setOpen(false);
-        }}
-        size="large"
-        extra={mode === "view" && selected && canUpdate && <Button type="primary" onClick={() => openEdit(selected)}>Chỉnh sửa</Button>}
-      >
-        {mode === "view" && selected ? (
-          <Space orientation="vertical">
-            <p><b>Mã NV:</b> {selected.employeeCode}</p>
-            <p><b>Username:</b> {selected.username}</p>
-            <p><b>Họ tên:</b> {selected.fullName}</p>
-            <p><b>Email:</b> {selected.email || "-"}</p>
-            <p><b>Phone:</b> {selected.phone || "-"}</p>
-            <p><b>Role:</b> <Tag color="blue">{selected.role?.code ?? "-"}</Tag> ({selected.role?.name ?? "-"})</p>
-            <p><b>Department:</b> <Tag color="purple">{selected.department?.name ?? "-"}</Tag></p>
-            <p><b>Team:</b> {selected.team?.code ?? "-"} {selected.team?.name ? `(${selected.team.name})` : ""}</p>
-            <p><b>Leader:</b> {selected.leader?.fullName ?? "-"}</p>
-            <p><b>Trạng thái:</b> <Tag color={selected.isActive ? "green" : "red"}>{selected.isActive ? "Hoạt động" : "Đã khóa"}</Tag></p>
-            <p><b>Ngày tạo:</b> {selected.createdAt}</p>
-            {(selected.bankName || selected.bankAccountNumber || selected.bankAccountHolder) && (
-              <>
-                <p><b>Tài khoản ngân hàng:</b></p>
-                <p style={{ paddingLeft: 16 }}><b>Ngân hàng:</b> {selected.bankName || "-"}</p>
-                <p style={{ paddingLeft: 16 }}><b>Số TK:</b> {selected.bankAccountNumber || "-"}</p>
-                <p style={{ paddingLeft: 16 }}><b>Chủ TK:</b> {selected.bankAccountHolder || "-"}</p>
-              </>
-            )}
-          </Space>
-        ) : (
-          <Form<AccountInput & { departmentCode?: string }> form={form} layout="vertical" onFinish={submit} initialValues={{ roleCode: "EMPLOYEE" }} autoComplete="off">
-            <Form.Item name="username" label="Username" rules={[{ required: mode === "create" }]}><Input autoComplete="new-username" disabled={mode === "edit"} /></Form.Item>
-            {mode === "create" && <Form.Item name="password" label="Mật khẩu" rules={[{ required: true, min: 6 }]}><Input.Password autoComplete="new-password" /></Form.Item>}
-            <Form.Item name="fullName" label="Họ tên" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="email" label="Email" rules={[{ type: "email" }]}><Input /></Form.Item>
-            <Form.Item name="phone" label="Điện thoại"><Input /></Form.Item>
-            {canUpdate && (
-              <Form.Item name="roleCode" label="Role">
-                <Select options={roleOptions} disabled={user?.role === "LEADER"} placeholder="Chọn role" />
-              </Form.Item>
-            )}
-            <Form.Item name="teamId" label="Team">
-              <Select options={teamOptions} allowClear placeholder="Chọn team" />
-            </Form.Item>
-            <Form.Item name="leaderId" label="Leader">
-              <Select options={leaderOptions} allowClear placeholder="Chọn leader" />
-            </Form.Item>
-            <Divider plain style={{ margin: "16px 0 8px" }}>Tài khoản ngân hàng</Divider>
-            <Form.Item name="bankName" label="Tên ngân hàng"><Input /></Form.Item>
-            <Form.Item name="bankAccountNumber" label="Số tài khoản"><Input /></Form.Item>
-            <Form.Item name="bankAccountHolder" label="Tên chủ tài khoản"><Input /></Form.Item>
-            <Form.Item><Button type="primary" htmlType="submit" loading={create.isPending || update.isPending}>{mode === "create" ? "Tạo tài khoản" : "Lưu thay đổi"}</Button></Form.Item>
-          </Form>
-        )}
-      </Drawer>
+        onClose={() => setOpen(false)}
+        mode={mode}
+        selected={selected}
+        defaultValues={mode === "create" ? draftData ?? undefined : undefined}
+        roleOptions={roleOptions}
+        teamOptions={teamOptions}
+        leaderOptions={leaderOptions}
+        onSuccess={handleSaved}
+      />
+
       <Drawer title="Đặt lại mật khẩu" open={passwordOpen} onClose={() => setPasswordOpen(false)} size="default">
         <Form form={passwordForm} layout="vertical" onFinish={({ newPassword }) => selected && reset.mutate({ id: selected._id, newPassword }, { onSuccess: () => setPasswordOpen(false) })}>
           <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>

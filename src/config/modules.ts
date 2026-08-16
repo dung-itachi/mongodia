@@ -36,8 +36,16 @@ export type ModuleDefinition = {
   title: string;
   /** Route path (e.g., /employees, /orders?status=SHIPPING) */
   route: string;
-  /** Permission required to access this module */
+  /** Permission required to access this module (any-of when used with `permissions`). */
   permission: ModulePermission;
+  /**
+   * Optional any-of permission list. When set, the user needs at least one
+   * of these to access the module. Useful for "manage implies view" tiers
+   * (e.g. `system-settings.manage` automatically grants the same access
+   * as `system-settings.view`). The single `permission` is used when this
+   * is omitted.
+   */
+  permissions?: ModulePermission[];
   /** NavGroup this module belongs to */
   group: NavGroupKey;
   /** SVG icon path data */
@@ -61,6 +69,21 @@ export const MODULES: ModuleDefinition[] = [
     permission: "dashboard.view",
     group: "DASHBOARD",
     icon: `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>`,
+    standalone: true,
+  },
+
+  // Notifications (Phase 10 — Real-time notification hub)
+  // Surfaced on the sidebar as a standalone entry so users can land on
+  // the history page even without using the bell dropdown. The bell in
+  // the header is the primary entry point on desktop; this entry is the
+  // "history page" shortcut.
+  {
+    id: "notifications",
+    title: "Thông báo",
+    route: "/notifications",
+    permission: "notification.view",
+    group: "DASHBOARD",
+    icon: `<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`,
     standalone: true,
   },
 
@@ -217,12 +240,32 @@ export const MODULES: ModuleDefinition[] = [
     icon: `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
   },
   {
+    id: "employees-orgchart",
+    title: "Sơ đồ tổ chức",
+    route: "/employees",
+    permission: "employee.view",
+    group: "ACCOUNTS",
+    icon: `<rect x="3" y="3" width="7" height="4" rx="1"/><rect x="14" y="3" width="7" height="4" rx="1"/><rect x="3" y="17" width="7" height="4" rx="1"/><rect x="14" y="17" width="7" height="4" rx="1"/><path d="M10 5h4M10 19h4M6.5 7v10M17.5 7v10"/>`,
+  },
+  {
     id: "my-account",
     title: "Tài khoản của tôi",
     route: "/account/profile",
     permission: "self-account.view",
     group: "ACCOUNTS",
     icon: `<circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>`,
+  },
+
+  // Phase 9 — Role & Permission Tree (RBAC management)
+  // Gated by the dedicated `role.permission.manage` code. Replaces the
+  // legacy `/roles` placeholder with a real Permission Tree page.
+  {
+    id: "roles-tree",
+    title: "Vai trò & Phân quyền",
+    route: "/roles",
+    permission: "role.permission.manage",
+    group: "ACCOUNTS",
+    icon: `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>`,
   },
 
   // Warehouse Group
@@ -284,11 +327,14 @@ export const MODULES: ModuleDefinition[] = [
   },
 
   // Settings Group (Sprint Settings — Exchange Rate)
+  // Phase 8 — Permission Audit: any-of [view, manage] because
+  // `system-settings.manage` implicitly grants access to the module.
   {
     id: "settings-exchange-rate",
     title: "Tỷ giá tiền tệ",
     route: "/settings/exchange-rate",
-    permission: "settings.exchange_rate.view",
+    permission: "system-settings.view",
+    permissions: ["system-settings.view", "system-settings.manage"],
     group: "SETTINGS",
     icon: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>`,
   },
@@ -298,9 +344,21 @@ export const MODULES: ModuleDefinition[] = [
     id: "settings-shipping-fee",
     title: "Phí ship",
     route: "/settings/shipping-fee",
-    permission: "settings.shipping_fee.view",
+    permission: "system-settings.view",
+    permissions: ["system-settings.view", "system-settings.manage"],
     group: "SETTINGS",
     icon: `<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/>`,
+  },
+
+  // Settings Group (Phase 10 follow-up — Notification management)
+  // Permission gate: `notification.manage` — chỉ Admin/Manager.
+  {
+    id: "settings-notifications",
+    title: "Quản lý thông báo",
+    route: "/settings/notifications",
+    permission: "notification.manage",
+    group: "SETTINGS",
+    icon: `<path d="M3 5h13M9 3v2"/><path d="M5 21h14a2 2 0 0 0 2-2V8H3v11a2 2 0 0 0 2 2z"/><path d="M3 8l9 5 9-5"/>`,
   },
 ];
 

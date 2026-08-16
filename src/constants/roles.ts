@@ -152,6 +152,21 @@ export const ROLES = [
       // ---- Settings (Shipping Fee) ------------------------------------
       "settings.shipping_fee.view",
       "settings.shipping_fee.update",
+
+      // ---- System Settings (module-level gate) ---------------------------
+      // `system-settings.view` opens the module; `system-settings.manage`
+      // covers all mutations in the module (Phase 8 — Permission Audit).
+      "system-settings.view",
+      "system-settings.manage",
+
+      // ---- Notification (Phase 10) ---------------------------------------
+      // Manager vận hành hệ thống; cần đọc và xử lý notification về
+      // cảnh báo tồn kho, đơn hàng, vận chuyển. Manager cũng có quyền
+      // quản lý (CRUD) thông báo hệ thống thông qua /settings/notifications.
+      "notification.view",
+      "notification.read",
+      "notification.readAll",
+      "notification.manage",
     ],
   },
 
@@ -202,6 +217,12 @@ export const ROLES = [
       "lead.view",
 
       "report.view",
+
+      // ---- Notification (Phase 10) ---------------------------------------
+      // Mọi nhân viên đều cần đọc thông báo.
+      "notification.view",
+      "notification.read",
+      "notification.readAll",
     ],
   },
 
@@ -239,6 +260,11 @@ export const ROLES = [
       "order.view",
       "order.reserve_stock",
       "order.history",
+
+      // ---- Notification (Phase 10) ---------------------------------------
+      "notification.view",
+      "notification.read",
+      "notification.readAll",
     ],
   },
 
@@ -312,6 +338,11 @@ export const ROLES = [
       "marketing-expense.lock",
 
       "report.view",
+
+      // ---- Notification (Phase 10) ---------------------------------------
+      "notification.view",
+      "notification.read",
+      "notification.readAll",
     ],
   },
 
@@ -344,6 +375,11 @@ export const ROLES = [
       "gift.view",
 
       "lead.view",
+
+      // ---- Notification (Phase 10) ---------------------------------------
+      "notification.view",
+      "notification.read",
+      "notification.readAll",
     ],
   },
 
@@ -402,6 +438,11 @@ export const ROLES = [
       "marketing-expense.lock",
 
       "report.view",
+
+      // ---- Notification (Phase 10) ---------------------------------------
+      "notification.view",
+      "notification.read",
+      "notification.readAll",
     ],
   },
 ];

@@ -14,8 +14,10 @@ import { MODULES, getModuleByRoute, type ModuleDefinition } from "./modules";
 export type RoutePermission = {
   /** Route path (must match Next.js route exactly) */
   path: string;
-  /** Permission required to access this route */
+  /** Permission required to access this route (any-of when used with `permissions`). */
   permission: string;
+  /** Any-of permissions for this route. When set, the user needs at least one. */
+  permissions?: string[];
   /** Human-readable label for the route (for 403 page) */
   label: string;
 };
@@ -30,6 +32,7 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = MODULES.map(
   (module): RoutePermission => ({
     path: module.route,
     permission: module.permission,
+    permissions: module.permissions,
     label: module.title,
   })
 );

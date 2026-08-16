@@ -64,6 +64,12 @@ export const PERMISSIONS = {
   FACEBOOK_CREATE: "facebook.create",
   FACEBOOK_UPDATE: "facebook.update",
   FACEBOOK_DELETE: "facebook.delete",
+
+  // Notification
+  NOTIFICATION_VIEW: "notification.view",
+  NOTIFICATION_READ: "notification.read",
+  NOTIFICATION_READ_ALL: "notification.readAll",
+  NOTIFICATION_MANAGE: "notification.manage",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
