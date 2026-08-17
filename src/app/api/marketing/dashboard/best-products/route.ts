@@ -13,6 +13,7 @@
 
 import { connectDB } from "@/lib/mongodb";
 import { Order } from "@/models/Order";
+import { Product } from "@/models/Product";
 import { OrderStatus } from "@/constants/orderStatus";
 import { getCurrentUser, UnauthorizedError, ForbiddenError } from "@/lib/auth";
 import { getAccountScope } from "@/lib/account-scope";
@@ -83,15 +84,25 @@ export async function GET(request: Request) {
       status: {
         $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED],
       },
+      // Chỉ lấy đơn có productId (không bao gồm combo)
+      productId: { $exists: true, $ne: null },
     };
     if (effectiveMarketingEmployeeId) {
       orderMatch.marketingEmployeeId = effectiveMarketingEmployeeId;
     }
 
-    // Aggregate by productOrCombo + sum order count
-    // Fallback: nếu không có productName thì dùng productId hoặc comboId string
+    // Aggregate by productId + use $lookup to get product name
     const bestAgg = await Order.aggregate([
       { $match: orderMatch },
+      // Lookup product info
+      {
+        $lookup: {
+          from: "products",
+          localField: "productId",
+          foreignField: "_id",
+          as: "productInfo",
+        },
+      },
       {
         $project: {
           productName: {
@@ -104,24 +115,14 @@ export async function GET(request: Request) {
               "$productSnapshot.name",
               {
                 $cond: [
-                  // Rồi comboSnapshot.name
+                  // Rồi tên từ product lookup
                   { $and: [
-                    { $ifNull: ["$comboSnapshot.name", false] },
-                    { $ne: ["$comboSnapshot.name", ""] }
+                    { $gt: [{ $size: { $ifNull: ["$productInfo", []] } }, 0] },
+                    { $ne: [{ $arrayElemAt: ["$productInfo.name", 0] }, null] }
                   ]},
-                  "$comboSnapshot.name",
-                  // Rồi productName trực tiếp
-                  {
-                    $cond: [
-                      { $and: [
-                        { $ifNull: ["$productName", false] },
-                        { $ne: ["$productName", ""] }
-                      ]},
-                      "$productName",
-                      // Fallback cuối cùng
-                      { $ifNull: ["$productId", "Sản phẩm khác"] }
-                    ]
-                  },
+                  { $arrayElemAt: ["$productInfo.name", 0] },
+                  // Fallback cuối cùng
+                  "Sản phẩm khác"
                 ],
               },
             ],
