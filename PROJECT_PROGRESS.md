@@ -1783,57 +1783,97 @@ occurs).
 | 1.6 | 2026-08-15 | Phase 7 — Warehouse Adjustment No-Op Data-Integrity Fix |
 | 1.7 | 2026-08-16 | Phase 8 — System Configuration Permission Audit |
 | 1.8 | 2026-08-16 | Phase 9 — Role & Permission Tree UI (RBAC management) |
+| 1.9 | 2026-08-17 | Phase 10 — Module 6: Nhật ký cuộc gọi (LeadCallLog) |
 
 ---
 
-**Report Generated:** 2026-08-16
-**Current Phase:** Phase 9 COMPLETE ✅
+**Report Generated:** 2026-08-17
+**Current Phase:** Phase 10 COMPLETE ✅
 **Final Verdict:** PASS
 
 ---
 
-## 22. Phase 8 — System Configuration Permission Audit
+## 24. Phase 10 — Module 6: Nhật ký cuộc gọi (LeadCallLog)
 
-### 22.1 Scope
+### 24.1 Scope
 
-The "Cấu hình hệ thống" (System Settings) module — currently exposing
-`/settings/exchange-rate` (Tỷ giá) and `/settings/shipping-fee` (Phí ship) —
-had no dedicated module-level permission gate. Both sub-pages only
-checked the legacy per-resource codes (`settings.exchange_rate.*` /
-`settings.shipping_fee.*`).
+Triển khai Module 6: **Nhật ký cuộc gọi (LeadCallLog)** — ghi nhận mỗi lần Sale gọi cho Lead với các trạng thái cuộc gọi rõ ràng.
 
-This phase introduces two module-level permission codes, wires the
-module registry and the API authorization layer to them, and adds
-regression tests for the five canonical scenarios.
+**Business requirement:**
+- Mỗi cuộc gọi tạo một bản ghi mới (append-only, không ghi đè)
+- Sale có thể chọn trạng thái: Không nghe máy, Máy bận, Sai số, Tiềm năng, Không nhu cầu, Hẹn gọi lại, Chốt đơn
+- Hệ thống tự động cập nhật trạng thái Lead dựa trên trạng thái cuộc gọi
 
-### 22.2 Permissions added
+### 24.2 Call Statuses
 
-| Code | Meaning |
-|------|---------|
-| `system-settings.view` | Can open the Cấu hình hệ thống module and read data |
-| `system-settings.manage` | Can mutate any setting (implying `view`) |
+| Code | Label | Maps to Lead Status |
+|------|-------|---------------------|
+| `NOT_CALLED` | Chưa gọi | - |
+| `NO_ANSWER` | Không nghe máy | NO_ANSWER |
+| `BUSY` | Máy bận | NO_ANSWER |
+| `WRONG_NUMBER` | Sai số | REJECTED |
+| `POTENTIAL` | Tiềm năng | POTENTIAL |
+| `NOT_INTERESTED` | Không nhu cầu | LOST |
+| `CALL_BACK` | Hẹn gọi lại | CONTACTED |
+| `CONVERTED` | Chốt đơn | CLOSED |
 
-Per spec §3, `system-settings.manage` implicitly grants module access.
-A user with only `system-settings.view` can browse and read but is
-denied every mutation.
+### 24.3 Implementation
 
-### 22.3 Implementation
+| Layer | Files | Description |
+|-------|-------|-------------|
+| **Constants** | `src/constants/leadCallStatus.ts` | Enum + labels + helper arrays |
+| **Model** | `src/models/LeadCallLog.ts` | Mongoose model with indexes |
+| **Repository** | `src/repositories/leadCallLog.repository.ts` | CRUD + stats aggregation |
+| **Service** | `src/services/leadCallLog.service.ts` | Business logic + Lead status sync |
+| **API** | `src/app/api/leads/[id]/calls/route.ts` | GET (history) + POST (log call) |
+| **Hooks** | `src/hooks/useLeadCallLog.ts` | React Query hooks |
+| **Components** | `CallLogTimeline.tsx`, `LogCallModal.tsx` | UI components |
 
-#### 22.3.1 Permission registry & seed
+### 24.4 Files Added
 
-- `src/constants/permissions.ts` — appends the two new codes.
-- `src/db/seeds/permissions.seed.ts` — registers the new codes under
-  the existing `Setting` module group so existing seed runs continue
-  to upsert them idempotently.
-- `src/constants/roles.ts` — MANAGER role is granted both
-  `system-settings.view` and `system-settings.manage`. ADMIN keeps the
-  `*` wildcard. No other role is granted these codes (preserves the
-  "admin/manager only" policy).
-- Legacy codes (`settings.exchange_rate.*`, `settings.shipping_fee.*`)
-  are **kept** so previously-deployed roles continue to work
-  without re-seed.
+1. `src/constants/leadCallStatus.ts` — LeadCallStatus enum + labels
+2. `src/models/LeadCallLog.ts` — Mongoose document model
+3. `src/repositories/leadCallLog.repository.ts` — Repository layer
+4. `src/services/leadCallLog.service.ts` — Service layer with business logic
+5. `src/hooks/useLeadCallLog.ts` — React Query hooks
+6. `src/app/api/leads/[id]/calls/route.ts` — API endpoints
+7. `src/components/sale/leads/CallLogTimeline.tsx` — Timeline display
+8. `src/components/sale/leads/LogCallModal.tsx` — Call logging modal
+9. `src/components/sale/leads/call-log-timeline.module.css` — Timeline styles
+10. `src/components/sale/leads/log-call-modal.module.css` — Modal styles
 
-#### 22.3.2 Module registry (`src/config/modules.ts`)
+### 24.5 Files Modified
+
+1. `src/models/index.ts` — Added LeadCallLog export
+2. `src/components/sale/leads/SaleLeadTable.tsx` — Added "Gọi" button
+3. `src/components/sale/leads/sale-leads.module.css` — Added callBtn style
+4. `src/app/(protected)/leads/page.tsx` — Integrated LogCallModal
+5. `src/components/marketing/leads/LeadDetailView.tsx` — Added "Cuộc gọi" tab
+
+### 24.6 Features
+
+- **Call Logging**: Sale clicks "Gọi" button → Modal to select call status + note
+- **Auto-sync**: Call status auto-updates Lead status
+- **Timeline View**: Marketing can view call history in LeadDetailView
+- **Call Stats**: Track no-answer count, potential leads, conversions
+
+### 24.7 API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/leads/[id]/calls` | Get call history (optional `?includeStats=true`) |
+| POST | `/api/leads/[id]/calls` | Log a new call `{ status, note?, duration? }` |
+
+### 24.8 TypeScript + Lint
+
+- ESLint: 0 errors on new files
+- TypeScript: 0 errors on new files
+
+**✅ PASS — Phase 10 Module 6 (LeadCallLog) complete**
+
+---
+
+## 25. Phase 8 — System Configuration Permission Audit
 
 The two SETTINGS items now declare both:
 
@@ -2153,3 +2193,128 @@ or the seed's idempotent upsert behaviour.
 **✅ PASS — Phase 9 Role & Permission Tree UI complete**
 
 ---
+
+# PHASE 4 — VERIFICATION & RECONCILIATION REPORT
+
+**Date:** August 13, 2026
+**Phase:** Phase 4 Verification & Reconciliation
+**Status:** FAIL — CRITICAL ISSUES FOUND
+
+---
+
+## EXECUTIVE SUMMARY
+
+PHASE 4 verification has identified **CRITICAL issues** that must be resolved before Phase 5.
+
+### Critical Findings:
+
+1. **[CRITICAL] `inventory.service.ts` contains active business flows using Inventory collection** as write target for stock operations (`exportOrder`, `reserveStock`, `releaseStock`, `rollbackExport`). These operations directly write to the legacy Inventory collection with wrong semantics.
+
+2. **[CRITICAL] `inventory.repository.ts` contains active stock mutation methods** (`decreaseStock`, `increaseStock`) that write to Inventory collection.
+
+3. **[CRITICAL] `applyItem()` in stockEngine.service.ts writes to Inventory collection** for OUT, RETURN, TRANSFER_OUT, TRANSFER_IN actions — bypassing WarehouseInventory SoT.
+
+4. **[WARNING] `adjustStock()` in stockEngine.service.ts writes to Inventory collection** instead of WarehouseInventory.
+
+5. **[WARNING] dualWrite.test.ts expectations are outdated** — tests expect Phase 2 dual-write behavior, but code is Phase 3 (WarehouseInventory-only).
+
+6. **[INFO] warehouseConcurrency.test.ts has infrastructure issues** — timeout/MongoDB buffering problems, not business logic failures.
+
+### Test Results Summary:
+
+| Test Suite | Passed | Failed | Status |
+|------------|--------|--------|--------|
+| phase3-stockEngine.test.ts | 12/12 | 0 | PASS |
+| dualWrite.test.ts | ~8/? | ~8 | FAIL (expected — Phase 2 tests) |
+| warehouseConcurrency.test.ts | 0 | 2 | FAIL (infrastructure) |
+| Other tests | ? | ? | Mixed |
+
+---
+
+## 1. WAREHOUSEINVENTORY INVARIANT AUDIT
+
+### Invariant Formula:
+```
+availableQuantity = quantity - reservedQuantity - inTransitQuantity
+```
+
+### Required Checks:
+- [x] quantity >= 0
+- [x] reservedQuantity >= 0
+- [x] inTransitQuantity >= 0
+- [x] availableQuantity >= 0
+- [x] reservedQuantity <= quantity
+- [x] inTransitQuantity <= quantity
+
+### Status: **PASS** (Code-level verification)
+- WarehouseInventory model uses schema validation with `min: 0`
+- All mutation functions preserve invariants via atomic updates
+- No code path found that violates invariants
+
+---
+
+## 2. LEGACY INVENTORY USAGE AUDIT
+
+### Summary
+The following active code paths still write to the legacy `Inventory` collection:
+
+| File | Method | Issue |
+|------|--------|-------|
+| `inventory.service.ts` | `exportOrder`, `reserveStock`, `releaseStock`, `rollbackExport` | Write to Inventory |
+| `inventory.repository.ts` | `decreaseStock`, `increaseStock` | Write to Inventory |
+| `stockEngine.service.ts` | `applyItem()` for OUT/RETURN/TRANSFER_OUT/TRANSFER_IN | Write to Inventory |
+| `stockEngine.service.ts` | `adjustStock()` | Write to Inventory |
+
+### Phase Migration Plan:
+
+| Phase | Target |
+|-------|--------|
+| Phase 3 | WarehouseInventory becomes SoT, Inventory writes stop |
+| Phase 4 | Migration code runs, validates consistency |
+| Phase 5 | Inventory collection deprecated (read-only) |
+
+### Resolution:
+- Phase 3 completed: All new operations write to `WarehouseInventory`
+- Phase 4 migration: Backfill `WarehouseInventory` from `Inventory`, verify consistency
+- Phase 5: Remove `Inventory` write paths, keep for historical reads only
+
+---
+
+## 3. DUAL-WRITE TEST ANALYSIS
+
+### dualWrite.test.ts Status: FAIL
+
+**Root Cause:** Tests were written for Phase 2 dual-write behavior. Code has since moved to Phase 3 (WarehouseInventory-only). Tests expect both `Inventory` and `WarehouseInventory` to be written, but only `WarehouseInventory` is written.
+
+**Action Required:** Update `dualWrite.test.ts` to Phase 3 expectations.
+
+### warehouseConcurrency.test.ts Status: FAIL (infrastructure)
+
+**Root Cause:** MongoDB buffering and Jest timeout issues, not business logic failures.
+
+**Action Required:** Increase Jest timeout, adjust MongoDB replica set configuration.
+
+---
+
+## 4. PHASE 4 MIGRATION CHECKLIST
+
+- [ ] Migrate all active `Inventory` writes to `WarehouseInventory`
+- [ ] Run backfill script to populate `WarehouseInventory` from `Inventory`
+- [ ] Validate all stock operations use `WarehouseInventory` as SoT
+- [ ] Update `dualWrite.test.ts` to Phase 3 expectations
+- [ ] Fix `warehouseConcurrency.test.ts` infrastructure issues
+- [ ] Run full test suite after fixes
+
+---
+
+## 5. NEXT STEPS
+
+1. **Immediate:** Fix Phase 3 code to stop writing to `Inventory` collection
+2. **Short-term:** Run migration script, validate data consistency
+3. **Medium-term:** Update tests, verify concurrency handling
+4. **Long-term:** Remove `Inventory` write paths in Phase 5
+
+---
+
+*Report generated: August 13, 2026*
+*Phase 4 Verification Complete*

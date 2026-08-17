@@ -22,11 +22,12 @@
  */
 
 import { memo, useCallback } from "react";
-import { Button, Empty, Popconfirm, Skeleton, Table, Tooltip } from "antd";
+import { useRouter } from "next/navigation";
+import { Button, Empty, Popconfirm, Skeleton, Space, Table, Tooltip, Popover } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { CheckSquareOutlined } from "@ant-design/icons";
+import { CheckSquareOutlined, EyeOutlined } from "@ant-design/icons";
 import { formatNumber } from "@/lib/format";
-import type { OrderListItem } from "@/types/order";
+import type { OrderListItem, OrderItem } from "@/types/order";
 import styles from "../orders.module.css";
 
 export type ReconciliationCardProps = {
@@ -39,6 +40,8 @@ export type ReconciliationCardProps = {
   onReconcileAll: () => void;
   bulkSubmitting?: boolean;
   showRevenue?: boolean;
+  exchangeRate?: number;
+  onViewDetail?: (id: string) => void;
 };
 
 function getComboOrProduct(order: OrderListItem): string {
@@ -51,6 +54,82 @@ function getComboOrProduct(order: OrderListItem): string {
   return order.combo?.name || order.product?.name || "-";
 }
 
+function getProductComboDetails(order: OrderListItem): OrderItem[] {
+  const items = order.orderItems ?? [];
+  if (items.length > 0) return items;
+  if (order.combo || order.product) {
+    return [{
+      comboId: order.comboId,
+      productId: order.productId,
+      comboName: order.combo?.name || "",
+      comboCode: order.combo?.code,
+      comboQuantity: order.quantity,
+      packageQuantity: 0,
+      giftQuantity: 0,
+      sellingPrice: order.unitPrice,
+      discount: 0,
+      subtotal: order.totalAmount,
+      details: [],
+      giftMode: "NO_GIFT",
+      giftSelections: [],
+      productName: order.product?.name || "",
+      quantity: order.quantity,
+      unitPrice: order.unitPrice,
+    }];
+  }
+  return [];
+}
+
+function ProductComboPopover({ order }: { order: OrderListItem }) {
+  const router = useRouter();
+  const items = getProductComboDetails(order);
+
+  const content = (
+    <div style={{ minWidth: 200 }}>
+      <div style={{ marginBottom: 8, fontWeight: 600, borderBottom: "1px solid #f0f0f0", paddingBottom: 4 }}>
+        Sản phẩm / Combo
+      </div>
+      <Table
+        size="small"
+        dataSource={items.map((item, idx) => ({ ...item, key: idx }))}
+        pagination={false}
+        columns={[
+          {
+            title: "Tên",
+            key: "name",
+            render: (_, record) => record.comboName || record.productName || "-",
+          },
+          {
+            title: "SL",
+            dataIndex: "quantity",
+            key: "qty",
+            width: 50,
+            align: "center",
+          },
+        ]}
+      />
+    </div>
+  );
+
+  return (
+    <Popover
+      content={content}
+      title={null}
+      trigger="hover"
+      placement="left"
+    >
+      <Button
+        type="link"
+        size="small"
+        icon={<EyeOutlined />}
+        onClick={() => router.push(`/orders/${order._id}`)}
+      >
+        Chi tiết
+      </Button>
+    </Popover>
+  );
+}
+
 function ReconciliationCardInner({
   title,
   accentColor,
@@ -61,6 +140,7 @@ function ReconciliationCardInner({
   onReconcileAll,
   bulkSubmitting = false,
   showRevenue = false,
+  exchangeRate = 1,
 }: ReconciliationCardProps) {
   const columns: ColumnsType<OrderListItem> = [
     {
@@ -77,6 +157,7 @@ function ReconciliationCardInner({
     {
       key: "customerName",
       title: "Tên khách",
+      width: 150,
       dataIndex: "customerName",
       render: (value: unknown) => (
         <span style={{ fontWeight: 600 }}>{String(value || "—")}</span>
@@ -85,17 +166,76 @@ function ReconciliationCardInner({
     {
       key: "product",
       title: "Sản phẩm",
-      render: (_: unknown, record: OrderListItem) => (
-        <span style={{ fontSize: 12 }}>{getComboOrProduct(record)}</span>
-      ),
+      width: 180,
+      render: (_: unknown, record: OrderListItem) => {
+        const items = record.orderItems ?? [];
+        const firstItem = items[0];
+        const productName = firstItem?.productName || record.product?.name || "-";
+        return <span style={{ fontSize: 12 }}>{productName}</span>;
+      },
+    },
+    {
+      key: "combo",
+      title: "Combo",
+      width: 150,
+      render: (_: unknown, record: OrderListItem) => {
+        const items = record.orderItems ?? [];
+        const firstItem = items[0];
+        const comboName = firstItem?.comboName || record.combo?.name || "-";
+        return <span style={{ fontSize: 12 }}>{comboName}</span>;
+      },
     },
     ...(showRevenue
       ? [
           {
-            key: "totalAmountVnd",
-            title: "Giá ₫",
+            key: "comboPrice",
+            title: "Đơn giá (MNT)",
+            align: "right" as const,
+            width: 120,
+            render: (_: unknown, record: OrderListItem) => {
+              const items = record.orderItems ?? [];
+              const firstItem = items[0];
+              const sellingPrice = firstItem?.sellingPrice || record.unitPrice || 0;
+              return (
+                <span style={{ fontWeight: 600 }}>
+                  {formatNumber(sellingPrice)}
+                </span>
+              );
+            },
+          },
+          {
+            key: "comboPriceVnd",
+            title: "Đơn giá (VND)",
+            align: "right" as const,
+            width: 120,
+            render: (_: unknown, record: OrderListItem) => {
+              const items = record.orderItems ?? [];
+              const firstItem = items[0];
+              const sellingPrice = firstItem?.sellingPrice || record.unitPrice || 0;
+              const vndPrice = Math.round(sellingPrice * exchangeRate);
+              return (
+                <span style={{ fontWeight: 600 }}>
+                  {formatNumber(vndPrice)}
+                </span>
+              );
+            },
+          },
+          {
+            key: "quantity",
+            title: "SL",
+            dataIndex: "quantity",
+            align: "center" as const,
+            width: 60,
+            render: (value: unknown) => (
+              <span>{value || 1}</span>
+            ),
+          },
+          {
+            key: "totalAmount",
+            title: "Thành tiền (MNT)",
             dataIndex: "totalAmount",
             align: "right" as const,
+            width: 130,
             render: (value: unknown) => (
               <span style={{ fontWeight: 700, color: "#52c41a" }}>
                 {formatNumber(Number(value || 0))}
@@ -107,19 +247,22 @@ function ReconciliationCardInner({
     {
       key: "actions",
       title: "Thao tác",
-      width: 120,
+      width: 200,
       align: "center" as const,
       render: (_: unknown, record: OrderListItem) => (
-        <Tooltip title="Đối soát đơn hàng này">
-          <Button
-            type="primary"
-            size="small"
-            icon={<CheckSquareOutlined />}
-            onClick={() => onReconcileOne(record._id)}
-          >
-            Đối soát
-          </Button>
-        </Tooltip>
+        <Space>
+          <ProductComboPopover order={record} />
+          <Tooltip title="Đối soát đơn hàng này">
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckSquareOutlined />}
+              onClick={() => onReconcileOne(record._id)}
+            >
+              Đối soát
+            </Button>
+          </Tooltip>
+        </Space>
       ),
     },
   ];

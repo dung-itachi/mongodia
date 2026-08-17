@@ -27,6 +27,8 @@ function DashboardStatsGridInner({ stats }: DashboardStatsGridProps) {
             icon={stat.icon}
             color={stat.color}
             trend={stat.trend}
+            onCurrencyToggle={stat.onCurrencyToggle}
+            displayCurrency={stat.displayCurrency}
           />
         ))}
       </StatGrid>

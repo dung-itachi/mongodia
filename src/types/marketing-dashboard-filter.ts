@@ -21,6 +21,9 @@ export type MarketingDashboardFilter = {
   campaignId?: string;
   source?: LeadSource;
   status?: LeadStatus;
+  // Sprint 8.0: Area/Team/MKT filtering
+  teamId?: string;
+  areaId?: string;
 };
 
 export type DrillDownContext = {

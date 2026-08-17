@@ -72,7 +72,15 @@ export default function MarketingDashboardPage() {
   const [selectedTeamForOverview, setSelectedTeamForOverview] = useState<string | undefined>(undefined);
   const [selectedAreaForOverview, setSelectedAreaForOverview] = useState<string | undefined>(undefined);
 
-  const { data, loading, error, refetch } = useMarketingDashboard();
+  // Build filter cho main dashboard
+  const dashboardFilter: MarketingDashboardFilter = {
+    period,
+    marketingEmployeeId: selectedAreaForOverview || selectedTeamForOverview ? undefined : selectedMktForOverview,
+    teamId: selectedTeamForOverview && selectedTeamForOverview !== "__all__" ? selectedTeamForOverview : undefined,
+    areaId: selectedAreaForOverview && selectedAreaForOverview !== "__all__" ? selectedAreaForOverview : undefined,
+  };
+
+  const { data, loading, error, refetch } = useMarketingDashboard({ filter: dashboardFilter });
   const { data: exportData } = useMarketingDashboardExport(advancedFilter);
 
   // Lookup options cho advanced filters (Sprint 7.4 — fix "nodata" dropdowns)
@@ -234,30 +242,21 @@ export default function MarketingDashboardPage() {
           }}
         />
 
-        {/* MKT Overview Banner — DS | Ads xin | Đã tiêu | Dư | %Ads | CPA */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 280 }}>
-            <MKTOverviewBanner
-              totalRevenue={totalRevenue}
-              totalXin={totalXin}
-              totalSpent={totalSpent}
-              cpa={cpa}
-              loading={!adsReport}
-            />
-          </div>
+        {/* Filters Row — Period + Area/Team/MKT (Sprint 8.0) */}
+        <div className={styles["mk-filters-row"]}>
+          <MKTOverviewBanner
+            totalRevenue={totalRevenue}
+            totalXin={totalXin}
+            totalSpent={totalSpent}
+            cpa={cpa}
+            loading={!adsReport}
+          />
+          <MarketingDashboardFilters period={period} onPeriodChange={handlePeriodChange} />
           {isGlobal && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-              {/* Filter theo Khu vực */}
+            <div className={styles["mk-area-filters"]}>
               <Select
                 allowClear
-                placeholder="Chọn Khu vực"
+                placeholder="Khu vực"
                 value={selectedAreaForOverview}
                 onChange={(v) => {
                   setSelectedAreaForOverview(v);
@@ -276,13 +275,12 @@ export default function MarketingDashboardPage() {
                     .includes(input.toLowerCase())
                 }
                 size="small"
-                style={{ width: 180 }}
+                style={{ width: 140 }}
                 suffixIcon={<EnvironmentOutlined />}
               />
-              {/* Filter theo Team */}
               <Select
                 allowClear
-                placeholder="Chọn Team"
+                placeholder="Team"
                 value={selectedTeamForOverview}
                 onChange={(v) => {
                   setSelectedTeamForOverview(v);
@@ -300,14 +298,13 @@ export default function MarketingDashboardPage() {
                     .includes(input.toLowerCase())
                 }
                 size="small"
-                style={{ width: 180 }}
+                style={{ width: 140 }}
                 suffixIcon={<ClusterOutlined />}
                 disabled={!!selectedAreaForOverview}
               />
-              {/* Filter theo MKT */}
               <Select
                 allowClear
-                placeholder="Chọn MKT"
+                placeholder="MKT"
                 value={selectedMktForOverview}
                 onChange={(v) => setSelectedMktForOverview(v)}
                 options={[
@@ -322,7 +319,7 @@ export default function MarketingDashboardPage() {
                     .includes(input.toLowerCase())
                 }
                 size="small"
-                style={{ width: 220 }}
+                style={{ width: 160 }}
                 suffixIcon={<UserOutlined />}
                 disabled={!!selectedAreaForOverview || !!selectedTeamForOverview}
               />
@@ -356,7 +353,7 @@ export default function MarketingDashboardPage() {
         <DailyAdsReport period={period} />
 
         {/* Basic Period Filter */}
-        <MarketingDashboardFilters period={period} onPeriodChange={handlePeriodChange} />
+        <div className={styles["mk-filters-row"]} />
 
         {/* Advanced Filters */}
         <MarketingDashboardAdvancedFilters

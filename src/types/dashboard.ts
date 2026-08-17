@@ -5,6 +5,14 @@
  * All values are aggregated từ Lead + Order collections (real data only).
  */
 
+/** Available filter periods for dashboard KPI stats. */
+export type DashboardPeriod =
+  | "1d"   // Hôm nay (1 ngày)
+  | "3d"   // 3 ngày gần nhất
+  | "7d"   // 7 ngày gần nhất
+  | "month" // Từ đầu tháng đến hiện tại
+  | "prev_month"; // Tháng trước (toàn bộ tháng)
+
 export type DashboardTrend = {
   /** % thay đổi so với kỳ trước (cùng độ dài). Ví dụ: 12.5 nghĩa là +12.5% */
   percent: number;

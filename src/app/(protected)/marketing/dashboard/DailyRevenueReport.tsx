@@ -12,9 +12,11 @@
  *
  * Sprint X.Y — Mở rộng bảng với các cột theo thiết kế mongolia-crm (7):
  *   Ngày | Số đẩy | Đã gọi | Chốt | Giao | TC | DS ₮ | DS ₫ | Biểu đồ
+ *
+ * Sprint 8.0 — Phân trang khi period > 30 ngày
  */
 
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useEffect } from "react";
 import { Card, Table, Skeleton, Row, Col, Statistic, Select, Space, Empty } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { UserOutlined } from "@ant-design/icons";
@@ -52,6 +54,25 @@ function isGlobalUser(user: { role: string; permissions: string[] } | null): boo
   return user.permissions.includes("*");
 }
 
+/**
+ * Tính page size dựa vào period
+ * - period < 30 ngày: hiển thị tất cả (no pagination)
+ * - period >= 30 ngày: phân trang 15 ngày/page
+ */
+function getPageSize(period: ChartPeriod): number {
+  const periodDays: Record<ChartPeriod, number> = {
+    "1d": 1,
+    "3d": 3,
+    "7d": 7,
+    "monthStart": 31,
+    "1month": 30,
+    "30d": 30,
+    "90d": 90,
+  };
+  const days = periodDays[period] ?? 30;
+  return days >= 30 ? 15 : 0;
+}
+
 function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
   const user = useAuthStore((state) => state.user);
   const isGlobal = isGlobalUser(user);
@@ -59,6 +80,13 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
   const [selectedMarketingEmployeeId, setSelectedMarketingEmployeeId] = useState<
     string | undefined
   >(undefined);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = getPageSize(period);
+
+  // Reset page khi period thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [period]);
 
   const { data, loading, error, refetch, scope } = useMarketingDailyReport({
     period,
@@ -88,6 +116,13 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
     });
   }, [data]);
 
+  // Paginated data
+  const paginatedData = useMemo(() => {
+    if (!pageSize || tableData.length <= pageSize) return tableData;
+    const start = (currentPage - 1) * pageSize;
+    return tableData.slice(start, start + pageSize);
+  }, [tableData, currentPage, pageSize]);
+
   // Max revenue để scale biểu đồ bar — dựa vào tổng doanh thu của cả period
   const maxRevenue = useMemo(
     () => Math.max(...tableData.map((r) => r.revenue), 1),
@@ -100,6 +135,27 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
     [tableData]
   );
 
+  const showPagination = pageSize > 0 && tableData.length > pageSize;
+
+  // Default summary values for empty/null state
+  const defaultSummary = {
+    totalDays: 0,
+    totalRevenue: 0,
+    totalOrders: 0,
+    avgDailyRevenue: 0,
+    totalAdsSpent: 0,
+    totalAdsRevenue: 0,
+    totalLeads: 0,
+    totalClosedLeads: 0,
+    overallROAS: 0,
+    totalPushed: 0,
+    totalCalled: 0,
+    totalClosed: 0,
+    totalShipped: 0,
+    totalDeliveredOk: 0,
+  };
+  const summary = data?.summary ?? defaultSummary;
+
   if (loading) {
     return (
       <Card
@@ -111,7 +167,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
     );
   }
 
-  if (error || !data) {
+  if (error) {
     return (
       <Card
         title="📈 Doanh số theo ngày"
@@ -123,8 +179,6 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       </Card>
     );
   }
-
-  const summary = data.summary;
 
   const columns: ColumnsType<DailyRevenueRow> = [
     {
@@ -356,8 +410,20 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       ) : (
         <Table
           columns={columns}
-          dataSource={tableData}
-          pagination={false}
+          dataSource={paginatedData}
+          pagination={
+            showPagination
+              ? {
+                  current: currentPage,
+                  pageSize,
+                  total: tableData.length,
+                  onChange: (page) => setCurrentPage(page),
+                  showSizeChanger: false,
+                  showTotal: (total, range) =>
+                    `${range[0]}-${range[1]} / ${total} ngày`,
+                }
+              : false
+          }
           size="small"
           scroll={{ x: 900 }}
           className={styles["mk-daily-report-table"]}

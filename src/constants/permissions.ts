@@ -532,4 +532,14 @@ export const PERMISSIONS = [
     code: "notification.manage",
     name: "Manage Notifications",
   },
+
+  // Language Settings
+  {
+    code: "settings.language.view",
+    name: "View Language Settings",
+  },
+  {
+    code: "settings.language.update",
+    name: "Update Language Settings",
+  },
 ];

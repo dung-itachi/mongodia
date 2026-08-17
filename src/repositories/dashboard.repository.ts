@@ -372,13 +372,38 @@ export async function aggregateRevenueSummary(): Promise<{
 // Chart Aggregations (Sprint 7.2)
 // ============================================================================
 
-export type ChartPeriod = "7d" | "30d" | "90d";
+export type ChartPeriod = "1d" | "3d" | "7d" | "monthStart" | "1month" | "30d" | "90d";
 
 function getDateRange(period: ChartPeriod): { start: Date; end: Date } {
   const now = new Date();
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
-  const days = period === "7d" ? 6 : period === "30d" ? 29 : 89;
+  let days: number;
+  switch (period) {
+    case "1d":
+      days = 0;
+      break;
+    case "3d":
+      days = 2;
+      break;
+    case "7d":
+      days = 6;
+      break;
+    case "monthStart":
+      // Đầu tháng đến nay
+      days = now.getUTCDate() - 1;
+      break;
+    case "1month":
+      days = 29;
+      break;
+    case "30d":
+      days = 29;
+      break;
+    case "90d":
+    default:
+      days = 89;
+      break;
+  }
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days, 0, 0, 0, 0));
 
   return { start, end };

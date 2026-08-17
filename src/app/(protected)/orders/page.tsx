@@ -596,7 +596,7 @@ function OrdersPageInner() {
       <PageContainer>
         <PageHeader
           title={pageTitle}
-          subtitle="Đối soát các đơn DELIVERED & RETURNED sang RECONCILED"
+          subtitle="Đối soát các đơn Giao thành công & Hoàn trả sang Đã đối soát"
           breadcrumb={[
             { label: "Trang chủ", href: "/" },
             { label: "Đơn hàng" },

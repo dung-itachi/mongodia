@@ -10,10 +10,12 @@
  * Sprint 7.4 — Scope theo tài khoản đăng nhập:
  *  - MKT (non-GLOBAL): API tự khoá cứng theo `marketingEmployeeId = currentUser._id`.
  *  - ADMIN/GLOBAL: mặc định xem tất cả MKT, có dropdown chọn MKT cụ thể.
+ *
+ * Sprint 8.0 — Phân trang khi period > 30 ngày
  */
 
-import { memo, useState } from "react";
-import { Card, Table, Skeleton, Row, Col, Statistic, Button, Modal, Form, InputNumber, DatePicker, Popconfirm, Space, Select } from "antd";
+import { memo, useState, useEffect } from "react";
+import { Card, Table, Skeleton, Row, Col, Statistic, Button, Modal, Form, InputNumber, DatePicker, Popconfirm, Space, Select, Empty } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMarketingDailyAdsReport } from "@/hooks/useMarketingDailyAdsReport";
 import { useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
@@ -54,10 +56,39 @@ function isGlobalUser(user: { role: string; permissions: string[] } | null): boo
   return user.permissions.includes("*");
 }
 
+/**
+ * Tính page size dựa vào period
+ * - period < 30 ngày: hiển thị tất cả (no pagination)
+ * - period >= 30 ngày: phân trang 15 ngày/page
+ */
+function getPageSize(period: ChartPeriod): number {
+  const periodDays: Record<ChartPeriod, number> = {
+    "1d": 1,
+    "3d": 3,
+    "7d": 7,
+    "monthStart": 31,
+    "1month": 30,
+    "30d": 30,
+    "90d": 90,
+  };
+  const days = periodDays[period] ?? 30;
+  return days >= 30 ? 15 : 0;
+}
+
 function DailyAdsReportInner({ period }: DailyAdsReportProps) {
   const user = useAuthStore((state) => state.user);
   const isGlobal = isGlobalUser(user);
   const message = useMessage();
+  const pageSize = getPageSize(period);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page khi period thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [period]);
+
+  // Chỉ fetch MKT list khi user là GLOBAL — non-GLOBAL bị khoá cứng rồi.
+  const { employees: marketingEmployeeOptions } = useMarketingEmployees();
 
   const [selectedMarketingEmployeeId, setSelectedMarketingEmployeeId] = useState<
     string | undefined
@@ -67,9 +98,6 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
     period,
     marketingEmployeeId: isGlobal ? selectedMarketingEmployeeId : undefined,
   });
-
-  // Chỉ fetch MKT list khi user là GLOBAL — non-GLOBAL bị khoá cứng rồi.
-  const { employees: marketingEmployeeOptions } = useMarketingEmployees();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -111,6 +139,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
     xinSang: number;
     xinChieu: number;
     xinGap: number;
+    tongTieu: number;
   }) => {
     if (!editingReport) return;
 
@@ -121,6 +150,11 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
           morning: values.xinSang || 0,
           afternoon: values.xinChieu || 0,
           emergency: values.xinGap || 0,
+        },
+        spentBudget: {
+          morning: values.tongTieu || 0,
+          afternoon: 0,
+          emergency: 0,
         },
       });
 
@@ -163,6 +197,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       xinSang: record.xinSang,
       xinChieu: record.xinChieu,
       xinGap: record.xinGap,
+      tongTieu: record.tongTieu,
     });
     setIsModalOpen(true);
   };
@@ -174,47 +209,34 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
     form.resetFields();
   };
 
-  if (loading) {
-    return (
-      <Card 
-        title="📊 Báo cáo Ads theo ngày" 
-        className={styles["mk-daily-report-card"]}
-      >
-        <Skeleton active paragraph={{ rows: 8 }} />
-      </Card>
-    );
-  }
+  // Computed values - only use data when available
+  const tableData: DailyAdsRow[] = data
+    ? data.data.map((item, index) => {
+        const dateParts = item.date.split("-");
+        return {
+          key: item.date || String(index),
+          _id: (item as any).firstReportId || "",
+          date: item.date,
+          dateDisplay: `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`,
+          xinSang: item.xinSang,
+          xinChieu: item.xinChieu,
+          xinGap: item.xinGap,
+          tongTieu: item.tongTieu,
+          tienDu: item.tienDu,
+          totalRevenue: item.totalRevenue,
+          percentAds: item.percentAds,
+          status: (item as any).status || "",
+        };
+      })
+    : [];
 
-  if (error || !data) {
-    return (
-      <Card 
-        title="📊 Báo cáo Ads theo ngày" 
-        className={styles["mk-daily-report-card"]}
-      >
-        <div className={styles["mk-drawer-error"]}>
-          Không thể tải dữ liệu báo cáo Ads theo ngày
-        </div>
-      </Card>
-    );
-  }
+  // Paginated data
+  const paginatedData =
+    !pageSize || tableData.length <= pageSize
+      ? tableData
+      : tableData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const tableData: DailyAdsRow[] = data.data.map((item, index) => {
-    const dateParts = item.date.split("-");
-    return {
-      key: item.date || String(index),
-      _id: (item as any).firstReportId || "",
-      date: item.date,
-      dateDisplay: `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`,
-      xinSang: item.xinSang,
-      xinChieu: item.xinChieu,
-      xinGap: item.xinGap,
-      tongTieu: item.tongTieu,
-      tienDu: item.tienDu,
-      totalRevenue: item.totalRevenue,
-      percentAds: item.percentAds,
-      status: (item as any).status || "",
-    };
-  });
+  const showPagination = pageSize > 0 && tableData.length > pageSize;
 
   const columns: ColumnsType<DailyAdsRow> = [
     {
@@ -336,6 +358,17 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       : "Tất cả MKT"
     : user?.fullName ?? "MKT của bạn";
 
+  // Default summary values for empty/null state
+  const defaultSummary = {
+    tongXin: 0,
+    tongTieu: 0,
+    tienDu: 0,
+    totalRevenue: 0,
+    percentAds: 0,
+    totalLeads: 0,
+  };
+  const summary = data?.summary ?? defaultSummary;
+
   return (
     <Card
       title="📊 Báo cáo Ads theo ngày"
@@ -398,70 +431,90 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       {/* Summary Stats */}
       <Row gutter={16} className={styles["mk-daily-report-summary"]}>
         <Col span={4}>
-          <Statistic 
-            title="Tổng xin" 
-            value={data.summary.tongXin}
+          <Statistic
+            title="Tổng xin"
+            value={summary.tongXin}
             formatter={(value) => formatNumber(Number(value))}
             styles={{ content: { fontSize: "18px" } }}
           />
         </Col>
         <Col span={4}>
-          <Statistic 
-            title="Tổng tiêu" 
-            value={data.summary.tongTieu}
+          <Statistic
+            title="Tổng tiêu"
+            value={summary.tongTieu}
             formatter={(value) => formatNumber(Number(value))}
             styles={{ content: { color: "#fa8c16", fontSize: "18px" } }}
           />
         </Col>
         <Col span={4}>
-          <Statistic 
-            title="Tiền dư" 
-            value={data.summary.tienDu}
+          <Statistic
+            title="Tiền dư"
+            value={summary.tienDu}
             formatter={(value) => formatNumber(Number(value))}
-            styles={{ content: { 
-              color: Number(data.summary.tienDu) >= 0 ? "#52c41a" : "#ff4d4f", 
-              fontSize: "18px" 
-            } }}
+            styles={{
+              content: {
+                color: Number(summary.tienDu) >= 0 ? "#52c41a" : "#ff4d4f",
+                fontSize: "18px",
+              },
+            }}
           />
         </Col>
         <Col span={4}>
-          <Statistic 
-            title="Doanh số" 
-            value={data.summary.totalRevenue}
+          <Statistic
+            title="Doanh số"
+            value={summary.totalRevenue}
             formatter={(value) => formatNumber(Number(value))}
             styles={{ content: { color: "#13c2c2", fontSize: "18px" } }}
           />
         </Col>
         <Col span={4}>
-          <Statistic 
-            title="%Ads" 
-            value={data.summary.percentAds}
+          <Statistic
+            title="%Ads"
+            value={summary.percentAds}
             formatter={(value) => `${value}%`}
-            styles={{ content: { 
-              color: data.summary.percentAds <= 100 ? "#52c41a" : "#ff4d4f", 
-              fontSize: "18px" 
-            } }}
+            styles={{
+              content: {
+                color: summary.percentAds <= 100 ? "#52c41a" : "#ff4d4f",
+                fontSize: "18px",
+              },
+            }}
           />
         </Col>
         <Col span={4}>
-          <Statistic 
-            title="Tổng Leads" 
-            value={data.summary.totalLeads}
+          <Statistic
+            title="Tổng Leads"
+            value={summary.totalLeads}
             styles={{ content: { fontSize: "18px" } }}
           />
         </Col>
       </Row>
 
       {/* Daily Table */}
-      <Table
-        columns={columns}
-        dataSource={tableData}
-        pagination={false}
-        size="small"
-        scroll={{ x: 1100 }}
-        className={styles["mk-daily-report-table"]}
-        bordered
-      />
+      {data && tableData.length > 0 ? (
+        <Table
+          columns={columns}
+          dataSource={paginatedData}
+          pagination={
+            showPagination
+              ? {
+                  current: currentPage,
+                  pageSize,
+                  total: tableData.length,
+                  onChange: (page) => setCurrentPage(page),
+                  showSizeChanger: false,
+                  showTotal: (total, range) =>
+                    `${range[0]}-${range[1]} / ${total} ngày`,
+                }
+              : false
+          }
+          size="small"
+          scroll={{ x: 1100 }}
+          className={styles["mk-daily-report-table"]}
+          bordered
+        />
+      ) : (
+        <Empty description="Chưa có dữ liệu báo cáo Ads" />
+      )}
 
       {/* Add/Edit Report Modal */}
       <Modal
@@ -469,7 +522,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
         open={isModalOpen}
         onCancel={closeModal}
         footer={null}
-        width={500}
+        width={600}
       >
         <Form
           form={form}
@@ -480,6 +533,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
             xinSang: 0,
             xinChieu: 0,
             xinGap: 0,
+            tongTieu: 0,
           }}
         >
           {!isEditMode && (
@@ -488,8 +542,8 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
               name="reportDate"
               rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
             >
-              <DatePicker 
-                style={{ width: "100%" }} 
+              <DatePicker
+                style={{ width: "100%" }}
                 format="DD/MM/YYYY"
                 placeholder="Chọn ngày"
                 disabledDate={(current) => current && current > dayjs().endOf("day")}
@@ -497,9 +551,49 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
             </Form.Item>
           )}
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item label="Xin sáng" name="xinSang">
+          <div style={{ marginBottom: 16, padding: "12px 16px", background: "#f5f5f5", borderRadius: 8 }}>
+            <div style={{ fontWeight: 600, marginBottom: 12, color: "#1890ff" }}>XIN</div>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item label="Xin sáng" name="xinSang" style={{ marginBottom: 8 }}>
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                    parser={(value) => (Number(value!.replace(/,/g, "")) || 0) as 0}
+                    min={0}
+                    placeholder="0"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item label="Xin chiều" name="xinChieu" style={{ marginBottom: 8 }}>
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                    parser={(value) => (Number(value!.replace(/,/g, "")) || 0) as 0}
+                    min={0}
+                    placeholder="0"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item label="Xin gấp" name="xinGap" style={{ marginBottom: 8 }}>
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                    parser={(value) => (Number(value!.replace(/,/g, "")) || 0) as 0}
+                    min={0}
+                    placeholder="0"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+
+          {isEditMode && (
+            <div style={{ marginBottom: 16, padding: "12px 16px", background: "#fff7e6", borderRadius: 8, border: "1px solid #ffd591" }}>
+              <div style={{ fontWeight: 600, marginBottom: 12, color: "#fa8c16" }}>ĐÃ TIÊU</div>
+              <Form.Item label="Tổng tiêu" name="tongTieu" style={{ marginBottom: 0 }}>
                 <InputNumber
                   style={{ width: "100%" }}
                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -508,30 +602,8 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
                   placeholder="0"
                 />
               </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Xin chiều" name="xinChieu">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(value) => (Number(value!.replace(/,/g, "")) || 0) as 0}
-                  min={0}
-                  placeholder="0"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Xin gấp" name="xinGap">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(value) => (Number(value!.replace(/,/g, "")) || 0) as 0}
-                  min={0}
-                  placeholder="0"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+            </div>
+          )}
 
           <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

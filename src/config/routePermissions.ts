@@ -59,18 +59,33 @@ export const ROUTE_PERMISSION_MAP: Record<string, RoutePermission> =
  * - Routes with query params (e.g., /orders?status=SHIPPING)
  */
 export function getRoutePermission(path: string): RoutePermission | undefined {
-  // Exact match first
-  if (ROUTE_PERMISSION_MAP[path]) {
-    return ROUTE_PERMISSION_MAP[path];
-  }
-
-  // Handle routes with query params (e.g., /orders?status=SHIPPING)
+  // Handle routes with query params — check base path first
+  // This ensures /settings?tab=language uses /settings's permission, not the
+  // query-specific module's permission
   const basePath = path.split("?")[0];
+
+  // Try base path first (higher priority for shared parent routes)
   if (ROUTE_PERMISSION_MAP[basePath]) {
     return ROUTE_PERMISSION_MAP[basePath];
   }
 
-  // Fallback: try to find a module that matches this route
+  // Exact match for routes without query params
+  if (ROUTE_PERMISSION_MAP[path]) {
+    return ROUTE_PERMISSION_MAP[path];
+  }
+
+  // Fallback: try to find a module for the base path first
+  // This prevents query-specific modules from overriding parent routes
+  const baseModule = getModuleByRoute(basePath);
+  if (baseModule) {
+    return {
+      path: baseModule.route,
+      permission: baseModule.permission,
+      label: baseModule.title,
+    };
+  }
+
+  // Final fallback: try the full path with query params
   const module = getModuleByRoute(path);
   if (module) {
     return {

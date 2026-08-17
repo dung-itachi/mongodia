@@ -4,7 +4,7 @@
  * Display a single statistic with optional trend indicator.
  */
 
-import { Spin } from "antd";
+import { Spin, Tooltip } from "antd";
 import { CSSProperties, ReactNode } from "react";
 
 export type StatTrend = "up" | "down" | "neutral";
@@ -43,6 +43,10 @@ export type StatCardProps = {
   onClick?: () => void;
   /** Size variant: default (140px) or compact (88px). */
   size?: StatSize;
+  /** Click handler for the currency icon — used on revenue cards to toggle MNT/VND. */
+  onCurrencyToggle?: () => void;
+  /** Current display currency — used for tooltip text. */
+  displayCurrency?: "MNT" | "VND";
 };
 
 const colorMap: Record<StatColor, { bg: string; text: string; border: string }> = {
@@ -103,6 +107,8 @@ export default function StatCard({
   prefix,
   onClick,
   size = "default",
+  onCurrencyToggle,
+  displayCurrency,
 }: StatCardProps) {
   const colors = colorMap[color];
   const sz = sizeMap[size];
@@ -200,22 +206,49 @@ export default function StatCard({
           )}
         </div>
         {icon && (
-          <div
-            style={{
-              width: sz.iconBox,
-              height: sz.iconBox,
-              borderRadius: size === "compact" ? 6 : 8,
-              backgroundColor: colors.bg,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: colors.text,
-              fontSize: sz.iconSize,
-              flexShrink: 0,
-            }}
+          <Tooltip
+            title={
+              onCurrencyToggle
+                ? displayCurrency === "MNT"
+                  ? "Click để hiển thị VND"
+                  : "Click để hiển thị MNT"
+                : undefined
+            }
           >
-            {icon}
-          </div>
+            <div
+              role={onCurrencyToggle ? "button" : undefined}
+              tabIndex={onCurrencyToggle ? 0 : undefined}
+              aria-label={onCurrencyToggle ? "Đổi đơn vị tiền tệ" : undefined}
+              onClick={(e) => {
+                if (!onCurrencyToggle) return;
+                e.stopPropagation();
+                onCurrencyToggle();
+              }}
+              onKeyDown={(e) => {
+                if (!onCurrencyToggle) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCurrencyToggle();
+                }
+              }}
+              style={{
+                width: sz.iconBox,
+                height: sz.iconBox,
+                borderRadius: size === "compact" ? 6 : 8,
+                backgroundColor: colors.bg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: colors.text,
+                fontSize: sz.iconSize,
+                flexShrink: 0,
+                cursor: onCurrencyToggle ? "pointer" : "default",
+              }}
+            >
+              {icon}
+            </div>
+          </Tooltip>
         )}
       </div>
     </div>

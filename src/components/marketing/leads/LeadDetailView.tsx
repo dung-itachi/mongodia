@@ -23,11 +23,14 @@ import {
   InfoCircleOutlined,
   HistoryOutlined,
   PaperClipOutlined,
+  PhoneOutlined,
 } from "@ant-design/icons";
 
 import { CardSection, DescriptionList, StatusBadge, SkeletonCard, EmptyState } from "@/components/common";
 import AssignSaleDrawer from "@/components/marketing/leads/AssignSaleDrawer";
+import CallLogTimeline from "@/components/sale/leads/CallLogTimeline";
 import { useLeadTimeline, useConvertLead, useUpdateLead, useDeleteLead } from "@/hooks/useMarketingLeads";
+import { useLeadCallHistory } from "@/hooks/useLeadCallLog";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LeadStatus } from "@/constants/leadStatus";
 import { MARKETING_LEAD_STATUS_OPTIONS } from "@/types/marketing-lead";
@@ -443,6 +446,45 @@ function getActionColor(action: string): string {
 }
 
 // =============================================================================
+// Tab: Cuộc gọi (Module 6 - Nhật ký cuộc gọi)
+// =============================================================================
+
+function CallLogTab({ leadId }: { leadId: string }) {
+  const { callHistory, loading, error } = useLeadCallHistory(leadId);
+
+  if (loading) {
+    return (
+      <div className={styles["tab-content"]}>
+        <CardSection>
+          <SkeletonCard rows={5} />
+        </CardSection>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles["tab-content"]}>
+        <CardSection>
+          <EmptyState
+            title="Không thể tải lịch sử cuộc gọi"
+            description={error}
+          />
+        </CardSection>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles["tab-content"]}>
+      <CardSection>
+        <CallLogTimeline callHistory={callHistory} showSaleName />
+      </CardSection>
+    </div>
+  );
+}
+
+// =============================================================================
 // Tab: File đính kèm
 // =============================================================================
 
@@ -593,6 +635,16 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
         </span>
       ),
       children: <TimelineTab leadId={lead._id} />,
+    },
+    {
+      key: "calls",
+      label: (
+        <span className={styles["tab-label"]}>
+          <PhoneOutlined />
+          Cuộc gọi
+        </span>
+      ),
+      children: <CallLogTab leadId={lead._id} />,
     },
     {
       key: "attachments",

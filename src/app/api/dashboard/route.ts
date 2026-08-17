@@ -39,37 +39,108 @@ import type {
   DashboardResponse,
   DashboardSummary,
   DashboardTrend,
+  DashboardPeriod,
 } from "@/types/dashboard";
 
-/** Window 30 ngày gần nhất (kỳ hiện tại). */
-function getCurrentWindow(): { start: Date; end: Date } {
-  const now = new Date();
-  const end = new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-      23,
-      59,
-      59,
-      999
-    )
-  );
-  const start = new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() - 29,
-      0,
-      0,
-      0,
-      0
-    )
-  );
-  return { start, end };
+/** Validate period string from query. */
+function parsePeriod(raw: string | null): DashboardPeriod {
+  const valid: DashboardPeriod[] = ["1d", "3d", "7d", "month", "prev_month"];
+  if (raw && valid.includes(raw as DashboardPeriod)) {
+    return raw as DashboardPeriod;
+  }
+  return "month";
 }
 
-/** Window 30 ngày liền trước (kỳ trước — dùng để tính trend). */
+/**
+ * Compute UTC start/end for the current window based on period.
+ * - "month" = from 1st of current month to now
+ * - "prev_month" = full previous month
+ * - "1d" / "3d" / "7d" = last N days including today
+ */
+function getWindowByPeriod(period: DashboardPeriod): {
+  start: Date;
+  end: Date;
+  previousStart: Date;
+  previousEnd: Date;
+} {
+  const now = new Date();
+  const todayEnd = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999)
+  );
+
+  let start: Date;
+  let end: Date = todayEnd;
+  let prevLengthDays: number; // how many days the previous period has (for trend comparison)
+
+  switch (period) {
+    case "1d": {
+      start = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0)
+      );
+      prevLengthDays = 1;
+      break;
+    }
+    case "3d": {
+      start = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 2, 0, 0, 0, 0)
+      );
+      prevLengthDays = 3;
+      break;
+    }
+    case "7d": {
+      start = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0, 0, 0, 0)
+      );
+      prevLengthDays = 7;
+      break;
+    }
+    case "month": {
+      start = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)
+      );
+      // Previous period = same length as current month so far
+      const currentLength = now.getUTCDate();
+      prevLengthDays = currentLength;
+      const prevEnd = new Date(start.getTime() - 1);
+      const prevStart = new Date(
+        Date.UTC(
+          prevEnd.getUTCFullYear(),
+          prevEnd.getUTCMonth(),
+          prevEnd.getUTCDate() - prevLengthDays + 1,
+          0, 0, 0, 0
+        )
+      );
+      return { start, end, previousStart: prevStart, previousEnd: prevEnd };
+    }
+    case "prev_month": {
+      // Full previous month
+      const prevMonth = now.getUTCMonth() === 0 ? 11 : now.getUTCMonth() - 1;
+      const prevYear = now.getUTCMonth() === 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
+      const daysInPrevMonth = new Date(
+        Date.UTC(prevYear, prevMonth + 1, 0)
+      ).getUTCDate();
+      start = new Date(Date.UTC(prevYear, prevMonth, 1, 0, 0, 0, 0));
+      end = new Date(
+        Date.UTC(prevYear, prevMonth, daysInPrevMonth, 23, 59, 59, 999)
+      );
+      prevLengthDays = daysInPrevMonth;
+      break;
+    }
+  }
+
+  const previousEnd = new Date(start.getTime() - 1);
+  const previousStart = new Date(
+    Date.UTC(
+      previousEnd.getUTCFullYear(),
+      previousEnd.getUTCMonth(),
+      previousEnd.getUTCDate() - prevLengthDays + 1,
+      0, 0, 0, 0
+    )
+  );
+  return { start, end, previousStart, previousEnd };
+}
+
+/** Build previous window for trend comparison (30-day fixed — kept for backward compat). */
 function getPreviousWindow(currentStart: Date): {
   start: Date;
   end: Date;
@@ -119,6 +190,9 @@ export async function GET(request: Request) {
       }
       throw err;
     }
+
+    const { searchParams } = new URL(request.url);
+    const period = parsePeriod(searchParams.get("period"));
 
     const scope = getAccountScope(currentUser);
     const isGlobal = scope === "GLOBAL";
@@ -181,8 +255,8 @@ export async function GET(request: Request) {
       cancelled: sumOrders(OrderStatus.CANCELLED),
     };
 
-    // ===== Summary — KPI cards (kỳ 30 ngày hiện tại) =====
-    const { start, end } = getCurrentWindow();
+    // ===== Summary — KPI cards (theo period) =====
+    const { start, end, previousStart, previousEnd } = getWindowByPeriod(period);
 
     const currentLeadMatch = {
       ...leadScopeMatch,
@@ -251,15 +325,13 @@ export async function GET(request: Request) {
     const returnedOrders = curOrderCounts.get(OrderStatus.RETURNED) ?? 0;
     const cancelledOrders = curOrderCounts.get(OrderStatus.CANCELLED) ?? 0;
 
-    // ===== Trend — so với 30 ngày liền trước =====
-    const { start: prevStart, end: prevEnd } = getPreviousWindow(start);
-
+    // ===== Trend — so với kỳ trước cùng độ dài =====
     const [prevOrderAgg] = await Promise.all([
       Order.aggregate<{ _id: OrderStatus | null; revenue: number }>([
         {
           $match: {
             ...orderScopeMatch,
-            createdAt: { $gte: prevStart, $lte: prevEnd },
+            createdAt: { $gte: previousStart, $lte: previousEnd },
           },
         },
         {

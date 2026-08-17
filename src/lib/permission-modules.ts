@@ -1,11 +1,6 @@
 /**
  * Permission → module-group mapping (Phase 9 — RBAC UI).
  *
- * Re-exports the `MODULE_MAP` defined in `db/seeds/permissions.seed.ts`
- * so both the seed file and the new `/api/permissions` endpoint can
- * share the same single source of truth. Avoids the alternative of
- * hardcoding the map twice and drifting them apart.
- *
  * IMPORTANT: when adding a new permission code to
  * `constants/permissions.ts`, ALSO add it here under the appropriate
  * module group. The seed runs `updateOne(..., { upsert: true })` for
@@ -14,14 +9,164 @@
  *
  * Adding a new module group? Update:
  *   1. this file (the mapping)
- *   2. `db/seeds/permissions.seed.ts` `MODULE_MAP`
+ *   2. `db/seeds/permissions.seed.ts` (imports PERMISSION_MODULE_MAP)
  *   3. (optional) UI ordering in `getPermissionsGroupedByModule()`
  */
 
-export { MODULE_MAP as PERMISSION_MODULE_MAP } from "@/db/seeds/permissions.seed";
+export const PERMISSION_MODULE_MAP: Record<string, string> = {
+  "dashboard.view": "Dashboard",
+
+  "employee.view": "Employee",
+  "employee.create": "Employee",
+  "employee.update": "Employee",
+  "employee.delete": "Employee",
+
+  "account.view": "Account",
+  "account.create": "Account",
+  "account.update": "Account",
+  "account.disable": "Account",
+  "account.resetPassword": "Account",
+  "account.manageAll": "Account",
+  "self-account.view": "Account",
+  "self-account.update": "Account",
+  "self-account.changePassword": "Account",
+
+  "department.view": "Department",
+  "department.create": "Department",
+  "department.update": "Department",
+  "department.delete": "Department",
+
+  "team.view": "Team",
+  "team.create": "Team",
+  "team.update": "Team",
+  "team.delete": "Team",
+
+  "role.view": "Role",
+  "role.create": "Role",
+  "role.update": "Role",
+  "role.delete": "Role",
+
+  // Phase 9 — Role-Permission Tree (RBAC management)
+  "role.permission.manage": "Role",
+
+  "area.view": "Area",
+  "area.create": "Area",
+  "area.update": "Area",
+  "area.delete": "Area",
+
+  "product.view": "Product",
+  "product.create": "Product",
+  "product.update": "Product",
+  "product.delete": "Product",
+
+  "category.view": "Category",
+  "category.create": "Category",
+  "category.update": "Category",
+  "category.delete": "Category",
+
+  "variant-option.view": "VariantOption",
+  "variant-option.create": "VariantOption",
+  "variant-option.update": "VariantOption",
+  "variant-option.delete": "VariantOption",
+
+  "variant-value.view": "VariantValue",
+  "variant-value.create": "VariantValue",
+  "variant-value.update": "VariantValue",
+  "variant-value.delete": "VariantValue",
+
+  "product-variant.view": "ProductVariant",
+  "product-variant.create": "ProductVariant",
+  "product-variant.update": "ProductVariant",
+  "product-variant.delete": "ProductVariant",
+
+  "customer.view": "Customer",
+  "customer.create": "Customer",
+  "customer.update": "Customer",
+  "customer.delete": "Customer",
+
+  "supplier.view": "Supplier",
+  "supplier.create": "Supplier",
+  "supplier.update": "Supplier",
+  "supplier.delete": "Supplier",
+
+  "warehouse.view": "Warehouse",
+  "warehouse.create": "Warehouse",
+  "warehouse.update": "Warehouse",
+  "warehouse.delete": "Warehouse",
+  "warehouse.import": "Warehouse",
+  "warehouse.transfer": "Warehouse",
+  "warehouse.receive": "Warehouse",
+  "warehouse.adjust": "Warehouse",
+  "warehouse.ship": "Warehouse",
+  "warehouse.return": "Warehouse",
+
+  "inventory.view": "Inventory",
+  "inventory-adjustment.view": "InventoryAdjustment",
+  "inventory-adjustment.create": "InventoryAdjustment",
+
+  "order.view": "Order",
+  "order.create": "Order",
+  "order.update": "Order",
+  "order.delete": "Order",
+  "order.confirm": "Order",
+  "order.cancel": "Order",
+  "order.history": "Order",
+  "order.revenue": "Order",
+  "order.reserve_stock": "Order",
+
+  "facebook-page.view": "FacebookPage",
+  "facebook-page.create": "FacebookPage",
+  "facebook-page.update": "FacebookPage",
+  "facebook-page.delete": "FacebookPage",
+
+  "facebook-page-assignment.view": "FacebookPageAssignment",
+  "facebook-page-assignment.create": "FacebookPageAssignment",
+  "facebook-page-assignment.update": "FacebookPageAssignment",
+  "facebook-page-assignment.delete": "FacebookPageAssignment",
+
+  "combo.view": "Combo",
+  "combo.create": "Combo",
+  "combo.update": "Combo",
+  "combo.delete": "Combo",
+
+  "gift.view": "Gift",
+  "gift.create": "Gift",
+  "gift.update": "Gift",
+  "gift.delete": "Gift",
+
+  "lead.view": "Lead",
+  "lead.create": "Lead",
+  "lead.update": "Lead",
+  "lead.delete": "Lead",
+  "lead.assign": "Lead",
+
+  "marketing-expense.view": "MarketingExpense",
+  "marketing-expense.create": "MarketingExpense",
+  "marketing-expense.update": "MarketingExpense",
+  "marketing-expense.delete": "MarketingExpense",
+  "marketing-expense.lock": "MarketingExpense",
+  "marketing-expense.reopen": "MarketingExpense",
+
+  "report.view": "Report",
+
+  // Sprint Settings — Exchange Rate
+  "settings.exchange_rate.view": "Setting",
+  "settings.exchange_rate.update": "Setting",
+
+  // Sprint Settings — Shipping Fee
+  "settings.shipping_fee.view": "Setting",
+  "settings.shipping_fee.update": "Setting",
+
+  // System Settings — module-level gate (Phase 8 — Permission Audit)
+  "system-settings.view": "Setting",
+  "system-settings.manage": "Setting",
+
+  // Language Settings
+  "settings.language.view": "Setting",
+  "settings.language.update": "Setting",
+};
 
 import { PERMISSIONS } from "@/constants/permissions";
-import { PERMISSION_MODULE_MAP } from "./permission-modules";
 
 export type PermissionGroup = {
   /** Module display name (e.g. "Order", "Setting") */

@@ -28,7 +28,7 @@ import Employee from "@/models/Employee";
 
 import { OrderStatus } from "@/constants/orderStatus";
 import { LeadStatus } from "@/constants/leadStatus";
-import { SOURCE_TYPE_LABELS } from "@/models/Lead";
+import { SOURCE_TYPE_LABELS, SOURCE_TYPES, type SourceType } from "@/models/Lead";
 
 import {
   getCurrentUser,
@@ -244,8 +244,9 @@ export async function GET(request: Request) {
       { $group: { _id: "$sourceType", count: { $sum: 1 } } },
     ]);
     const leadSource = leadSourceAgg
+      .filter((r) => SOURCE_TYPES.includes(r._id as SourceType))
       .map((r: { _id: string; count: number }) => ({
-        source: SOURCE_TYPE_LABELS[r._id as keyof typeof SOURCE_TYPE_LABELS] ?? r._id,
+        source: SOURCE_TYPE_LABELS[r._id as SourceType],
         count: r.count,
       }))
       .sort(

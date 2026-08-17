@@ -40,6 +40,9 @@ export { Lead } from "./Lead";
 // LeadHistory uses named export
 export { LeadHistory } from "./LeadHistory";
 
+// LeadCallLog uses named export (Module 6 - Nhật ký cuộc gọi)
+export { LeadCallLog } from "./LeadCallLog";
+
 export { default as LoginHistory } from "./LoginHistory";
 
 export { default as MarketingExpenseReport } from "./MarketingExpenseReport";

@@ -19,6 +19,7 @@ export interface SaleLeadTableProps {
   data: SaleLead[];
   onUpdateStatus: (lead: SaleLead, status: LeadStatus) => void;
   onConvert: (lead: SaleLead) => void;
+  onLogCall?: (lead: SaleLead) => void;
   onReassign?: (lead: SaleLead) => void;
   loading?: boolean;
   canReassign?: boolean;
@@ -32,6 +33,7 @@ function SaleLeadTableInner({
   data,
   onUpdateStatus,
   onConvert,
+  onLogCall,
   onReassign,
   loading,
   canReassign = false,
@@ -169,6 +171,20 @@ function SaleLeadTableInner({
           const noAnswerCount = lead.noAnswerCount ?? 0;
           return (
             <div className={styles.actionGroup}>
+              {/* Call Button - Module 6 */}
+              {onLogCall && (
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<PhoneOutlined />}
+                  onClick={() => onLogCall(lead)}
+                  disabled={lead.status === LeadStatus.CLOSED}
+                  className={styles.callBtn}
+                >
+                  Gọi
+                </Button>
+              )}
+
               {/* No Answer Button with badge */}
               <Badge
                 count={noAnswerCount}
@@ -259,7 +275,7 @@ function SaleLeadTableInner({
         },
       },
     ],
-    [onUpdateStatus, onConvert, onReassign, canReassign]
+    [onUpdateStatus, onConvert, onLogCall, onReassign, canReassign]
   );
 
   // Row selection config

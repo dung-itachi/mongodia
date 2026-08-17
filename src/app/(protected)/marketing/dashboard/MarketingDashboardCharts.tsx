@@ -6,7 +6,7 @@
  */
 
 import { memo, useState } from "react";
-import { Card, Skeleton, Button, Space, Tooltip } from "antd";
+import { Card, Skeleton, Button, Space, Tooltip, Empty } from "antd";
 import { BarChartOutlined, LineChartOutlined } from "@ant-design/icons";
 import { useMarketingChartData } from "@/hooks/useMarketingChartData";
 import { MARKETING_DASHBOARD_CHARTS } from "./marketing-dashboard-chart.config";
@@ -38,7 +38,7 @@ function MarketingDashboardChartsInner({ period, onChartClick }: MarketingDashbo
     );
   }
 
-  if (error || !data) {
+  if (error) {
     return (
       <div className={styles["mk-charts-grid"]}>
         <Card title="Lỗi">Không thể tải dữ liệu biểu đồ</Card>

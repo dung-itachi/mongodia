@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -19,7 +19,9 @@ import {
   type NavGroup,
 } from "@/config/nav.config";
 import { useAuthStore } from "@/store/auth.store";
+import { useLanguageStore } from "@/store/language.store";
 import { hasAnyPermission } from "@/lib/permission";
+import { t } from "@/lib/i18n";
 
 /**
  * Map role-switcher code → set of `NavGroupKey` (from modules.ts) that should
@@ -92,9 +94,7 @@ export default function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuthStore();
-  const [lang, setLang] = useState<(typeof LANGUAGES)[number]["code"]>(
-    DEFAULT_LANG
-  );
+  const { language, setLanguage } = useLanguageStore();
   const [role, setRoleState] = useState<(typeof ROLES)[number]["code"]>(() => {
     // Read persisted "view-as role" from localStorage so the choice survives
     // page reloads. Falls back to the default role when storage is empty or
@@ -167,7 +167,7 @@ export default function Sidebar({
         <div className="ico">{BRAND_INITIALS}</div>
         <div className="brand-txt">
           <div className="nm">{BRAND_NAME}</div>
-          <div className="sub">{BRAND_SUB}</div>
+          <div className="sub">{t("Quản lý đơn hàng", language)}</div>
         </div>
         <button
           type="button"
@@ -203,8 +203,8 @@ export default function Sidebar({
           <button
             key={l.code}
             type="button"
-            className={`lb ${lang === l.code ? "on" : ""}`}
-            onClick={() => setLang(l.code)}
+            className={`lb ${language === l.code ? "on" : ""}`}
+            onClick={() => setLanguage(l.code as "vi" | "en" | "mn")}
           >
             {l.label}
           </button>
@@ -220,7 +220,7 @@ export default function Sidebar({
             className={`rb ${role === r.code ? "on" : ""}`}
             onClick={() => setRole(r.code)}
           >
-            {r.label}
+            {t(r.label, language)}
           </button>
         ))}
       </div>
@@ -228,7 +228,12 @@ export default function Sidebar({
       {/* Nav groups (filtered by permission) */}
       <nav className="nav">
         <Suspense fallback={null}>
-          <NavGroups visibleGroups={visibleGroups} />
+          <NavGroups
+            visibleGroups={visibleGroups}
+            language={language}
+            expandAll={() => {}}
+            collapseAll={() => {}}
+          />
         </Suspense>
       </nav>
 
@@ -238,14 +243,14 @@ export default function Sidebar({
           type="button"
           className="logout-btn"
           onClick={handleLogout}
-          aria-label="Đăng xuất"
+          aria-label={t("Đăng xuất", language)}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          <span>Đăng xuất</span>
+          <span>{t("Đăng xuất", language)}</span>
         </button>
         <div className="ver">v6.0 · Mongolia CRM</div>
       </div>
@@ -258,13 +263,19 @@ function NavGroupBlock({
   pathname,
   search,
   standalone,
+  isOpen,
+  onToggle,
+  language,
 }: {
   group: NavGroup;
   pathname: string;
   search: string;
   standalone: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
+  language: "vi" | "en" | "mn";
 }) {
-  const wrapperClass = standalone ? "ngs" : "ng open";
+  const wrapperClass = standalone ? "ngs" : `ng${isOpen ? " open" : ""}`;
 
   // Sprint 8.6 — Hybrid group header:
   //   - label (icon + text) becomes a Link to group.href (if any)
@@ -282,7 +293,7 @@ function NavGroupBlock({
     </svg>
   );
   const headerLabel = (
-    <span className="nl">{group.label}</span>
+    <span className="nl">{t(group.label, language)}</span>
   );
   const chevron = (
     <svg className="na" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -310,12 +321,17 @@ function NavGroupBlock({
                 type="button"
                 className="nh-toggle"
                 aria-label={`Mở rộng ${group.label}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggle();
+                }}
               >
                 {chevron}
               </button>
             </>
           ) : (
-            <button type="button" className="nh">
+            <button type="button" className="nh" onClick={onToggle}>
               {headerIcon}
               {headerLabel}
               {chevron}
@@ -329,6 +345,7 @@ function NavGroupBlock({
             key={item.key}
             item={item}
             active={isActive(pathname, search, item.href)}
+            language={language}
           />
         ))}
       </div>
@@ -336,13 +353,14 @@ function NavGroupBlock({
   );
 }
 
-function NavItemLink({ item, active }: { item: NavItem; active: boolean }) {
+function NavItemLink({ item, active, language }: { item: NavItem; active: boolean; language: "vi" | "en" | "mn" }) {
+  const translatedLabel = t(item.label, language);
   return (
     <Link href={item.href} prefetch={false} className={`ni ${active ? "on" : ""}`}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
         <g dangerouslySetInnerHTML={{ __html: item.iconSvg }} />
       </svg>
-      <span>{item.label}</span>
+      <span>{translatedLabel}</span>
       {item.pill != null && <span className="pill">{item.pill}</span>}
     </Link>
   );
@@ -406,13 +424,97 @@ function isExactRoot(pathname: string, search: string, href?: string): boolean {
  * tree will be marked dynamic. We isolate the call here so only this
  * small subtree is suspended; the rest of the sidebar renders normally.
  */
-function NavGroups({ visibleGroups }: { visibleGroups: NavGroup[] }) {
+function NavGroups({
+  visibleGroups,
+  language,
+}: {
+  visibleGroups: NavGroup[];
+  language: "vi" | "en" | "mn";
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchString = searchParams.toString();
 
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    visibleGroups.forEach((g) => {
+      const hasActiveItem = g.items.some((item) =>
+        isActive(pathname, searchString, item.href)
+      );
+      if (hasActiveItem || g.items.length === 1) {
+        initial.add(g.key);
+      }
+    });
+    return initial;
+  });
+
+  const toggleGroup = useCallback((key: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleExpandAll = useCallback(() => {
+    setOpenGroups(new Set(visibleGroups.map((g) => g.key)));
+  }, [visibleGroups]);
+
+  const handleCollapseAll = useCallback(() => {
+    setOpenGroups(new Set());
+  }, []);
+
   return (
     <>
+      {/* Expand/Collapse all controls */}
+      <div style={{ display: "flex", gap: "4px", padding: "4px 8px", marginBottom: "4px" }}>
+        <button
+          type="button"
+          onClick={handleExpandAll}
+          style={{
+            flex: 1,
+            padding: "4px 8px",
+            fontSize: "9px",
+            fontWeight: 600,
+            background: "rgba(255,255,255,0.06)",
+            color: "var(--sb-txt)",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+          title={t("Expand", language)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 10, height: 10, marginRight: 4 }}>
+            <path d="M4 8l8-6 8 6M4 16l8 6 8-6" strokeWidth="2" />
+          </svg>
+          {t("Expand", language)}
+        </button>
+        <button
+          type="button"
+          onClick={handleCollapseAll}
+          style={{
+            flex: 1,
+            padding: "4px 8px",
+            fontSize: "9px",
+            fontWeight: 600,
+            background: "rgba(255,255,255,0.06)",
+            color: "var(--sb-txt)",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+          title={t("Collapse", language)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 10, height: 10, marginRight: 4 }}>
+            <path d="M4 8l8 6 8-6M4 16l8-6 8 6" strokeWidth="2" />
+          </svg>
+          {t("Collapse", language)}
+        </button>
+      </div>
       {visibleGroups.map((group) => (
         <NavGroupBlock
           key={group.key}
@@ -420,6 +522,9 @@ function NavGroups({ visibleGroups }: { visibleGroups: NavGroup[] }) {
           pathname={pathname}
           search={searchString}
           standalone={group.items.length === 1 && !!group.items[0].standalone}
+          isOpen={openGroups.has(group.key)}
+          onToggle={() => toggleGroup(group.key)}
+          language={language}
         />
       ))}
     </>

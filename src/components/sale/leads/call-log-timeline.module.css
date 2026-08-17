@@ -1,0 +1,61 @@
+/* Call Log Timeline Styles (Module 6) */
+
+.container {
+  width: 100%;
+}
+
+.timeline {
+  margin-top: 8px;
+}
+
+.timelineItem {
+  padding-bottom: 4px;
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.statusTag {
+  margin-right: 0;
+}
+
+.callTime {
+  font-size: 12px;
+}
+
+.itemSale {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.note {
+  font-size: 13px;
+  color: #333;
+  margin-bottom: 4px !important;
+  white-space: pre-wrap;
+}
+
+.duration {
+  font-size: 12px;
+}
+
+.showMore {
+  font-size: 12px;
+  display: block;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.emptyCard {
+  margin: 0;
+}
+
+.emptyCard .ant-card-body {
+  padding: 16px;
+}

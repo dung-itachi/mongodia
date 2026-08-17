@@ -39,6 +39,7 @@ import type { OrderItem } from "@/types/variant";
 import { LeadStatus } from "@/constants/leadStatus";
 import SaleLeadsToolbar from "@/components/sale/leads/SaleLeadsToolbar";
 import SaleLeadTable from "@/components/sale/leads/SaleLeadTable";
+import LogCallModal from "@/components/sale/leads/LogCallModal";
 import LeadStatusLegend from "@/components/sale/leads/LeadStatusLegend";
 import { useAuthStore } from "@/store/auth.store";
 import styles from "@/components/sale/leads/sale-leads.module.css";
@@ -56,6 +57,7 @@ export default function SaleLeadsPage() {
   const [limit, setLimit] = useState(20);
   const [convertingLead, setConvertingLead] = useState<SaleLead | null>(null);
   const [reassigningLead, setReassigningLead] = useState<SaleLead | null>(null);
+  const [loggingCallLead, setLoggingCallLead] = useState<SaleLead | null>(null);
   // Row selection for bulk operations
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [legendOpen, setLegendOpen] = useState(false);
@@ -139,6 +141,15 @@ export default function SaleLeadsPage() {
   }, []);
 
   const handleReassignSuccess = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
+  // Handle log call (Module 6)
+  const handleLogCall = useCallback((lead: SaleLead) => {
+    setLoggingCallLead(lead);
+  }, []);
+
+  const handleLogCallSuccess = useCallback(() => {
     void refetch();
   }, [refetch]);
 
@@ -244,6 +255,7 @@ export default function SaleLeadsPage() {
               data={leads}
               onUpdateStatus={handleUpdateStatus}
               onConvert={handleConvert}
+              onLogCall={handleLogCall}
               onReassign={isAdminOrManager ? handleReassign : undefined}
               canReassign={isAdminOrManager}
               loading={loading}
@@ -282,6 +294,13 @@ export default function SaleLeadsPage() {
       <LeadStatusLegend
         open={legendOpen}
         onClose={() => setLegendOpen(false)}
+      />
+
+      <LogCallModal
+        open={!!loggingCallLead}
+        lead={loggingCallLead}
+        onClose={() => setLoggingCallLead(null)}
+        onSuccess={handleLogCallSuccess}
       />
     </PageContainer>
   );

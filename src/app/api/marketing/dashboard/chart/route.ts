@@ -18,8 +18,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const period = (searchParams.get("period") || "7d") as ChartPeriod;
 
-    if (!["7d", "30d", "90d"].includes(period)) {
-      return errorResponse("Invalid period. Use 7d, 30d, or 90d.", 400);
+    if (!["1d", "3d", "7d", "monthStart", "1month", "30d", "90d"].includes(period)) {
+      return errorResponse("Invalid period. Use 1d, 3d, 7d, monthStart, 1month, 30d, or 90d.", 400);
     }
 
     const data = await marketingDashboardService.getChartData(period);

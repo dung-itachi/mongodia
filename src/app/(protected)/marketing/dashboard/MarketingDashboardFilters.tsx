@@ -1,5 +1,5 @@
 /**
- * Marketing Dashboard Filters (Sprint 7.2 — Charts & Analytics)
+ * Marketing Dashboard Filters (Sprint 8.0 — Thêm filter 1/3/7/Từ đầu tháng/1 tháng)
  *
  * Config-driven filter for dashboard.
  */
@@ -14,7 +14,11 @@ export type MarketingDashboardFiltersProps = {
 };
 
 const PERIOD_OPTIONS = [
+  { label: "1 ngày", value: "1d" },
+  { label: "3 ngày", value: "3d" },
   { label: "7 ngày", value: "7d" },
+  { label: "Đầu tháng", value: "monthStart" },
+  { label: "1 tháng", value: "1month" },
   { label: "30 ngày", value: "30d" },
   { label: "90 ngày", value: "90d" },
 ];

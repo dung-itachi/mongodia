@@ -9,7 +9,7 @@
  * - No business logic (config is delegated to dashboard.config.ts).
  */
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import {
   PageContainer,
   PageHeader,
@@ -17,20 +17,36 @@ import {
 } from "@/components/common";
 import { TeamOutlined } from "@ant-design/icons";
 import { useDashboard } from "@/hooks/useDashboard";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { buildDashboardStats } from "./dashboard.config";
 import DashboardStatsGrid from "./DashboardStatsGrid";
+import DashboardFilters from "./DashboardFilters";
 import DashboardRefreshButton from "./DashboardRefreshButton";
 import DashboardErrorState from "./DashboardErrorState";
 import DashboardCharts from "./charts/DashboardCharts";
 import DashboardWidgets from "./widgets/DashboardWidgets";
+import type { DashboardPeriod } from "@/types/dashboard";
 import styles from "./dashboard.module.css";
 
 export default function DashboardPage() {
-  const [{ data, loading, error }, { refetch }] = useDashboard();
+  const [period, setPeriod] = useState<DashboardPeriod>("month");
+  const [{ data, loading, error }, { refetch }] = useDashboard(period);
+  const { data: exchangeRateData } = useExchangeRate();
+
+  const [displayCurrency, setDisplayCurrency] = useState<"MNT" | "VND">("MNT");
 
   const stats = useMemo(
-    () => (data ? buildDashboardStats(data.summary) : []),
-    [data]
+    () =>
+      data
+        ? buildDashboardStats(
+            data.summary,
+            displayCurrency,
+            exchangeRateData?.rate ?? 7,
+            () =>
+              setDisplayCurrency((prev) => (prev === "MNT" ? "VND" : "MNT")),
+          )
+        : [],
+    [data, displayCurrency, exchangeRateData]
   );
 
   const handleRetry = useCallback(() => {
@@ -68,6 +84,7 @@ export default function DashboardPage() {
       />
 
       <div className={styles["d4-page"]}>
+        <DashboardFilters period={period} onPeriodChange={setPeriod} />
         <DashboardStatsGrid stats={stats} />
         <DashboardCharts />
         <DashboardWidgets />

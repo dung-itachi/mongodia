@@ -25,6 +25,7 @@ import { App } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import { useReconciliationLists } from "@/hooks/useReconciliationLists";
 import { useChangeOrderStatus } from "@/hooks/useOrders";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import type { OrderListItem } from "@/types/order";
 import ReconciliationStats from "./ReconciliationStats";
 import ReconciliationCard from "./ReconciliationCard";
@@ -45,9 +46,33 @@ function ReconciliationPanelInner() {
     refetch,
   } = useReconciliationLists({ limit: 500 });
 
+  const { data: exchangeRateData } = useExchangeRate();
+  const exchangeRate = exchangeRateData?.rate ?? 1;
+
   const changeStatus = useChangeOrderStatus();
   const [bulkSubmittingDelivered, setBulkSubmittingDelivered] = useState(false);
   const [bulkSubmittingReturned, setBulkSubmittingReturned] = useState(false);
+
+  // Track orders that have been clicked for reconciliation (local only)
+  const [reconciledOrderIds, setReconciledOrderIds] = useState<Set<string>>(new Set());
+
+  // Sort delivered orders: un-reconciled first, reconciled (clicked) at bottom
+  const sortedDeliveredOrders = [...deliveredOrders].sort((a, b) => {
+    const aDone = reconciledOrderIds.has(a._id);
+    const bDone = reconciledOrderIds.has(b._id);
+    if (aDone && !bDone) return 1;
+    if (!aDone && bDone) return -1;
+    return 0;
+  });
+
+  // Sort returned orders: un-reconciled first, reconciled (clicked) at bottom
+  const sortedReturnedOrders = [...returnedOrders].sort((a, b) => {
+    const aDone = reconciledOrderIds.has(a._id);
+    const bDone = reconciledOrderIds.has(b._id);
+    if (aDone && !bDone) return 1;
+    if (!aDone && bDone) return -1;
+    return 0;
+  });
 
   const invalidateReconciliation = useCallback(() => {
     void queryClient.invalidateQueries({
@@ -64,6 +89,8 @@ function ReconciliationPanelInner() {
           data: { status: "RECONCILED" },
         });
         message.success("Đã đối soát đơn hàng");
+        // Add to local reconciled set (will be removed after refetch)
+        setReconciledOrderIds((prev) => new Set([...prev, id]));
         invalidateReconciliation();
       } catch (error) {
         message.error(
@@ -87,6 +114,10 @@ function ReconciliationPanelInner() {
           ? setBulkSubmittingDelivered
           : setBulkSubmittingReturned;
       setLoading(true);
+
+      // Mark all as reconciled locally first
+      const allIds = list.map((o) => o._id);
+      setReconciledOrderIds((prev) => new Set([...prev, ...allIds]));
 
       const results = await Promise.allSettled(
         list.map((o) =>
@@ -137,18 +168,19 @@ function ReconciliationPanelInner() {
       <ReconciliationCard
         title={<>✅ Đơn giao thành công</>}
         accentColor="green"
-        orders={deliveredOrders}
+        orders={sortedDeliveredOrders}
         loading={loading}
         onReconcileOne={handleReconcileOne}
         onReconcileAll={() => handleReconcileAll("delivered")}
         bulkSubmitting={bulkSubmittingDelivered}
         showRevenue
+        exchangeRate={exchangeRate}
       />
 
       <ReconciliationCard
-        title={<>↩ Đơn hoàn trả</>}
+        title={<>↩ Đơn đã đối soát</>}
         accentColor="orange"
-        orders={returnedOrders}
+        orders={sortedReturnedOrders}
         loading={loading}
         onReconcileOne={handleReconcileOne}
         onReconcileAll={() => handleReconcileAll("returned")}

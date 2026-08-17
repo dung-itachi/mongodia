@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import type { DashboardResponse } from "@/types/dashboard";
+import type { DashboardResponse, DashboardPeriod } from "@/types/dashboard";
 
 export type UseDashboardState = {
   data: DashboardResponse | null;
@@ -18,7 +18,9 @@ export type UseDashboardActions = {
   refetch: () => Promise<void>;
 };
 
-export function useDashboard(): [UseDashboardState, UseDashboardActions] {
+export function useDashboard(
+  period: DashboardPeriod = "month",
+): [UseDashboardState, UseDashboardActions] {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,8 @@ export function useDashboard(): [UseDashboardState, UseDashboardActions] {
     setError(null);
 
     try {
-      const response = await fetch("/api/dashboard", {
+      const url = `/api/dashboard?period=${period}`;
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -54,7 +57,7 @@ export function useDashboard(): [UseDashboardState, UseDashboardActions] {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => {
     fetchDashboard();

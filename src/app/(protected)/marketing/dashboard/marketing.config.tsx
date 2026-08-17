@@ -82,14 +82,86 @@ function trendToCardTrend(trend: MarketingTrend): NonNullable<StatCardProps["tre
 
 /**
  * Marketing Dashboard Cards — array for easy extension.
+ * Sprint 8.0: Order KPIs moved to top as primary metrics.
  *
- * Future cards (tương lai):
- * - Profit (revenue - expense)
- * - Average Order (revenue / orderCount)
- * - Average Lead Cost (expense / leads)
- * - Customer Lifetime Value
+ * Order: Tổng Đã đẩy → Đã gọi → Chưa gọi → Tỉ lệ chốt → Doanh thu → Giao TC
+ * Then: Lead cards, Expense cards, Revenue, Conversion
  */
 export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
+  // ===== Order KPIs (Sprint 7.4 — tính từ collection Orders) =====
+  // Primary metrics — moved to top (Sprint 8.0)
+  {
+    key: "totalPushed",
+    title: "Tổng Đã đẩy",
+    icon: <ShoppingCartOutlined />,
+    color: "blue",
+    selector: (data) => data.order.totalPushed,
+    formatter: "number",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.totalPushed,
+  },
+  {
+    key: "called",
+    title: "Đã gọi",
+    icon: <PhoneOutlined />,
+    color: "green",
+    selector: (data) => data.order.called,
+    formatter: "number",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.called,
+  },
+  {
+    key: "notCalled",
+    title: "Chưa gọi",
+    icon: <PhoneFilled />,
+    color: "orange",
+    selector: (data) => data.order.notCalled,
+    formatter: "number",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.notCalled,
+  },
+  {
+    key: "closingRate",
+    title: "Tỉ lệ chốt",
+    icon: <PieChartOutlined />,
+    color: "purple",
+    selector: (data) => data.order.closingRate,
+    formatter: "percent",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.closingRate,
+  },
+  {
+    key: "orderRevenue",
+    title: "Doanh thu",
+    icon: <FundOutlined />,
+    color: "green",
+    selector: (data) => data.order.totalRevenue,
+    formatter: "currency",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.orderRevenue,
+  },
+  {
+    key: "deliveredOk",
+    title: "Giao TC",
+    icon: <TruckOutlined />,
+    color: "green",
+    selector: (data) => data.order.deliveredOk,
+    formatter: "number",
+    permission: "marketing.dashboard.revenue",
+    drillDown: true,
+    exportable: true,
+    trendSelector: (data) => data.trend.deliveredOk,
+  },
   // Lead cards
   {
     key: "todayLead",
@@ -189,79 +261,6 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
     drillDown: true,
     exportable: true,
     trendSelector: (data) => data.trend.conversionRate,
-  },
-  // ===== Order KPIs (Sprint 7.4 — tính từ collection Orders) =====
-  {
-    key: "totalPushed",
-    title: "Tổng Đã đẩy",
-    icon: <ShoppingCartOutlined />,
-    color: "blue",
-    selector: (data) => data.order.totalPushed,
-    formatter: "number",
-    permission: "marketing.dashboard.revenue",
-    drillDown: true,
-    exportable: true,
-    trendSelector: (data) => data.trend.totalPushed,
-  },
-  {
-    key: "called",
-    title: "Đã gọi",
-    icon: <PhoneOutlined />,
-    color: "green",
-    selector: (data) => data.order.called,
-    formatter: "number",
-    permission: "marketing.dashboard.revenue",
-    drillDown: true,
-    exportable: true,
-    trendSelector: (data) => data.trend.called,
-  },
-  {
-    key: "notCalled",
-    title: "Chưa gọi",
-    icon: <PhoneFilled />,
-    color: "orange",
-    selector: (data) => data.order.notCalled,
-    formatter: "number",
-    permission: "marketing.dashboard.revenue",
-    drillDown: true,
-    exportable: true,
-    trendSelector: (data) => data.trend.notCalled,
-  },
-  {
-    key: "closingRate",
-    title: "Tỉ lệ chốt",
-    icon: <PieChartOutlined />,
-    color: "purple",
-    selector: (data) => data.order.closingRate,
-    formatter: "percent",
-    permission: "marketing.dashboard.revenue",
-    drillDown: true,
-    exportable: true,
-    trendSelector: (data) => data.trend.closingRate,
-  },
-  {
-    key: "orderRevenue",
-    title: "Doanh thu (đơn)",
-    icon: <FundOutlined />,
-    color: "green",
-    selector: (data) => data.order.totalRevenue,
-    formatter: "currency",
-    permission: "marketing.dashboard.revenue",
-    drillDown: true,
-    exportable: true,
-    trendSelector: (data) => data.trend.orderRevenue,
-  },
-  {
-    key: "deliveredOk",
-    title: "Giao TC",
-    icon: <TruckOutlined />,
-    color: "green",
-    selector: (data) => data.order.deliveredOk,
-    formatter: "number",
-    permission: "marketing.dashboard.revenue",
-    drillDown: true,
-    exportable: true,
-    trendSelector: (data) => data.trend.deliveredOk,
   },
 ];
 

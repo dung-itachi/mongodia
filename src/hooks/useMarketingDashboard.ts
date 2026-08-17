@@ -1,5 +1,6 @@
 /**
  * useMarketingDashboard Hook (Sprint 7.1 — Dashboard Repository Refactor)
+ * Sprint 8.0: Thêm filter params để support area/team/mkt filtering
  *
  * Fetch marketing dashboard data using React Query.
  * Uses dashboardKeys.marketing() for domain-specific cache keys.
@@ -12,10 +13,29 @@
 import { useQuery } from "@tanstack/react-query";
 import { dashboardKeys } from "@/hooks/dashboardKeys";
 import type { MarketingDashboardData } from "@/types/marketing-dashboard";
+import type { MarketingDashboardFilter } from "@/types/marketing-dashboard-filter";
+
+export type UseMarketingDashboardParams = {
+  filter?: MarketingDashboardFilter;
+};
+
+const buildQueryString = (filter?: MarketingDashboardFilter): string => {
+  if (!filter) return "";
+  const params = new URLSearchParams();
+  if (filter.period) params.set("period", filter.period);
+  if (filter.dateRange?.startDate) params.set("startDate", filter.dateRange.startDate);
+  if (filter.dateRange?.endDate) params.set("endDate", filter.dateRange.endDate);
+  if (filter.marketingEmployeeId) params.set("marketingEmployeeId", filter.marketingEmployeeId);
+  if (filter.teamId) params.set("teamId", filter.teamId);
+  if (filter.areaId) params.set("areaId", filter.areaId);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+};
 
 const fetchMarketingDashboard =
-  async (): Promise<MarketingDashboardData> => {
-    const response = await fetch("/api/marketing/dashboard", {
+  async (filter?: MarketingDashboardFilter): Promise<MarketingDashboardData> => {
+    const queryString = buildQueryString(filter);
+    const response = await fetch(`/api/marketing/dashboard${queryString}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -37,15 +57,15 @@ const fetchMarketingDashboard =
     return result.data;
   };
 
-export function useMarketingDashboard() {
+export function useMarketingDashboard(params?: UseMarketingDashboardParams) {
   const {
     data,
     isLoading,
     error,
     refetch,
   } = useQuery<MarketingDashboardData, Error>({
-    queryKey: dashboardKeys.marketing(),
-    queryFn: fetchMarketingDashboard,
+    queryKey: dashboardKeys.marketing(params?.filter),
+    queryFn: () => fetchMarketingDashboard(params?.filter),
     staleTime: 60 * 1000,   // 60 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,

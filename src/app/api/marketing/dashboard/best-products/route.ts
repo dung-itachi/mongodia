@@ -89,19 +89,39 @@ export async function GET(request: Request) {
     }
 
     // Aggregate by productOrCombo + sum order count
+    // Fallback: nếu không có productName thì dùng productId hoặc comboId string
     const bestAgg = await Order.aggregate([
       { $match: orderMatch },
       {
         $project: {
           productName: {
             $cond: [
-              { $ifNull: ["$productSnapshot.name", false] },
+              // Ưu tiên productSnapshot.name
+              { $and: [
+                { $ifNull: ["$productSnapshot.name", false] },
+                { $ne: ["$productSnapshot.name", ""] }
+              ]},
               "$productSnapshot.name",
               {
                 $cond: [
-                  { $ifNull: ["$comboSnapshot.name", false] },
+                  // Rồi comboSnapshot.name
+                  { $and: [
+                    { $ifNull: ["$comboSnapshot.name", false] },
+                    { $ne: ["$comboSnapshot.name", ""] }
+                  ]},
                   "$comboSnapshot.name",
-                  { $ifNull: ["$productName", "Khác"] },
+                  // Rồi productName trực tiếp
+                  {
+                    $cond: [
+                      { $and: [
+                        { $ifNull: ["$productName", false] },
+                        { $ne: ["$productName", ""] }
+                      ]},
+                      "$productName",
+                      // Fallback cuối cùng
+                      { $ifNull: ["$productId", "Sản phẩm khác"] }
+                    ]
+                  },
                 ],
               },
             ],

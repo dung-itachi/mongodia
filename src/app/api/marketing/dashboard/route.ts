@@ -34,6 +34,14 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    // Sprint 8.0: Area/Team/MKT filtering
+    const marketingEmployeeId = searchParams.get("marketingEmployeeId");
+    const teamId = searchParams.get("teamId");
+    const areaId = searchParams.get("areaId");
+    if (marketingEmployeeId) filter.marketingEmployeeId = marketingEmployeeId;
+    if (teamId) filter.teamId = teamId;
+    if (areaId) filter.areaId = areaId;
+
     const data = await marketingDashboardService.getDashboard(filter);
 
     return success(data);

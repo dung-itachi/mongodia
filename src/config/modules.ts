@@ -73,18 +73,14 @@ export const MODULES: ModuleDefinition[] = [
   },
 
   // Notifications (Phase 10 — Real-time notification hub)
-  // Surfaced on the sidebar as a standalone entry so users can land on
-  // the history page even without using the bell dropdown. The bell in
-  // the header is the primary entry point on desktop; this entry is the
-  // "history page" shortcut.
+  // Surfaced on the sidebar in SETTINGS group, right above "Quản lý thông báo".
   {
     id: "notifications",
     title: "Thông báo",
     route: "/notifications",
     permission: "notification.view",
-    group: "DASHBOARD",
+    group: "SETTINGS",
     icon: `<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>`,
-    standalone: true,
   },
 
   // Marketing Group
@@ -195,6 +191,14 @@ export const MODULES: ModuleDefinition[] = [
     icon: `<path d="M9 11l3 3L22 4"/>`,
     pill: 0,
   },
+  {
+    id: "orders-all",
+    title: "Tất cả đơn hàng",
+    route: "/orders",
+    permission: "order.view",
+    group: "ORDERS",
+    icon: `<rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/>`,
+  },
 
   // Products Group
   {
@@ -204,6 +208,30 @@ export const MODULES: ModuleDefinition[] = [
     permission: "product.view",
     group: "PRODUCTS",
     icon: `<path d="M12 2L2 7l10 5 10-5-10-5z"/>`,
+  },
+  {
+    id: "products-categories",
+    title: "Danh mục",
+    route: "/products/categories",
+    permission: "product.view",
+    group: "PRODUCTS",
+    icon: `<path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/>`,
+  },
+  {
+    id: "products-variants",
+    title: "Biến thể",
+    route: "/products/variants",
+    permission: "product.view",
+    group: "PRODUCTS",
+    icon: `<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>`,
+  },
+  {
+    id: "products-combos",
+    title: "Combo",
+    route: "/products/combos",
+    permission: "product.view",
+    group: "PRODUCTS",
+    icon: `<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>`,
   },
   {
     id: "gifts",
@@ -257,14 +285,14 @@ export const MODULES: ModuleDefinition[] = [
   },
 
   // Phase 9 — Role & Permission Tree (RBAC management)
-  // Gated by the dedicated `role.permission.manage` code. Replaces the
-  // legacy `/roles` placeholder with a real Permission Tree page.
+  // Gated by the dedicated `role.permission.manage` code.
+  // Moved to SETTINGS group (Phase 10 follow-up).
   {
     id: "roles-tree",
     title: "Vai trò & Phân quyền",
     route: "/roles",
     permission: "role.permission.manage",
-    group: "ACCOUNTS",
+    group: "SETTINGS",
     icon: `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>`,
   },
 
@@ -360,6 +388,17 @@ export const MODULES: ModuleDefinition[] = [
     group: "SETTINGS",
     icon: `<path d="M3 5h13M9 3v2"/><path d="M5 21h14a2 2 0 0 0 2-2V8H3v11a2 2 0 0 0 2 2z"/><path d="M3 8l9 5 9-5"/>`,
   },
+
+  // Settings Group (Language)
+  {
+    id: "settings-language",
+    title: "Ngôn ngữ",
+    route: "/settings?tab=language",
+    permission: "settings.language.view",
+    permissions: ["settings.language.view", "settings.language.update"],
+    group: "SETTINGS",
+    icon: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>`,
+  },
 ];
 
 /**
@@ -409,7 +448,6 @@ export const NAV_GROUPS: NavGroupDefinition[] = [
     key: "ORDERS",
     label: "Đơn hàng",
     icon: `<rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/>`,
-    href: "/orders",
   },
   {
     key: "PRODUCTS",
@@ -476,10 +514,20 @@ export function getModuleByRoute(route: string): ModuleDefinition | undefined {
 
   // Handle routes with query params (e.g., /orders?status=SHIPPING)
   const basePath = route.split("?")[0];
-  for (const module of MODULES) {
-    if (module.route.startsWith(basePath + "?")) {
-      return module;
+
+  // If base path is different from route, only match if we don't have an exact
+  // base path match. This prevents /settings from matching /settings?tab=language
+  if (basePath !== route) {
+    // Only find query-param modules if the base path doesn't exist as a module
+    if (!ROUTE_MODULE_MAP[basePath]) {
+      for (const module of MODULES) {
+        if (module.route.startsWith(basePath + "?")) {
+          return module;
+        }
+      }
     }
+    // Base path exists as a module, so don't return query-param modules
+    return undefined;
   }
 
   return undefined;

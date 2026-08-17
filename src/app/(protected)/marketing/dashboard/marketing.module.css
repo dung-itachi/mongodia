@@ -47,6 +47,26 @@
   margin-bottom: 8px;
 }
 
+/* Filters row — gộp period + area/team/mkt (Sprint 8.0) */
+.mk-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mk-area-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mk-filters-row .mk-overview-banner {
+  flex: 1;
+  min-width: 300px;
+}
+
 /* Charts grid */
 .mk-charts-grid {
   display: grid;

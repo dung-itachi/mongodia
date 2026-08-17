@@ -15,7 +15,7 @@ import {
 } from "@ant-design/icons";
 import type { StatCardProps } from "@/components/common/cards/StatCard";
 import type { DashboardSummary, DashboardTrend } from "@/types/dashboard";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatNumber, formatVND, convertMNTtoVND } from "@/lib/format";
 
 export type DashboardStatItem = {
   title: string;
@@ -23,6 +23,8 @@ export type DashboardStatItem = {
   icon: StatCardProps["icon"];
   color: StatCardProps["color"];
   trend: NonNullable<StatCardProps["trend"]>;
+  onCurrencyToggle?: () => void;
+  displayCurrency?: "MNT" | "VND";
 };
 
 function trendToStatTrend(trend: DashboardTrend): NonNullable<StatCardProps["trend"]> {
@@ -35,9 +37,25 @@ function trendToStatTrend(trend: DashboardTrend): NonNullable<StatCardProps["tre
 
 /**
  * Build the KPI stat cards from a dashboard summary.
+ *
+ * @param summary  - Dashboard summary data
+ * @param displayCurrency - "MNT" | "VND" — currency to display for the revenue card
+ * @param exchangeRate    - VND per 1 MNT (from /api/settings/exchange-rate)
+ * @param onCurrencyToggle - Called when the user clicks the currency toggle button
  */
-export function buildDashboardStats(summary: DashboardSummary): DashboardStatItem[] {
+export function buildDashboardStats(
+  summary: DashboardSummary,
+  displayCurrency: "MNT" | "VND" = "MNT",
+  exchangeRate: number = 7,
+  onCurrencyToggle?: () => void,
+): DashboardStatItem[] {
   const trend = trendToStatTrend(summary.trend);
+
+  const revenueInMNT = summary.revenue;
+  const revenueDisplay =
+    displayCurrency === "VND"
+      ? formatVND(convertMNTtoVND(revenueInMNT, exchangeRate))
+      : formatCurrency(revenueInMNT);
 
   return [
     {
@@ -77,10 +95,12 @@ export function buildDashboardStats(summary: DashboardSummary): DashboardStatIte
     },
     {
       title: "Doanh thu",
-      value: formatCurrency(summary.revenue),
+      value: revenueDisplay,
       icon: <DollarOutlined />,
       color: "green",
       trend,
+      onCurrencyToggle,
+      displayCurrency,
     },
   ];
 }

@@ -74,6 +74,11 @@
   border-color: #52c41a !important;
 }
 
+.callBtn {
+  background-color: #1890ff !important;
+  border-color: #1890ff !important;
+}
+
 /* Stats Grid */
 .statsGrid {
   display: grid;

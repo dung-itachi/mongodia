@@ -240,7 +240,7 @@ export type MarketingDashboardApiResponse = {
 // Chart & Ranking Types (Sprint 7.2)
 // ============================================================================
 
-export type ChartPeriod = "7d" | "30d" | "90d";
+export type ChartPeriod = "1d" | "3d" | "7d" | "monthStart" | "1month" | "30d" | "90d";
 
 export type TrendDataPoint = {
   date: string;
