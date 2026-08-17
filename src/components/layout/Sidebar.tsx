@@ -30,6 +30,11 @@ import { t } from "@/lib/i18n";
  * role works with day-to-day, plus shared groups (Dashboard, Orders, …).
  *
  * Persisted in localStorage under `sb-role` so the choice survives reloads.
+ *
+ * NOTE: This is the VIEW-AS switcher only — it does NOT change actual session
+ * permissions. The authoritative "what groups does the current user see"
+ * decision lives in the Sidebar's `visibleGroups` filter, which reads from
+ * the User payload (Role.visibleGroups + Leader team-code resolution).
  */
 const ROLE_VISIBLE_GROUPS: Record<
   (typeof ROLES)[number]["code"],
@@ -46,10 +51,34 @@ const ROLE_VISIBLE_GROUPS: Record<
     "WAREHOUSE",
     "SETTINGS",
   ],
-  mkt: ["DASHBOARD", "MKT"],
+  mkt: ["DASHBOARD", "MKT", "PRODUCTS"],
   sale: ["DASHBOARD", "SALE", "CUSTOMERS", "ORDERS", "PRODUCTS"],
-  kho: ["DASHBOARD", "WAREHOUSE", "ORDERS"],
+  kho: ["DASHBOARD", "ORDERS", "WAREHOUSE", "PRODUCTS"],
 };
+
+/**
+ * Leader team-code → NavGroupKey mapping (Sprint — Leader scope by team).
+ *
+ * A leader's sidebar is the union of:
+ *   - The group that matches their team (MKT / SALE / WAREHOUSE)
+ *   - The "shared" groups they need to see (DASHBOARD, ORDERS, PRODUCTS,
+ *     CUSTOMERS — so they can monitor their members' day-to-day work).
+ *
+ * Leaders of teams with a non-business code fall back to DASHBOARD only.
+ */
+const LEADER_TEAM_TO_GROUP: Record<string, string> = {
+  MKT: "MKT",
+  SALE: "SALE",
+  WAREHOUSE: "WAREHOUSE",
+};
+
+function resolveLeaderVisibleGroups(teamCode: string | null | undefined): string[] {
+  if (!teamCode) return ["DASHBOARD"];
+  const group = LEADER_TEAM_TO_GROUP[teamCode.toUpperCase()];
+  if (!group) return ["DASHBOARD"];
+  // Leader gets their own team's group + shared cross-functional groups.
+  return ["DASHBOARD", group, "ORDERS", "PRODUCTS"];
+}
 
 const ROLE_STORAGE_KEY = "sb-role";
 
@@ -133,9 +162,56 @@ export default function Sidebar({
   // Filter groups and items by permission AND by the role-switcher filter.
   // The role switcher is a *view* filter — it scopes which nav groups are
   // shown without changing the actual session permissions.
+  //
+  // Two layers of filtering:
+  //   1. Business scope (role-based): which groups the user's role is
+  //      allowed to see. Driven by:
+  //        - user.role.visibleGroups (from Role doc, seed-backed)
+  //        - For LEADER: derived from user.teamCode at runtime
+  //        - ADMIN: bypass (sees everything)
+  //   2. Permission scope (per-item): even within an allowed group, items
+  //      are still hidden if the user lacks the required permission code.
   const userPermissions = user?.permissions ?? [];
+  const userRoleCode = user?.role ?? "";
+  const userVisibleGroups = user?.visibleGroups ?? [];
+
+  // Compute effective business-scope groups for the current user.
+  let businessScopeGroups: Set<string> | null = null; // null = no scope filter (admin)
+  if (userRoleCode !== "ADMIN" && !userPermissions.includes("*")) {
+    let groups: string[];
+    if (userRoleCode === "LEADER") {
+      groups = resolveLeaderVisibleGroups(user.teamCode ?? null);
+    } else if (userVisibleGroups.length > 0) {
+      groups = userVisibleGroups;
+    } else {
+      // Fallback for roles seeded without visibleGroups: deny-by-default
+      // except for DASHBOARD so the user isn't completely locked out.
+      groups = ["DASHBOARD"];
+    }
+    businessScopeGroups = new Set(groups);
+  }
+
+  // When the user's role is granted a NavGroup via `visibleGroups`
+  // (i.e. the admin ticked the group on the Permission Tree page),
+  // the group header AND its items should be visible regardless of the
+  // per-item permission check. This keeps the role-scope and the
+  // permission-scope in sync: admins manage visibility at the group
+  // level, and the Sidebar reflects that instead of hiding the group
+  // because the user lacks every individual permission.
+  //
+  // Permission check still applies to groups that are NOT in the
+  // user's `visibleGroups` (defence-in-depth — a stale cache or
+  // back-door role assignment can't accidentally expose a screen).
+  const isGroupInScope = (groupKey: string): boolean =>
+    !businessScopeGroups || businessScopeGroups.has(groupKey);
+
   const visibleGroups = NAV_GROUPS.map((group) => {
+    const inScope = isGroupInScope(group.groupKey ?? "");
     const visibleItems = group.items.filter((item) => {
+      // Group-level scope from visibleGroups overrides per-item
+      // permission checks: when admin has ticked this group for the
+      // role, treat all items in the group as visible.
+      if (inScope) return true;
       if (item.permissions && item.permissions.length > 0) {
         return hasAnyPermission(userPermissions, item.permissions);
       }
@@ -147,6 +223,10 @@ export default function Sidebar({
     return { ...group, items: visibleItems };
   })
     .filter((group) => {
+      // Business-scope filter: drop groups outside the user's role scope.
+      if (businessScopeGroups && !businessScopeGroups.has(group.groupKey ?? "")) {
+        return false;
+      }
       // Role-switcher filter: only keep groups whose `groupKey` is in the
       // role's allow-list. Admin sees everything; other roles see a slice.
       const allowed = ROLE_VISIBLE_GROUPS[role];

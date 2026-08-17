@@ -17,7 +17,17 @@ import api from "@/lib/axios";
  */
 
 export type RolePermissions = {
-  role: { _id: string; code: string; name: string; isActive: boolean };
+  role: {
+    _id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+    /**
+     * Nav groups this role is allowed to see on the sidebar.
+     * Empty array means "resolve dynamically" (Leader only).
+     */
+    visibleGroups?: string[];
+  };
   /**
    * True when the role is granted FULL ACCESS:
    *   - role.code === "ADMIN" (seed-time invariant), OR

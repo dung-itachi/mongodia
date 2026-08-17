@@ -138,6 +138,10 @@ export const updateRoleSchema = z.object({
   description: z.string().trim().optional(),
 
   isActive: z.boolean(),
+
+  // Sprint — sidebar visibility (NavGroupKey[]).
+  // Optional; defaults to [] so legacy clients keep working.
+  visibleGroups: z.array(z.string()).optional(),
 });
 
 export type UpdateRoleForm = z.infer<typeof updateRoleSchema>;

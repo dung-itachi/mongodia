@@ -5,7 +5,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { updateRoleSchema } from "@/utils/validator";
 
 import Role from "@/models/Role";
+import Permission from "@/models/Permission";
+import RolePermission from "@/models/RolePermission";
 
+import { getModulesByGroup } from "@/config/modules";
 import { mapRole } from "@/mappers/role.mapper";
 import { error as errorResponse, success } from "@/utils/response";
 
@@ -141,9 +144,89 @@ export async function PUT(
           role.name = data.name;
           role.description = data.description ?? "";
           role.isActive = data.isActive;
-          
+
+          // Sprint — Role-based sidebar visibility.
+          // Empty array means "use dynamic resolution" (Leader only).
+          // ADMIN role ignores this; we still store it for symmetry.
+          const nextVisibleGroups = Array.isArray(
+            (data as { visibleGroups?: unknown }).visibleGroups,
+          )
+            ? ((data as { visibleGroups: unknown[] }).visibleGroups.filter(
+                (g) => typeof g === "string",
+              ) as string[])
+            : [];
+          const previousVisibleGroups = Array.isArray(role.visibleGroups)
+            ? (role.visibleGroups as string[])
+            : [];
+          role.visibleGroups = nextVisibleGroups;
+
+          // Auto-grant — when the admin ticks a NEW group for this role
+          // (i.e. a group that wasn't in `previousVisibleGroups`), grant
+          // the corresponding module permissions so the user can both SEE
+          // the menu items AND actually OPEN them (otherwise they would
+          // hit a 403 from the backend route guard).
+          //
+          // We are ADDITIVE only: existing permissions are never
+          // removed. If the admin wants to revoke a previously-granted
+          // permission, they should manage it via the Permission Tree
+          // page. This keeps the Sidebar tick and the Permission Tree
+          // independent and prevents accidental data loss.
+          const previousSet = new Set(previousVisibleGroups);
+          const newlyAddedGroups = nextVisibleGroups.filter(
+            (g) => !previousSet.has(g),
+          );
+
+          if (newlyAddedGroups.length > 0) {
+            // Collect unique permission codes for every newly-ticked group.
+            const codes = new Set<string>();
+            for (const groupKey of newlyAddedGroups) {
+              const modules = getModulesByGroup(
+                groupKey as Parameters<typeof getModulesByGroup>[0],
+              );
+              for (const m of modules) {
+                if (Array.isArray(m.permissions) && m.permissions.length > 0) {
+                  m.permissions.forEach((p) => codes.add(p));
+                } else if (typeof m.permission === "string" && m.permission) {
+                  codes.add(m.permission);
+                }
+              }
+            }
+
+            if (codes.size > 0) {
+              const permissionDocs = await Permission.find({
+                code: { $in: Array.from(codes) },
+                isActive: true,
+              })
+                .select("_id code")
+                .lean();
+
+              if (permissionDocs.length > 0) {
+                const roleId = role._id as mongoose.Types.ObjectId;
+                // insertMany with `ordered: false` skips duplicates (the
+                // unique index on (roleId, permissionId) prevents creating
+                // duplicates).
+                await RolePermission.insertMany(
+                  permissionDocs.map((p) => ({
+                    roleId,
+                    permissionId: p._id,
+                  })),
+                  { ordered: false },
+                ).catch((err: unknown) => {
+                  // E11000 duplicate-key errors are expected when the
+                  // role already has some of these permissions.
+                  if (
+                    !(err as { code?: number }).code ||
+                    (err as { code?: number }).code !== 11000
+                  ) {
+                    throw err;
+                  }
+                });
+              }
+            }
+          }
+
           await role.save();
-          
+
           return success(
             mapRole(role.toObject()),
             "Cập nhật vai trò thành công"

@@ -13,6 +13,9 @@ export async function seedRoles() {
           code: role.code,
           name: role.name,
           description: "",
+          // Persist sidebar visibility. ADMIN ignores this; LEADER
+          // leaves it empty and resolves at request time via team code.
+          visibleGroups: role.visibleGroups ?? [],
           isActive: true,
         },
       },

@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         .sort({
           name: 1,
         })
-        .select("code name description isActive")
+        .select("code name description isActive visibleGroups")
         .lean();
       
         const items = mapRoleList(roles);

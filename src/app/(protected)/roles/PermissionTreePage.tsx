@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Alert, Input, Spin } from "antd";
+import { Alert, Checkbox, Input, Spin } from "antd";
 
 import PageHeader from "@/components/common/layout/PageHeader";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
@@ -16,6 +16,7 @@ import {
   useRolePermissions,
   useUpdateRolePermissions,
 } from "@/hooks/useRolePermissions";
+import { useUpdateRoleWithVisibleGroups } from "@/hooks/useUpdateRoleVisibleGroups";
 import { useAntApp } from "@/providers/AntdProvider";
 
 import {
@@ -24,6 +25,7 @@ import {
   togglePermissionCode,
   type TriState,
 } from "@/lib/permission-modules";
+import { NAV_GROUPS as SIDEBAR_NAV_GROUPS } from "@/config/nav.config";
 
 type Props = {
   /** Current user's permission list (from auth context). */
@@ -123,17 +125,62 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
     setDraft(null);
   }, [selectedRoleId, rolePermsQ.data]);
 
+  // -------- visibleGroups (sidebar scope) edit state --------
+  const [visibleGroupsDraft, setVisibleGroupsDraft] = useState<string[] | null>(null);
+  useEffect(() => {
+    setVisibleGroupsDraft(null);
+  }, [selectedRoleId, rolesQ.data]);
+
+  // Roles that should NOT be edited via the visibleGroups panel
+  // because their scope is decided elsewhere:
+  //   - ADMIN: sees everything by definition (wildcard bypass).
+  //   - LEADER: scope is resolved dynamically from Employee.teamId.code
+  //     (MKT/SALE/WAREHOUSE → matching group). See Sidebar.tsx.
   const isAdminEditingDisabled =
     rolePermsQ.data?.isAdmin === true || rolePermsQ.data?.isWildcard === true;
+  const isLeader = rolePermsQ.data?.role.code === "LEADER";
 
   const baseCodes = rolePermsQ.data?.grantedCodes ?? [];
+  const sortedCompare = (a: string[]) => [...a].sort().join(",");
   const currentCodes: string[] = useMemo(() => {
     if (rolePermsQ.data?.isWildcard) return [];
     if (draft !== null) return draft;
     return baseCodes;
   }, [rolePermsQ.data, draft, baseCodes]);
 
-  const sortedCompare = (a: string[]) => [...a].sort().join(",");
+  // Lookup current RoleSummary from the roles list so we can round-trip
+  // code/name/description/isActive when PUTting the visibleGroups change.
+  const currentRoleDetail = useMemo(() => {
+    if (!rolePermsQ.data) return null;
+    const found = (rolesQ.data?.items ?? []).find(
+      (r) => r._id === rolePermsQ.data!.role._id,
+    );
+    if (!found) return null;
+    return found;
+  }, [rolePermsQ.data, rolesQ.data]);
+
+  const currentVisibleGroups: string[] = useMemo(() => {
+    if (visibleGroupsDraft !== null) return visibleGroupsDraft;
+    return currentRoleDetail?.visibleGroups ?? [];
+  }, [visibleGroupsDraft, currentRoleDetail]);
+
+  const isVisibleGroupsDirty =
+    visibleGroupsDraft !== null &&
+    !isAdminEditingDisabled &&
+    !isLeader &&
+    currentRoleDetail !== null &&
+    sortedCompare(currentVisibleGroups) !==
+      sortedCompare(currentRoleDetail.visibleGroups ?? []);
+
+  // Sidebar nav groups (filtered to those that actually have items in
+  // the registry so we don't render dead toggles).
+  const availableSidebarGroups = useMemo(
+    () =>
+      SIDEBAR_NAV_GROUPS.filter(
+        (g) => !g.standalone && (g.groupKey ?? "") !== "",
+      ),
+    [],
+  );
 
   const isDirty =
     draft !== null &&
@@ -193,6 +240,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
 
   // -------- Mutations --------
   const updateMut = useUpdateRolePermissions();
+  const updateVisibleGroupsMut = useUpdateRoleWithVisibleGroups();
 
   function applySave() {
     if (!rolePermsQ.data || draft === null) return;
@@ -208,6 +256,38 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
 
   function resetDraft() {
     setDraft(null);
+  }
+
+  function toggleVisibleGroup(groupKey: string) {
+    if (!rolePermsQ.data || !currentRoleDetail) return;
+    setVisibleGroupsDraft((curr) => {
+      const base = curr ?? currentRoleDetail.visibleGroups ?? [];
+      const has = base.includes(groupKey);
+      return has ? base.filter((g) => g !== groupKey) : [...base, groupKey];
+    });
+  }
+
+  function saveVisibleGroups() {
+    if (!rolePermsQ.data || !currentRoleDetail || visibleGroupsDraft === null) return;
+    updateVisibleGroupsMut.mutate(
+      {
+        roleId: rolePermsQ.data.role._id,
+        current: currentRoleDetail,
+        visibleGroups: visibleGroupsDraft,
+      },
+      {
+        onSuccess: () => {
+          message.success("Cập nhật nhóm hiển thị thành công");
+          setVisibleGroupsDraft(null);
+        },
+        onError: (err: Error) =>
+          message.error(err.message || "Cập nhật nhóm hiển thị thất bại"),
+      },
+    );
+  }
+
+  function resetVisibleGroupsDraft() {
+    setVisibleGroupsDraft(null);
   }
 
   function setBucketState(bucketModule: string, target: TriState) {
@@ -368,6 +448,126 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                           thể chỉnh sửa danh sách permission cho ADMIN.
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* ============ Visible Groups (Sidebar scope) ============ */}
+                  {rolePermsQ.data && !isAdminEditingDisabled && (
+                    <div
+                      className="card"
+                      style={{
+                        marginTop: 14,
+                        padding: 12,
+                        background: "rgba(255,255,255,0.02)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: 8,
+                        }}
+                      >
+                        <div>
+                          <strong style={{ fontSize: 13 }}>
+                            Nhóm hiển thị trên Sidebar
+                          </strong>
+                          <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                            Chọn các nhóm nghiệp vụ mà vai trò này được
+                            nhìn thấy trên sidebar.
+                            {isLeader && (
+                              <>
+                                {" "}
+                                <span style={{ color: "#f59e0b" }}>
+                                  LEADER: nhóm hiển thị được tự động suy ra
+                                  từ team (MKT/SALE/WAREHOUSE) — không thể
+                                  chỉnh tại đây.
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {isVisibleGroupsDirty && (
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                onClick={resetVisibleGroupsDraft}
+                                disabled={updateVisibleGroupsMut.isPending}
+                              >
+                                Reset
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-pri btn-sm"
+                                onClick={saveVisibleGroups}
+                                disabled={updateVisibleGroupsMut.isPending}
+                              >
+                                Lưu
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns:
+                            "repeat(auto-fill, minmax(180px, 1fr))",
+                          gap: 8,
+                        }}
+                      >
+                        {availableSidebarGroups.map((g) => {
+                          const key = g.groupKey ?? "";
+                          const checked = currentVisibleGroups.includes(key);
+                          return (
+                            <label
+                              key={key}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "6px 10px",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: 4,
+                                cursor: isLeader ? "not-allowed" : "pointer",
+                                opacity: isLeader ? 0.5 : 1,
+                                fontSize: 12,
+                              }}
+                            >
+                              <Checkbox
+                                checked={checked}
+                                disabled={isLeader}
+                                onChange={() => toggleVisibleGroup(key)}
+                              />
+                              <span>{g.label}</span>
+                              <span
+                                style={{
+                                  marginLeft: "auto",
+                                  fontSize: 10,
+                                  color: "#888",
+                                  fontFamily: "monospace",
+                                }}
+                              >
+                                {key}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {isVisibleGroupsDirty && (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            fontSize: 11,
+                            color: "#f59e0b",
+                          }}
+                        >
+                          ⚠ Có thay đổi nhóm hiển thị chưa lưu
+                        </div>
+                      )}
                     </div>
                   )}
 

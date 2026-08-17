@@ -9,6 +9,15 @@ export interface User {
     /** Display label for role (e.g. "Quản trị viên"). Optional — older
      *  payloads pre-date this field, so fallback to `role` in UI. */
     roleName?: string;
+    /** Nav groups (from `NavGroupKey`) this role is allowed to see
+     *  on the sidebar. Empty array means "resolve dynamically" —
+     *  currently used by LEADER whose visibleGroups depend on
+     *  their team code (MKT/SALE/WAREHOUSE). */
+    visibleGroups?: string[];
+    /** Team code (from `Employee.teamId`). Used by Sidebar to resolve
+     *  Leader scope — MKT → MKT group, SALE → SALE group,
+     *  WAREHOUSE → WAREHOUSE group. Null when the user has no team. */
+    teamCode?: string | null;
     permissions: string[];
 }
 

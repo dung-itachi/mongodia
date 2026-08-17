@@ -21,6 +21,12 @@ export type RoleSummary = {
   name: string;
   description?: string;
   isActive: boolean;
+  /**
+   * Nav groups this role is allowed to see on the sidebar.
+   * Empty array means "resolve dynamically" (currently only LEADER
+   * uses dynamic resolution based on `Employee.teamId.code`).
+   */
+  visibleGroups?: string[];
 };
 
 export type RoleList = {

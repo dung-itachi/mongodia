@@ -1,9 +1,20 @@
+import Team from "@/models/Team";
 import { getCurrentUser } from "@/lib/auth";
 import { error as errorResponse, success } from "@/utils/response";
 
 export async function GET(request: Request) {
   try {
     const currentUser = await getCurrentUser(request);
+
+    // Resolve teamCode for Leader scope — the sidebar uses this to
+    // decide which NavGroup (MKT/SALE/WAREHOUSE) the Leader can see.
+    let teamCode: string | null = null;
+    if (currentUser.employee.teamId) {
+      const team = await Team.findById(currentUser.employee.teamId)
+        .select("code")
+        .lean();
+      teamCode = team?.code ?? null;
+    }
 
     return success({
       _id: currentUser.employee._id.toString(),
@@ -14,6 +25,12 @@ export async function GET(request: Request) {
       avatar: currentUser.employee.avatar,
       role: currentUser.role.code,
       roleName: currentUser.role.name,
+      // Nav groups this role is allowed to see on the sidebar.
+      // Empty array means "use dynamic resolution" (Leader only).
+      visibleGroups: (currentUser.role as { visibleGroups?: string[] }).visibleGroups ?? [],
+      // Team code — used by Sidebar to resolve Leader's scope
+      // (MKT → MKT group, SALE → SALE group, WAREHOUSE → WAREHOUSE group).
+      teamCode,
       permissions: currentUser.permissions,
     });
   } catch (error) {

@@ -133,6 +133,7 @@ export async function GET(
         code: role.code,
         name: role.name,
         isActive: role.isActive,
+        visibleGroups: Array.isArray(role.visibleGroups) ? role.visibleGroups : [],
       },
       isWildcard,
       isAdmin,

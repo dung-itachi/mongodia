@@ -7,6 +7,10 @@
  *   - `code`           : mã định danh (lưu DB + dùng trong code).
  *   - `name`           : tên hiển thị.
  *   - `permissions`    : danh sách permission code thuộc role.
+ *   - `visibleGroups`  : danh sách NavGroupKey (từ modules.ts) mà role
+ *                        ĐƯỢC PHÉP nhìn thấy trên sidebar (Sprint 8.6).
+ *                        Admin thấy tất cả; các role khác chỉ thấy đúng
+ *                        phần nghiệp vụ của mình.
  *
  * Nguyên tắc:
  *   - KHÔNG hardcode role trong middleware / route — chỉ check permission.
@@ -14,17 +18,11 @@
  *   - Permission định nghĩa ở `src/constants/permissions.ts` — đây là source
  *     of truth duy nhất cho permission code.
  *
- * Phase 5.1 (Order Permissions):
- *   - Order giờ có 9 permission: view / create / update / delete / confirm /
- *     cancel / history / revenue / reserve_stock.
- *   - Phân quyền theo nghiệp vụ:
- *       ADMIN       → Full (wildcard).
- *       MANAGER     → Toàn bộ Order.
- *       SALE        → view / create / update / history (chốt + sửa đơn của mình).
- *       MKT         → chỉ view (xem đơn phát sinh từ Lead).
- *       WAREHOUSE   → view / reserve_stock (giữ / trả chỗ kho cho đơn).
- *       LEADER      → view / create / update (giữ tương thích với role cũ).
- *       EMPLOYEE    → view (giữ tương thích — chỉ xem).
+ * Nghiệp vụ phân quyền (theo .theme/report.md):
+ *   - MKT   → chỉ thấy MKT và Sản phẩm (bao gồm các item bên trong chúng)
+ *   - SALE  → chỉ thấy Sale và Đơn hàng (bao gồm các item bên trong chúng)
+ *   - KHO   → chỉ thấy Đơn hàng và Kho (bao gồm các item bên trong chúng)
+ *   - LEADER các phần này → thấy thành viên mà leader quản lý (scope)
  * ==================================================
  */
 
@@ -33,8 +31,24 @@ export const ROLES = [
     code: "ADMIN",
     name: "Administrator",
     permissions: ["*"],
+    // Admin thấy tất cả groups; Sidebar sẽ bỏ qua filter nếu role = admin
+    visibleGroups: [
+      "DASHBOARD",
+      "MKT",
+      "SALE",
+      "CUSTOMERS",
+      "ORDERS",
+      "PRODUCTS",
+      "ACCOUNTS",
+      "WAREHOUSE",
+      "SETTINGS",
+    ],
   },
 
+  /**
+   * MANAGER — quản lý cấp phòng ban.
+   * Có quyền rộng; hiển thị đầy đủ group nghiệp vụ.
+   */
   {
     code: "MANAGER",
     name: "Manager",
@@ -168,12 +182,28 @@ export const ROLES = [
       "notification.readAll",
       "notification.manage",
     ],
+    visibleGroups: [
+      "DASHBOARD",
+      "MKT",
+      "SALE",
+      "CUSTOMERS",
+      "ORDERS",
+      "PRODUCTS",
+      "ACCOUNTS",
+      "WAREHOUSE",
+      "SETTINGS",
+    ],
   },
 
   /**
    * SALE — nhân viên kinh doanh.
-   * Chốt đơn, sửa đơn, xem timeline. KHÔNG xóa đơn, KHÔNG reserve/release
-   * kho (do WAREHOUSE phụ trách), KHÔNG xem revenue detail.
+   * Theo nghiệp vụ (report.md):
+   *   - Được: Nhận Lead, Gọi điện, Ghi lịch sử gọi, Chỉnh đơn, Chốt đơn,
+   *           Xác nhận, Đi hàng, Hoàn.
+   *   - KHÔNG được: Tạo sản phẩm.
+   *
+   * Sidebar chỉ hiển thị: Dashboard, Sale, Đơn hàng.
+   * Tuy nhiên Sale cần xem Sản phẩm/Combo để chọn cho khách → show PRODUCTS.
    */
   {
     code: "SALE",
@@ -201,6 +231,7 @@ export const ROLES = [
       "self-account.update",
       "self-account.changePassword",
 
+      // Sale cần xem sản phẩm/combo để chọn cho khách
       "product.view",
       "product-variant.view",
       "combo.view",
@@ -208,12 +239,13 @@ export const ROLES = [
       // ---- Gift (Sale cần xem để chọn quà cho khách) ----------------
       "gift.view",
 
-      // ---- Order --------------------------------------------------
+      // ---- Order (xem + chỉnh sửa đơn của mình + chốt) -----------
       "order.view",
       "order.create",
       "order.update",
       "order.history",
 
+      // ---- Lead (nhận + cập nhật) -----------------------------------
       "lead.view",
 
       "report.view",
@@ -224,12 +256,23 @@ export const ROLES = [
       "notification.read",
       "notification.readAll",
     ],
+    visibleGroups: [
+      "DASHBOARD",
+      "SALE",
+      "CUSTOMERS",
+      "ORDERS",
+      "PRODUCTS",
+    ],
   },
 
   /**
    * WAREHOUSE — nhân viên kho.
-   * Xem đơn để biết cần giữ / trả chỗ kho cho đơn nào.
-   * KHÔNG sửa thông tin đơn, KHÔNG xóa đơn.
+   * Theo nghiệp vụ (report.md):
+   *   - Lấy sản phẩm từ Module Sản phẩm (chỉ quản lý nhập/xuất, không tạo SP mới).
+   *   - Quản lý nhập kho, chuyển kho, xuất kho.
+   *
+   * Sidebar chỉ hiển thị: Dashboard, Đơn hàng, Kho.
+   * (Kho cần PRODUCTS để xem sản phẩm)
    */
   {
     code: "WAREHOUSE",
@@ -237,15 +280,19 @@ export const ROLES = [
     permissions: [
       "dashboard.view",
 
+      // ---- Kho operations ----------------------------------------------
       "warehouse.view",
       "warehouse.import",
       "warehouse.transfer",
       "warehouse.receive",
       "warehouse.ship",
       "warehouse.return",
+      "warehouse.adjust",
       "inventory.view",
       "inventory-adjustment.view",
+      "inventory-adjustment.create",
 
+      // Kho cần xem sản phẩm (không tạo/sửa)
       "product.view",
       "product-variant.view",
 
@@ -256,7 +303,7 @@ export const ROLES = [
       "self-account.update",
       "self-account.changePassword",
 
-      // ---- Order --------------------------------------------------
+      // ---- Order (xem để biết cần xuất kho cho đơn nào) ----------
       "order.view",
       "order.reserve_stock",
       "order.history",
@@ -266,11 +313,21 @@ export const ROLES = [
       "notification.read",
       "notification.readAll",
     ],
+    visibleGroups: [
+      "DASHBOARD",
+      "ORDERS",
+      "WAREHOUSE",
+      "PRODUCTS",
+    ],
   },
 
   /**
-   * LEADER — giữ tương thích với role cũ (Phase trước). Có thêm
-   * `order.confirm` / `order.cancel` so với SALE.
+   * LEADER — trưởng nhóm.
+   * Theo nghiệp vụ (report.md):
+   *   - Thấy các thành viên mà leader quản lý (scope theo team MKT/SALE/WAREHOUSE).
+   *   - Có quyền rộng trong phần mình quản lý + Marketing Expense.
+   *   - Sidebar phụ thuộc vào team leader (MKT/SALE/KHO) → sẽ resolve động
+   *     trong Sidebar dựa trên Employee.teamId.code.
    */
   {
     code: "LEADER",
@@ -282,6 +339,7 @@ export const ROLES = [
       "self-account.update",
       "self-account.changePassword",
 
+      // Leader quản lý nhân viên thuộc team mình quản lý
       "employee.view",
       "account.view",
       "account.create",
@@ -290,12 +348,13 @@ export const ROLES = [
       "account.resetPassword",
 
       "team.view",
+
       "category.view",
 
+      // Leader xem được sản phẩm/combo (scope team mình quản lý)
       "product.view",
 
       "variant-option.view",
-
       "variant-value.view",
       "product-variant.view",
 
@@ -344,6 +403,9 @@ export const ROLES = [
       "notification.read",
       "notification.readAll",
     ],
+    // LEADER có visibleGroups phụ thuộc vào team.code (MKT/SALE/WAREHOUSE);
+    // sidebar sẽ resolve động bằng cách tra Employee.teamId.code.
+    visibleGroups: [], // computed dynamically
   },
 
   /**
@@ -381,10 +443,20 @@ export const ROLES = [
       "notification.read",
       "notification.readAll",
     ],
+    visibleGroups: [
+      "DASHBOARD",
+      "ORDERS",
+      "PRODUCTS",
+    ],
   },
 
   /**
    * MKT — Marketing.
+   * Theo nghiệp vụ (report.md):
+   *   - Được: Quản lý sản phẩm, Tạo Combo, Nhập Lead, Phân loại Lead,
+   *           Gửi Sale, Theo dõi trạng thái đơn của mình.
+   *   - KHÔNG được: Gọi khách.
+   *
    * Workflow Simplification (Aug 2026):
    *   - view / create / update / delete: làm việc với report của chính mình
    *     (kiểm tra ownership trong Service/Repository, không phải ở đây).
@@ -412,21 +484,43 @@ export const ROLES = [
       "customer.create",
       "customer.update",
 
+      // MKT quản lý sản phẩm + tạo Combo
       "product.view",
+      "product.create",
+      "product.update",
+      "product.delete",
+
+      "category.view",
+      "category.create",
+      "category.update",
+
+      "variant-option.view",
+      "variant-option.create",
+      "variant-option.update",
+
+      "variant-value.view",
+      "variant-value.create",
+      "variant-value.update",
+
+      "product-variant.view",
+      "product-variant.create",
+      "product-variant.update",
 
       "combo.view",
       "combo.create",
       "combo.update",
+      "combo.delete",
 
       // ---- Gift (MKT cần xem quà) ----------------------------------
       "gift.view",
 
+      // MKT nhập lead + phân loại + gửi sale
       "lead.view",
       "lead.create",
       "lead.update",
       "lead.assign",
 
-      // ---- Order (chỉ xem) ---------------------------------------
+      // ---- Order (chỉ xem đơn của mình) ----------------------------
       "order.view",
 
       // ---- Marketing Expense (Workflow Simplification) --------------------
@@ -443,6 +537,11 @@ export const ROLES = [
       "notification.view",
       "notification.read",
       "notification.readAll",
+    ],
+    visibleGroups: [
+      "DASHBOARD",
+      "MKT",
+      "PRODUCTS",
     ],
   },
 ];
