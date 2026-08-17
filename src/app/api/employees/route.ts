@@ -55,6 +55,7 @@ export async function GET(request: Request) {
         const keyword = searchParams.get("keyword")?.trim() ?? "";
         const role = searchParams.get("role")?.trim() ?? "";
         const team = searchParams.get("team")?.trim() ?? "";
+        const area = searchParams.get("area")?.trim() ?? "";
         const isActive = searchParams.get("isActive");
         const sort = searchParams.get("sort") ?? "createdAt_desc";
 
@@ -143,6 +144,39 @@ export async function GET(request: Request) {
             }).select("_id");
 
             filter.teamId = teamDoc?._id ?? null;
+        }
+
+        // Filter by area (through team.areaId)
+        if (area) {
+            const areaDoc = await Team.findOne({
+                code: area.toUpperCase(),
+            }).select("areaId").lean();
+
+            if (areaDoc?.areaId) {
+                // Find all teams in this area
+                const teamsInArea = await Team.find({
+                    areaId: areaDoc.areaId,
+                }).select("_id").lean();
+
+                const teamIds = teamsInArea.map((t) => t._id);
+                if (teamIds.length > 0) {
+                    filter.teamId = { $in: teamIds };
+                } else {
+                    filter.teamId = null; // No teams in this area
+                }
+            } else {
+                // Try to find area by ID
+                const areaTeams = await Team.find({
+                    areaId: area,
+                }).select("_id").lean();
+
+                const teamIds = areaTeams.map((t) => t._id);
+                if (teamIds.length > 0) {
+                    filter.teamId = { $in: teamIds };
+                } else {
+                    filter.teamId = null;
+                }
+            }
         }
 
         const total = await Employee.countDocuments(filter);

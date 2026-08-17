@@ -11,7 +11,8 @@
 
 import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { message, Dropdown, Button, Space, Checkbox, Tooltip } from "antd";
+import { Button, Checkbox, Dropdown, Space, Tooltip } from "antd";
+import { useMessage } from "@/contexts/MessageContext";
 import {
   EyeOutlined,
   EditOutlined,
@@ -58,6 +59,7 @@ export default function OrdersPage() {
 }
 
 function OrdersPageInner() {
+  const message = useMessage();
   const router = useRouter();
   const searchParams = useSearchParams();
 

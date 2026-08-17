@@ -22,7 +22,7 @@
  */
 
 import { memo, useCallback } from "react";
-import { Button, Empty, Popconfirm, Skeleton, Table } from "antd";
+import { Button, Empty, Popconfirm, Skeleton, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { CheckSquareOutlined } from "@ant-design/icons";
 import { formatNumber } from "@/lib/format";
@@ -107,17 +107,19 @@ function ReconciliationCardInner({
     {
       key: "actions",
       title: "Thao tác",
-      width: 80,
+      width: 120,
       align: "center" as const,
       render: (_: unknown, record: OrderListItem) => (
-        <Button
-          type="primary"
-          size="small"
-          icon={<CheckSquareOutlined />}
-          onClick={() => onReconcileOne(record._id)}
-        >
-          ĐS
-        </Button>
+        <Tooltip title="Đối soát đơn hàng này">
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckSquareOutlined />}
+            onClick={() => onReconcileOne(record._id)}
+          >
+            Đối soát
+          </Button>
+        </Tooltip>
       ),
     },
   ];
@@ -144,14 +146,16 @@ function ReconciliationCardInner({
               okButtonProps={{ danger: false }}
               onConfirm={handleConfirmAll}
             >
-              <Button
-                type="primary"
-                size="small"
-                loading={bulkSubmitting}
-                icon={<CheckSquareOutlined />}
-              >
-                ☑ ĐS tất cả
-              </Button>
+              <Tooltip title="Đối soát tất cả đơn hàng trong danh sách">
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={bulkSubmitting}
+                  icon={<CheckSquareOutlined />}
+                >
+                  ☑ Đối soát tất cả
+                </Button>
+              </Tooltip>
             </Popconfirm>
           )}
         </div>

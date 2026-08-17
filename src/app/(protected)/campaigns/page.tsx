@@ -16,12 +16,20 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  RocketOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  CheckCircleOutlined,
+  FolderOutlined,
+} from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonTable from "@/components/common/overlay/SkeletonTable";
+import { PageStatsBanner } from "@/components/common";
 
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -78,6 +86,15 @@ export default function CampaignsListPage() {
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+
+  // Calculate campaign stats
+  const campaignStats = useMemo(() => {
+    const active = items.filter((c) => c.status === "ACTIVE").length;
+    const paused = items.filter((c) => c.status === "PAUSED").length;
+    const completed = items.filter((c) => c.status === "COMPLETED").length;
+    const archived = items.filter((c) => c.status === "ARCHIVED").length;
+    return { total, active, paused, completed, archived };
+  }, [items, total]);
 
   const errorMsg = useMemo(() => {
     if (!error) return null;
@@ -143,7 +160,50 @@ export default function CampaignsListPage() {
     <PageContainer>
       <PageHeader
         title="Campaigns"
-        subtitle="Quản lý Campaigns cho Marketing"
+        subtitle={`${total} campaigns cho Marketing`}
+      />
+
+      {/* Stats Banner */}
+      <PageStatsBanner
+        stats={[
+          {
+            key: "total",
+            value: campaignStats.total,
+            label: "Tổng Campaigns",
+            icon: <RocketOutlined style={{ color: "#1890ff" }} />,
+            color: "blue",
+          },
+          {
+            key: "active",
+            value: campaignStats.active,
+            label: "Đang chạy",
+            icon: <PlayCircleOutlined style={{ color: "#52c41a" }} />,
+            color: "green",
+          },
+          {
+            key: "paused",
+            value: campaignStats.paused,
+            label: "Tạm dừng",
+            icon: <PauseCircleOutlined style={{ color: "#fa8c16" }} />,
+            color: "orange",
+          },
+          {
+            key: "completed",
+            value: campaignStats.completed,
+            label: "Hoàn thành",
+            icon: <CheckCircleOutlined style={{ color: "#722ed1" }} />,
+            color: "purple",
+          },
+          {
+            key: "archived",
+            value: campaignStats.archived,
+            label: "Đã lưu trữ",
+            icon: <FolderOutlined style={{ color: "#8c8c8c" }} />,
+            color: "gold",
+          },
+        ]}
+        loading={isLoading}
+        style={{ marginBottom: 16 }}
       />
 
       <div className={styles["campaign-page"]}>

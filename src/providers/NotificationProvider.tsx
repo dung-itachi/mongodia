@@ -42,6 +42,7 @@ import type {
   NotificationItem,
   NotificationRealtimeEvent,
 } from "@/types/notification";
+import type { NotificationPayload } from "@/lib/notificationBus";
 import { showNotificationToast } from "@/components/notifications/notificationToast";
 
 // ============ Singleton EventSource ============
@@ -117,8 +118,23 @@ export default function NotificationProvider({ children }: Props) {
 
     const onNotification = (e: MessageEvent) => {
       try {
-        const payload = JSON.parse(e.data) as { notification: NotificationItem };
-        const notification = payload.notification;
+        const payload = JSON.parse(e.data) as { notification: NotificationPayload };
+        const raw = payload.notification;
+        // Transform SSE payload (NotificationPayload) to NotificationItem
+        const notification: NotificationItem = {
+          id: raw.id,
+          title: raw.title,
+          message: raw.message,
+          type: raw.type,
+          category: raw.category ?? "general",
+          priority: raw.priority ?? "normal",
+          link: raw.link ?? null,
+          senderId: raw.senderId ?? "",
+          senderName: raw.senderName ?? "Hệ thống",
+          createdAt: raw.createdAt,
+          read: false,
+          readAt: null,
+        };
         prependNotificationToCache(queryClient, notification);
         incrementUnread(1);
         showNotificationToast(notification, () => {

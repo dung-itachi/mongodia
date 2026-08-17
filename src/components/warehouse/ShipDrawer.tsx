@@ -39,7 +39,7 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
-import { Drawer, Button, Space, Table, Tag, Input, message, Alert, Divider, Typography, Select } from "antd";
+import { Drawer, Button, Space, Table, Tag, Input, Alert, Divider, Typography, Select } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { CheckOutlined, GiftOutlined, ShoppingOutlined, UndoOutlined } from "@ant-design/icons";
 import type { OrderDetail } from "@/types/order";
@@ -48,6 +48,7 @@ import type { ShipmentItem } from "@/hooks/useWarehouseShipments";
 import { useShipOrder } from "@/hooks/useWarehouseShipments";
 import { useWarehouseInventory } from "@/hooks/useWarehouseInventory";
 import { getItemDisplayName } from "@/hooks/useWarehouseInventory";
+import { useMessage } from "@/contexts/MessageContext";
 
 const { Text, Title } = Typography;
 
@@ -83,6 +84,7 @@ interface ProductDisplayItem {
 export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
   const [shipNote, setShipNote] = useState("");
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
+  const message = useMessage();
   const [selectedRandomGifts, setSelectedRandomGifts] = useState<Record<string, string>>({});
 
   const shipMutation = useShipOrder();

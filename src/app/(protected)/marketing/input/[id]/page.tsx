@@ -11,13 +11,14 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, message } from "antd";
+import { Button } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 
 import { notFound } from "next/navigation";
 import { PageContainer, PageHeader } from "@/components/common";
 import { useMarketingLead, useDeleteLead } from "@/hooks/useMarketingLeads";
 import { LeadDetailView } from "@/components/marketing/leads/LeadDetailView";
+import { useMessage } from "@/contexts/MessageContext";
 
 // =============================================================================
 // Main Page
@@ -29,6 +30,7 @@ export default function LeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const message = useMessage();
   const router = useRouter();
   const queryClient = useQueryClient();
 

@@ -6,7 +6,7 @@
  */
 
 import { memo, useState } from "react";
-import { Drawer, Tabs, Table, Statistic, Row, Col, Spin, Card, message } from "antd";
+import { Drawer, Tabs, Table, Statistic, Row, Col, Spin, Card } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { DrillDownData } from "@/types/marketing-dashboard";
 import type { DrillDownContext } from "@/types/marketing-dashboard-filter";

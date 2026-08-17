@@ -454,11 +454,14 @@ export class WarehouseAdjustmentService {
    * running total at each movement, and using it as `before`
    * for ADJUSTMENT movements.
    */
-  async listAdjustments(filters: {
+  export interface AdjustmentListFilters {
     warehouseId?: string;
+    type?: string;
     page?: number;
     limit?: number;
-  }) {
+  }
+
+  async listAdjustments(filters: AdjustmentListFilters) {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
 
@@ -466,9 +469,13 @@ export class WarehouseAdjustmentService {
     if (filters.warehouseId) {
       query.warehouseId = oid(filters.warehouseId, "Warehouse ID");
     }
+    // If type filter is specified, filter by type; otherwise show all movements
+    if (filters.type) {
+      query.type = filters.type;
+    }
 
     const [items, total] = await Promise.all([
-      WarehouseStockMovement.find({ ...query, referenceType: "ADJUSTMENT" })
+      WarehouseStockMovement.find(query)
         .populate("warehouseId", "_id code name")
         .populate("productId", "_id code name")
         .populate("variantId", "_id sku")
@@ -478,7 +485,7 @@ export class WarehouseAdjustmentService {
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      WarehouseStockMovement.countDocuments({ ...query, referenceType: "ADJUSTMENT" }),
+      WarehouseStockMovement.countDocuments(query),
     ]);
 
     const enriched = await enrichAdjustmentsWithHistory(items);

@@ -18,15 +18,17 @@ import { createAccountSchema } from "@/validators/account.validator";
 import Employee, { IEmployee } from "@/models/Employee";
 import Role from "@/models/Role";
 import Team from "@/models/Team";
+import Area from "@/models/Area";
 
 const accountPopulate = [
   { path: "roleId", select: "code name" },
-  { path: "teamId", select: "code name departmentId managerId leaderId", populate: [
+  { path: "teamId", select: "code name departmentId managerId leaderId areaId", populate: [
     { path: "departmentId", select: "code name" },
     { path: "managerId", select: "employeeCode fullName username" },
     { path: "leaderId", select: "employeeCode fullName username" },
   ] },
   { path: "leaderId", select: "employeeCode fullName username" },
+  { path: "areaId", select: "code name" },
 ];
 
 function mapAccount(employee: any) {
@@ -43,6 +45,7 @@ function mapAccount(employee: any) {
     team: employee.teamId,
     department: employee.teamId?.departmentId ?? null,
     leader: employee.leaderId,
+    area: employee.areaId,
     createdAt: employee.createdAt,
     updatedAt: employee.updatedAt,
   };
@@ -71,6 +74,7 @@ export async function GET(request: Request) {
     const roleCode = params.get("role")?.trim().toUpperCase();
     const teamId = params.get("teamId")?.trim();
     const leaderId = params.get("leaderId")?.trim();
+    const areaId = params.get("areaId")?.trim();
     const status = params.get("isActive");
     const page = Math.max(1, Number(params.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(params.get("pageSize")) || 20));
@@ -97,6 +101,7 @@ export async function GET(request: Request) {
 
     if (teamId && mongoose.isValidObjectId(teamId)) filter.teamId = teamId;
     if (leaderId && scope === "GLOBAL" && mongoose.isValidObjectId(leaderId)) filter.leaderId = leaderId;
+    if (areaId && mongoose.isValidObjectId(areaId)) filter.areaId = new mongoose.Types.ObjectId(areaId);
 
     if (roleCode) {
       const role = await Role.findOne({ code: roleCode, isActive: true }).select("_id").lean();
@@ -152,6 +157,8 @@ export async function POST(request: Request) {
     if (teamId && !(await Team.exists({ _id: teamId, isActive: true }))) return errorResponse("Team không tồn tại", 400);
     if (leaderId && !(await Employee.exists({ _id: leaderId, isActive: true }))) return errorResponse("Leader không tồn tại", 400);
 
+    if (parsed.data.areaId && !(await Area.exists({ _id: parsed.data.areaId, isActive: true }))) return errorResponse("Khu vực không tồn tại", 400);
+
     const emailLower = parsed.data.email?.toLowerCase() || "";
     if (emailLower && await Employee.exists({ email: emailLower })) return errorResponse("Email đã tồn tại", 400);
     if (await Employee.exists({ username: parsed.data.username.toLowerCase() })) return errorResponse("Username đã tồn tại", 400);
@@ -161,6 +168,7 @@ export async function POST(request: Request) {
       fullName: parsed.data.fullName, email: emailLower, phone: parsed.data.phone ?? "", avatar: parsed.data.avatar ?? "",
       bankName: parsed.data.bankName ?? "", bankAccountNumber: parsed.data.bankAccountNumber ?? "", bankAccountHolder: parsed.data.bankAccountHolder ?? "",
       roleId: role._id, teamId: teamId ? new mongoose.Types.ObjectId(teamId) : null, leaderId: leaderId ? new mongoose.Types.ObjectId(leaderId) : null,
+      areaId: parsed.data.areaId ? new mongoose.Types.ObjectId(parsed.data.areaId) : null,
     });
     await writeAccountAudit({ actorId: currentUser.employee._id, targetId: employee._id, action: "CREATE_ACCOUNT", newData: { roleCode: role.code, teamId, leaderId }, request });
     const result = await Employee.findById(employee._id).populate(accountPopulate).select("-password").lean();

@@ -22,6 +22,8 @@ import {
   useFacebookPages,
   useMarketingEmployees,
   useCampaignsForSelect,
+  useTeamsForMarketingDashboard,
+  useAreasForMarketingDashboard,
 } from "@/hooks/useMarketingExpenseLookups";
 import { useAuthStore } from "@/store/auth.store";
 import { buildMarketingStats } from "./marketing.config";
@@ -37,12 +39,13 @@ import BestSellingProductsCard from "./BestSellingProductsCard";
 import MarketingDashboardRanking from "./MarketingDashboardRanking";
 import MarketingDashboardDrillDownDrawer from "./MarketingDashboardDrillDownDrawer";
 import MarketingErrorState from "./MarketingErrorState";
-import { TeamOutlined, FileExcelOutlined, FilePdfOutlined, UserOutlined } from "@ant-design/icons";
-import { Button, message, Space, Select } from "antd";
+import { TeamOutlined, FileExcelOutlined, FilePdfOutlined, UserOutlined, EnvironmentOutlined, ClusterOutlined } from "@ant-design/icons";
+import { Button, Space, Select } from "antd";
 import type { ChartPeriod } from "@/types/marketing-dashboard";
 import type { MarketingDashboardFilter, DrillDownContext } from "@/types/marketing-dashboard-filter";
 import { exportToExcel, exportToPDF } from "@/lib/export-utils";
 import styles from "./marketing.module.css";
+import { useMessage } from "@/contexts/MessageContext";
 
 /**
  * ADMIN (role=ADMIN) hoặc user có wildcard permission "*" được xem tất cả MKT.
@@ -56,6 +59,7 @@ function isGlobalUser(user: { role: string; permissions: string[] } | null): boo
 export default function MarketingDashboardPage() {
   const user = useAuthStore((state) => state.user);
   const isGlobal = isGlobalUser(user);
+  const message = useMessage();
 
   const [period, setPeriod] = useState<ChartPeriod>("7d");
   const [advancedFilter, setAdvancedFilter] = useState<MarketingDashboardFilter>({ period });
@@ -65,6 +69,8 @@ export default function MarketingDashboardPage() {
   const [selectedMktForOverview, setSelectedMktForOverview] = useState<
     string | undefined
   >(undefined);
+  const [selectedTeamForOverview, setSelectedTeamForOverview] = useState<string | undefined>(undefined);
+  const [selectedAreaForOverview, setSelectedAreaForOverview] = useState<string | undefined>(undefined);
 
   const { data, loading, error, refetch } = useMarketingDashboard();
   const { data: exportData } = useMarketingDashboardExport(advancedFilter);
@@ -73,12 +79,19 @@ export default function MarketingDashboardPage() {
   const { pages: facebookPageOptions } = useFacebookPages();
   const { employees: employeeOptions } = useMarketingEmployees();
   const { campaigns: campaignOptions } = useCampaignsForSelect();
+  const { teams: teamOptions } = useTeamsForMarketingDashboard();
+  const { areas: areaOptions } = useAreasForMarketingDashboard();
 
   // ===== Lấy dữ liệu cho dải tóm tắt & cards mới =====
-  const mktIdForOverview = isGlobal ? selectedMktForOverview : undefined;
+  // Filter priority: Area > Team > MKT
+  // Nếu chọn Area thì bỏ qua Team và MKT
+  // Nếu chọn Team thì bỏ qua MKT
+  const mktIdForOverview = selectedAreaForOverview || selectedTeamForOverview ? undefined : selectedMktForOverview;
+  
   const { data: dailyReport } = useMarketingDailyReport({
     period,
     marketingEmployeeId: mktIdForOverview,
+    // TODO: Add teamId/areaId params when API supports
   });
   const { data: adsReport } = useMarketingDailyAdsReport({
     period,
@@ -240,26 +253,80 @@ export default function MarketingDashboardPage() {
             />
           </div>
           {isGlobal && (
-            <Select
-              allowClear
-              placeholder="Chọn MKT cho tổng quan"
-              value={selectedMktForOverview}
-              onChange={(v) => setSelectedMktForOverview(v)}
-              options={[
-                { value: "__all__", label: "Tất cả MKT" },
-                ...employeeOptions,
-              ]}
-              showSearch
-              optionFilterProp="label"
-              filterOption={(input, option) =>
-                String(option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              size="small"
-              style={{ width: 220 }}
-              suffixIcon={<UserOutlined />}
-            />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              {/* Filter theo Khu vực */}
+              <Select
+                allowClear
+                placeholder="Chọn Khu vực"
+                value={selectedAreaForOverview}
+                onChange={(v) => {
+                  setSelectedAreaForOverview(v);
+                  setSelectedTeamForOverview(undefined);
+                  setSelectedMktForOverview(undefined);
+                }}
+                options={[
+                  { value: "__all__", label: "Tất cả Khu vực" },
+                  ...areaOptions,
+                ]}
+                showSearch
+                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  String(option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                size="small"
+                style={{ width: 180 }}
+                suffixIcon={<EnvironmentOutlined />}
+              />
+              {/* Filter theo Team */}
+              <Select
+                allowClear
+                placeholder="Chọn Team"
+                value={selectedTeamForOverview}
+                onChange={(v) => {
+                  setSelectedTeamForOverview(v);
+                  setSelectedMktForOverview(undefined);
+                }}
+                options={[
+                  { value: "__all__", label: "Tất cả Team" },
+                  ...teamOptions,
+                ]}
+                showSearch
+                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  String(option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                size="small"
+                style={{ width: 180 }}
+                suffixIcon={<ClusterOutlined />}
+                disabled={!!selectedAreaForOverview}
+              />
+              {/* Filter theo MKT */}
+              <Select
+                allowClear
+                placeholder="Chọn MKT"
+                value={selectedMktForOverview}
+                onChange={(v) => setSelectedMktForOverview(v)}
+                options={[
+                  { value: "__all__", label: "Tất cả MKT" },
+                  ...employeeOptions,
+                ]}
+                showSearch
+                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  String(option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                size="small"
+                style={{ width: 220 }}
+                suffixIcon={<UserOutlined />}
+                disabled={!!selectedAreaForOverview || !!selectedTeamForOverview}
+              />
+            </div>
           )}
         </div>
 

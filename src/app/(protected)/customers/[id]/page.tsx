@@ -18,7 +18,7 @@
 
 import { use, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Row, Col, message, Button, Tag, Tabs } from "antd";
+import { Row, Col, Button, Tag, Tabs } from "antd";
 import {
   EditOutlined,
   PhoneOutlined,
@@ -45,6 +45,7 @@ import {
   useDeleteCustomer,
 } from "@/hooks/useCustomers";
 import { CustomerStatus } from "@/types/customer";
+import { useMessage } from "@/contexts/MessageContext";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -65,6 +66,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function CustomerDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const message = useMessage();
 
   // Fetch customer
   const { customer, loading, error, refetch } = useCustomer(id);

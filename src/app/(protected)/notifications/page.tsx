@@ -14,17 +14,26 @@ import type { NotificationItem } from "@/types/notification";
 import NotificationItemRow from "@/components/notifications/NotificationItemRow";
 import "@/components/notifications/notification.css";
 
-type Filter = "all" | "unread";
+type ReadFilter = "all" | "unread";
+type DateFilter = "1" | "3" | "7" | "all";
 
-const TABS: { key: Filter; label: string }[] = [
+const READ_TABS: { key: ReadFilter; label: string }[] = [
   { key: "all", label: "Tất cả" },
   { key: "unread", label: "Chưa đọc" },
+];
+
+const DATE_FILTERS: { key: DateFilter; label: string }[] = [
+  { key: "1", label: "1 ngày" },
+  { key: "3", label: "3 ngày" },
+  { key: "7", label: "7 ngày" },
+  { key: "all", label: "Tất cả" },
 ];
 
 export default function NotificationsPage() {
   const canView = useCan("notification.view");
   const unreadCount = useNotificationStore((s) => s.unreadCount);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [readFilter, setReadFilter] = useState<ReadFilter>("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
 
   const {
     data,
@@ -36,17 +45,26 @@ export default function NotificationsPage() {
     error,
     refetch,
   } = useInfiniteNotifications({
-    onlyUnread: filter === "unread",
+    onlyUnread: readFilter === "unread",
     limit: 20,
   });
 
   const markRead = useMarkRead();
   const markAllRead = useMarkAllRead();
 
-  const items = useMemo<NotificationItem[]>(
-    () => data?.pages.flatMap((p) => p.items) ?? [],
-    [data]
-  );
+  // Client-side date filter — applied on top of the fetched items
+  const filteredItems = useMemo<NotificationItem[]>(() => {
+    const pages = data?.pages ?? [];
+    const all = pages.flatMap((p) => p.items);
+
+    if (dateFilter === "all") return all;
+
+    const days = parseInt(dateFilter, 10);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    cutoff.setHours(0, 0, 0, 0);
+    return all.filter((n) => new Date(n.createdAt) >= cutoff);
+  }, [data, dateFilter]);
 
   const handleItemClick = (item: NotificationItem) => {
     if (!item.read) {
@@ -96,15 +114,27 @@ export default function NotificationsPage() {
       <div className="np-header">
         <h1 className="np-title">Thông báo</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div className="np-tabs" role="tablist" aria-label="Bộ lọc thông báo">
-            {TABS.map((tab) => (
+          <div className="np-date-filters" role="group" aria-label="Lọc theo ngày">
+            {DATE_FILTERS.map((d) => (
+              <button
+                key={d.key}
+                type="button"
+                className={`np-date-btn${dateFilter === d.key ? " is-active" : ""}`}
+                onClick={() => setDateFilter(d.key)}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+          <div className="np-tabs" role="tablist" aria-label="Lọc theo trạng thái đọc">
+            {READ_TABS.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 role="tab"
-                aria-selected={filter === tab.key}
-                className={`np-tab${filter === tab.key ? " is-active" : ""}`}
-                onClick={() => setFilter(tab.key)}
+                aria-selected={readFilter === tab.key}
+                className={`np-tab${readFilter === tab.key ? " is-active" : ""}`}
+                onClick={() => setReadFilter(tab.key)}
               >
                 {tab.label}
               </button>
@@ -152,12 +182,12 @@ export default function NotificationsPage() {
               Thử lại
             </button>
           </div>
-        ) : items.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <div className="np-empty">
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={
-                filter === "unread"
+                readFilter === "unread"
                   ? "Bạn đã đọc hết thông báo"
                   : "Bạn chưa có thông báo nào"
               }
@@ -165,7 +195,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <>
-            {items.map((n) => (
+            {filteredItems.map((n) => (
               <div role="listitem" key={n.id}>
                 <NotificationItemRow
                   item={n}
@@ -186,7 +216,7 @@ export default function NotificationsPage() {
                 </button>
               </div>
             )}
-            {!hasNextPage && items.length >= 20 && (
+            {!hasNextPage && filteredItems.length >= 20 && (
               <div className="np-load-more" style={{ color: "var(--muted)" }}>
                 Đã hiển thị tất cả thông báo
               </div>

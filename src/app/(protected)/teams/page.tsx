@@ -2,13 +2,25 @@
 
 import { useMemo, useState } from "react";
 import { Button, Drawer, Form, Input, Popconfirm, Select, Space, Table, Tag, Typography } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  TeamOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
+  CrownOutlined,
+} from "@ant-design/icons";
 import { useTeams } from "@/hooks/useTeams";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAreas } from "@/hooks/useAreas";
 import { useAntApp } from "@/providers/AntdProvider";
 import api from "@/lib/axios";
+import {
+  PageContainer,
+  PageHeader,
+  PageStatsBanner,
+} from "@/components/common";
 
 type Team = {
   _id: string;
@@ -36,6 +48,14 @@ export default function TeamsPage() {
   const { data: departmentsData } = useDepartments();
   const { data: employeesData } = useEmployees({ pageSize: 200 });
   const { data: areasData } = useAreas();
+
+  // Calculate team stats
+  const teams = data ?? [];
+  const totalTeams = teams.length;
+  const activeTeams = teams.filter((t) => t.isActive !== false).length;
+  const inactiveTeams = teams.filter((t) => t.isActive === false).length;
+  const totalLeaders = teams.filter((t) => t.leaderId).length;
+  const totalManagers = teams.filter((t) => t.managerId).length;
 
   const departmentOptions = useMemo(() => {
     return (departmentsData ?? []).map((d: { _id: string; code?: string; name?: string }) => ({
@@ -186,21 +206,90 @@ export default function TeamsPage() {
   const drawerTitle = mode === "create" ? "Tạo Team" : mode === "edit" ? "Cập nhật Team" : "Chi tiết Team";
 
   return (
-    <div style={{ padding: 24 }}>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <Space style={{ justifyContent: "space-between", width: "100%" }}>
-          <Typography.Title level={3} style={{ margin: 0 }}>Quản lý Teams</Typography.Title>
+    <PageContainer>
+      <PageHeader
+        title="Quản lý Teams"
+        subtitle={`${totalTeams} teams trong hệ thống`}
+        actions={
           <Space>
-            <Input.Search placeholder="Mã team, tên team" allowClear onSearch={setSearch} style={{ width: 250 }} />
+            <Input.Search
+              placeholder="Mã team, tên team"
+              allowClear
+              onSearch={setSearch}
+              style={{ width: 250 }}
+            />
             <Button icon={<ReloadOutlined />} onClick={() => void refetch()} />
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Tạo Team</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              Tạo Team
+            </Button>
           </Space>
-        </Space>
-        {error && <Typography.Text type="danger">Lỗi tải dữ liệu: {(error as Error).message}</Typography.Text>}
-        <div style={{ background: "#fff", padding: 12, borderRadius: 6 }}>
-          <Table rowKey="_id" loading={isLoading} dataSource={filteredData} columns={columns} pagination={{ total: filteredData.length, pageSize: 50, showTotal: (total) => `Tổng ${total} team` }} scroll={{ x: 900 }} />
-        </div>
-      </Space>
+        }
+      />
+
+      {/* Stats Banner */}
+      <PageStatsBanner
+        stats={[
+          {
+            key: "total",
+            value: totalTeams,
+            label: "Tổng Teams",
+            icon: <TeamOutlined style={{ color: "#1890ff" }} />,
+            color: "blue",
+          },
+          {
+            key: "active",
+            value: activeTeams,
+            label: "Đang hoạt động",
+            icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+            color: "green",
+          },
+          {
+            key: "inactive",
+            value: inactiveTeams,
+            label: "Không hoạt động",
+            icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
+            color: "red",
+          },
+          {
+            key: "leaders",
+            value: totalLeaders,
+            label: "Có Trưởng nhóm",
+            icon: <CrownOutlined style={{ color: "#722ed1" }} />,
+            color: "purple",
+          },
+          {
+            key: "managers",
+            value: totalManagers,
+            label: "Có Quản lý",
+            icon: <TeamOutlined style={{ color: "#fa8c16" }} />,
+            color: "orange",
+          },
+        ]}
+        loading={isLoading}
+        style={{ marginBottom: 16 }}
+      />
+
+      {error && (
+        <Typography.Text type="danger" style={{ marginBottom: 16, display: "block" }}>
+          Lỗi tải dữ liệu: {(error as Error).message}
+        </Typography.Text>
+      )}
+
+      <div style={{ background: "#fff", padding: 12, borderRadius: 8, border: "1px solid #f0f0f0" }}>
+        <Table
+          rowKey="_id"
+          loading={isLoading}
+          dataSource={filteredData}
+          columns={columns}
+          pagination={{
+            total: filteredData.length,
+            pageSize: 50,
+            showTotal: (total) => `Tổng ${total} team`,
+          }}
+          scroll={{ x: 900 }}
+        />
+      </div>
+
       <Drawer title={drawerTitle} open={open} onClose={handleCloseDrawer} size="default">
         {mode === "view" && selected ? (
           <Space orientation="vertical">
@@ -233,6 +322,6 @@ export default function TeamsPage() {
           </Form>
         )}
       </Drawer>
-    </div>
+    </PageContainer>
   );
 }

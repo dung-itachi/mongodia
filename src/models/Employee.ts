@@ -92,6 +92,13 @@ const EmployeeSchema = new Schema<IEmployee>(
       default: null,
     },
 
+    areaId: {
+      type: Schema.Types.ObjectId,
+      ref: "Area",
+      default: null,
+      index: true,
+    },
+
     warehouseId: {
       type: Schema.Types.ObjectId,
       ref: "Warehouse",
@@ -133,6 +140,7 @@ const EmployeeSchema = new Schema<IEmployee>(
   },
   {
     timestamps: true,
+    strict: false,
   }
 );
 

@@ -28,7 +28,6 @@ import {
   Tag,
   Select,
   InputNumber,
-  message,
   Spin,
   Typography,
   Divider,
@@ -50,6 +49,7 @@ import {
 
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
+import { useMessage } from "@/contexts/MessageContext";
 
 import type {
   EditableQuickOrderRow,
@@ -122,6 +122,7 @@ const CURRENCY_FORMAT = new Intl.NumberFormat("mn-MN", {
 
 export default function QuickOrderImportPage() {
   const router = useRouter();
+  const message = useMessage();
 
   // State
   const [pastedText, setPastedText] = useState("");

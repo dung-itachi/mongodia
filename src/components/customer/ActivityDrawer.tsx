@@ -11,9 +11,10 @@
  */
 
 import { useEffect } from "react";
-import { Drawer, Form, Input, Select, DatePicker, Button, message } from "antd";
+import { Drawer, Form, Input, Select, DatePicker, Button } from "antd";
 import { useCreateCustomerActivity, useUpdateCustomerActivity } from "@/hooks/useCustomerActivities";
 import { ActivityType, ActivityResult } from "@/types/customer-activity";
+import { useMessage } from "@/contexts/MessageContext";
 
 const { TextArea } = Input;
 
@@ -59,6 +60,7 @@ export default function ActivityDrawer({
 }: ActivityDrawerProps) {
   const [form] = Form.useForm();
   const isEditing = !!activityId;
+  const message = useMessage();
 
   const createMutation = useCreateCustomerActivity();
   const updateMutation = useUpdateCustomerActivity();

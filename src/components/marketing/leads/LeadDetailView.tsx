@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Dropdown, Tabs, message, Modal, Tag, Space, Timeline } from "antd";
+import { Button, Dropdown, Tabs, Modal, Tag, Space, Timeline } from "antd";
 import type { MenuProps } from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -35,6 +35,7 @@ import type { MarketingLead, MarketingLeadStatus } from "@/types/marketing-lead"
 import { useAuthStore } from "@/store/auth.store";
 import { hasPermission } from "@/lib/permission";
 import styles from "@/app/(protected)/marketing/input/[id]/lead-detail.module.css";
+import { useMessage } from "@/contexts/MessageContext";
 
 dayjs.extend(relativeTime);
 
@@ -475,6 +476,7 @@ export interface LeadDetailViewProps {
 
 export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailViewProps) {
   const router = useRouter();
+  const message = useMessage();
   const queryClient = useQueryClient();
 
   const updateMutation = useUpdateLead();

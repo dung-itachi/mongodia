@@ -1,0 +1,494 @@
+/**
+ * Notification Management CSS Module
+ * Modern styling for the notification admin page
+ */
+
+/* ============ Page Container ============ */
+.pageContainer {
+  padding: 24px;
+}
+
+/* ============ Header Section ============ */
+.headerSection {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--line);
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.headerLeft {
+  flex: 1;
+  min-width: 280px;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.pageSubtitle {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ============ Stats Cards ============ */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.statCard {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.statCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.statIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.statIconTotal {
+  background: #e6f4ff;
+  color: #1890ff;
+}
+
+.statIconUnread {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.statIconPinned {
+  background: #f9f0ff;
+  color: #722ed1;
+}
+
+.statIconToday {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.statContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 2px;
+}
+
+/* ============ Filters Section ============ */
+.filtersSection {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+}
+
+.filtersRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filterSearch {
+  flex: 1;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.filterSelect {
+  min-width: 140px;
+}
+
+.filterButton {
+  white-space: nowrap;
+}
+
+/* ============ Table Section ============ */
+.tableSection {
+  background: var(--card);
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #fafafa;
+}
+
+.tableTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* ============ Notification Row Styling ============ */
+.notificationList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.notificationRow {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.15s;
+  gap: 16px;
+  max-width: 100%;
+}
+
+.notificationRow:last-child {
+  border-bottom: none;
+}
+
+.notificationRow:hover {
+  background: #fafafa;
+}
+
+.notificationRow.isPinned {
+  background: #fef9f0;
+}
+
+.notificationRow.isInactive {
+  opacity: 0.6;
+}
+
+.notificationRowLeft {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notificationIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.iconInfo {
+  background: #e6f4ff;
+  color: #1890ff;
+}
+
+.iconSuccess {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.iconWarning {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.iconError {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.notificationRowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.notificationTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.notificationMessage {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.notificationMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.notificationRowRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  min-width: 160px;
+}
+
+.notificationTime {
+  font-size: 12px;
+  color: #8c8c8c;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.notificationStats {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #666;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.notificationActions {
+  display: flex;
+  gap: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.notificationRow:hover .notificationActions {
+  opacity: 1;
+}
+
+/* ============ Badge Styles ============ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badgeBlue {
+  background: #e6f4ff;
+  color: #1890ff;
+}
+
+.badgeGreen {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.badgeOrange {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.badgeRed {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.badgePurple {
+  background: #f9f0ff;
+  color: #722ed1;
+}
+
+.badgeGray {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.badgePinned {
+  background: #fef9f0;
+  color: #fa8c16;
+}
+
+/* ============ Empty State ============ */
+.emptyState {
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.emptyTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.emptyMessage {
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+/* ============ Pagination ============ */
+.paginationRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  background: #fafafa;
+}
+
+.paginationInfo {
+  font-size: 13px;
+  color: #666;
+}
+
+/* ============ Quick Actions ============ */
+.quickActions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.quickActionBtn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: #666;
+}
+
+.quickActionBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.quickActionBtnActive {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.quickActionBtnActive:hover {
+  background: var(--accent-p);
+  border-color: var(--accent-p);
+  color: #fff;
+}
+
+/* ============ Responsive ============ */
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 16px;
+  }
+
+  .headerTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headerActions {
+    justify-content: flex-end;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filtersRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterSearch {
+    max-width: none;
+  }
+
+  .notificationRow {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .notificationRowRight {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .notificationActions {
+    opacity: 1;
+  }
+}

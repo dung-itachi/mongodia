@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { Form, Input, InputNumber, Modal, message } from "antd";
+import { Form, Input, InputNumber, Modal } from "antd";
 import { useCreateAdjustment } from "@/hooks/useWarehouseAdjustments";
 import type { NormalizedInventoryItem } from "@/hooks/useWarehouseInventory";
+import { useMessage } from "@/contexts/MessageContext";
 
 export interface AdjustInventoryModalProps {
   open: boolean;

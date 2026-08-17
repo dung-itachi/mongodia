@@ -3,7 +3,8 @@
  */
 
 import { memo, useEffect, useState } from "react";
-import { Button, Input, Space, Select, message } from "antd";
+import { Button, Input, Space, Select } from "antd";
+import { useMessage } from "@/contexts/MessageContext";
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import AsyncSelect from "@/components/common/inputs/AsyncSelect";
 import styles from "./campaigns.module.css";
@@ -36,6 +37,7 @@ function CampaignsToolbarInner({
   onCreate,
   onRefresh,
 }: CampaignsToolbarProps) {
+  const message = useMessage();
   const [facebookPageOptions, setFacebookPageOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingPages, setLoadingPages] = useState(false);
 

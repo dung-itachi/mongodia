@@ -11,7 +11,7 @@
 
 import { use, useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Row, Col, Table, message, Button, Dropdown, Space, Form, Input, Modal, Checkbox } from "antd";
+import { Row, Col, Table, Button, Dropdown, Space, Form, Input, Modal, Checkbox } from "antd";
 import type { TableColumnsType } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -32,6 +32,7 @@ import SkeletonCard from "@/components/common/overlay/SkeletonCard";
 import PermissionGate from "@/components/common/PermissionGate";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
 import LoadingOverlay from "@/components/common/overlay/LoadingOverlay";
+import { useMessage } from "@/contexts/MessageContext";
 
 import { useOrder, useDeleteOrder, useChangeOrderStatus, useUpdateOrder } from "@/hooks/useOrders";
 import { useShipOrder, useReturnOrderStock } from "@/hooks/useWarehouseWorkflow";
@@ -47,6 +48,7 @@ interface PageProps {
 export default function OrderDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const message = useMessage();
   const searchParams = useSearchParams();
   const [editForm] = Form.useForm();
 

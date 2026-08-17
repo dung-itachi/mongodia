@@ -88,9 +88,15 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
     });
   }, [data]);
 
-  // Max revenue để scale biểu đồ bar
+  // Max revenue để scale biểu đồ bar — dựa vào tổng doanh thu của cả period
   const maxRevenue = useMemo(
     () => Math.max(...tableData.map((r) => r.revenue), 1),
+    [tableData]
+  );
+
+  // Total revenue sum để scale chiều cao cột tỷ lệ với tổng period
+  const totalRevenueSum = useMemo(
+    () => tableData.reduce((s, r) => s + r.revenue, 0),
     [tableData]
   );
 
@@ -214,8 +220,8 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       width: 140,
       render: (_, record) => {
         const pct =
-          record.revenue > 0
-            ? Math.max((record.revenue / maxRevenue) * 100, 4)
+          record.revenue > 0 && totalRevenueSum > 0
+            ? Math.max((record.revenue / totalRevenueSum) * 100, 4)
             : 0;
         const hasRev = record.revenue > 0;
         return (

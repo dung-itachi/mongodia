@@ -135,7 +135,7 @@ function ReconciliationPanelInner() {
       />
 
       <ReconciliationCard
-        title={<>✅ → Đối soát</>}
+        title={<>✅ Đơn giao thành công</>}
         accentColor="green"
         orders={deliveredOrders}
         loading={loading}
@@ -146,7 +146,7 @@ function ReconciliationPanelInner() {
       />
 
       <ReconciliationCard
-        title={<>↩ → Đối soát</>}
+        title={<>↩ Đơn hoàn trả</>}
         accentColor="orange"
         orders={returnedOrders}
         loading={loading}

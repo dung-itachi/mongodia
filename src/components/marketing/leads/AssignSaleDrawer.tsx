@@ -6,11 +6,12 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { message, Spin } from "antd";
+import { Spin } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
 import AsyncSelect from "@/components/common/inputs/AsyncSelect";
 import type { SelectOption as AsyncSelectOption } from "@/components/common/inputs/AsyncSelect";
 import type { MarketingLead } from "@/types/marketing-lead";
+import { useMessage } from "@/contexts/MessageContext";
 
 interface SaleEmployee {
   _id: string;
@@ -37,6 +38,7 @@ export default function AssignSaleDrawer({
   const [saleOptions, setSaleOptions] = useState<AsyncSelectOption[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const message = useMessage();
 
   // Reset when drawer closes
   useEffect(() => {

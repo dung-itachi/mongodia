@@ -12,12 +12,18 @@ import { useState, useCallback } from "react";
 import { App } from "antd";
 import {
   PhoneOutlined,
+  UserOutlined,
+  PlusOutlined,
+  ClockCircleOutlined,
+  TrophyOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import {
   PageContainer,
   PageHeader,
   CardSection,
   PaginationComponent,
+  PageStatsBanner,
 } from "@/components/common";
 import {
   useSaleLeads,
@@ -153,39 +159,48 @@ export default function SaleLeadsPage() {
       />
 
       <CardSection>
-        {/* Stats Grid */}
-        <div className={styles.statsGrid}>
-          <div className={styles.statItem}>
-            <div className={styles.statValue} style={{ color: "#1890ff" }}>
-              {counts.total}
-            </div>
-            <div className={styles.statLabel}>Tổng số</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue} style={{ color: "#1890ff" }}>
-              {counts.new}
-            </div>
-            <div className={styles.statLabel}>Mới</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue} style={{ color: "#fa8c16" }}>
-              {counts.noAnswer}
-            </div>
-            <div className={styles.statLabel}>K nghe</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue} style={{ color: "#52c41a" }}>
-              {counts.potential}
-            </div>
-            <div className={styles.statLabel}>Tiềm năng</div>
-          </div>
-          <div className={styles.statItem}>
-            <div className={styles.statValue} style={{ color: "#52c41a" }}>
-              {counts.closed}
-            </div>
-            <div className={styles.statLabel}>Đã chốt</div>
-          </div>
-        </div>
+        {/* Stats Banner */}
+        <PageStatsBanner
+          stats={[
+            {
+              key: "total",
+              value: counts.total,
+              label: "Tổng số",
+              icon: <PhoneOutlined style={{ color: "#1890ff" }} />,
+              color: "blue",
+            },
+            {
+              key: "new",
+              value: counts.new,
+              label: "Mới",
+              icon: <PlusOutlined style={{ color: "#722ed1" }} />,
+              color: "purple",
+            },
+            {
+              key: "noAnswer",
+              value: counts.noAnswer,
+              label: "Không nghe máy",
+              icon: <ClockCircleOutlined style={{ color: "#fa8c16" }} />,
+              color: "orange",
+            },
+            {
+              key: "potential",
+              value: counts.potential,
+              label: "Tiềm năng",
+              icon: <TrophyOutlined style={{ color: "#52c41a" }} />,
+              color: "green",
+            },
+            {
+              key: "closed",
+              value: counts.closed,
+              label: "Đã chốt đơn",
+              icon: <CheckCircleOutlined style={{ color: "#13c2c2" }} />,
+              color: "cyan",
+            },
+          ]}
+          loading={loading}
+          style={{ marginBottom: 16 }}
+        />
 
         {/* Toolbar */}
         <SaleLeadsToolbar

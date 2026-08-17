@@ -13,7 +13,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { message, Modal } from "antd";
+import { Modal } from "antd";
 import {
   PageContainer,
   PageHeader,
@@ -36,9 +36,11 @@ import LeadTable from "./LeadTable";
 import LeadDrawer, { type LeadFormData } from "./LeadDrawer";
 import MarketingInputSection from "@/components/marketing/input/MarketingInputSection";
 import type { MarketingLead } from "@/types/marketing-lead";
+import { useMessage } from "@/contexts/MessageContext";
 
 export default function MarketingInputPage() {
   const router = useRouter();
+  const message = useMessage();
   const [filters, setFilters] = useState<MarketingLeadFilters>({
     page: 1,
     limit: 20,

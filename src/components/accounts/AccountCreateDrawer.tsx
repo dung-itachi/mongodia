@@ -62,6 +62,9 @@ export type AccountCreateDrawerProps = {
   /** Leaders selectable in the form. */
   leaderOptions: Array<{ value: string; label: string }>;
 
+  /** Areas selectable in the form. */
+  areaOptions: Array<{ value: string; label: string }>;
+
   /** Called after a successful create/update. */
   onSuccess?: () => void;
 
@@ -81,6 +84,7 @@ export default function AccountCreateDrawer({
   roleOptions,
   teamOptions,
   leaderOptions,
+  areaOptions,
   onSuccess,
   showBankFields = true,
 }: AccountCreateDrawerProps) {
@@ -99,11 +103,13 @@ export default function AccountCreateDrawer({
         roleCode: defaultValues?.roleCode ?? "EMPLOYEE",
         teamId: defaultValues?.teamId ?? undefined,
         leaderId: defaultValues?.leaderId ?? undefined,
+        areaId: defaultValues?.areaId ?? undefined,
       });
     } else if (selected) {
       form.setFieldsValue({
         ...selected,
         roleCode: selected.role?.code,
+        areaId: selected.area?._id,
       });
     }
     // We intentionally exclude `form` from the deps — Ant's `useForm`
@@ -124,6 +130,7 @@ export default function AccountCreateDrawer({
           roleCode: values.roleCode,
           teamId: values.teamId ?? null,
           leaderId: values.leaderId ?? null,
+          areaId: values.areaId ?? null,
           bankName: values.bankName,
           bankAccountNumber: values.bankAccountNumber,
           bankAccountHolder: values.bankAccountHolder,
@@ -149,6 +156,7 @@ export default function AccountCreateDrawer({
             roleCode: values.roleCode,
             teamId: values.teamId ?? null,
             leaderId: values.leaderId ?? null,
+            areaId: values.areaId ?? null,
             bankName: values.bankName,
             bankAccountNumber: values.bankAccountNumber,
             bankAccountHolder: values.bankAccountHolder,
@@ -205,8 +213,12 @@ export default function AccountCreateDrawer({
             <Tag color="purple">{selected.department?.name ?? "-"}</Tag>
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Team:</b> {selected.team?.code ?? "-"}{" "}
+            <b>Team:</b> {selected.team?.code ?? "-"} {" "}
             {selected.team?.name ? `(${selected.team.name})` : ""}
+          </Typography.Paragraph>
+          <Typography.Paragraph>
+            <b>Khu vực:</b>{" "}
+            <Tag color="green">{selected.area?.code ?? selected.area?.name ?? "-"}</Tag>
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>Leader:</b> {selected.leader?.fullName ?? "-"}
@@ -291,6 +303,14 @@ export default function AccountCreateDrawer({
               allowClear
               placeholder="Chọn team"
               disabled={locked.has("teamId")}
+            />
+          </Form.Item>
+
+          <Form.Item name="areaId" label="Khu vực">
+            <Select
+              options={areaOptions}
+              allowClear
+              placeholder="Chọn khu vực"
             />
           </Form.Item>
 

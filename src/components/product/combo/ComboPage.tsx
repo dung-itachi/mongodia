@@ -11,8 +11,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Button, Select, Input, Modal, App } from "antd";
-import { PlusOutlined, AppstoreOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { Input, App, Select } from "antd";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 import {
   PageContainer,
   PageHeader,
@@ -28,32 +28,59 @@ import {
   type UpdateComboInput,
 } from "@/hooks/useCombos";
 import { useProductList, type ProductListItem } from "@/hooks/useProductCrud";
-import ComboTable from "./ComboTable";
+import ProductComboList from "./ProductComboList";
 import ComboForm, { type ComboFormProductOption } from "./ComboForm";
+
+interface CategoryOption {
+  _id: string;
+  code: string;
+  name: string;
+}
 
 export default function ComboPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComboListItem | null>(null);
-  const [pickProductOpen, setPickProductOpen] = useState(false);
   const [pendingProductId, setPendingProductId] = useState<string | null>(null);
   const { modal } = App.useApp();
 
-  const [filterProductId, setFilterProductId] = useState<string | undefined>();
   const [filterKeyword, setFilterKeyword] = useState<string | undefined>();
+  const [filterCategoryId, setFilterCategoryId] = useState<string | undefined>();
 
   const { data, isLoading, refetch } = useComboList({
-    productId: filterProductId,
     keyword: filterKeyword,
     limit: 1000,
   });
   const { data: productsData } = useProductList();
 
+  const combos = data?.items ?? [];
+  const products: ProductListItem[] = productsData?.items ?? [];
+
+  const categoryOptions: CategoryOption[] = useMemo(() => {
+    const categoryMap = new Map<string, CategoryOption>();
+    products.forEach((p) => {
+      const category = p.category;
+      if (typeof category === "object" && category !== null) {
+        const cat = category as { _id: string; code: string; name: string };
+        if (!categoryMap.has(cat._id)) {
+          categoryMap.set(cat._id, cat);
+        }
+      }
+    });
+    return Array.from(categoryMap.values());
+  }, [products]);
+
+  const categorySelectOptions = useMemo(
+    () =>
+      categoryOptions.map((c) => ({
+        label: `${c.code} - ${c.name}`,
+        value: c._id,
+      })),
+    [categoryOptions]
+  );
+
   const createMutation = useCreateCombo();
   const updateMutation = useUpdateCombo();
   const deleteMutation = useDeleteCombo();
-
-  const combos = data?.items ?? [];
-  const products: ProductListItem[] = productsData?.items ?? [];
 
   const productOptions: ComboFormProductOption[] = useMemo(
     () =>
@@ -72,36 +99,16 @@ export default function ComboPage() {
     [products]
   );
 
-  const filterProductOptions = useMemo(
-    () =>
-      products.map((p) => {
-        const category =
-          typeof p.category === "object" && p.category !== null ? p.category : null;
-        return {
-          label: `${p.code} - ${p.name}${category ? ` [${category.code}]` : ""}`,
-          value: p._id,
-        };
-      }),
-    [products]
+  const handleOpenCreate = useCallback(
+    (productId?: string) => {
+      if (productId) {
+        setPendingProductId(productId);
+        setEditingItem(null);
+        setDrawerOpen(true);
+      }
+    },
+    []
   );
-
-  const handleOpenCreate = useCallback(() => {
-    if (products.length === 0) return;
-    if (products.length === 1) {
-      setPendingProductId(products[0]._id);
-      setEditingItem(null);
-      setDrawerOpen(true);
-      return;
-    }
-    setPickProductOpen(true);
-  }, [products]);
-
-  const handlePickProduct = useCallback((productId: string) => {
-    setPendingProductId(productId);
-    setPickProductOpen(false);
-    setEditingItem(null);
-    setDrawerOpen(true);
-  }, []);
 
   const handleEdit = useCallback((item: ComboListItem) => {
     setEditingItem(item);
@@ -213,40 +220,34 @@ export default function ComboPage() {
       <CardSection>
         <div style={{ marginBottom: 16, display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <Select
-            placeholder="Lọc theo sản phẩm"
+            placeholder="Lọc theo danh mục"
             allowClear
             showSearch
             optionFilterProp="label"
-            style={{ width: 250 }}
-            value={filterProductId}
-            onChange={(v) => {
-              setFilterProductId(v);
-              void refetch();
-            }}
-            options={filterProductOptions}
+            style={{ width: 200 }}
+            value={filterCategoryId}
+            onChange={(v) => setFilterCategoryId(v)}
+            options={categorySelectOptions}
           />
           <Input.Search
-            placeholder="Tìm kiếm combo..."
+            placeholder="Tìm kiếm sản phẩm..."
             style={{ width: 250 }}
             value={filterKeyword}
             onChange={(e) => setFilterKeyword(e.target.value || undefined)}
-            onSearch={() => void refetch()}
+            onSearch={() => {}}
             allowClear
           />
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleOpenCreate}
-          >
-            Thêm combo
-          </Button>
         </div>
 
-        <ComboTable
-          data={combos}
+        <ProductComboList
+          products={products}
+          combos={combos}
           loading={isLoading}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
+          filterCategoryId={filterCategoryId}
+          filterKeyword={filterKeyword}
+          onAddCombo={handleOpenCreate}
+          onEditCombo={handleEdit}
+          onDeleteCombo={handleDelete}
           onToggleActive={handleToggleActive}
         />
       </CardSection>
@@ -261,37 +262,6 @@ export default function ComboPage() {
         initialProductId={pendingProductId ?? undefined}
         lockProductSelection={!!pendingProductId}
       />
-
-      <Modal
-        title={
-          <>
-            <AppstoreOutlined style={{ marginRight: 8 }} />
-            Chọn sản phẩm để tạo combo
-          </>
-        }
-        open={pickProductOpen}
-        onCancel={() => setPickProductOpen(false)}
-        footer={null}
-        width={520}
-      >
-        <p style={{ color: "#8c8c8c" }}>
-          Combo phải gắn với một sản phẩm. Chọn sản phẩm bên dưới để tiếp tục.
-        </p>
-        <Select
-          placeholder="Chọn sản phẩm"
-          showSearch
-          optionFilterProp="label"
-          style={{ width: "100%" }}
-          value={pendingProductId ?? undefined}
-          onChange={(value) => handlePickProduct(value)}
-          options={productOptions
-            .filter((p) => p.isActive !== false)
-            .map((p) => ({
-              label: `${p.code} - ${p.name}${p.categoryCode ? ` [${p.categoryCode}]` : ""}`,
-              value: p._id,
-            }))}
-        />
-      </Modal>
     </PageContainer>
   );
 }

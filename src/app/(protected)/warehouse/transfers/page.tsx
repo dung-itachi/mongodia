@@ -7,7 +7,6 @@ import {
   Form,
   Input,
   InputNumber,
-  message,
   Modal,
   Row,
   Select,
@@ -30,6 +29,7 @@ import {
 import { useWarehouses } from "@/hooks/useWarehouses";
 import { useGiftList } from "@/hooks/useGifts";
 import type { WarehouseTransferStatus } from "@/models/WarehouseTransfer";
+import { useMessage } from "@/contexts/MessageContext";
 
 const { Text } = Typography;
 
@@ -127,6 +127,7 @@ function sumQuantities(
 export default function WarehouseTransfersPage() {
   const { warehouses } = useWarehouses();
   const { data: giftResponse } = useGiftList();
+  const message = useMessage();
   const gifts = giftResponse?.items ?? [];
 
   // Products list

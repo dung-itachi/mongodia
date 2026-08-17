@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAntApp } from "@/providers/AntdProvider";
 import api from "@/lib/axios";
 
 export interface GiftListItem {
@@ -132,46 +131,40 @@ export function useGiftInventoryHistory(id: string | null) {
 
 export function useCreateGift() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
+  
   return useMutation({
     mutationFn: createGift,
     onSuccess: () => {
       invalidateGiftData(queryClient);
-      void message.success("Tạo quà tặng thành công");
     },
-    onError: (error: Error) => void message.error(error.message),
   });
 }
 
 export function useUpdateGift() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
+  
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateGiftInput }) => updateGift(id, input),
     onSuccess: () => {
       invalidateGiftData(queryClient);
-      void message.success("Cập nhật quà tặng thành công");
     },
-    onError: (error: Error) => void message.error(error.message),
   });
 }
 
 export function useDeleteGift() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
+  
   return useMutation({
     mutationFn: deleteGift,
     onSuccess: () => {
       invalidateGiftData(queryClient);
-      void message.success("Xóa quà tặng thành công");
     },
-    onError: (error: Error) => void message.error(error.message),
   });
 }
 
 export function useChangeGiftInventory() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
+  
   return useMutation({
     mutationFn: ({
       id,
@@ -189,12 +182,6 @@ export function useChangeGiftInventory() {
     }) => changeGiftInventory(id, input),
     onSuccess: (_, variables) => {
       invalidateGiftData(queryClient, variables.id);
-      void message.success(
-        variables.input.operation === "IMPORT"
-          ? "Nhập tồn quà tặng thành công"
-          : "Điều chỉnh tồn quà tặng thành công"
-      );
     },
-    onError: (error: Error) => void message.error(error.message),
   });
 }

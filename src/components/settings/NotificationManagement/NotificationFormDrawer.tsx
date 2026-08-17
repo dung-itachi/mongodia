@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Form, Input, Radio, Select, Switch, Tag } from "antd";
-import { PushpinOutlined } from "@ant-design/icons";
+import { PushpinOutlined, UserOutlined, TeamOutlined, CheckCircleFilled } from "@ant-design/icons";
 import DrawerForm from "@/components/common/forms/DrawerForm";
 import type { NotificationAdminItem } from "@/hooks/useNotificationsAdmin";
+import {
+  RecipientSelector,
+  type RecipientValue,
+} from "@/components/settings/NotificationManagement/RecipientSelector";
 import type {
   CreateNotificationInput,
   UpdateNotificationInput,
@@ -59,10 +63,19 @@ export default function NotificationFormDrawer({
 }: NotificationFormDrawerProps) {
   const [form] = Form.useForm();
   const isEditing = !!initial;
+  const [recipientValue, setRecipientValue] = useState<RecipientValue | undefined>();
 
   useEffect(() => {
     if (!open) return;
     if (initial) {
+      // Parse existing recipients if any
+      const hasSpecificRecipients = initial.recipientsCount > 0;
+      const initialRecipientValue: RecipientValue = {
+        mode: hasSpecificRecipients ? "individual" : "broadcast",
+        recipientIds: [],
+      };
+      setRecipientValue(initialRecipientValue);
+
       form.setFieldsValue({
         title: initial.title,
         message: initial.message,
@@ -71,25 +84,42 @@ export default function NotificationFormDrawer({
         priority: initial.priority,
         isPinned: initial.isPinned,
         link: initial.link,
-        recipientMode: initial.recipientsCount === 0 ? "broadcast" : "specific",
+        recipientMode: hasSpecificRecipients ? "specific" : "broadcast",
+        isActive: initial.isActive,
       });
     } else {
       form.resetFields();
+      setRecipientValue(undefined);
       form.setFieldsValue({
         type: NotificationType.INFO,
         category: NotificationCategory.GENERAL,
         priority: NotificationPriority.NORMAL,
         isPinned: false,
         recipientMode: "broadcast",
+        isActive: true,
       });
     }
   }, [open, initial, form]);
 
+  const handleRecipientModeChange = (mode: string) => {
+    const recipientMode: RecipientValue["mode"] =
+      mode === "broadcast" ? "broadcast" : "individual";
+    setRecipientValue({ mode: recipientMode, recipientIds: [] });
+  };
+
   const handleSubmit = () => {
     void form.validateFields().then((values) => {
-      const broadcast = values.recipientMode === "broadcast";
+      const isBroadcast = values.recipientMode === "broadcast";
+
+      // Get recipient IDs and filters from RecipientSelector
+      const recipientIds = isBroadcast
+        ? []
+        : recipientValue?.recipientIds ?? [];
+      const teamIds = recipientValue?.teamIds;
+      const leaderIds = recipientValue?.leaderIds;
+      const roleFilters = recipientValue?.roleFilters;
+
       if (isEditing) {
-        // Edit mode — full UpdateNotificationInput shape.
         const payload: UpdateNotificationInput = {
           title: values.title,
           message: values.message,
@@ -98,8 +128,11 @@ export default function NotificationFormDrawer({
           priority: values.priority,
           isPinned: values.isPinned,
           link: values.link || null,
-          broadcast,
-          recipientIds: broadcast ? undefined : values.recipientIds,
+          broadcast: isBroadcast,
+          recipientIds,
+          teamIds,
+          leaderIds,
+          roleFilters,
           isActive: values.isActive,
         };
         onSubmit(payload);
@@ -112,8 +145,11 @@ export default function NotificationFormDrawer({
           priority: values.priority,
           isPinned: values.isPinned,
           link: values.link || null,
-          broadcast,
-          recipientIds: broadcast ? undefined : values.recipientIds,
+          broadcast: isBroadcast,
+          recipientIds,
+          teamIds,
+          leaderIds,
+          roleFilters,
         };
         onSubmit(payload);
       }
@@ -174,57 +210,40 @@ export default function NotificationFormDrawer({
           <Input placeholder="VD: /orders hoặc /products" />
         </Form.Item>
 
-        <Form.Item
-          name="isPinned"
-          label="Ghim lên đầu"
-          valuePropName="checked"
-          tooltip="Thông báo được ghim sẽ hiển thị trước các thông báo khác"
-        >
+        <Form.Item name="isPinned" label="Ghim lên đầu" valuePropName="checked" tooltip="Thông báo được ghim sẽ hiển thị trước các thông báo khác">
           <Switch checkedChildren={<PushpinOutlined />} unCheckedChildren={null} />
         </Form.Item>
 
-        <Form.Item name="recipientMode" label="Người nhận">
-          <Radio.Group>
-            <Radio.Button value="broadcast">Tất cả</Radio.Button>
-            <Radio.Button value="specific">Cụ thể (sẽ cấu hình sau)</Radio.Button>
+        {/* Recipient Selection */}
+        <Form.Item name="recipientMode" label="Người nhận" valuePropName="value">
+          <Radio.Group onChange={(e) => handleRecipientModeChange(e.target.value)}>
+            <Radio.Button value="broadcast">
+              <UserOutlined /> Tất cả
+            </Radio.Button>
+            <Radio.Button value="specific">
+              <TeamOutlined /> Cụ thể
+            </Radio.Button>
           </Radio.Group>
         </Form.Item>
 
         <Form.Item
           noStyle
-          shouldUpdate={(prev, curr) =>
-            prev.recipientMode !== curr.recipientMode
-          }
+          shouldUpdate={(prev, curr) => prev.recipientMode !== curr.recipientMode}
         >
           {({ getFieldValue }) =>
             getFieldValue("recipientMode") === "specific" ? (
-              <Form.Item
-                name="recipientIds"
-                label="Danh sách ID người nhận"
-                tooltip="Dán danh sách _id của Employee, phân cách bằng dấu phẩy. Tính năng chọn user sẽ được bổ sung sau."
-                rules={[
-                  {
-                    validator: async (_rule, value) => {
-                      if (!value) return;
-                      if (!Array.isArray(value)) {
-                        throw new Error("Cần mảng ID");
-                      }
-                      for (const v of value) {
-                        if (typeof v !== "string" || v.trim().length < 1) {
-                          throw new Error("Mỗi ID phải là chuỗi hợp lệ");
-                        }
-                      }
-                    },
-                  },
-                ]}
-              >
-                <Select
-                  mode="tags"
-                  placeholder="Dán ID, Enter để thêm"
-                  tokenSeparators={[","]}
+              <Form.Item label="Chọn người nhận">
+                <RecipientSelector
+                  value={recipientValue}
+                  onChange={setRecipientValue}
+                  disabled={submitting}
                 />
               </Form.Item>
-            ) : null
+            ) : (
+              <div style={{ padding: "8px 0", color: "#52c41a" }}>
+                <CheckCircleFilled /> Thông báo sẽ được gửi đến TẤT CẢ nhân viên
+              </div>
+            )
           }
         </Form.Item>
 

@@ -27,6 +27,7 @@ async function callApi(url: string, init: RequestInit = {}) {
 
 export function useWarehouseAdjustments(filters: {
   warehouseId?: string;
+  type?: string;
   page?: number;
   limit?: number;
 }) {
@@ -35,6 +36,7 @@ export function useWarehouseAdjustments(filters: {
     queryFn: () => {
       const params = new URLSearchParams();
       if (filters.warehouseId) params.set("warehouseId", filters.warehouseId);
+      if (filters.type) params.set("type", filters.type);
       if (filters.page) params.set("page", String(filters.page));
       if (filters.limit) params.set("limit", String(filters.limit));
       return callApi(`/api/warehouse/adjustments?${params.toString()}`);

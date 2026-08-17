@@ -13,7 +13,11 @@ export type NotificationItem = {
   title: string;
   message: string;
   type: NotificationItemType;
+  category: string;
+  priority: string;
   link: string | null;
+  senderId: string;
+  senderName: string;
   createdAt: string;
   read: boolean;
   readAt: string | null;
@@ -66,6 +70,8 @@ export type NotificationAdminItem = {
   isPinned: boolean;
   isActive: boolean;
   link: string | null;
+  senderId: string;
+  senderName: string;
   recipientsCount: number;
   readCount: number;
   createdAt: string;
@@ -82,6 +88,7 @@ export type NotificationAdminListQuery = {
   category?: string;
   type?: string;
   isPinned?: boolean;
+  isActive?: boolean;
   page?: number;
   pageSize?: number;
 };
@@ -95,6 +102,9 @@ export type CreateNotificationInput = {
   isPinned?: boolean;
   link?: string | null;
   recipientIds?: string[];
+  teamIds?: string[];
+  leaderIds?: string[];
+  roleFilters?: string[];
   broadcast?: boolean;
 };
 
@@ -108,5 +118,26 @@ export type UpdateNotificationInput = {
   isActive?: boolean;
   link?: string | null;
   recipientIds?: string[];
+  teamIds?: string[];
+  leaderIds?: string[];
+  roleFilters?: string[];
   broadcast?: boolean;
 };
+
+/**
+ * Recipient selection modes for notifications
+ */
+export type RecipientSelectionMode =
+  | "broadcast"    // All employees
+  | "individual"    // Specific employees
+  | "team"          // Entire teams
+  | "leader"        // Leader + all employees under them
+  | "role";         // By role (SALE, MKT, WAREHOUSE)
+
+export interface RecipientValue {
+  mode: RecipientSelectionMode;
+  recipientIds: string[];
+  teamIds?: string[];
+  leaderIds?: string[];
+  roleFilters?: string[];
+}

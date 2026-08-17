@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Button, Form, Input, InputNumber, Modal, Select, Space, Table, message } from "antd";
+import { Button, Form, Input, InputNumber, Modal, Select, Space, Table } from "antd";
 import { PlusOutlined, MinusCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
@@ -12,12 +12,14 @@ import { useProducts } from "@/hooks/useProducts";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useCreateReceipt, useWarehouseReceipts } from "@/hooks/useWarehouseWorkflow";
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
+import { useMessage } from "@/contexts/MessageContext";
 
 type ItemRow = { itemType: "PRODUCT" | "GIFT"; productId?: string; variantId?: string; giftId?: string; orderedQuantity: number; receivedQuantity: number };
 
 export default function WarehouseReceiptsPage() {
   const { warehouses } = useWarehouses();
   const { data: giftResponse } = useGiftList();
+  const message = useMessage();
   const gifts = giftResponse?.items ?? [];
   const { products: productsList = [] } = useProducts();
   const productsFromApi = productsList ?? [];

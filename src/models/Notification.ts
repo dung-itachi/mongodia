@@ -21,6 +21,11 @@ export interface INotification {
   isPinned: boolean;
   isActive: boolean;
   link?: string;
+  // Extended recipient selection
+  recipientMode: "broadcast" | "individual" | "team" | "leader" | "role";
+  teamIds?: Schema.Types.ObjectId[];
+  leaderIds?: Schema.Types.ObjectId[];
+  roleFilters?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -89,6 +94,33 @@ const NotificationSchema = new Schema<INotification>(
       type: String,
       default: null,
     },
+
+    // Extended recipient selection modes
+    recipientMode: {
+      type: String,
+      enum: ["broadcast", "individual", "team", "leader", "role"],
+      default: "broadcast",
+    },
+
+    teamIds: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Team",
+      },
+    ],
+
+    leaderIds: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Employee",
+      },
+    ],
+
+    roleFilters: [
+      {
+        type: String,
+      },
+    ],
   },
   {
     timestamps: true,

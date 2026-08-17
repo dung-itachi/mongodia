@@ -270,14 +270,40 @@
   min-width: 4px;
 }
 
-/* Chart styles */
+/* Bar chart with Y-axis */
 .mk-chart {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0;
+  height: 250px;
+  padding: 8px 0;
+}
+
+.mk-chart-yaxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-right: 6px;
+  min-width: 48px;
+}
+
+.mk-chart-yaxis-label {
+  font-size: 9px;
+  color: #8c8c8c;
+  white-space: nowrap;
+}
+
+.mk-chart-bars {
+  flex: 1;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 8px;
-  height: 250px;
-  padding: 8px 0;
+  height: 100%;
+  border-left: 1px solid #e8e8e8;
+  padding-left: 8px;
 }
 
 .mk-chart-col {
@@ -285,7 +311,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
+  height: 100%;
   min-width: 0;
 }
 
@@ -294,17 +322,15 @@
   color: #8c8c8c;
   font-weight: 500;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  text-align: center;
 }
 
 .mk-chart-bar-container {
   flex: 1;
-  width: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  width: 100%;
   min-height: 4px;
 }
 
@@ -318,8 +344,18 @@
 .mk-chart-label {
   font-size: 10px;
   color: #595959;
-  margin-top: 4px;
   white-space: nowrap;
+}
+
+/* Line chart SVG wrapper */
+.mk-line-chart-wrap {
+  width: 100%;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  overflow: visible;
 }
 
 .mk-filter-bar {

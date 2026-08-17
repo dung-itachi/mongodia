@@ -30,10 +30,13 @@ export type NotificationPayload = {
   title: string;
   message: string;
   type: "info" | "success" | "warning" | "error";
+  category: string;
+  priority: string;
   link?: string | null;
-  createdAt: string;
-  /** ObjectId strings of recipients; empty array = broadcast. */
+  senderId: string;
+  senderName: string;
   recipientIds: string[];
+  createdAt: string;
 };
 
 export type BusEvent =

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, message } from "antd";
-import { PlusOutlined, MinusCircleOutlined, ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from "@ant-design/icons";
+import { Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from "antd";
+import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import CardSection from "@/components/common/cards/CardSection";
@@ -10,6 +10,8 @@ import { useWarehouses } from "@/hooks/useWarehouses";
 import { useGiftList } from "@/hooks/useGifts";
 import { useWarehouseAdjustments, useCreateAdjustment } from "@/hooks/useWarehouseAdjustments";
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
+import { useMessage } from "@/contexts/MessageContext";
+import type { WarehouseStockMovementType } from "@/models/WarehouseStockMovement";
 
 type AdjustmentRow = {
   itemType: "PRODUCT" | "GIFT";
@@ -20,28 +22,23 @@ type AdjustmentRow = {
   reason: string;
 };
 
-type Direction = "INCREASE" | "DECREASE" | "NEUTRAL";
-
 const TYPE_LABELS: Record<string, { label: string; color: string }> = {
   PRODUCT: { label: "Sản phẩm", color: "blue" },
   GIFT: { label: "Quà tặng", color: "green" },
 };
 
-const DIRECTION_META: Record<Direction, { label: string; color: string; sign: "+" | "-" | "±"; icon: React.ReactNode }> = {
-  INCREASE: { label: "Tăng", color: "green", sign: "+", icon: <ArrowUpOutlined /> },
-  DECREASE: { label: "Giảm", color: "red", sign: "-", icon: <ArrowDownOutlined /> },
-  NEUTRAL: { label: "Không đổi", color: "default", sign: "±", icon: <MinusOutlined /> },
+// Movement type labels
+const MOVEMENT_TYPE_LABELS: Record<WarehouseStockMovementType, { label: string; color: string }> = {
+  IMPORT: { label: "Nhập kho", color: "green" },
+  TRANSFER_OUT: { label: "Chuyển đi", color: "orange" },
+  TRANSFER_IN: { label: "Nhận chuyển", color: "blue" },
+  ORDER_OUT: { label: "Xuất đơn", color: "red" },
+  ORDER_RETURN: { label: "Hoàn đơn", color: "purple" },
+  ADJUSTMENT: { label: "Điều chỉnh", color: "magenta" },
 };
 
-function readDirection(row: Record<string, unknown>): Direction {
-  const value = row.direction;
-  if (value === "INCREASE" || value === "DECREASE" || value === "NEUTRAL") return value;
-  // Backward-compatibility fallback: derive from `changeSigned` if present
-  const signed = Number(row.changeSigned ?? 0);
-  if (signed > 0) return "INCREASE";
-  if (signed < 0) return "DECREASE";
-  return "NEUTRAL";
-}
+// Movement types that decrease stock
+const OUT_TYPES: WarehouseStockMovementType[] = ["TRANSFER_OUT", "ORDER_OUT"];
 
 function formatQuantity(value: unknown): string {
   const n = Number(value ?? 0);
@@ -51,16 +48,18 @@ function formatQuantity(value: unknown): string {
 export default function WarehouseAdjustmentsPage() {
   const { warehouses } = useWarehouses();
   const { data: giftResponse } = useGiftList();
+  const message = useMessage();
   const gifts = giftResponse?.items ?? [];
   const [products, setProducts] = useState<{ _id: string; code: string; name: string }[]>([]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [warehouseId, setWarehouseId] = useState<string | undefined>();
+  const [movementType, setMovementType] = useState<string | undefined>();
 
   const filters = useMemo(
-    () => ({ warehouseId, page, limit: pageSize }),
-    [warehouseId, page, pageSize]
+    () => ({ warehouseId, type: movementType, page, limit: pageSize }),
+    [warehouseId, movementType, page, pageSize]
   );
   const { data, loading, refetch } = useWarehouseAdjustments(filters);
   const createAdjustment = useCreateAdjustment();
@@ -120,10 +119,22 @@ export default function WarehouseAdjustmentsPage() {
   const columns = useMemo(
     () => [
       {
-        title: "Mã điều chỉnh",
-        dataIndex: "referenceCode",
-        width: 180,
-        key: "code",
+        title: "Thời gian",
+        dataIndex: "createdAt",
+        width: 160,
+        key: "createdAt",
+        render: (value: unknown) => new Date(String(value)).toLocaleString("vi-VN"),
+      },
+      {
+        title: "Loại",
+        dataIndex: "type",
+        width: 130,
+        key: "type",
+        render: (value: string) => (
+          <Tag color={MOVEMENT_TYPE_LABELS[value as WarehouseStockMovementType]?.color}>
+            {MOVEMENT_TYPE_LABELS[value as WarehouseStockMovementType]?.label ?? value}
+          </Tag>
+        ),
       },
       {
         title: "Kho",
@@ -133,19 +144,9 @@ export default function WarehouseAdjustmentsPage() {
         render: (value: unknown) => readWarehouseName(value),
       },
       {
-        title: "Loại",
-        dataIndex: "itemType",
-        width: 130,
-        key: "type",
-        render: (value: unknown) => (
-          <Tag color={TYPE_LABELS[String(value)]?.color}>
-            {TYPE_LABELS[String(value)]?.label ?? String(value)}
-          </Tag>
-        ),
-      },
-      {
         title: "Mặt hàng",
         key: "item",
+        width: 220,
         render: (_: unknown, row: Record<string, unknown>) => {
           if (row.itemType === "GIFT") {
             return (row.giftId as { name?: string } | null)?.name ?? "Quà tặng";
@@ -156,64 +157,28 @@ export default function WarehouseAdjustmentsPage() {
         },
       },
       {
-        title: "Hướng điều chỉnh",
-        key: "direction",
-        width: 170,
-        filterMultiple: false,
-        filters: [
-          { text: "Tăng", value: "INCREASE" },
-          { text: "Giảm", value: "DECREASE" },
-          { text: "Không đổi", value: "NEUTRAL" },
-        ],
-        onFilter: (value: unknown, row: Record<string, unknown>) =>
-          readDirection(row) === value,
-        render: (_: unknown, row: Record<string, unknown>) => {
-          const direction = readDirection(row);
-          const meta = DIRECTION_META[direction];
-          return (
-            <Tag color={meta.color} icon={meta.icon}>
-              {meta.label}
-            </Tag>
-          );
-        },
-      },
-      {
-        title: "Trước → Sau",
-        key: "beforeAfter",
-        width: 200,
+        title: "Số lượng",
+        dataIndex: "quantity",
+        key: "quantity",
+        width: 120,
         align: "right" as const,
-        render: (_: unknown, row: Record<string, unknown>) => {
-          const beforeRaw = row.beforeQuantity;
-          const afterRaw = row.afterQuantity;
-          const before = typeof beforeRaw === "number" ? beforeRaw : Number(beforeRaw ?? 0);
-          const after = typeof afterRaw === "number" ? afterRaw : Number(afterRaw ?? 0);
-          if (!Number.isFinite(before) && !Number.isFinite(after)) return "-";
-          const direction = readDirection(row);
-          const color = direction === "INCREASE" ? "#52c41a" : direction === "DECREASE" ? "#f5222d" : "#8c8c8c";
+        render: (value: number, row: Record<string, unknown>) => {
+          const isOut = OUT_TYPES.includes(row.type as WarehouseStockMovementType);
+          const sign = isOut ? "-" : "+";
+          const color = isOut ? "#f5222d" : "#52c41a";
           return (
-            <span style={{ fontFamily: "monospace", color }}>
-              {formatQuantity(before)} → {formatQuantity(after)}
+            <span style={{ fontWeight: 600, color }}>
+              {sign}{formatQuantity(Math.abs(value))}
             </span>
           );
         },
       },
       {
-        title: "Số lượng thay đổi",
-        key: "change",
-        width: 150,
-        align: "right" as const,
-        render: (_: unknown, row: Record<string, unknown>) => {
-          const direction = readDirection(row);
-          const meta = DIRECTION_META[direction];
-          const signed = row.changeSigned !== undefined
-            ? Number(row.changeSigned)
-            : Number(row.quantity ?? 0) * (direction === "DECREASE" ? -1 : direction === "INCREASE" ? 1 : 0);
-          return (
-            <span style={{ color: meta.color === "default" ? "#8c8c8c" : meta.color, fontWeight: 600 }}>
-              {meta.sign}{formatQuantity(Math.abs(signed))}
-            </span>
-          );
-        },
+        title: "Mã tham chiếu",
+        dataIndex: "referenceCode",
+        width: 160,
+        key: "referenceCode",
+        render: (value: string) => value || "-",
       },
       {
         title: "Người thực hiện",
@@ -222,13 +187,6 @@ export default function WarehouseAdjustmentsPage() {
         key: "creator",
         render: (value: unknown) =>
           ((value as { fullName?: string } | null)?.fullName ?? "-"),
-      },
-      {
-        title: "Thời gian",
-        dataIndex: "createdAt",
-        width: 180,
-        key: "createdAt",
-        render: (value: unknown) => new Date(String(value)).toLocaleString("vi-VN"),
       },
     ],
     []
@@ -263,12 +221,12 @@ export default function WarehouseAdjustmentsPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Điều chỉnh tồn kho"
-        subtitle={`${data?.total ?? 0} điều chỉnh`}
+        title="Lịch sử tồn kho"
+        subtitle={`${data?.total ?? 0} movement`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },
           { label: "Kho", href: "/warehouses" },
-          { label: "Điều chỉnh tồn kho" },
+          { label: "Lịch sử tồn kho" },
         ]}
         actions={
           <Button
@@ -307,6 +265,20 @@ export default function WarehouseAdjustmentsPage() {
                 label: w.name,
               })),
             ]}
+          />
+          <Select
+            allowClear
+            placeholder="Loại"
+            style={{ width: 160 }}
+            value={movementType}
+            onChange={(value) => {
+              setMovementType(value);
+              setPage(1);
+            }}
+            options={Object.entries(MOVEMENT_TYPE_LABELS).map(([value, info]) => ({
+              value,
+              label: info.label,
+            }))}
           />
         </Space>
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Badge, Dropdown, Empty, Skeleton } from "antd";
+import { Dropdown, Empty, Skeleton } from "antd";
 import { BellOutlined } from "@ant-design/icons";
 
 import { useCan } from "@/hooks/useCan";
@@ -11,16 +11,38 @@ import {
   useMarkAllRead,
   useMarkRead,
 } from "@/hooks/useNotifications";
-import { useNotificationStore } from "@/store/notification.store";
 import type { NotificationItem } from "@/types/notification";
 import NotificationItemRow from "./NotificationItemRow";
 import "./notification.css";
 
-const POPUP_LIMIT = 5;
+const POPUP_LIMIT = 10;
+
+// Get start of today in local timezone
+function getStartOfToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+}
+
+// Filter notifications to only show today's
+function filterTodayNotifications(items: NotificationItem[]): NotificationItem[] {
+  const startOfToday = getStartOfToday();
+  return items.filter((item) => {
+    const createdAt = new Date(item.createdAt);
+    return createdAt >= startOfToday;
+  });
+}
+
+// Get today's date label
+function getTodayLabel(): string {
+  const today = new Date();
+  const day = today.getDate();
+  const month = today.getMonth() + 1;
+  const year = today.getFullYear();
+  return `${day}/${month}/${year}`;
+}
 
 export default function NotificationBell() {
   const canView = useCan("notification.view");
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
   const [open, setOpen] = useState(false);
 
   // Only fetch the dropdown list when the user actually opens it to avoid
@@ -33,15 +55,30 @@ export default function NotificationBell() {
     isLoading,
     isError,
     refetch,
-  } = useInfiniteNotifications({ limit: POPUP_LIMIT });
+  } = useInfiniteNotifications({ limit: 50 }); // Fetch more to filter by today
 
   const markRead = useMarkRead();
   const markAllRead = useMarkAllRead();
 
-  const items = useMemo<NotificationItem[]>(
+  // Get all notifications from pages
+  const allItems = useMemo<NotificationItem[]>(
     () => data?.pages.flatMap((p) => p.items) ?? [],
     [data]
   );
+
+  // Filter to only today's notifications
+  const todayItems = useMemo<NotificationItem[]>(
+    () => filterTodayNotifications(allItems),
+    [allItems]
+  );
+
+  // Get unread count for today only
+  const todayUnreadCount = useMemo<number>(
+    () => todayItems.filter((n) => !n.read).length,
+    [todayItems]
+  );
+
+  const hasUnread = todayUnreadCount > 0;
 
   const handleItemClick = (item: NotificationItem) => {
     if (!item.read) {
@@ -65,11 +102,11 @@ export default function NotificationBell() {
       onClick={(e) => e.stopPropagation()}
     >
       <div className="nb-popup-header">
-        <span>Thông báo</span>
+        <span>Thông báo hôm nay ({getTodayLabel()})</span>
         <button
           type="button"
           onClick={handleMarkAll}
-          disabled={unreadCount === 0 || markAllRead.isPending}
+          disabled={todayUnreadCount === 0 || markAllRead.isPending}
         >
           Đánh dấu đã đọc tất cả
         </button>
@@ -104,15 +141,15 @@ export default function NotificationBell() {
               </button>
             </div>
           </div>
-        ) : items.length === 0 ? (
+        ) : todayItems.length === 0 ? (
           <div className="nb-empty">
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="Bạn không có thông báo nào"
+              description="Hôm nay không có thông báo nào"
             />
           </div>
         ) : (
-          items.map((n) => (
+          todayItems.map((n) => (
             <NotificationItemRow
               key={n.id}
               item={n}
@@ -121,7 +158,7 @@ export default function NotificationBell() {
             />
           ))
         )}
-        {hasNextPage && (
+        {hasNextPage && todayItems.length >= POPUP_LIMIT && (
           <div className="np-load-more">
             <button
               type="button"
@@ -135,7 +172,7 @@ export default function NotificationBell() {
       </div>
       <div className="nb-popup-footer">
         <Link href="/notifications" onClick={() => setOpen(false)}>
-          Xem tất cả
+          Xem tất cả thông báo
         </Link>
       </div>
     </div>
@@ -154,23 +191,27 @@ export default function NotificationBell() {
     >
       <button
         type="button"
-        className="nb-bell"
+        className={`nb-bell ${hasUnread ? "has-unread" : ""}`}
         aria-label={
-          unreadCount > 0
-            ? `Thông báo, ${unreadCount} chưa đọc`
+          hasUnread
+            ? `Thông báo, ${todayUnreadCount} chưa đọc hôm nay`
             : "Thông báo"
         }
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <Badge
-          count={unreadCount}
-          overflowCount={99}
-          size="small"
-          offset={[2, -2]}
-        >
+        <span className="nb-badge-wrapper">
           <BellOutlined />
-        </Badge>
+          <span
+            className="nb-badge"
+            data-open={hasUnread ? "true" : "false"}
+            aria-hidden="true"
+          >
+            <span className="nb-badge-dot">
+              {todayUnreadCount > 99 ? "99+" : todayUnreadCount}
+            </span>
+          </span>
+        </span>
       </button>
     </Dropdown>
   );

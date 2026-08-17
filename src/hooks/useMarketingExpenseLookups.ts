@@ -8,6 +8,7 @@
  * Sprint 8.x — Refactored to React Query to deduplicate fetches across components
  *              (Dashboard page + DailyAdsReport + DailyRevenueReport all use
  *              useMarketingEmployees — without RQ cache, each instance refetches).
+ * Sprint 8.x — Added useMarketingEmployeesByTeamAndArea for Dashboard Team/Area filters
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -23,6 +24,8 @@ const lookupKeys = {
   facebookPages: ["lookup", "facebook-pages", "active"] as const,
   employees: ["lookup", "employees", "active"] as const,
   campaigns: ["lookup", "campaigns", "active"] as const,
+  employeesByTeam: (teamId?: string) => ["lookup", "employees", "by-team", teamId ?? "all"] as const,
+  employeesByArea: (areaId?: string) => ["lookup", "employees", "by-area", areaId ?? "all"] as const,
 };
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -132,6 +135,146 @@ export function useCampaignsForSelect(): UseCampaignsResult {
     campaigns: toOptions(data?.items, (c) => ({
       label: c.code ? `${c.name} (${c.code})` : c.name,
       value: c._id,
+    })),
+    loading: isLoading,
+    error: error?.message ?? null,
+  };
+}
+
+// ============================================================================
+// useTeamsForMarketingDashboard (Sprint 8.x — Dashboard Team Filter)
+// ============================================================================
+
+interface UseTeamsForMarketingDashboardResult {
+  teams: SelectOption[];
+  loading: boolean;
+  error: string | null;
+}
+
+/**
+ * Lấy danh sách teams cho Marketing Dashboard (chỉ MKT department)
+ */
+export function useTeamsForMarketingDashboard(): UseTeamsForMarketingDashboardResult {
+  const { data, isLoading, error } = useQuery<{
+    items: Array<{ _id: string; code: string; name: string }>;
+  }>({
+    queryKey: ["lookup", "teams", "for-marketing"],
+    queryFn: () => fetchJson("/api/teams?pageSize=100&isActive=true"),
+    staleTime: LOOKUP_STALE_TIME,
+  });
+
+  return {
+    teams: toOptions(data?.items, (t) => ({
+      label: `${t.name} (${t.code})`,
+      value: t.code,
+    })),
+    loading: isLoading,
+    error: error?.message ?? null,
+  };
+}
+
+// ============================================================================
+// useAreasForMarketingDashboard (Sprint 8.x — Dashboard Area Filter)
+// ============================================================================
+
+interface UseAreasForMarketingDashboardResult {
+  areas: SelectOption[];
+  loading: boolean;
+  error: string | null;
+}
+
+/**
+ * Lấy danh sách areas cho Marketing Dashboard
+ */
+export function useAreasForMarketingDashboard(): UseAreasForMarketingDashboardResult {
+  const { data, isLoading, error } = useQuery<{
+    items: Array<{ _id: string; code: string; name: string }>;
+  }>({
+    queryKey: ["lookup", "areas", "for-marketing"],
+    queryFn: () => fetchJson("/api/areas?pageSize=100&isActive=true"),
+    staleTime: LOOKUP_STALE_TIME,
+  });
+
+  return {
+    areas: toOptions(data?.items, (a) => ({
+      label: a.name,
+      value: a.code,
+    })),
+    loading: isLoading,
+    error: error?.message ?? null,
+  };
+}
+
+// ============================================================================
+// useMarketingEmployeesByTeam (Sprint 8.x — Dashboard Team Filter)
+// ============================================================================
+
+interface UseMarketingEmployeesByTeamResult {
+  employees: SelectOption[];
+  loading: boolean;
+  error: string | null;
+}
+
+/**
+ * Lấy danh sách MKT theo Team ID
+ */
+export function useMarketingEmployeesByTeam(teamId?: string): UseMarketingEmployeesByTeamResult {
+  const { data, isLoading, error } = useQuery<{
+    items: Array<{ _id: string; fullName: string; employeeCode?: string }>;
+  }>({
+    queryKey: lookupKeys.employeesByTeam(teamId),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("role", "MKT");
+      params.set("isActive", "true");
+      if (teamId) params.set("team", teamId);
+      return fetchJson(`/api/employees?${params.toString()}&pageSize=100`);
+    },
+    staleTime: LOOKUP_STALE_TIME,
+  });
+
+  return {
+    employees: toOptions(data?.items, (emp) => ({
+      label: emp.employeeCode ? `${emp.fullName} (${emp.employeeCode})` : emp.fullName,
+      value: emp._id,
+    })),
+    loading: isLoading,
+    error: error?.message ?? null,
+  };
+}
+
+// ============================================================================
+// useMarketingEmployeesByArea (Sprint 8.x — Dashboard Area Filter)
+// ============================================================================
+
+interface UseMarketingEmployeesByAreaResult {
+  employees: SelectOption[];
+  loading: boolean;
+  error: string | null;
+}
+
+/**
+ * Lấy danh sách MKT theo Area ID (thông qua team của area đó)
+ */
+export function useMarketingEmployeesByArea(areaId?: string): UseMarketingEmployeesByAreaResult {
+  const { data, isLoading, error } = useQuery<{
+    items: Array<{ _id: string; fullName: string; employeeCode?: string }>;
+  }>({
+    queryKey: lookupKeys.employeesByArea(areaId),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("role", "MKT");
+      params.set("isActive", "true");
+      if (areaId) params.set("area", areaId);
+      return fetchJson(`/api/employees?${params.toString()}&pageSize=100`);
+    },
+    staleTime: LOOKUP_STALE_TIME,
+  });
+
+  return {
+    employees: toOptions(data?.items, (emp) => ({
+      label: emp.employeeCode ? `${emp.fullName} (${emp.employeeCode})` : emp.fullName,
+      value: emp._id,
     })),
     loading: isLoading,
     error: error?.message ?? null,

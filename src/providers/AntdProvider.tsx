@@ -2,6 +2,7 @@
 
 import { App, ConfigProvider } from "antd";
 import { ReactNode, createContext, useContext } from "react";
+import { MessageContext } from "@/contexts/MessageContext";
 
 interface AppContextType {
   message: ReturnType<typeof App.useApp>["message"];
@@ -34,9 +35,11 @@ export default function AntdProvider({ children }: Props) {
         },
       }}
     >
-      <AntAppContext.Provider value={app}>
-        <App>{children}</App>
-      </AntAppContext.Provider>
+      <MessageContext.Provider value={app.message}>
+        <AntAppContext.Provider value={app}>
+          <App>{children}</App>
+        </AntAppContext.Provider>
+      </MessageContext.Provider>
     </ConfigProvider>
   );
 }

@@ -14,17 +14,19 @@ import { updateAccountSchema } from "@/validators/account.validator";
 import Employee from "@/models/Employee";
 import Role from "@/models/Role";
 import Team from "@/models/Team";
+import Area from "@/models/Area";
 
 const populate = [
   { path: "roleId", select: "code name" },
-  { path: "teamId", select: "code name departmentId managerId leaderId", populate: [
+  { path: "teamId", select: "code name departmentId managerId leaderId areaId", populate: [
     { path: "departmentId", select: "code name" },
     { path: "managerId", select: "employeeCode fullName username" },
     { path: "leaderId", select: "employeeCode fullName username" },
   ] },
   { path: "leaderId", select: "employeeCode fullName username" },
+  { path: "areaId", select: "code name" },
 ];
-const map = (employee: any) => ({ ...employee, password: undefined, role: employee.roleId, team: employee.teamId, department: employee.teamId?.departmentId ?? null, leader: employee.leaderId });
+const map = (employee: any) => ({ ...employee, password: undefined, role: employee.roleId, team: employee.teamId, department: employee.teamId?.departmentId ?? null, leader: employee.leaderId, area: employee.areaId });
 
 async function resolveTarget(id: string) {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
@@ -103,6 +105,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     if (data.teamId && !(await Team.exists({ _id: data.teamId, isActive: true }))) return errorResponse("Team không tồn tại", 400);
     if (data.leaderId && !(await Employee.exists({ _id: data.leaderId, isActive: true }))) return errorResponse("Leader không tồn tại", 400);
+    if (data.areaId && !(await Area.exists({ _id: data.areaId, isActive: true }))) return errorResponse("Khu vực không tồn tại", 400);
     if (data.email && (await Employee.exists({ email: data.email.toLowerCase(), _id: { $ne: target._id } }))) return errorResponse("Email đã tồn tại", 400);
     if (data.isActive === false && target._id.equals(currentUser.employee._id)) return errorResponse("Không thể vô hiệu hóa tài khoản của chính mình", 400);
 
@@ -116,6 +119,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (data.bankAccountHolder !== undefined) target.bankAccountHolder = data.bankAccountHolder;
     if (data.teamId !== undefined) target.teamId = data.teamId ? new mongoose.Types.ObjectId(data.teamId) : null;
     if (data.leaderId !== undefined) target.leaderId = data.leaderId ? new mongoose.Types.ObjectId(data.leaderId) : null;
+    if (data.areaId !== undefined) target.areaId = data.areaId ? new mongoose.Types.ObjectId(data.areaId) : null;
     if (data.isActive !== undefined) target.isActive = data.isActive;
     if (newRole) target.roleId = newRole._id;
     await target.save();

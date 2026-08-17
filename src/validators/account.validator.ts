@@ -24,6 +24,7 @@ export const createAccountSchema = z.object({
   roleCode: z.string().trim().min(1).max(30),
   teamId: optionalId,
   leaderId: optionalId,
+  areaId: optionalId,
 }).strict();
 
 export const updateAccountSchema = z.object({
@@ -31,6 +32,7 @@ export const updateAccountSchema = z.object({
   roleCode: z.string().trim().min(1).max(30).optional(),
   teamId: optionalId,
   leaderId: optionalId,
+  areaId: optionalId,
   isActive: z.boolean().optional(),
 }).strict();
 

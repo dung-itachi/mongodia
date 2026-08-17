@@ -6,7 +6,6 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAntApp } from "@/providers/AntdProvider";
 import api from "@/lib/axios";
 import { useState, useCallback } from "react";
 
@@ -188,7 +187,7 @@ export function useProductDetail(id: string | null) {
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
+  
 
   return useMutation({
     mutationFn: createProduct,
@@ -198,14 +197,14 @@ export function useCreateProduct() {
       void queryClient.invalidateQueries({ queryKey: ["products"] });
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      
     },
   });
 }
 
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
+  
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateProductInput }) =>
@@ -215,26 +214,24 @@ export function useUpdateProduct() {
       void queryClient.invalidateQueries({
         queryKey: ["product-detail", variables.id],
       });
-      void message.success("Cập nhật sản phẩm thành công");
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      
     },
   });
 }
 
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
+  
 
   return useMutation({
     mutationFn: deleteProduct,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["product-list"] });
-      void message.success("Xóa sản phẩm thành công");
     },
     onError: (error: Error) => {
-      void message.error(error.message);
+      
     },
   });
 }

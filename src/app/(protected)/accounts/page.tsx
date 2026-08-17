@@ -1,14 +1,31 @@
 "use client";
 
+import dayjs from "dayjs";
 import { useMemo, useState } from "react";
-import { Avatar, Button, Drawer, Form, Input, Popconfirm, Space, Table, Tag, Typography } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Avatar, Button, DatePicker, Drawer, Form, Input, Popconfirm, Select, Space, Table, Tag, Typography } from "antd";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  FilterOutlined,
+} from "@ant-design/icons";
 import { useAuthStore } from "@/store/auth.store";
-import { useAccounts, useDisableAccount, useResetPassword, useUpdateAccount, type Account, type AccountInput } from "@/hooks/useAccounts";
+import {
+  useAccounts,
+  useDisableAccount,
+  useResetPassword,
+  useUpdateAccount,
+  type Account,
+  type AccountInput,
+} from "@/hooks/useAccounts";
+import { useAreas } from "@/hooks/useAreas";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useTeams } from "@/hooks/useTeams";
 import { useEmployees } from "@/hooks/useEmployees";
 import AccountCreateDrawer from "@/components/accounts/AccountCreateDrawer";
+import {
+  PageContainer,
+  PageHeader,
+} from "@/components/common";
 
 export default function AccountsPage() {
   const user = useAuthStore((state) => state.user);
@@ -19,17 +36,23 @@ export default function AccountsPage() {
   const canResetPassword = isGlobal || (user?.permissions.includes("account.resetPassword") ?? false);
 
   const [search, setSearch] = useState("");
+  const [filterTeam, setFilterTeam] = useState<string | null>(null);
+  const [filterArea, setFilterArea] = useState<string | null>(null);
+  const [filterCreated, setFilterCreated] = useState<[Dayjs, Dayjs] | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [selected, setSelected] = useState<Account | null>(null);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"view" | "edit" | "create">("create");
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [draftData, setDraftData] = useState<AccountInput | null>(null);
   const [passwordForm] = Form.useForm<{ newPassword: string }>();
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data, isLoading, error, refetch } = useAccounts({ search, pageSize: 100 });
   const { data: departmentsData } = useDepartments();
   const { data: teamsData } = useTeams();
   const { data: employeesData } = useEmployees({ pageSize: 100 });
+  const { data: areasData } = useAreas();
 
   const update = useUpdateAccount();
   const disable = useDisableAccount();
@@ -72,6 +95,11 @@ export default function AccountsPage() {
     return items.map((t) => ({ value: t._id, label: `${t.code ?? ""} — ${t.name ?? ""}` }));
   }, [teamsData]);
 
+  const areaOptions = useMemo(() => {
+    const items = (areasData ?? []) as unknown as Array<{ _id: string; code?: string; name?: string }>;
+    return items.map((a) => ({ value: a._id, label: `${a.code ?? ""} — ${a.name ?? ""}` }));
+  }, [areasData]);
+
   const leaderOptions = useMemo(() => {
     const items = (employeesData ?? []) as unknown as Array<{ _id: string; fullName?: string; employeeCode?: string; role?: { code?: string } }>;
     return items.filter((e) => e.role?.code === "LEADER").map((e) => ({ value: e._id, label: `${e.fullName ?? ""} (${e.employeeCode ?? ""})` }));
@@ -100,6 +128,7 @@ export default function AccountsPage() {
     { title: "Role", render: (_: unknown, item: Account) => <Tag color="blue">{item.role?.code ?? "-"}</Tag>, width: 110 },
     { title: "Department", render: (_: unknown, item: Account) => <Tag color="purple">{item.department?.name ?? item.team?.code ?? "-"}</Tag>, width: 130 },
     { title: "Team", dataIndex: "team", render: (_: unknown, item: Account) => item.team?.code ?? "-" },
+    { title: "Khu vực", render: (_: unknown, item: Account) => item.area?.code ? <Tag color="green">{item.area.code}</Tag> : "-" },
     { title: "Leader", render: (_: unknown, item: Account) => item.leader?.fullName ?? "-" },
     { title: "Trạng thái", render: (_: unknown, item: Account) => <Tag color={item.isActive ? "green" : "red"}>{item.isActive ? "Hoạt động" : "Đã khóa"}</Tag>, width: 110 },
     {
@@ -115,27 +144,182 @@ export default function AccountsPage() {
     },
   ], [canUpdate, canDisable, canResetPassword, disable, passwordForm]);
 
+  const accounts = data?.items ?? [];
+  const totalAccounts = data?.total ?? 0;
+
+  const filteredAccounts = useMemo(() => {
+    let result = [...accounts];
+
+    if (filterTeam) {
+      result = result.filter((a) => a.team?._id === filterTeam);
+    }
+    if (filterArea) {
+      result = result.filter((a) => a.area?._id === filterArea || a.team?.areaId === filterArea);
+    }
+    if (filterCreated) {
+      const [start, end] = filterCreated;
+      result = result.filter((a) => {
+        if (!a.createdAt) return false;
+        const d = dayjs(a.createdAt);
+        return d.isAfter(start) && d.isBefore(end) || d.isSame(start, "day") || d.isSame(end, "day");
+      });
+    }
+
+    result.sort((a, b) => {
+      const nameA = (a.fullName ?? a.username ?? "").toLowerCase();
+      const nameB = (b.fullName ?? b.username ?? "").toLowerCase();
+      return sortOrder === "asc" ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+    });
+
+    return result;
+  }, [accounts, filterTeam, filterArea, filterCreated, sortOrder]);
+
+  const activeAccounts = filteredAccounts.filter((a) => a.isActive).length;
+  const lockedAccounts = filteredAccounts.filter((a) => !a.isActive).length;
+
+  // Count by role
+  const roleCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    accounts.forEach((acc) => {
+      const role = acc.role?.code ?? "OTHER";
+      map[role] = (map[role] || 0) + 1;
+    });
+    return map;
+  }, [accounts]);
+
   const handleSaved = () => {
     setDraftData(null);
     setOpen(false);
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <Space style={{ justifyContent: "space-between", width: "100%" }}>
-          <Typography.Title level={3} style={{ margin: 0 }}>Quản lý tài khoản</Typography.Title>
+    <PageContainer>
+      <PageHeader
+        title="Quản lý tài khoản"
+        subtitle={
+          <span style={{ fontSize: 13, color: "#595959" }}>
+            <span style={{ fontWeight: 700, color: "#1890ff", fontSize: 16 }}>{totalAccounts}</span> tài khoản
+            <span style={{ color: "#d9d9d9", margin: "0 8px" }}>|</span>
+            <span style={{ fontWeight: 600, color: "#52c41a" }}>{activeAccounts}</span> hoạt động
+            <span style={{ color: "#d9d9d9", margin: "0 8px" }}>|</span>
+            <span style={{ fontWeight: 600, color: "#ff4d4f" }}>{lockedAccounts}</span> bị khóa
+          </span>
+        }
+        actions={
           <Space>
-            <Input.Search placeholder="Username, họ tên, email, mã nhân viên" allowClear onSearch={setSearch} style={{ width: 300 }} />
+            <Input.Search
+              placeholder="Username, họ tên, email, mã nhân viên"
+              allowClear
+              onSearch={setSearch}
+              style={{ width: 280 }}
+            />
+            <Button
+              icon={<FilterOutlined />}
+              onClick={() => setShowFilters((v) => !v)}
+              type={showFilters ? "primary" : "default"}
+            >
+              Lọc
+            </Button>
             <Button icon={<ReloadOutlined />} onClick={() => void refetch()} />
-            {canCreate && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Tạo tài khoản</Button>}
+            {canCreate && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+                Tạo tài khoản
+              </Button>
+            )}
           </Space>
-        </Space>
-        {error && <Typography.Text type="danger">Lỗi tải dữ liệu: {(error as Error).message}. Vui lòng đăng xuất rồi đăng nhập lại.</Typography.Text>}
-        <div style={{ background: "#fff", padding: 12, borderRadius: 6 }}>
-          <Table rowKey="_id" loading={isLoading} dataSource={data?.items ?? []} columns={columns} pagination={{ total: data?.total, pageSize: 100, showTotal: (total) => `Tổng ${total} tài khoản` }} scroll={{ x: 1400 }} />
+        }
+      />
+
+      {error && (
+        <Typography.Text type="danger" style={{ marginBottom: 16, display: "block" }}>
+          Lỗi tải dữ liệu: {(error as Error).message}. Vui lòng đăng xuất rồi đăng nhập lại.
+        </Typography.Text>
+      )}
+
+      {showFilters && (
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 8,
+            border: "1px solid #f0f0f0",
+            padding: "16px 20px",
+            marginBottom: 12,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 12,
+            alignItems: "flex-end",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Team</div>
+            <Select
+              allowClear
+              placeholder="Tất cả team"
+              style={{ width: 200 }}
+              options={teamOptions}
+              value={filterTeam}
+              onChange={setFilterTeam}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Khu vực</div>
+            <Select
+              allowClear
+              placeholder="Tất cả khu vực"
+              style={{ width: 180 }}
+              options={areaOptions}
+              value={filterArea}
+              onChange={setFilterArea}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Ngày tạo</div>
+            <DatePicker.RangePicker
+              value={filterCreated}
+              onChange={(dates) => setFilterCreated(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
+              format="DD/MM/YYYY"
+              style={{ width: 260 }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Sắp xếp</div>
+            <Select
+              value={sortOrder}
+              onChange={setSortOrder}
+              style={{ width: 140 }}
+              options={[
+                { value: "asc", label: "A → Z" },
+                { value: "desc", label: "Z → A" },
+              ]}
+            />
+          </div>
+          <Button
+            onClick={() => {
+              setFilterTeam(null);
+              setFilterArea(null);
+              setFilterCreated(null);
+              setSortOrder("asc");
+            }}
+          >
+            Đặt lại
+          </Button>
         </div>
-      </Space>
+      )}
+
+      <div style={{ background: "#fff", padding: 12, borderRadius: 8, border: "1px solid #f0f0f0" }}>
+        <Table
+          rowKey="_id"
+          loading={isLoading}
+          dataSource={filteredAccounts}
+          columns={columns}
+          pagination={{
+            total: filteredAccounts.length,
+            pageSize: 100,
+            showTotal: (total) => `Hiển thị ${total} tài khoản`,
+          }}
+          scroll={{ x: 1400 }}
+        />
+      </div>
 
       <AccountCreateDrawer
         open={open}
@@ -146,15 +330,16 @@ export default function AccountsPage() {
         roleOptions={roleOptions}
         teamOptions={teamOptions}
         leaderOptions={leaderOptions}
+        areaOptions={areaOptions}
         onSuccess={handleSaved}
       />
 
-      <Drawer title="Đặt lại mật khẩu" open={passwordOpen} onClose={() => setPasswordOpen(false)} size="default">
+      <Drawer title="�ặt lại mật khẩu" open={passwordOpen} onClose={() => setPasswordOpen(false)} size="default">
         <Form form={passwordForm} layout="vertical" onFinish={({ newPassword }) => selected && reset.mutate({ id: selected._id, newPassword }, { onSuccess: () => setPasswordOpen(false) })}>
           <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
           <Button type="primary" htmlType="submit" loading={reset.isPending}>Xác nhận</Button>
         </Form>
       </Drawer>
-    </div>
+    </PageContainer>
   );
 }

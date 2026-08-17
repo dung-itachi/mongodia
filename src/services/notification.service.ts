@@ -26,6 +26,7 @@ import { Types } from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Notification from "@/models/Notification";
 import NotificationRead from "@/models/NotificationRead";
+import Employee from "@/models/Employee";
 
 import type {
   NotificationItem,
@@ -92,17 +93,26 @@ function toItem(
     _id: Types.ObjectId;
     title: string;
     message: string;
+    category: string;
+    priority: string;
+    link?: string | null;
+    senderId?: { _id: Types.ObjectId; employeeCode: string; fullName: string } | null;
     createdAt: Date;
   },
   readMap: Map<string, { readAt: Date }>
 ): NotificationItem {
   const read = readMap.get(doc._id.toString());
+  const sender = doc.senderId ?? null;
   return {
     id: doc._id.toString(),
     title: doc.title,
     message: doc.message,
     type: inferType(doc.createdAt),
-    link: null,
+    category: doc.category,
+    priority: doc.priority,
+    link: (doc.link as string | null | undefined) ?? null,
+    senderId: sender?._id?.toString() ?? "",
+    senderName: sender?.fullName ?? sender?.employeeCode ?? "Hệ thống",
     createdAt: doc.createdAt.toISOString(),
     read: Boolean(read),
     readAt: read ? read.readAt.toISOString() : null,
@@ -158,7 +168,8 @@ export async function listForUser(
   const docs = await Notification.find(filter)
     .sort({ createdAt: -1, _id: -1 })
     .limit(limit + 1)
-    .select("_id title message createdAt")
+    .select("_id title message category priority link senderId createdAt")
+    .populate("senderId", "_id employeeCode fullName")
     .lean();
 
   const hasMore = docs.length > limit;
@@ -307,6 +318,7 @@ export interface AdminListOptions {
   category?: string;
   type?: string;
   isPinned?: boolean;
+  isActive?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -346,6 +358,9 @@ export async function listAllForAdmin(
   if (typeof options.isPinned === "boolean") {
     filter.isPinned = options.isPinned;
   }
+  if (typeof options.isActive === "boolean") {
+    filter.isActive = options.isActive;
+  }
   if (options.search) {
     const re = new RegExp(escapeRegex(options.search), "i");
     filter.$or = [{ title: re }, { message: re }];
@@ -356,25 +371,45 @@ export async function listAllForAdmin(
       .sort({ createdAt: -1 })
       .skip((page - 1) * pageSize)
       .limit(pageSize)
+      .populate("senderId", "_id employeeCode fullName")
       .lean(),
     Notification.countDocuments(filter),
   ]);
 
-  const items = docs.map((d) => ({
-    id: d._id.toString(),
-    title: d.title,
-    message: d.message,
-    type: d.type,
-    category: d.category,
-    priority: d.priority,
-    isPinned: Boolean(d.isPinned),
-    isActive: Boolean(d.isActive),
-    link: (d.link as string | null | undefined) ?? null,
-    recipientsCount: Array.isArray(d.recipients) ? d.recipients.length : 0,
-    readCount: Array.isArray(d.readBy) ? d.readBy.length : 0,
-    createdAt: d.createdAt.toISOString(),
-    updatedAt: d.updatedAt.toISOString(),
-  }));
+  const notificationIds = docs.map((d) => d._id);
+
+  // Build a map: notificationId → read count via NotificationRead
+  const readCountMap = new Map<string, number>();
+  if (notificationIds.length > 0) {
+    const readCounts = await NotificationRead.aggregate([
+      { $match: { notificationId: { $in: notificationIds } } },
+      { $group: { _id: "$notificationId", count: { $sum: 1 } } },
+    ]);
+    for (const rc of readCounts) {
+      readCountMap.set(rc._id.toString(), rc.count);
+    }
+  }
+
+  const items = docs.map((d) => {
+    const sender = d.senderId as unknown as { _id: { toString: () => string }; employeeCode: string; fullName: string } | null;
+    return ({
+      id: d._id.toString(),
+      title: d.title,
+      message: d.message,
+      type: d.type,
+      category: d.category,
+      priority: d.priority,
+      isPinned: Boolean(d.isPinned),
+      isActive: Boolean(d.isActive),
+      link: (d.link as string | null | undefined) ?? null,
+      senderId: sender?._id?.toString() ?? "",
+      senderName: sender?.fullName ?? sender?.employeeCode ?? "Hệ thống",
+      recipientsCount: Array.isArray(d.recipients) ? d.recipients.length : 0,
+      readCount: readCountMap.get(d._id.toString()) ?? 0,
+      createdAt: d.createdAt.toISOString(),
+      updatedAt: d.updatedAt.toISOString(),
+    });
+  });
 
   return { items, total };
 }
@@ -400,6 +435,9 @@ export interface CreateInput {
   isPinned?: boolean;
   link?: string | null;
   recipientIds?: string[];
+  teamIds?: string[];
+  leaderIds?: string[];
+  roleFilters?: string[];
   broadcast?: boolean;
   senderId: string;
 }
@@ -416,7 +454,27 @@ export async function createOne(input: CreateInput): Promise<{ id: string }> {
     throw new NotificationServiceError("senderId không hợp lệ", 400);
   }
 
-  const recipients = input.broadcast
+  // Determine recipient mode and resolve recipients
+  const isBroadcast = input.broadcast || (
+    !input.recipientIds?.length &&
+    !input.teamIds?.length &&
+    !input.leaderIds?.length &&
+    !input.roleFilters?.length
+  );
+
+  const recipientMode: "broadcast" | "individual" | "team" | "leader" | "role" =
+    isBroadcast
+      ? "broadcast"
+      : input.teamIds?.length
+        ? "team"
+        : input.leaderIds?.length
+          ? "leader"
+          : input.roleFilters?.length
+            ? "role"
+            : "individual";
+
+  // Validate and convert IDs to ObjectIds
+  const recipientIds = isBroadcast
     ? []
     : (input.recipientIds ?? []).map((id) => {
         if (!Types.ObjectId.isValid(id)) {
@@ -424,6 +482,85 @@ export async function createOne(input: CreateInput): Promise<{ id: string }> {
         }
         return new Types.ObjectId(id);
       });
+
+  const teamIds = input.teamIds?.map((id) => {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotificationServiceError(`teamId không hợp lệ: ${id}`, 400);
+    }
+    return new Types.ObjectId(id);
+  }) ?? [];
+
+  const leaderIds = input.leaderIds?.map((id) => {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new NotificationServiceError(`leaderId không hợp lệ: ${id}`, 400);
+    }
+    return new Types.ObjectId(id);
+  }) ?? [];
+
+  // For team/leader/role modes, resolve actual recipients
+  let resolvedRecipients: Types.ObjectId[] = [...recipientIds];
+  if (recipientMode === "team" && teamIds.length > 0) {
+    const teamMembers = await Employee.find({
+      isActive: true,
+      teamId: { $in: teamIds },
+    })
+      .select("_id")
+      .lean();
+    const teamMemberIds = teamMembers.map((e) => e._id);
+    resolvedRecipients = [...new Set([...resolvedRecipients, ...teamMemberIds])];
+  }
+
+  if (recipientMode === "leader" && leaderIds.length > 0) {
+    // Get leader + all employees under each leader
+    for (const leaderId of leaderIds) {
+      resolvedRecipients.push(leaderId);
+      const directReports = await Employee.find({
+        isActive: true,
+        leaderId: leaderId,
+      })
+        .select("_id")
+        .lean();
+      const reportIds = directReports.map((e) => e._id);
+
+      // Recursively get nested reports
+      const allReportIds = new Set<string>(reportIds.map((id) => id.toString()));
+      const toProcess = [...reportIds.map((id) => id.toString())];
+
+      while (toProcess.length > 0) {
+        const currentId = toProcess.pop()!;
+        const nestedReports = await Employee.find({
+          isActive: true,
+          leaderId: currentId,
+        })
+          .select("_id")
+          .lean();
+
+        for (const nr of nestedReports) {
+          const nrStr = nr._id.toString();
+          if (!allReportIds.has(nrStr)) {
+            allReportIds.add(nrStr);
+            toProcess.push(nrStr);
+          }
+        }
+      }
+
+      allReportIds.forEach((id) => {
+        resolvedRecipients.push(new Types.ObjectId(id));
+      });
+    }
+    resolvedRecipients = [...new Set(resolvedRecipients)];
+  }
+
+  if (recipientMode === "role" && input.roleFilters?.length) {
+    const roleEmployees = await Employee.find({
+      isActive: true,
+      "roleId.code": { $in: input.roleFilters },
+    })
+      .select("_id")
+      .lean();
+    const roleEmployeeIds = roleEmployees.map((e) => e._id);
+    resolvedRecipients = [...new Set([...resolvedRecipients, ...roleEmployeeIds])];
+  }
 
   const created = await Notification.create({
     title: input.title.trim(),
@@ -435,8 +572,12 @@ export async function createOne(input: CreateInput): Promise<{ id: string }> {
     isActive: true,
     link: input.link ?? null,
     senderId: new Types.ObjectId(input.senderId),
-    recipients,
+    recipients: resolvedRecipients,
     readBy: [],
+    recipientMode,
+    teamIds: recipientMode === "team" ? teamIds : [],
+    leaderIds: recipientMode === "leader" ? leaderIds : [],
+    roleFilters: recipientMode === "role" ? input.roleFilters : [],
   });
 
   return { id: created._id.toString() };
@@ -452,6 +593,9 @@ export interface UpdateInput {
   isActive?: boolean;
   link?: string | null;
   recipientIds?: string[];
+  teamIds?: string[];
+  leaderIds?: string[];
+  roleFilters?: string[];
   broadcast?: boolean;
 }
 
@@ -484,11 +628,38 @@ export async function updateOne(
   if (input.isActive !== undefined) update.isActive = input.isActive;
   if (input.link !== undefined) update.link = input.link;
 
-  if (input.broadcast !== undefined || input.recipientIds !== undefined) {
-    if (input.broadcast) {
+  if (input.broadcast !== undefined || input.recipientIds !== undefined ||
+      input.teamIds !== undefined || input.leaderIds !== undefined ||
+      input.roleFilters !== undefined) {
+
+    const isBroadcast = input.broadcast || (
+      !input.recipientIds?.length &&
+      !input.teamIds?.length &&
+      !input.leaderIds?.length &&
+      !input.roleFilters?.length
+    );
+
+    const recipientMode: "broadcast" | "individual" | "team" | "leader" | "role" =
+      isBroadcast
+        ? "broadcast"
+        : input.teamIds?.length
+          ? "team"
+          : input.leaderIds?.length
+            ? "leader"
+            : input.roleFilters?.length
+              ? "role"
+              : "individual";
+
+    update.recipientMode = recipientMode;
+
+    if (isBroadcast) {
       update.recipients = [];
-    } else if (input.recipientIds) {
-      update.recipients = input.recipientIds.map((rid) => {
+      update.teamIds = [];
+      update.leaderIds = [];
+      update.roleFilters = [];
+    } else {
+      // Convert and validate IDs
+      const recipientIds = (input.recipientIds ?? []).map((rid) => {
         if (!Types.ObjectId.isValid(rid)) {
           throw new NotificationServiceError(
             `recipientId không hợp lệ: ${rid}`,
@@ -497,6 +668,91 @@ export async function updateOne(
         }
         return new Types.ObjectId(rid);
       });
+
+      const teamIds = (input.teamIds ?? []).map((tid) => {
+        if (!Types.ObjectId.isValid(tid)) {
+          throw new NotificationServiceError(`teamId không hợp lệ: ${tid}`, 400);
+        }
+        return new Types.ObjectId(tid);
+      });
+
+      const leaderIds = (input.leaderIds ?? []).map((lid) => {
+        if (!Types.ObjectId.isValid(lid)) {
+          throw new NotificationServiceError(`leaderId không hợp lệ: ${lid}`, 400);
+        }
+        return new Types.ObjectId(lid);
+      });
+
+      // Resolve recipients based on mode
+      let resolvedRecipients = [...recipientIds];
+
+      if (recipientMode === "team" && teamIds.length > 0) {
+        const teamMembers = await Employee.find({
+          isActive: true,
+          teamId: { $in: teamIds },
+        })
+          .select("_id")
+          .lean();
+        const teamMemberIds = teamMembers.map((e) => e._id);
+        resolvedRecipients = [...new Set([...resolvedRecipients, ...teamMemberIds])];
+      }
+
+      if (recipientMode === "leader" && leaderIds.length > 0) {
+        for (const leaderId of leaderIds) {
+          resolvedRecipients.push(leaderId);
+          const directReports = await Employee.find({
+            isActive: true,
+            leaderId: leaderId,
+          })
+            .select("_id")
+            .lean();
+
+          const allReportIds = new Set<string>();
+          allReportIds.add(leaderId.toString());
+          directReports.forEach((e) => allReportIds.add(e._id.toString()));
+
+          // Recursive for nested reports
+          const toProcess = directReports.map((e) => e._id.toString());
+          while (toProcess.length > 0) {
+            const currentId = toProcess.pop()!;
+            const nestedReports = await Employee.find({
+              isActive: true,
+              leaderId: currentId,
+            })
+              .select("_id")
+              .lean();
+
+            for (const nr of nestedReports) {
+              const nrStr = nr._id.toString();
+              if (!allReportIds.has(nrStr)) {
+                allReportIds.add(nrStr);
+                toProcess.push(nrStr);
+              }
+            }
+          }
+
+          allReportIds.forEach((sid) => {
+            resolvedRecipients.push(new Types.ObjectId(sid));
+          });
+        }
+        resolvedRecipients = [...new Set(resolvedRecipients)];
+      }
+
+      if (recipientMode === "role" && input.roleFilters?.length) {
+        const roleEmployees = await Employee.find({
+          isActive: true,
+          "roleId.code": { $in: input.roleFilters },
+        })
+          .select("_id")
+          .lean();
+        const roleEmployeeIds = roleEmployees.map((e) => e._id);
+        resolvedRecipients = [...new Set([...resolvedRecipients, ...roleEmployeeIds])];
+      }
+
+      update.recipients = resolvedRecipients;
+      update.teamIds = recipientMode === "team" ? teamIds : [];
+      update.leaderIds = recipientMode === "leader" ? leaderIds : [];
+      update.roleFilters = recipientMode === "role" ? input.roleFilters : [];
     }
   }
 

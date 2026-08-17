@@ -41,14 +41,22 @@ export async function GET(request: Request) {
       }
       const page = parseInt(searchParams.get("page") ?? "1", 10);
       const pageSize = parseInt(searchParams.get("pageSize") ?? "20", 10);
+      const isPinnedParam = searchParams.get("isPinned");
+      const isActiveParam = searchParams.get("isActive");
       const result = await listAllForAdmin({
         search: searchParams.get("search") ?? undefined,
         category: searchParams.get("category") ?? undefined,
         type: searchParams.get("type") ?? undefined,
         isPinned:
-          searchParams.get("isPinned") === "true"
+          isPinnedParam === "true"
             ? true
-            : searchParams.get("isPinned") === "false"
+            : isPinnedParam === "false"
+              ? false
+              : undefined,
+        isActive:
+          isActiveParam === "true"
+            ? true
+            : isActiveParam === "false"
               ? false
               : undefined,
         page: Number.isFinite(page) ? page : 1,
@@ -136,6 +144,21 @@ export async function POST(request: Request) {
       link: typeof body.link === "string" ? body.link : null,
       recipientIds: Array.isArray(body.recipientIds)
         ? (body.recipientIds as unknown[]).filter(
+            (x): x is string => typeof x === "string"
+          )
+        : undefined,
+      teamIds: Array.isArray(body.teamIds)
+        ? (body.teamIds as unknown[]).filter(
+            (x): x is string => typeof x === "string"
+          )
+        : undefined,
+      leaderIds: Array.isArray(body.leaderIds)
+        ? (body.leaderIds as unknown[]).filter(
+            (x): x is string => typeof x === "string"
+          )
+        : undefined,
+      roleFilters: Array.isArray(body.roleFilters)
+        ? (body.roleFilters as unknown[]).filter(
             (x): x is string => typeof x === "string"
           )
         : undefined,

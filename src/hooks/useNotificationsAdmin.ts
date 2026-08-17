@@ -41,6 +41,9 @@ async function fetchAdminList(
   if (typeof q.isPinned === "boolean") {
     params.set("isPinned", q.isPinned ? "true" : "false");
   }
+  if (typeof q.isActive === "boolean") {
+    params.set("isActive", q.isActive ? "true" : "false");
+  }
   if (q.page) params.set("page", String(q.page));
   if (q.pageSize) params.set("pageSize", String(q.pageSize));
 

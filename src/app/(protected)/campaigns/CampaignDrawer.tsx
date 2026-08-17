@@ -6,7 +6,8 @@ import { memo, useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Drawer, Input, Select, DatePicker, Button, Space, Form, message } from "antd";
+import { Drawer, Input, Select, DatePicker, Button, Space, Form } from "antd";
+import { useMessage } from "@/contexts/MessageContext";
 import dayjs from "dayjs";
 import { useCampaign, useCreateCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
 import AsyncSelect from "@/components/common/inputs/AsyncSelect";
@@ -51,6 +52,7 @@ function CampaignDrawerInner({
   onClose,
   onSuccess,
 }: CampaignDrawerProps) {
+  const message = useMessage();
   const isEdit = mode === "edit";
 
   const { data: recordData, isLoading: isLoadingRecord } = useCampaign(

@@ -5,10 +5,11 @@
  */
 
 import { useState, useEffect } from "react";
-import { Modal, Select, Spin, message, Alert } from "antd";
+import { Modal, Select, Spin, Alert } from "antd";
 import { UserSwitchOutlined } from "@ant-design/icons";
 import api from "@/lib/axios";
 import type { SaleLead } from "@/hooks/useSaleLeads";
+import { useMessage } from "@/contexts/MessageContext";
 
 interface Employee {
   _id: string;
@@ -33,6 +34,7 @@ export default function ReassignModal({
   const [submitting, setSubmitting] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const message = useMessage();
 
   // Fetch sale employees
   useEffect(() => {

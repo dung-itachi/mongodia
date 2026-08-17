@@ -13,7 +13,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Table, Input, Select, Button, Tag, Dropdown, message } from "antd";
+import { Table, Input, Select, Button, Tag, Dropdown } from "antd";
 import type { TableProps } from "antd";
 import {
   PlusOutlined,
@@ -21,6 +21,10 @@ import {
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
+  UserOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -29,6 +33,8 @@ import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonTable from "@/components/common/overlay/SkeletonTable";
 import PermissionGate from "@/components/common/PermissionGate";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
+import { PageStatsBanner } from "@/components/common";
+import { useMessage } from "@/contexts/MessageContext";
 
 import {
   useCustomers,
@@ -47,6 +53,7 @@ const STATUS_OPTIONS = [
 
 export default function CustomersPage() {
   const router = useRouter();
+  const message = useMessage();
 
   // Search and filter state
   const [keyword, setKeyword] = useState("");
@@ -72,6 +79,14 @@ export default function CustomersPage() {
   const { data, isLoading, refetch } = useCustomers(filterParams);
   const customers = data?.items ?? [];
   const total = data?.total ?? 0;
+
+  // Calculate customer stats
+  const customerStats = useMemo(() => {
+    const active = customers.filter((c) => c.status === CustomerStatus.ACTIVE).length;
+    const inactive = customers.filter((c) => c.status === CustomerStatus.INACTIVE).length;
+    const blocked = customers.filter((c) => c.status === CustomerStatus.BLOCKED).length;
+    return { total, active, inactive, blocked };
+  }, [customers, total]);
 
   // Delete mutation
   const deleteMutation = useDeleteCustomer();
@@ -236,6 +251,42 @@ export default function CustomersPage() {
             </Button>
           </PermissionGate>
         }
+      />
+
+      {/* Stats Banner */}
+      <PageStatsBanner
+        stats={[
+          {
+            key: "total",
+            value: customerStats.total,
+            label: "Tổng khách hàng",
+            icon: <TeamOutlined style={{ color: "#1890ff" }} />,
+            color: "blue",
+          },
+          {
+            key: "active",
+            value: customerStats.active,
+            label: "Đang hoạt động",
+            icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+            color: "green",
+          },
+          {
+            key: "inactive",
+            value: customerStats.inactive,
+            label: "Không hoạt động",
+            icon: <UserOutlined style={{ color: "#fa8c16" }} />,
+            color: "orange",
+          },
+          {
+            key: "blocked",
+            value: customerStats.blocked,
+            label: "Bị chặn",
+            icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
+            color: "red",
+          },
+        ]}
+        loading={isLoading}
+        style={{ marginBottom: 16 }}
       />
 
       <div className="bg-white rounded-lg shadow p-4">

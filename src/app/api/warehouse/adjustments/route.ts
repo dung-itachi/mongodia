@@ -13,6 +13,7 @@ export async function GET(request: Request) {
 
     const params = new URL(request.url).searchParams;
     const warehouseId = params.get("warehouseId") ?? undefined;
+    const type = params.get("type") ?? undefined;
 
     // Check warehouse access
     if (!warehouseId && !canAccessAllWarehouses(currentUser)) {
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
     return success(
       await warehouseAdjustmentService.listAdjustments({
         warehouseId,
+        type,
         page: Number(params.get("page") ?? 1),
         limit: Math.min(Number(params.get("limit") ?? 20), 100),
       })

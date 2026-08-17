@@ -11,7 +11,7 @@
  */
 
 import { useState } from "react";
-import { Timeline, Card, Tag, Button, Empty, Spin, Dropdown, message } from "antd";
+import { Timeline, Card, Tag, Button, Empty, Spin, Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import {
   PhoneOutlined,
@@ -31,6 +31,7 @@ import ActivityDrawer from "./ActivityDrawer";
 import { useCustomerActivities, useDeleteCustomerActivity } from "@/hooks/useCustomerActivities";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ActivityType, ActivityResult } from "@/types/customer-activity";
+import { useMessage } from "@/contexts/MessageContext";
 
 interface CustomerTimelineProps {
   customerId: string;
@@ -83,6 +84,7 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
 export default function CustomerTimeline({ customerId }: CustomerTimelineProps) {
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const message = useMessage();
   const [editingActivity, setEditingActivity] = useState<{
     id: string;
     data: {

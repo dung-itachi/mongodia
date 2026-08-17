@@ -34,7 +34,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Card, InputNumber, Button, Space, Tag, Select, Typography, Divider, Alert, Radio, message } from "antd";
+import { Card, InputNumber, Button, Space, Tag, Select, Typography, Divider, Alert, Radio } from "antd";
 import { PlusOutlined, DeleteOutlined, ShoppingOutlined, GiftOutlined, QuestionOutlined } from "@ant-design/icons";
 import type { RadioChangeEvent, SelectProps } from "antd";
 import type {
@@ -48,6 +48,7 @@ import type {
 import { resolveVariantId, validateOrderItem } from "@/types/variant";
 import { useGiftList, type GiftListItem } from "@/hooks/useGifts";
 import { formatMNT } from "@/lib/format";
+import { useMessage } from "@/contexts/MessageContext";
 
 const { Text } = Typography;
 
@@ -912,6 +913,7 @@ export default function OrderProductDetail({
 }: OrderProductDetailProps) {
   const variantOptions = product?.variantOptions || [];
   const hasVariants = variantOptions.length > 0;
+  const message = useMessage();
 
   // Calculate totals
   const totals = useMemo(() => {

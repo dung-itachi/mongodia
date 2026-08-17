@@ -43,7 +43,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button, Input, Space, Tooltip, message } from "antd";
+import { Button, Input, Space, Tooltip } from "antd";
 import {
   SearchOutlined,
   ZoomInOutlined,
@@ -62,6 +62,7 @@ import { useAccount } from "@/hooks/useAccounts";
 import { useAuthStore } from "@/store/auth.store";
 import type { OrgNode, OrgFlatEntry } from "./types";
 import "./chart.css";
+import { useMessage } from "@/contexts/MessageContext";
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 110;

@@ -44,7 +44,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { message, Dropdown, Button, Space, Card, Statistic, Row, Col, Tag } from "antd";
+import { Dropdown, Button, Space, Card, Statistic, Row, Col, Tag } from "antd";
 import {
   CheckOutlined,
   EyeOutlined,
@@ -69,9 +69,11 @@ import { useDebounce } from "@/hooks/useDebounce";
 import type { OrderListItem } from "@/types/order";
 import ShipDrawer from "@/components/warehouse/ShipDrawer";
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
+import { useMessage } from "@/contexts/MessageContext";
 
 export default function WarehouseShipmentsPage() {
   const router = useRouter();
+  const message = useMessage();
 
   // Filter state
   const [keyword, setKeyword] = useState("");

@@ -6,7 +6,6 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAntApp } from "@/providers/AntdProvider";
 import api from "@/lib/axios";
 
 // ============================================================================
@@ -392,7 +391,6 @@ export function useVariantOptionDetail(id: string | null) {
 
 export function useCreateVariantOption() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: createVariantOption,
@@ -400,17 +398,12 @@ export function useCreateVariantOption() {
       void queryClient.invalidateQueries({
         queryKey: ["variant-option-list"],
       });
-      void message.success("Tạo thuộc tính biến thể thành công");
-    },
-    onError: (error: Error) => {
-      void message.error(error.message);
     },
   });
 }
 
 export function useUpdateVariantOption() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
 
   return useMutation({
     mutationFn: ({
@@ -427,10 +420,6 @@ export function useUpdateVariantOption() {
       void queryClient.invalidateQueries({
         queryKey: ["variant-option-detail", variables.id],
       });
-      void message.success("Cập nhật thuộc tính biến thể thành công");
-    },
-    onError: (error: Error) => {
-      void message.error(error.message);
     },
   });
 }
@@ -464,26 +453,18 @@ export function useVariantValueDetail(id: string | null) {
 
 export function useCreateVariantValue() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
-
   return useMutation({
     mutationFn: createVariantValue,
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["variant-value-list"],
       });
-      void message.success("Tạo giá trị biến thể thành công");
-    },
-    onError: (error: Error) => {
-      void message.error(error.message);
     },
   });
 }
 
 export function useUpdateVariantValue() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
-
   return useMutation({
     mutationFn: ({
       id,
@@ -499,28 +480,18 @@ export function useUpdateVariantValue() {
       void queryClient.invalidateQueries({
         queryKey: ["variant-value-detail", variables.id],
       });
-      void message.success("Cập nhật giá trị biến thể thành công");
-    },
-    onError: (error: Error) => {
-      void message.error(error.message);
     },
   });
 }
 
 export function useDeleteVariantValue() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
-
   return useMutation({
     mutationFn: deleteVariantValue,
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["variant-value-list"],
       });
-      void message.success("Xóa giá trị biến thể thành công");
-    },
-    onError: (error: Error) => {
-      void message.error(error.message);
     },
   });
 }
@@ -554,26 +525,18 @@ export function useProductVariantDetail(id: string | null) {
 
 export function useCreateProductVariant() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
-
   return useMutation({
     mutationFn: createProductVariant,
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["product-variant-list"],
       });
-      void message.success("Tạo biến thể sản phẩm thành công");
-    },
-    onError: (error: Error) => {
-      void message.error(error.message);
     },
   });
 }
 
 export function useUpdateProductVariant() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
-
   return useMutation({
     mutationFn: ({
       id,
@@ -589,28 +552,18 @@ export function useUpdateProductVariant() {
       void queryClient.invalidateQueries({
         queryKey: ["product-variant-detail", variables.id],
       });
-      void message.success("Cập nhật biến thể sản phẩm thành công");
-    },
-    onError: (error: Error) => {
-      void message.error(error.message);
     },
   });
 }
 
 export function useDeleteProductVariant() {
   const queryClient = useQueryClient();
-  const { message } = useAntApp();
-
   return useMutation({
     mutationFn: deleteProductVariant,
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["product-variant-list"],
       });
-      void message.success("Xóa biến thể sản phẩm thành công");
-    },
-    onError: (error: Error) => {
-      void message.error(error.message);
     },
   });
 }

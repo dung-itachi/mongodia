@@ -13,7 +13,7 @@
  */
 
 import { memo, useState } from "react";
-import { Card, Table, Skeleton, Row, Col, Statistic, Button, Modal, Form, InputNumber, DatePicker, message, Popconfirm, Space, Select } from "antd";
+import { Card, Table, Skeleton, Row, Col, Statistic, Button, Modal, Form, InputNumber, DatePicker, Popconfirm, Space, Select } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMarketingDailyAdsReport } from "@/hooks/useMarketingDailyAdsReport";
 import { useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
@@ -24,6 +24,7 @@ import api from "@/lib/axios";
 import styles from "./marketing.module.css";
 import dayjs from "dayjs";
 import { DeleteOutlined, EditOutlined, UserOutlined } from "@ant-design/icons";
+import { useMessage } from "@/contexts/MessageContext";
 
 export type DailyAdsReportProps = {
   period: ChartPeriod;
@@ -56,6 +57,7 @@ function isGlobalUser(user: { role: string; permissions: string[] } | null): boo
 function DailyAdsReportInner({ period }: DailyAdsReportProps) {
   const user = useAuthStore((state) => state.user);
   const isGlobal = isGlobalUser(user);
+  const message = useMessage();
 
   const [selectedMarketingEmployeeId, setSelectedMarketingEmployeeId] = useState<
     string | undefined

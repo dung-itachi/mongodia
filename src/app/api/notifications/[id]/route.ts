@@ -59,6 +59,21 @@ export async function PATCH(
             (x): x is string => typeof x === "string"
           )
         : undefined,
+      teamIds: Array.isArray(body.teamIds)
+        ? (body.teamIds as unknown[]).filter(
+            (x): x is string => typeof x === "string"
+          )
+        : undefined,
+      leaderIds: Array.isArray(body.leaderIds)
+        ? (body.leaderIds as unknown[]).filter(
+            (x): x is string => typeof x === "string"
+          )
+        : undefined,
+      roleFilters: Array.isArray(body.roleFilters)
+        ? (body.roleFilters as unknown[]).filter(
+            (x): x is string => typeof x === "string"
+          )
+        : undefined,
       broadcast: typeof body.broadcast === "boolean" ? body.broadcast : undefined,
     });
 

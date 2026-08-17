@@ -10,3 +10,5 @@ export { default as StatusBadge, DEFAULT_STATUS_MAPPING } from "./StatusBadge";
 export { default as EmptyState } from "./EmptyState";
 export { default as AuditCard } from "./AuditCard";
 export type { AuditItem } from "./AuditCard";
+export { default as PageStatsBanner } from "./PageStatsBanner";
+export type { PageStatItem, PageStatsBannerProps, StatItemColor } from "./PageStatsBanner";
