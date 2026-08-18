@@ -100,7 +100,9 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
     onClose();
   };
 
-  const isNoAnswerStatus = selectedStatus && NO_ANSWER_STATUSES.includes(selectedStatus);
+  const isNoAnswerStatus =
+    selectedStatus !== null &&
+    (NO_ANSWER_STATUSES as readonly LeadCallStatus[]).includes(selectedStatus);
 
   // Render options cho select
   const statusOptions = Object.values(LeadCallStatus).map((status) => ({
@@ -155,12 +157,18 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             onChange={handleStatusChange}
             size="large"
             showSearch
-            filterOption={(input, option) =>
-              (option?.label as unknown as { props: { children: SpaceProps } })
-                ?.props?.children?.props?.children
-                ?.toLowerCase()
-                .includes(input.toLowerCase()) ?? false
-            }
+            filterOption={(input, option) => {
+              const labelRaw = (option?.label ?? "") as unknown as
+                | { props?: { children?: unknown } }
+                | string;
+              const nested =
+                typeof labelRaw === "string"
+                  ? labelRaw
+                  : (labelRaw?.props?.children as unknown) ?? "";
+              return String(nested)
+                .toLowerCase()
+                .includes(input.toLowerCase());
+            }}
           />
         </Form.Item>
 

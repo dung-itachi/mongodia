@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { ReturnType } from "react";
 import { App } from "antd";
 
 type MessageType = ReturnType<typeof App.useApp>["message"];

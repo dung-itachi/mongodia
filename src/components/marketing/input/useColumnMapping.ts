@@ -92,7 +92,7 @@ export function useColumnMapping(userId?: string | null) {
 
   // Khi userId thay đổi → đọc lại mapping tương ứng
   useEffect(() => {
-    setMappings(readStorage(userId));
+    setMappings(readStorage(userId ?? null));
   }, [userId]);
 
   const setModeLayout = useCallback(
@@ -100,7 +100,7 @@ export function useColumnMapping(userId?: string | null) {
       const normalized = normalizeLayout(layout, mode);
       setMappings((prev) => {
         const next = { ...prev, [mode]: normalized };
-        writeStorage(userId, next);
+        writeStorage(userId ?? null, next);
         return next;
       });
     },

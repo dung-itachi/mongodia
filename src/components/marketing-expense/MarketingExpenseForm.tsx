@@ -33,14 +33,14 @@ import {
   marketingExpenseFormSchema,
   defaultMarketingExpenseForm,
   type MarketingExpenseForm,
-} from "@/validators/marketing-expense.validator";
+} from "@/validators/marketing-expense.form";
 
 import { useFacebookPages, useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
 
 import BudgetAllocationTable from "./BudgetAllocationTable";
 import MarketingExpenseSummaryCard from "./MarketingExpenseSummaryCard";
 
-import styles from "./marketing-expense.module.css";
+import styles from "@/app/(protected)/marketing/expense/marketing-expense.module.css";
 
 const { TextArea } = Input;
 

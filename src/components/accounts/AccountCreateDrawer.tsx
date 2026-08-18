@@ -13,24 +13,35 @@
  * be embedded into any page without duplicating the form schema.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Divider,
   Drawer,
   Form,
   Input,
+  Progress,
   Select,
   Space,
   Tag,
   Typography,
 } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 import {
   type Account,
   type AccountInput,
   useCreateAccount,
   useUpdateAccount,
 } from "@/hooks/useAccounts";
+import {
+  uploadToCloudinary,
+  getAvatarDisplayUrl,
+  extractPublicId,
+  deleteCloudinaryImage,
+  type ValidationError,
+} from "@/lib/cloudinary";
+import styles from "./AccountCreateDrawer.module.css";
+import ImageSizeErrorModal from "./ImageSizeErrorModal";
 
 export type AccountCreateDrawerProps = {
   open: boolean;
@@ -96,7 +107,71 @@ export default function AccountCreateDrawer({
   const create = useCreateAccount();
   const update = useUpdateAccount();
 
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [sizeError, setSizeError] = useState<{ fileSizeMB: number; fileName: string } | null>(null);
+
   const locked = useMemo(() => new Set(lockedFields ?? []), [lockedFields]);
+
+  const currentAvatarUrl = getAvatarDisplayUrl(avatarUrl ?? selected?.avatar ?? undefined);
+  const displayAvatarUrl = previewUrl || currentAvatarUrl;
+
+  // Sync avatarUrl when drawer opens with selected account
+  useEffect(() => {
+    if (open && selected?.avatar) {
+      setAvatarUrl(selected.avatar);
+    }
+    if (open && !selected) {
+      setAvatarUrl(null);
+      setPreviewUrl(null);
+    }
+  }, [open, selected]);
+
+  const handleAvatarChange = async (file: File) => {
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const result = await uploadToCloudinary(file, (percent) => {
+        setUploadProgress(percent);
+      });
+
+      setAvatarUrl(result.secure_url);
+      setPreviewUrl(null);
+      void form.setFieldValue("avatar", result.secure_url);
+    } catch (err) {
+      const validationErr = err as ValidationError;
+      if (validationErr && typeof validationErr === "object" && validationErr.code === "size") {
+        setSizeError({
+          fileSizeMB: validationErr.fileSizeMB ?? file.size / (1024 * 1024),
+          fileName: file.name,
+        });
+        setPreviewUrl(null);
+      } else if (validationErr && typeof validationErr === "object" && validationErr.code === "type") {
+        setPreviewUrl(null);
+      }
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleUploadClick = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/webp";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+        void handleAvatarChange(file);
+      }
+    };
+    input.click();
+  };
 
   // Reset form whenever the drawer opens or the inputs change.
   useEffect(() => {
@@ -132,7 +207,7 @@ export default function AccountCreateDrawer({
           fullName: values.fullName,
           email: values.email,
           phone: values.phone,
-          avatar: values.avatar,
+          avatar: avatarUrl ?? values.avatar ?? "",
           roleCode: values.roleCode,
           teamId: values.teamId ?? null,
           departmentId: values.departmentId ?? null,
@@ -145,12 +220,16 @@ export default function AccountCreateDrawer({
         {
           onSuccess: () => {
             form.resetFields();
+            setAvatarUrl(null);
+            setPreviewUrl(null);
             onSuccess?.();
             onClose();
           },
         }
       );
     } else if (selected) {
+      const oldAvatarUrl = selected.avatar ?? "";
+      const newAvatarUrl = avatarUrl ?? values.avatar ?? "";
       update.mutate(
         {
           id: selected._id,
@@ -158,7 +237,7 @@ export default function AccountCreateDrawer({
             fullName: values.fullName,
             email: values.email,
             phone: values.phone,
-            avatar: values.avatar,
+            avatar: newAvatarUrl,
             roleCode: values.roleCode,
             teamId: values.teamId ?? null,
             departmentId: values.departmentId ?? null,
@@ -171,6 +250,15 @@ export default function AccountCreateDrawer({
         },
         {
           onSuccess: () => {
+            void (async () => {
+              const oldPublicId = extractPublicId(oldAvatarUrl);
+              const newPublicId = extractPublicId(newAvatarUrl);
+              if (oldPublicId && oldPublicId !== newPublicId) {
+                await deleteCloudinaryImage(oldPublicId);
+              }
+            })();
+            setAvatarUrl(null);
+            setPreviewUrl(null);
             onSuccess?.();
             onClose();
           },
@@ -195,6 +283,25 @@ export default function AccountCreateDrawer({
     >
       {mode === "view" && selected ? (
         <Space orientation="vertical" size="small" style={{ width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
+            <div style={{
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              overflow: "hidden",
+              border: "2px solid #d9d9d9",
+              background: "#fafafa",
+              flexShrink: 0
+            }}>
+              {selected.avatar ? (
+                <img src={getAvatarDisplayUrl(selected.avatar)} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#999", fontSize: 11 }}>
+                  Không có avatar
+                </div>
+              )}
+            </div>
+          </div>
           <Typography.Paragraph>
             <b>Mã NV:</b> {selected.employeeCode}
           </Typography.Paragraph>
@@ -296,6 +403,40 @@ export default function AccountCreateDrawer({
             <Input />
           </Form.Item>
 
+          <Form.Item label="Avatar">
+            <div className={styles.avatarRow}>
+              <div className={styles.avatarPreview}>
+                {displayAvatarUrl ? (
+                  <img src={displayAvatarUrl} alt="Avatar" />
+                ) : (
+                  <div className={styles.avatarPlaceholder}>
+                    <span>Chưa có avatar</span>
+                  </div>
+                )}
+              </div>
+              <div className={styles.uploadActions}>
+                {isUploading && (
+                  <div className={styles.uploadProgress}>
+                    <Progress percent={uploadProgress} size="small" status="active" />
+                    <span>Đang tải lên...</span>
+                  </div>
+                )}
+                <Button
+                  icon={<UploadOutlined />}
+                  onClick={handleUploadClick}
+                  loading={isUploading}
+                >
+                  {displayAvatarUrl && !previewUrl ? "Chọn ảnh mới" : "Tải lên avatar"}
+                </Button>
+                <Typography.Text type="secondary" className={styles.uploadHint}>
+                  JPG / PNG / WebP - Tối đa 5MB
+                </Typography.Text>
+              </div>
+            </div>
+          </Form.Item>
+
+          <Form.Item name="avatar" hidden><Input /></Form.Item>
+
           <Form.Item name="roleCode" label="Role">
             <Select
               options={roleOptions}
@@ -366,6 +507,12 @@ export default function AccountCreateDrawer({
           </Form.Item>
         </Form>
       )}
+
+      <ImageSizeErrorModal
+        open={sizeError !== null}
+        onClose={() => setSizeError(null)}
+        fileSizeMB={sizeError?.fileSizeMB}
+      />
     </Drawer>
   );
 }

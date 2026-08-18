@@ -6,6 +6,8 @@ export interface IArea {
   address?: string;
   countryCode: string;
   isActive: boolean;
+  /** Teams belonging to this area (used by dashboard aggregations). */
+  teamIds?: mongoose.Types.ObjectId[];
 }
 
 const AreaSchema = new Schema<IArea>(
@@ -34,6 +36,10 @@ const AreaSchema = new Schema<IArea>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    teamIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Team" }],
+      default: [],
     },
   },
   {

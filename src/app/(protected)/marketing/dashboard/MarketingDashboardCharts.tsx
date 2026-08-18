@@ -86,7 +86,9 @@ function MarketingDashboardChartsInner({ period, onChartClick }: MarketingDashbo
 
       <div className={styles["mk-charts-grid"]}>
         {MARKETING_DASHBOARD_CHARTS.map((chart) => {
-          const chartData = chart.selector(data);
+          const rawData = data ? chart.selector(data) : null;
+          if (!rawData) return null;
+          const chartData = rawData;
           const sumValue = chartData.reduce((s, d) => s + Math.abs(d.value), 0);
           const maxValue = Math.max(sumValue, 1);
           const visibleData = chartData.slice(-7);

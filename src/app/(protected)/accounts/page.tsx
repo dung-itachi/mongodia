@@ -1,6 +1,6 @@
 "use client";
 
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import { Avatar, Button, DatePicker, Drawer, Form, Input, Popconfirm, Select, Space, Table, Tag, Typography } from "antd";
 import {
@@ -159,7 +159,7 @@ export default function AccountsPage() {
       result = result.filter((a) => a.team?._id === filterTeam);
     }
     if (filterArea) {
-      result = result.filter((a) => a.area?._id === filterArea || a.team?.areaId === filterArea);
+      result = result.filter((a) => a.area?._id === filterArea);
     }
     if (filterCreated) {
       const [start, end] = filterCreated;

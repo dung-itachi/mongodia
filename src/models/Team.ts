@@ -6,7 +6,7 @@ export interface ITeam {
 
   departmentId: Types.ObjectId;
 
-  areaId: Types.ObjectId;
+  areaId?: Types.ObjectId | null;
 
   leaderId?: Types.ObjectId | null;
 

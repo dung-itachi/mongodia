@@ -24,14 +24,14 @@ import { memo, useState, useEffect, useCallback, useRef } from "react";
 import { InputNumber } from "antd";
 import type { UseFormWatch, UseFormSetValue } from "react-hook-form";
 
-import type { MarketingExpenseForm } from "@/validators/marketing-expense.validator";
+import type { MarketingExpenseForm } from "@/validators/marketing-expense.form";
 import {
   sumBudgetAllocation,
   calculateRemainingBudget,
 } from "@/utils/MarketingExpenseCalculator";
 import { MARKETING_BUDGET_SLOTS, type BudgetSlotId } from "@/configs/marketing-budget-slots.config";
 
-import styles from "./marketing-expense.module.css";
+import styles from "@/app/(protected)/marketing/expense/marketing-expense.module.css";
 
 interface BudgetAllocationTableProps {
   watch: UseFormWatch<MarketingExpenseForm>;

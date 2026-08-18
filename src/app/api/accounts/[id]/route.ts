@@ -119,10 +119,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (data.bankName !== undefined) target.bankName = data.bankName;
     if (data.bankAccountNumber !== undefined) target.bankAccountNumber = data.bankAccountNumber;
     if (data.bankAccountHolder !== undefined) target.bankAccountHolder = data.bankAccountHolder;
-    if (data.teamId !== undefined) target.teamId = data.teamId ? new mongoose.Types.ObjectId(data.teamId) : null;
-    if (data.departmentId !== undefined) target.departmentId = data.departmentId ? new mongoose.Types.ObjectId(data.departmentId) : null;
-    if (data.leaderId !== undefined) target.leaderId = data.leaderId ? new mongoose.Types.ObjectId(data.leaderId) : null;
-    if (data.areaId !== undefined) target.areaId = data.areaId ? new mongoose.Types.ObjectId(data.areaId) : null;
+    if (data.teamId !== undefined) (target as any).teamId = data.teamId ? new mongoose.Types.ObjectId(data.teamId) : null;
+    if (data.departmentId !== undefined) (target as any).departmentId = data.departmentId ? new mongoose.Types.ObjectId(data.departmentId) : null;
+    if (data.leaderId !== undefined) (target as any).leaderId = data.leaderId ? new mongoose.Types.ObjectId(data.leaderId) : null;
+    if (data.areaId !== undefined) (target as any).areaId = data.areaId ? new mongoose.Types.ObjectId(data.areaId) : null;
     if (data.isActive !== undefined) target.isActive = data.isActive;
     if (newRole) target.roleId = newRole._id;
     await target.save();

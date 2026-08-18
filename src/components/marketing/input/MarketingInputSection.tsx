@@ -1020,7 +1020,7 @@ export default function MarketingInputSection({
           `💡 Phone phải là 6-11 chữ số liên tục (vd "96621013"). ` +
           `Nếu paste từ nguồn không có tab, hệ thống sẽ tự tìm phone bằng regex — ` +
           `đảm bảo có ít nhất 1 chuỗi số điện thoại rõ ràng trong dòng.`,
-        { duration: 8 }
+        8
       );
     } else if (errorCount > 0) {
       toast.warning(
@@ -1037,7 +1037,7 @@ export default function MarketingInputSection({
       const rowsText = noProductInfoRows.join(", ");
       toast.warning(
         `⚠ Dòng STT: ${rowsText} đang thiếu dữ liệu sản phẩm/combo — hãy chọn sản phẩm/combo ở trên.`,
-        { duration: 6 }
+        6
       );
     }
 
@@ -1049,7 +1049,7 @@ export default function MarketingInputSection({
         (uniqueWarnings.length > 3
           ? `\n• ... và ${uniqueWarnings.length - 3} cảnh báo khác`
           : "");
-      toast.warning(warningText, { duration: 8 });
+      toast.warning(warningText, 8);
     }
   }, [inputText, inputType, selectedCombo, selectedProductId, selectedProductName, comboByNameMap, selectedFacebookPageId, facebookPages]);
 

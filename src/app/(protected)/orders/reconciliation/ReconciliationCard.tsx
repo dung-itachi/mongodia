@@ -70,7 +70,7 @@ function getProductComboDetails(order: OrderListItem): OrderItem[] {
       discount: 0,
       subtotal: order.totalAmount,
       details: [],
-      giftMode: "NO_GIFT",
+      giftMode: "RANDOM",
       giftSelections: [],
       productName: order.product?.name || "",
       quantity: order.quantity,
@@ -227,7 +227,7 @@ function ReconciliationCardInner({
             align: "center" as const,
             width: 60,
             render: (value: unknown) => (
-              <span>{value || 1}</span>
+              <span>{Number(value) || 1}</span>
             ),
           },
           {

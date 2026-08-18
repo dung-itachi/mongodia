@@ -43,6 +43,7 @@ export default function AdjustInventoryModal({
 }: AdjustInventoryModalProps) {
   const [form] = Form.useForm<FormValues>();
   const createAdjustment = useCreateAdjustment();
+  const message = useMessage();
 
   useEffect(() => {
     if (!open || !item) return;
@@ -60,7 +61,7 @@ export default function AdjustInventoryModal({
 
   const handleOk = async () => {
     if (!item) return;
-    const warehouseId = item.warehouseIdValue;
+    const warehouseId = item.warehouseId;
     if (!warehouseId) {
       message.error("Không xác định được kho của dòng tồn kho này");
       return;
@@ -68,7 +69,7 @@ export default function AdjustInventoryModal({
     try {
       const values = await form.validateFields();
       const payload = {
-        warehouseId,
+        warehouseId: typeof warehouseId === "string" ? warehouseId : warehouseId._id,
         items: [
           {
             productId: item.itemType === "PRODUCT" ? item.productIdValue || undefined : undefined,

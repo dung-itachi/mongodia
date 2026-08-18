@@ -111,7 +111,7 @@ function resolveAssignment(raw: {
     | null;
 
   return {
-    _id: raw._id.toString(),
+    _id: String(raw._id),
     marketingEmployeeId: employee
       ? (employee._id.toString?.() ?? String(employee._id))
       : null,
@@ -147,7 +147,10 @@ async function fetchCurrentAssignmentsByPageIds(
 
   for (const a of docs) {
     const pageId = (a.facebookPageId as { toString: () => string }).toString();
-    map.set(pageId, resolveAssignment(a));
+    const assignment = resolveAssignment(a);
+    if (assignment) {
+      map.set(pageId, assignment);
+    }
   }
 
   return map;

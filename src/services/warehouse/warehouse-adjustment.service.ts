@@ -86,6 +86,13 @@ export interface AdjustmentListItem {
   direction: AdjustmentDirection;
 }
 
+export interface AdjustmentListFilters {
+  warehouseId?: string;
+  type?: string;
+  page?: number;
+  limit?: number;
+}
+
 export type AdjustmentItemInput = {
   productId?: string;
   variantId?: string;
@@ -454,13 +461,6 @@ export class WarehouseAdjustmentService {
    * running total at each movement, and using it as `before`
    * for ADJUSTMENT movements.
    */
-  export interface AdjustmentListFilters {
-    warehouseId?: string;
-    type?: string;
-    page?: number;
-    limit?: number;
-  }
-
   async listAdjustments(filters: AdjustmentListFilters) {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;

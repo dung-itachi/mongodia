@@ -84,7 +84,7 @@ export default function SettingsHubPage() {
         title="Cài đặt hệ thống"
         subtitle="Tỷ giá tiền tệ, phí ship và ngôn ngữ"
         breadcrumb={[{ label: "Trang chủ", href: "/" }, { label: "Cài đặt hệ thống" }]}
-        extra={
+        actions={
           <Dropdown menu={languageMenu} trigger={["click"]}>
             <Button icon={<GlobalOutlined />}>
               <span style={{ marginRight: 4 }}>{currentLang.flag}</span>

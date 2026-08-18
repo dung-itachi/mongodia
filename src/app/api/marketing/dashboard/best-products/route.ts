@@ -20,7 +20,7 @@ import mongoose from "mongoose";
 
 import { connectDB } from "@/lib/mongodb";
 import { Order } from "@/models/Order";
-import { Product } from "@/models/Product";
+import Product from "@/models/Product";
 import Employee from "@/models/Employee";
 import Team from "@/models/Team";
 import Area from "@/models/Area";

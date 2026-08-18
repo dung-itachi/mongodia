@@ -6,8 +6,9 @@ import { useState, useEffect } from "react";
 import styles from "./profile.module.css";
 import { useChangeMyPassword, useMyProfile, useUpdateMyProfile } from "@/hooks/useMyProfile";
 import { useAuthStore } from "@/store/auth.store";
-import { uploadToCloudinary, getAvatarDisplayUrl } from "@/lib/cloudinary";
+import { uploadToCloudinary, getAvatarDisplayUrl, extractPublicId, deleteCloudinaryImage, type ValidationError } from "@/lib/cloudinary";
 import type { Account } from "@/hooks/useAccounts";
+import ImageSizeErrorModal from "@/components/accounts/ImageSizeErrorModal";
 
 type ProfileFields = Pick<Account, "fullName" | "email" | "phone" | "avatar">;
 type PasswordFields = { currentPassword: string; newPassword: string };
@@ -19,6 +20,7 @@ export default function ProfilePage() {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [sizeError, setSizeError] = useState<number | null>(null);
 
   const user = useAuthStore((state) => state.user);
   const canEditProfile = (user?.permissions.includes("*") ?? false) || (user?.permissions.includes("self-account.update") ?? false);
@@ -51,8 +53,14 @@ export default function ProfilePage() {
 
       setAvatarUrl(result.secure_url);
       setPreviewUrl(null);
-    } catch {
-      // Error already shown in uploadToCloudinary
+    } catch (err) {
+      const validationErr = err as ValidationError;
+      if (validationErr && typeof validationErr === "object" && validationErr.code === "size") {
+        setSizeError(validationErr.fileSizeMB ?? file.size / (1024 * 1024));
+        setPreviewUrl(null);
+      } else if (validationErr && typeof validationErr === "object" && validationErr.code === "type") {
+        setPreviewUrl(null);
+      }
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -97,8 +105,16 @@ export default function ProfilePage() {
                   phone: values.phone,
                   avatar: currentAvatarUrl ?? values.avatar ?? "",
                 };
+                const oldAvatarUrl = profile?.avatar ?? "";
                 update.mutate(payload, {
                   onSuccess: () => {
+                    void (async () => {
+                      const oldPublicId = extractPublicId(oldAvatarUrl);
+                      const newPublicId = extractPublicId(currentAvatarUrl ?? "");
+                      if (oldPublicId && oldPublicId !== newPublicId) {
+                        await deleteCloudinaryImage(oldPublicId);
+                      }
+                    })();
                     messageApi?.success("Lưu thông tin thành công");
                   },
                   onError: () => {
@@ -206,10 +222,16 @@ export default function ProfilePage() {
           <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
             <Button onClick={() => setPasswordModalOpen(false)}>Hủy</Button>
-            <Button type="primary" htmlType="submit" loading={changePassword.isPending}>Đổi mật khẩu</Button>
+            <Button type="primary" htmlType="submit" loading={changePassword.isPending}>Đổi mật kh�u</Button>
           </Space>
         </Form>
       </Modal>
+
+      <ImageSizeErrorModal
+        open={sizeError !== null}
+        onClose={() => setSizeError(null)}
+        fileSizeMB={sizeError ?? undefined}
+      />
     </div>
   );
 }

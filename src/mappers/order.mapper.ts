@@ -128,6 +128,10 @@ export interface OrderResponse {
   productVariantId?: string;
   productSnapshot?: { code: string; name: string };
   comboSnapshot?: { code: string; name: string };
+  /** Populated Product object (only present after Mongoose `.populate`). */
+  product?: { _id: string; code: string; name: string };
+  /** Populated Combo object (only present after Mongoose `.populate`). */
+  combo?: { _id: string; code: string; name: string };
 
   // ---- Pricing -----------------------------------------------------
   quantity: number;

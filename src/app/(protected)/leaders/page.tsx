@@ -9,7 +9,7 @@ import { useAreas } from "@/hooks/useAreas";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useEmployees as useEmployeesAll } from "@/hooks/useEmployees";
 import { useAuthStore } from "@/store/auth.store";
-import type { Employee } from "@/hooks/useEmployees";
+import type { EmployeeListItem } from "@/hooks/useEmployees";
 import AccountCreateDrawer from "@/components/accounts/AccountCreateDrawer";
 
 export default function LeadersPage() {
@@ -62,10 +62,10 @@ export default function LeadersPage() {
   }, [leaders, search]);
 
   const columns = useMemo(() => [
-    { title: "STT", render: (_: unknown, __: Employee, index: number) => index + 1, width: 60 },
+    { title: "STT", render: (_: unknown, __: EmployeeListItem, index: number) => index + 1, width: 60 },
     {
       title: "Avatar",
-      render: (_: unknown, item: Employee) => (
+      render: (_: unknown, item: EmployeeListItem) => (
         <Avatar src={item.avatar || undefined}>{item.fullName?.charAt(0)}</Avatar>
       ),
       width: 70,
@@ -73,18 +73,17 @@ export default function LeadersPage() {
     { title: "Mã NV", dataIndex: "employeeCode", width: 110 },
     { title: "Họ tên", dataIndex: "fullName" },
     { title: "Username", dataIndex: "username" },
-    { title: "Email", render: (_: unknown, item: Employee) => item.email || "-" },
-    { title: "Phone", render: (_: unknown, item: Employee) => item.phone || "-" },
+    { title: "Email", render: (_: unknown, item: EmployeeListItem) => item.email || "-" },
+    { title: "Phone", render: (_: unknown, item: EmployeeListItem) => item.phone || "-" },
     {
       title: "Team",
-      render: (_: unknown, item: Employee) => {
-        const code = typeof item.teamId === "object" ? (item.teamId as { code?: string })?.code : null;
-        return code ?? "-";
+      render: (_: unknown, item: EmployeeListItem) => {
+        return item.team?.name ?? "-";
       },
     },
     {
       title: "Trạng thái",
-      render: (_: unknown, item: Employee) => (
+      render: (_: unknown, item: EmployeeListItem) => (
         <Tag color={item.isActive ? "green" : "red"}>{item.isActive ? "Hoạt động" : "Đã khóa"}</Tag>
       ),
       width: 110,

@@ -48,7 +48,7 @@ export default function SaleLeadsPage() {
   // Get user role from auth store
   const user = useAuthStore((state) => state.user);
   const { message } = App.useApp();
-  const roleCode = typeof user?.role === 'string' ? user.role : user?.role?.code;
+  const roleCode = user?.role;
   const isAdminOrManager = roleCode === "ADMIN" || roleCode === "MANAGER";
 
   // State

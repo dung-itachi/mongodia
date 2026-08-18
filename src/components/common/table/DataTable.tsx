@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 
 export type Column = {
   key: string;
-  title: string;
+  title: ReactNode;
   dataIndex?: string;
   width?: number | string;
   align?: "left" | "center" | "right";

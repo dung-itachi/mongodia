@@ -181,7 +181,7 @@ export default function Sidebar({
   if (userRoleCode !== "ADMIN" && !userPermissions.includes("*")) {
     let groups: string[];
     if (userRoleCode === "LEADER") {
-      groups = resolveLeaderVisibleGroups(user.teamCode ?? null);
+      groups = resolveLeaderVisibleGroups(user?.teamCode ?? null);
     } else if (userVisibleGroups.length > 0) {
       groups = userVisibleGroups;
     } else {
@@ -312,8 +312,6 @@ export default function Sidebar({
           <NavGroups
             visibleGroups={visibleGroups}
             language={language}
-            expandAll={() => {}}
-            collapseAll={() => {}}
           />
         </Suspense>
       </nav>
@@ -552,44 +550,44 @@ function NavGroups({
   return (
     <>
       {/* Expand/Collapse all controls */}
-      <div style={{ display: "flex", gap: "4px", padding: "4px 8px", marginBottom: "4px" }}>
-        <Tooltip
-          title={
-            <span style={{ fontSize: 12 }}>
-              {openGroups.size === visibleGroups.length ? "Thu gọn tất cả" : "Mở rộng tất cả"}
-            </span>
-          }
-          mouseEnterDelay={0}
-          styles={{ root: { fontSize: 12 } }}
-          placement="right"
+      <Tooltip
+        title={
+          <span style={{ fontSize: 12 }}>
+            {openGroups.size === visibleGroups.length ? "Thu gọn tất cả" : "Mở rộng tất cả"}
+          </span>
+        }
+        mouseEnterDelay={0}
+        styles={{ root: { fontSize: 12 } }}
+        placement="right"
+      >
+        <button
+          type="button"
+          onClick={openGroups.size === visibleGroups.length ? handleCollapseAll : handleExpandAll}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            padding: "4px 8px",
+            marginBottom: "4px",
+            background: "rgba(255,255,255,0.06)",
+            color: "var(--sb-txt)",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
         >
-          <button
-            type="button"
-            onClick={openGroups.size === visibleGroups.length ? handleCollapseAll : handleExpandAll}
-            style={{
-              padding: "6px",
-              background: "rgba(255,255,255,0.06)",
-              color: "var(--sb-txt)",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {openGroups.size === visibleGroups.length ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 14, height: 14 }}>
-                <path d="M4 8l8 6 8-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 14, height: 14 }}>
-                <path d="M4 8l8-6 8 6M4 16l8 6 8-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
-          </button>
-        </Tooltip>
-      </div>
+          {openGroups.size === visibleGroups.length ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 14, height: 14 }}>
+              <path d="M4 8l8 6 8-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 14, height: 14 }}>
+              <path d="M4 8l8-6 8 6M4 16l8 6 8-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </button>
+      </Tooltip>
       {visibleGroups.map((group) => (
         <NavGroupBlock
           key={group.key}

@@ -33,14 +33,13 @@ export class LeadCallLogService {
         });
 
         // Ghi lịch sử thay đổi trạng thái
-        await leadHistoryService.logAction(
-          data.leadId,
-          data.saleId,
-          LeadAction.STATUS_CHANGED,
-          leadStatus,
-          undefined,
-          data.note
-        );
+        await leadHistoryService.logAction({
+          leadId: data.leadId,
+          employeeId: data.saleId,
+          action: LeadAction.STATUS_CHANGED,
+          oldValue: leadStatus,
+          note: data.note,
+        });
       } catch (error) {
         // Log error nhưng không fail việc tạo call log
         console.error("Error updating lead status:", error);

@@ -1,19 +1,22 @@
 /**
  * ==================================================
- * MARKETING EXPENSE VALIDATOR
+ * MARKETING EXPENSE VALIDATOR (SERVER-ONLY)
  * ==================================================
  *
  * Sprint 6.5 — Marketing Expense Domain
  * Sprint 6.7 — Marketing Expense CRUD (Backend)
  *
- * Zod schemas cho MarketingExpenseReport:
- *   - `marketingExpenseFormSchema`   → UI form (Sprint 6.5)
+ * Zod schemas cho MarketingExpenseReport API:
  *   - `createMarketingExpenseSchema` → POST /api/marketing/expenses (Sprint 6.7)
  *   - `updateMarketingExpenseSchema` → PATCH /api/marketing/expenses/:id
  *   - `listMarketingExpenseSchema`   → GET /api/marketing/expenses query params
  *
+ * Server-only vì import mongoose (mongoose.Types.ObjectId.isValid).
+ * Client-side form schemas (UI form) tách sang `@/validators/marketing-expense.form`
+ * để tránh kéo mongoose vào client bundle.
+ *
  * Lưu ý:
- *  - Validator chỉ kiểm tra shape dữ liệu form.
+ *  - Validator chỉ kiểm tra shape dữ liệu.
  *  - Business rules (status transition, duplicate ngày, ...) thuộc Service.
  */
 
@@ -43,60 +46,6 @@ const budgetAllocationSchema = z.object({
   afternoon: nonNegativeNumber,
   emergency: nonNegativeNumber,
 });
-
-// ============================================================================
-// Main form schema
-// ============================================================================
-
-export const marketingExpenseFormSchema = z.object({
-  reportDate: z.string().min(1, "Ngày báo cáo là bắt buộc"),
-
-  marketingEmployeeId: z
-    .string()
-    .trim()
-    .min(1, "Nhân viên marketing là bắt buộc"),
-
-  /**
-   * `facebookPageId` = null / undefined / "" → báo cáo toàn team.
-   */
-  facebookPageId: z.string().nullable().default(null),
-
-  requestedBudget: z.object({
-    morning: z.number().min(0).default(0),
-    afternoon: z.number().min(0).default(0),
-    emergency: z.number().min(0).default(0),
-  }),
-
-  spentBudget: z.object({
-    morning: z.number().min(0).default(0),
-    afternoon: z.number().min(0).default(0),
-    emergency: z.number().min(0).default(0),
-  }),
-
-  totalRevenue: z.number().min(0).default(0),
-  totalLeads: z.number().min(0).default(0),
-  closedLeads: z.number().min(0).default(0),
-
-  note: z.string().trim().max(2000).default(""),
-});
-
-export type MarketingExpenseForm = z.infer<typeof marketingExpenseFormSchema>;
-
-// ============================================================================
-// Default form (cho UI init)
-// ============================================================================
-
-export const defaultMarketingExpenseForm: MarketingExpenseForm = {
-  reportDate: new Date().toISOString().slice(0, 10),
-  marketingEmployeeId: "",
-  facebookPageId: null,
-  requestedBudget: { morning: 0, afternoon: 0, emergency: 0 },
-  spentBudget: { morning: 0, afternoon: 0, emergency: 0 },
-  totalRevenue: 0,
-  totalLeads: 0,
-  closedLeads: 0,
-  note: "",
-};
 
 // ============================================================================
 // API schemas (Sprint 6.7)

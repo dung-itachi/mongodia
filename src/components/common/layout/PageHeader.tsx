@@ -16,7 +16,7 @@ export type PageHeaderProps = {
   /** Page title */
   title: ReactNode;
   /** Optional subtitle */
-  subtitle?: string;
+  subtitle?: ReactNode;
   /** Breadcrumb items */
   breadcrumb?: BreadcrumbItem[];
   /** Action buttons on the right */

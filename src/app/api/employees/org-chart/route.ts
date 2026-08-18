@@ -182,10 +182,10 @@ export async function GET(request: Request) {
     }
 
     const managers = (employeesByRole.get("MANAGER") ?? []).map((e) =>
-      toNode(e as Parameters<typeof toNode>[0])
+      toNode(e as unknown as Parameters<typeof toNode>[0])
     );
     const leaders = (employeesByRole.get("LEADER") ?? []).map((e) =>
-      toNode(e as Parameters<typeof toNode>[0])
+      toNode(e as unknown as Parameters<typeof toNode>[0])
     );
 
     // Build the LEADER → EMPLOYEE map by walking Employee.leaderId.
@@ -201,7 +201,7 @@ export async function GET(request: Request) {
           (emp.leaderId as unknown as { _id?: string })._id
             ? (emp.leaderId as unknown as { _id: string })._id.toString()
             : null;
-        const node = toNode(emp as Parameters<typeof toNode>[0]);
+        const node = toNode(emp as unknown as Parameters<typeof toNode>[0]);
         if (leaderId) {
           const bucket = employeesUnderLeader.get(leaderId) ?? [];
           bucket.push(node);
@@ -247,7 +247,7 @@ export async function GET(request: Request) {
     // Build the ADMIN root. If there are no ADMINs at all, we synthesize
     // a virtual root so the chart always renders something useful.
     const admins = (employeesByRole.get("ADMIN") ?? []).map((e) =>
-      toNode(e as Parameters<typeof toNode>[0])
+      toNode(e as unknown as Parameters<typeof toNode>[0])
     );
 
     let root: OrgNode;

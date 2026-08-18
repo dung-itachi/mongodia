@@ -45,7 +45,7 @@ export default function GiftTable({
       title: "STT",
       width: 60,
       align: "center",
-      render: (_: unknown, __: Record<string, unknown>, index: number) => <span>{index + 1}</span>,
+      render: (_: unknown, __: Record<string, unknown>, index: number = 0) => <span>{index + 1}</span>,
     },
     { key: "name", title: "Tên quà", dataIndex: "name" },
     {

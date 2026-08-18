@@ -237,7 +237,7 @@ export class LeadCallLogRepository {
    * Map document to CallLogItem
    */
   private mapToItem(
-    doc: ILeadCallLog | (mongoose.LeanDocument<ILeadCallLog> & { _id: mongoose.Types.ObjectId })
+    doc: ILeadCallLog | (mongoose.HydratedDocument<ILeadCallLog> & { _id: mongoose.Types.ObjectId })
   ): CallLogItem {
     const sale = doc.saleId as unknown as {
       _id: mongoose.Types.ObjectId;

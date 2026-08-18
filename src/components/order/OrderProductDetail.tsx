@@ -592,6 +592,7 @@ function OrderItemRow({
 }: OrderItemRowProps) {
   const variantOptions = product?.variantOptions || [];
   const hasVariants = variantOptions.length > 0;
+  const message = useMessage();
 
   // Tính tổng yêu cầu
   const totalProductsRequired = item.comboQuantity * item.packageQuantity;

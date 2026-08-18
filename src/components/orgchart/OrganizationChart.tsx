@@ -92,6 +92,7 @@ export default function OrganizationChart({
   // "+ sibling" / "↓ child" buttons on each card.
   // ---------------------------------------------------------------------------
   const user = useAuthStore((state) => state.user);
+  const message = useMessage();
   const canCreate =
     user?.role === "ADMIN" ||
     user?.permissions.includes("*") ||
@@ -707,6 +708,7 @@ export default function OrganizationChart({
           teamOptions={[]}
           departmentOptions={createDepartmentOptions}
           leaderOptions={[]}
+          areaOptions={[]}
           showBankFields={false}
           onSuccess={onCreateSuccess}
         />

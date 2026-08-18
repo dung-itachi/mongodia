@@ -15,12 +15,39 @@ interface UploadResult {
   public_id: string;
 }
 
-function validateFile(file: File): string | null {
+export const COMPRESS_LINKS: { label: string; url: string }[] = [
+  { label: "imagecompressor.com", url: "https://imagecompressor.com/vi/" },
+  { label: "iloveimg.com", url: "https://www.iloveimg.com/vi/nen-anh" },
+  { label: "compress2go.com", url: "https://www.compress2go.com/vi/compress-image" },
+  { label: "img2go.com", url: "https://www.img2go.com/vi/compress-image" },
+  { label: "chungdoi.com", url: "https://chungdoi.com/vi/giam-dung-luong-anh" },
+  { label: "websiteplanet.com", url: "https://www.websiteplanet.com/vi/webtools/imagecompressor/" },
+  { label: "trantienduy.com", url: "https://trantienduy.com/giam-dung-luong-hinh-anh/" },
+  { label: "snapedit.app", url: "https://snapedit.app/vi/compress-image" },
+  { label: "smallpdf.com", url: "https://smallpdf.com/blog/compress-jpeg" },
+];
+
+export type ValidationErrorCode = "size" | "type";
+
+export interface ValidationError {
+  code: ValidationErrorCode;
+  message: string;
+  fileSizeMB?: number;
+}
+
+function validateFile(file: File): ValidationError | null {
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return "Chỉ chấp nhận file JPG, PNG hoặc WebP";
+    return {
+      code: "type",
+      message: "Chỉ chấp nhận file JPG, PNG hoặc WebP",
+    };
   }
   if (file.size > MAX_FILE_SIZE) {
-    return `File vượt quá giới hạn 5MB (${(file.size / (1024 * 1024)).toFixed(2)}MB). Hãy nén ảnh trước khi upload tại: https://imagecompressor.com/vi/ | https://www.iloveimg.com/vi/nen-anh | https://www.compress2go.com/vi/compress-image | https://www.img2go.com/vi/compress-image | https://chungdoi.com/vi/giam-dung-luong-anh | https://www.websiteplanet.com/vi/webtools/imagecompressor/ | https://trantienduy.com/giam-dung-luong-hinh-anh/ | https://snapedit.app/vi/compress-image | https://smallpdf.com/blog/compress-jpeg`;
+    return {
+      code: "size",
+      message: `File vượt quá giới hạn 5MB (${(file.size / (1024 * 1024)).toFixed(2)}MB)`,
+      fileSizeMB: file.size / (1024 * 1024),
+    };
   }
   return null;
 }
@@ -91,14 +118,15 @@ export async function uploadToCloudinary(
 ): Promise<UploadResult> {
   const error = validateFile(file);
   if (error) {
-    antMessage.error(error);
-    throw new Error(error);
+    throw error;
   }
 
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
-    const envError = "Thiếu cấu hình Cloudinary. Vui lòng kiểm tra biến môi trường.";
-    antMessage.error(envError);
-    throw new Error(envError);
+    const envError: ValidationError = {
+      code: "type",
+      message: "Thiếu cấu hình Cloudinary. Vui lòng kiểm tra biến môi trường.",
+    };
+    throw envError;
   }
 
   const resizedFile = await resizeImage(file);
@@ -136,8 +164,13 @@ export async function uploadToCloudinary(
 
     return result;
   } catch (err) {
+    const validationErr = err as ValidationError;
+    if (validationErr && typeof validationErr === "object" && validationErr.code) {
+      // Validation errors should be displayed by the caller (via modal)
+      throw err;
+    }
     if (err instanceof Error) {
-      if (err.antMessage.includes("Failed to fetch")) {
+      if (err.message.includes("Failed to fetch")) {
         antMessage.error("Không thể kết nối Cloudinary. Vui lòng kiểm tra kết nối mạng.");
       } else {
         antMessage.error(err.message);
@@ -153,7 +186,38 @@ export function isCloudinaryUrl(url: string): boolean {
   return url.includes("res.cloudinary.com");
 }
 
-export function getAvatarDisplayUrl(url: string | undefined | null): string | null {
-  if (!url || url.trim() === "") return null;
+export function getAvatarDisplayUrl(url: string | undefined | null): string | undefined {
+  if (!url || url.trim() === "") return undefined;
   return url;
+}
+
+/**
+ * Extract public_id from a Cloudinary URL.
+ * e.g. https://res.cloudinary.com/cloud-name/image/upload/v1234567890/avatars/abc123.jpg
+ * returns "avatars/abc123"
+ */
+export function extractPublicId(url: string | undefined | null): string | null {
+  if (!url) return null;
+
+  // Match: res.cloudinary.com/{cloud_name}/image/upload[/v{version}]/{public_id}
+  const match = url.match(/res\.cloudinary\.com\/[^/]+\/image\/upload(?:\/v\d+)?\/(.+?)(?:\.jpg|\.png|\.jpeg|\.webp|\.gif)?$/i);
+  if (!match) return null;
+
+  return match[1];
+}
+
+/**
+ * Call the server-side delete endpoint that signs the request with the
+ * Cloudinary API secret. Never expose the secret to the client.
+ */
+export async function deleteCloudinaryImage(publicId: string): Promise<void> {
+  try {
+    await fetch("/api/cloudinary/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId }),
+    });
+  } catch (err) {
+    console.warn("Failed to delete old Cloudinary image:", publicId, err);
+  }
 }

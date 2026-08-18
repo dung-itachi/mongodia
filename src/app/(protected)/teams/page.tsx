@@ -167,7 +167,7 @@ export default function TeamsPage() {
     }
   };
 
-  const handleSubmit = async (values: { code: string; name: string; departmentCode: string; leaderCode?: string; managerCode?: string }) => {
+  const handleSubmit = async (values: { code: string; name: string; departmentCode: string; areaCode?: string; leaderCode?: string; managerCode?: string }) => {
     try {
       setLoading(true);
       const payload = {

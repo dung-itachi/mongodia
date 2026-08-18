@@ -17,7 +17,7 @@
 
 import { calculateBudgetSummary } from "@/utils/MarketingExpenseCalculator";
 
-import styles from "./marketing-expense.module.css";
+import styles from "@/app/(protected)/marketing/expense/marketing-expense.module.css";
 
 export interface MarketingExpenseSummaryCardProps {
   requestedBudget?: { morning: number; afternoon: number; emergency: number };

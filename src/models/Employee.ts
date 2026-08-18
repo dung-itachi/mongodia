@@ -22,6 +22,9 @@ export interface IEmployee {
   /** Direct manager relation used by hierarchical account authorization. */
   leaderId?: Types.ObjectId | null;
 
+  /** Geographic area scope for the employee (e.g. sale regions); null means no area assignment. */
+  areaId?: Types.ObjectId | null;
+
   /** Warehouse scope for warehouse operators; null means no warehouse assignment. */
   warehouseId?: Types.ObjectId | null;
 

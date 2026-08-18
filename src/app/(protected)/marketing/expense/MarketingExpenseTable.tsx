@@ -32,7 +32,7 @@ import {
 import { marketingExpenseStatusConfig } from "@/configs/marketing-expense-status.config";
 import { sumBudgetAllocation } from "@/utils/MarketingExpenseCalculator";
 
-import styles from "../marketing-expense.module.css";
+import styles from "@/app/(protected)/marketing/expense/marketing-expense.module.css";
 
 // ============================================================================
 // Helpers

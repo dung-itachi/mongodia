@@ -106,15 +106,16 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const handleAddReport = async (values: {
-    reportDate: dayjs.Dayjs;
+    reportDate?: dayjs.Dayjs;
     xinSang: number;
     xinChieu: number;
     xinGap: number;
+    tongTieu?: number;
   }) => {
     setSubmitting(true);
     try {
       const response = await api.post("/api/marketing/dashboard/daily-ads-report", {
-        reportDate: values.reportDate.toISOString(),
+        reportDate: values.reportDate ? values.reportDate.toISOString() : new Date().toISOString(),
         xinSang: values.xinSang || 0,
         xinChieu: values.xinChieu || 0,
         xinGap: values.xinGap || 0,
@@ -136,6 +137,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
   };
 
   const handleEditReport = async (values: {
+    reportDate?: dayjs.Dayjs;
     xinSang: number;
     xinChieu: number;
     xinGap: number;

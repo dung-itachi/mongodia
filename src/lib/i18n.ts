@@ -125,12 +125,6 @@ const translations: Record<Language, TranslationSet> = {
     // Group labels
     "Cài đặt hệ thống": "Системийн тохиргоо",
 
-    // Role labels
-    "Admin": "Админ",
-    "MKT": "МКТ",
-    "Sale": "Борлуулалт",
-    "Kho": "Агуулах",
-
     // Common
     "Đăng xuất": "Гарах",
     "Expand": "Дэлгэх",

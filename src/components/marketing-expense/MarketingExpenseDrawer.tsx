@@ -32,7 +32,7 @@ import {
   marketingExpenseFormSchema,
   defaultMarketingExpenseForm,
   type MarketingExpenseForm,
-} from "@/validators/marketing-expense.validator";
+} from "@/validators/marketing-expense.form";
 
 import {
   useCreateMarketingExpense,
@@ -45,7 +45,7 @@ import BudgetAllocationTable from "./BudgetAllocationTable";
 import MarketingExpenseSummaryCard from "./MarketingExpenseSummaryCard";
 import MarketingExpenseWorkflowBar from "./MarketingExpenseWorkflowBar";
 
-import styles from "./marketing-expense.module.css";
+import styles from "@/app/(protected)/marketing/expense/marketing-expense.module.css";
 
 const { TextArea } = Input;
 

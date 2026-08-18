@@ -22,7 +22,7 @@ function TopMarketingTableInner({ data }: TopMarketingTableProps) {
       title: "#",
       width: 50,
       align: "center",
-      render: (_value: unknown, _record: Record<string, unknown>, index: number) => index + 1,
+      render: (_value: unknown, _record: Record<string, unknown>, index: number = 0) => index + 1,
     },
     {
       key: "marketingEmployeeName",

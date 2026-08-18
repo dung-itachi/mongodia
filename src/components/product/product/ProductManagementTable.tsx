@@ -124,7 +124,7 @@ export default function ProductManagementTable({
       title: "STT",
       width: 60,
       align: "center",
-      render: (_: unknown, record: Record<string, unknown>, index: number) => index + 1,
+      render: (_: unknown, record: Record<string, unknown>, index: number = 0) => index + 1,
     },
     {
       key: "code",

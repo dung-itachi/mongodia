@@ -177,7 +177,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
   const availableSidebarGroups = useMemo(
     () =>
       SIDEBAR_NAV_GROUPS.filter(
-        (g) => !g.standalone && (g.groupKey ?? "") !== "",
+        (g) => (g.groupKey ?? "") !== "",
       ),
     [],
   );
