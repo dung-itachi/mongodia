@@ -11,12 +11,17 @@
  * - aggregateDrillDown(filter) — Sprint 7.3
  */
 
+import mongoose from "mongoose";
+
 import { Lead } from "@/models/Lead";
 import { Order } from "@/models/Order";
 import { MarketingExpenseReport } from "@/models/MarketingExpenseReport";
 import { LeadStatus } from "@/constants/leadStatus";
 import { OrderStatus } from "@/constants/orderStatus";
 import { LeadSource, LEAD_SOURCE_LABELS } from "@/constants/leadSource";
+import Employee from "@/models/Employee";
+import Team from "@/models/Team";
+import Area from "@/models/Area";
 import type {
   MarketingSummary,
   DailyLeadChartItem,
@@ -33,13 +38,61 @@ import type {
 } from "@/types/marketing-dashboard-filter";
 
 // ============================================================================
+// Area/Team Resolution Helper (Sprint 8.X)
+// ============================================================================
+
+/**
+ * Resolve areaId/teamId into a list of marketing employee ObjectIds.
+ * Priority: marketingEmployeeId > teamId > areaId.
+ * NOTE: areaId/teamId values are CODE strings (e.g., "PVD"), not ObjectIds.
+ */
+async function resolveMarketingEmployeeIds(params: {
+  areaId?: string | null;
+  teamId?: string | null;
+  marketingEmployeeId?: string | null;
+}): Promise<string[] | undefined> {
+  if (params.marketingEmployeeId) {
+    return [params.marketingEmployeeId];
+  }
+
+  const { areaId, teamId } = params;
+
+  if (teamId && teamId !== "__all__") {
+    // Query by code (string) since Team uses code as identifier
+    const team = await Team.findOne({ code: teamId }).select("leaderId managerId _id").lean();
+    if (!team) return [];
+    const ids = new Set<string>();
+    if (team.leaderId) ids.add(team.leaderId.toString());
+    if (team.managerId) ids.add(team.managerId.toString());
+    const members = await Employee.find({ teamId: team._id })
+      .select("_id").lean();
+    members.forEach((e) => ids.add(e._id.toString()));
+    return ids.size > 0 ? Array.from(ids) : undefined;
+  }
+
+  if (areaId && areaId !== "__all__") {
+    // Query by code (string) since Area uses code as identifier (e.g., "PVD")
+    const area = await Area.findOne({ code: areaId }).select("teamIds").lean();
+    if (!area || !area.teamIds || area.teamIds.length === 0) return [];
+    const employeeIds = new Set<string>();
+    for (const tId of area.teamIds) {
+      const members = await Employee.find({ teamId: tId }).select("_id").lean();
+      members.forEach((e) => employeeIds.add(e._id.toString()));
+    }
+    return employeeIds.size > 0 ? Array.from(employeeIds) : undefined;
+  }
+
+  return undefined;
+}
+
+// ============================================================================
 // Lead Aggregations
 // ============================================================================
 
 /**
  * Aggregate lead summary counts using $facet.
  */
-export async function aggregateLeadSummary(): Promise<{
+export async function aggregateLeadSummary(filter?: MarketingDashboardFilter): Promise<{
   todayLead: number;
   weekLead: number;
   monthLead: number;
@@ -55,8 +108,20 @@ export async function aggregateLeadSummary(): Promise<{
   weekStart.setUTCDate(weekStart.getUTCDate() - 6);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 
+  // Resolve area/team into employee IDs for filtering
+  const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+    marketingEmployeeId: filter?.marketingEmployeeId,
+    areaId: filter?.areaId,
+    teamId: filter?.teamId,
+  });
+
+  const baseMatch: Record<string, unknown> = { isActive: true };
+  if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+    baseMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
+  }
+
   const results = await Lead.aggregate([
-    { $match: { isActive: true } },
+    { $match: baseMatch },
     {
       $facet: {
         todayLead: [
@@ -164,7 +229,7 @@ export async function aggregateTopMarketingByLeads(limit = 5): Promise<TopMarket
       $project: {
         _id: 0,
         employeeId: { $toString: "$_id" },
-        employeeName: { $ifNull: ["$employee.name", "Unknown"] },
+        employeeName: { $ifNull: ["$employee.fullName", "Unknown"] },
         avatar: { $ifNull: ["$employee.avatar", null] },
         totalLead: 1,
         closedLead: 1,
@@ -200,7 +265,7 @@ export async function aggregateTopMarketingByLeads(limit = 5): Promise<TopMarket
 /**
  * Aggregate expense summary from MarketingExpenseReport.
  */
-export async function aggregateExpenseSummary(): Promise<{
+export async function aggregateExpenseSummary(filter?: MarketingDashboardFilter): Promise<{
   totalSpent: number;
   totalRevenue: number;
   totalLeads: number;
@@ -212,13 +277,23 @@ export async function aggregateExpenseSummary(): Promise<{
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 
+  // Resolve area/team into employee IDs for filtering
+  const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+    marketingEmployeeId: filter?.marketingEmployeeId,
+    areaId: filter?.areaId,
+    teamId: filter?.teamId,
+  });
+
+  const match: Record<string, unknown> = {
+    reportDate: { $gte: monthStart },
+    isActive: { $ne: false },
+  };
+  if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+    match.marketingEmployeeId = { $in: resolvedEmployeeIds };
+  }
+
   const results = await MarketingExpenseReport.aggregate([
-    {
-      $match: {
-        reportDate: { $gte: monthStart },
-        isActive: { $ne: false },
-      },
-    },
+    { $match: match },
     {
       $group: {
         _id: null,
@@ -288,7 +363,7 @@ export async function aggregateTopMarketingChannels(limit = 10): Promise<TopMark
       $project: {
         _id: 0,
         marketingEmployeeId: { $toString: "$_id" },
-        marketingEmployeeName: { $ifNull: ["$employee.name", "Unknown"] },
+        marketingEmployeeName: { $ifNull: ["$employee.fullName", "Unknown"] },
         totalSpent: 1,
         totalRevenue: 1,
         roas: {
@@ -316,7 +391,7 @@ export async function aggregateTopMarketingChannels(limit = 10): Promise<TopMark
 /**
  * Aggregate revenue summary from Order collection.
  */
-export async function aggregateRevenueSummary(): Promise<{
+export async function aggregateRevenueSummary(filter?: MarketingDashboardFilter): Promise<{
   todayRevenue: number;
   monthRevenue: number;
   totalRevenue: number;
@@ -327,13 +402,23 @@ export async function aggregateRevenueSummary(): Promise<{
   const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 
+  // Resolve area/team into employee IDs for filtering
+  const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+    marketingEmployeeId: filter?.marketingEmployeeId,
+    areaId: filter?.areaId,
+    teamId: filter?.teamId,
+  });
+
+  const baseMatch: Record<string, unknown> = {
+    status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+    isActive: true,
+  };
+  if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+    baseMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
+  }
+
   const results = await Order.aggregate([
-    {
-      $match: {
-        status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
-        isActive: true,
-      },
-    },
+    { $match: baseMatch },
     {
       $facet: {
         todayRevenue: [
@@ -719,7 +804,7 @@ export async function aggregateTopMarketingEmployees(limit = 10): Promise<TopMar
       $project: {
         _id: 0,
         employeeId: { $toString: "$_id" },
-        employeeName: { $ifNull: ["$employee.name", "Unknown"] },
+        employeeName: { $ifNull: ["$employee.fullName", "Unknown"] },
         avatar: { $ifNull: ["$employee.avatar", null] },
         totalLeads: 1,
         qualifiedLeads: 1,
@@ -866,9 +951,9 @@ export async function aggregateMarketingDashboard(filter?: MarketingDashboardFil
   conversion: number;
 }> {
   const [leadSummary, expenseSummary, revenueSummary, orderSummary] = await Promise.all([
-    aggregateLeadSummary(),
-    aggregateExpenseSummary(),
-    aggregateRevenueSummary(),
+    aggregateLeadSummary(filter),
+    aggregateExpenseSummary(filter),
+    aggregateRevenueSummary(filter),
     aggregateOrderSummary(filter),
   ]);
 
@@ -977,7 +1062,7 @@ function getPreviousPeriod(
 /**
  * Tính trend cho Lead KPIs (today vs yesterday, month vs last-month).
  */
-export async function aggregateLeadTrendSummary(): Promise<LeadTrendSummary> {
+export async function aggregateLeadTrendSummary(filter?: MarketingDashboardFilter): Promise<LeadTrendSummary> {
   const now = new Date();
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
   const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
@@ -991,8 +1076,20 @@ export async function aggregateLeadTrendSummary(): Promise<LeadTrendSummary> {
   const lastMonthEnd = new Date(monthStart);
   lastMonthEnd.setUTCMilliseconds(lastMonthEnd.getUTCMilliseconds() - 1);
 
+  // Resolve area/team into employee IDs
+  const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+    marketingEmployeeId: filter?.marketingEmployeeId,
+    areaId: filter?.areaId,
+    teamId: filter?.teamId,
+  });
+
+  const baseMatch: Record<string, unknown> = { isActive: true };
+  if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+    baseMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
+  }
+
   const results = await Lead.aggregate([
-    { $match: { isActive: true } },
+    { $match: baseMatch },
     {
       $facet: {
         todayCount: [
@@ -1052,20 +1149,30 @@ export async function aggregateLeadTrendSummary(): Promise<LeadTrendSummary> {
 /**
  * Tính trend cho Expense KPIs (tháng này vs tháng trước).
  */
-export async function aggregateExpenseTrendSummary(): Promise<ExpenseTrendSummary> {
+export async function aggregateExpenseTrendSummary(filter?: MarketingDashboardFilter): Promise<ExpenseTrendSummary> {
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
   const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
   const lastMonthEnd = new Date(monthStart);
   lastMonthEnd.setUTCMilliseconds(lastMonthEnd.getUTCMilliseconds() - 1);
 
+  // Resolve area/team into employee IDs
+  const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+    marketingEmployeeId: filter?.marketingEmployeeId,
+    areaId: filter?.areaId,
+    teamId: filter?.teamId,
+  });
+
+  const baseMatch: Record<string, unknown> = {
+    reportDate: { $gte: lastMonthStart },
+    isActive: { $ne: false },
+  };
+  if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+    baseMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
+  }
+
   const results = await MarketingExpenseReport.aggregate([
-    {
-      $match: {
-        reportDate: { $gte: lastMonthStart },
-        isActive: { $ne: false },
-      },
-    },
+    { $match: baseMatch },
     {
       $facet: {
         monthSpent: [
@@ -1113,21 +1220,31 @@ export async function aggregateExpenseTrendSummary(): Promise<ExpenseTrendSummar
 /**
  * Tính trend cho Revenue KPIs (tháng này vs tháng trước).
  */
-export async function aggregateRevenueTrendSummary(): Promise<RevenueTrendSummary> {
+export async function aggregateRevenueTrendSummary(filter?: MarketingDashboardFilter): Promise<RevenueTrendSummary> {
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
   const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
   const lastMonthEnd = new Date(monthStart);
   lastMonthEnd.setUTCMilliseconds(lastMonthEnd.getUTCMilliseconds() - 1);
 
+  // Resolve area/team into employee IDs
+  const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+    marketingEmployeeId: filter?.marketingEmployeeId,
+    areaId: filter?.areaId,
+    teamId: filter?.teamId,
+  });
+
+  const baseMatch: Record<string, unknown> = {
+    createdAt: { $gte: lastMonthStart },
+    isActive: true,
+    status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
+  };
+  if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+    baseMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
+  }
+
   const results = await Order.aggregate([
-    {
-      $match: {
-        createdAt: { $gte: lastMonthStart },
-        isActive: true,
-        status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
-      },
-    },
+    { $match: baseMatch },
     {
       $facet: {
         month: [
@@ -1317,6 +1434,13 @@ export type OrderSummary = {
 export async function aggregateOrderSummary(
   filter?: MarketingDashboardFilter
 ): Promise<OrderSummary> {
+  // Resolve area/team into employee IDs
+  const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+    marketingEmployeeId: filter?.marketingEmployeeId,
+    areaId: filter?.areaId,
+    teamId: filter?.teamId,
+  });
+
   const match: Record<string, unknown> = { isActive: true };
 
   if (filter?.dateRange?.startDate) {
@@ -1332,8 +1456,8 @@ export async function aggregateOrderSummary(
       match.createdAt = { $lte: endDate };
     }
   }
-  if (filter?.marketingEmployeeId) {
-    match.marketingEmployeeId = filter.marketingEmployeeId;
+  if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+    match.marketingEmployeeId = { $in: resolvedEmployeeIds };
   }
   if (filter?.facebookPageId) {
     // Lọc qua lead nếu cần — tạm thời bỏ qua (order không có facebookPageId trực tiếp)
@@ -1420,6 +1544,42 @@ function buildLeadMatch(filter: MarketingDashboardFilter): Record<string, unknow
   if (filter.status) {
     match.status = filter.status;
   }
+  // Sprint 8.0: Team filter
+  if (filter.teamId && filter.teamId !== "__all__") {
+    match.teamId = filter.teamId;
+  }
+  // Sprint 8.0: Area filter
+  if (filter.areaId && filter.areaId !== "__all__") {
+    match.areaId = filter.areaId;
+  }
+
+  // Sprint 8.x: filter leads by card key
+  if (filter.cardKey) {
+    switch (filter.cardKey) {
+      case "called":
+        match.callStatus = "called";
+        break;
+      case "notCalled":
+        match.$or = [
+          { callStatus: { $exists: false } },
+          { callStatus: null },
+          { callStatus: "not_called" },
+        ];
+        break;
+      case "assignedLead":
+        match.saleEmployeeId = { $exists: true, $ne: null };
+        break;
+      case "closedLead":
+        match.status = LeadStatus.CLOSED;
+        break;
+      case "conversionRate":
+      case "monthLead":
+        break;
+      default:
+        break;
+    }
+  }
+
   return match;
 }
 
@@ -1447,6 +1607,14 @@ function buildExpenseMatch(filter: MarketingDashboardFilter): Record<string, unk
   }
   if (filter.campaignId) {
     match.facebookPageId = filter.campaignId;
+  }
+  // Sprint 8.0: Team filter
+  if (filter.teamId && filter.teamId !== "__all__") {
+    match.teamId = filter.teamId;
+  }
+  // Sprint 8.0: Area filter
+  if (filter.areaId && filter.areaId !== "__all__") {
+    match.areaId = filter.areaId;
   }
   return match;
 }
@@ -1780,7 +1948,7 @@ async function aggregateTopMarketingEmployeesWithFilter(
       $project: {
         _id: 0,
         employeeId: { $toString: "$_id" },
-        employeeName: { $ifNull: ["$employee.name", "Unknown"] },
+        employeeName: { $ifNull: ["$employee.fullName", "Unknown"] },
         avatar: { $ifNull: ["$employee.avatar", null] },
         totalLeads: 1,
         qualifiedLeads: 1,

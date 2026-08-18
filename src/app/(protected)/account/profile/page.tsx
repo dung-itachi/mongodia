@@ -1,15 +1,25 @@
 "use client";
 
-import { Button, Card, Form, Input, Space, Typography } from "antd";
+import { Button, Card, Form, Input, message, Modal, Progress, Space, Typography } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
 import styles from "./profile.module.css";
 import { useChangeMyPassword, useMyProfile, useUpdateMyProfile } from "@/hooks/useMyProfile";
 import { useAuthStore } from "@/store/auth.store";
+import { uploadToCloudinary, getAvatarDisplayUrl } from "@/lib/cloudinary";
 import type { Account } from "@/hooks/useAccounts";
 
 type ProfileFields = Pick<Account, "fullName" | "email" | "phone" | "avatar">;
 type PasswordFields = { currentPassword: string; newPassword: string };
 
 export default function ProfilePage() {
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   const user = useAuthStore((state) => state.user);
   const canEditProfile = (user?.permissions.includes("*") ?? false) || (user?.permissions.includes("self-account.update") ?? false);
   const canChangePassword = (user?.permissions.includes("*") ?? false) || (user?.permissions.includes("self-account.changePassword") ?? false);
@@ -20,8 +30,53 @@ export default function ProfilePage() {
   const [profileForm] = Form.useForm<ProfileFields>();
   const [passwordForm] = Form.useForm<PasswordFields>();
 
+  // Sync avatarUrl when profile loads (to handle page refresh and after save)
+  useEffect(() => {
+    if (profile?.avatar && !avatarUrl) {
+      setAvatarUrl(profile.avatar);
+    }
+  }, [profile?.avatar]);
+
+  const currentAvatarUrl = getAvatarDisplayUrl(avatarUrl ?? profile?.avatar ?? undefined);
+  const displayAvatarUrl = previewUrl || currentAvatarUrl;
+
+  const handleAvatarChange = async (file: File) => {
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const result = await uploadToCloudinary(file, (percent) => {
+        setUploadProgress(percent);
+      });
+
+      setAvatarUrl(result.secure_url);
+      setPreviewUrl(null);
+    } catch {
+      // Error already shown in uploadToCloudinary
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleUploadClick = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/webp";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+        void handleAvatarChange(file);
+      }
+    };
+    input.click();
+  };
+
   return (
     <div style={{ maxWidth: 1100, padding: 24 }}>
+      {contextHolder}
       <Typography.Title level={3}>Tài khoản của tôi</Typography.Title>
       <Card loading={isLoading}>
         <div className={styles.profileLayout}>
@@ -33,21 +88,82 @@ export default function ProfilePage() {
               form={profileForm}
               layout="vertical"
               initialValues={profile as ProfileFields | undefined}
-              onFinish={(values) => update.mutate(values)}
+              onFinish={(values) => {
+                // Capture current avatarUrl to avoid stale closure
+                const currentAvatarUrl = avatarUrl;
+                const payload = {
+                  fullName: values.fullName,
+                  email: values.email,
+                  phone: values.phone,
+                  avatar: currentAvatarUrl ?? values.avatar ?? "",
+                };
+                update.mutate(payload, {
+                  onSuccess: () => {
+                    messageApi?.success("Lưu thông tin thành công");
+                  },
+                  onError: () => {
+                    messageApi?.error("Lưu thông tin thất bại");
+                  }
+                });
+              }}
               disabled={!canEditProfile}
-              style={{ marginTop: 24 }}
             >
+              <Form.Item name="avatar" hidden><Input /></Form.Item>
+
+              <Form.Item label="Avatar">
+                <div className={styles.avatarUpload}>
+                  <div className={styles.avatarPreview}>
+                    {displayAvatarUrl ? (
+                      <img src={displayAvatarUrl} alt="Avatar" />
+                    ) : (
+                      <div className={styles.avatarPlaceholder}>
+                        <span>Chưa có avatar</span>
+                      </div>
+                    )}
+                  </div>
+                  {isUploading && (
+                    <div className={styles.uploadProgress}>
+                      <Progress percent={uploadProgress} size="small" status="active" />
+                      <span>Đang tải lên...</span>
+                    </div>
+                  )}
+                  {canEditProfile && (
+                    <Button
+                      icon={<UploadOutlined />}
+                      onClick={handleUploadClick}
+                      loading={isUploading}
+                    >
+                      {displayAvatarUrl && !previewUrl ? "Chọn ảnh mới" : "Tải lên avatar"}
+                    </Button>
+                  )}
+                  <Typography.Text type="secondary" className={styles.uploadHint}>
+                    JPG / PNG / WebP - Tối đa 5MB
+                  </Typography.Text>
+                </div>
+              </Form.Item>
+
+              <Typography.Text type="secondary">
+                Bạn chỉ có thể cập nhật các thông tin cá nhân. Role, phòng ban, team, leader được quản lý bởi cấp trên.
+              </Typography.Text>
+
               <Form.Item label="Mã nhân viên"><Input value={profile?.employeeCode} disabled /></Form.Item>
               <Form.Item label="Username"><Input value={profile?.username} disabled /></Form.Item>
               <Form.Item label="Role"><Input value={profile?.role?.code ?? ""} disabled /></Form.Item>
               <Form.Item name="fullName" label="Họ tên" rules={[{ required: true, min: 2, max: 100 }]}><Input /></Form.Item>
               <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}><Input /></Form.Item>
               <Form.Item name="phone" label="Điện thoại"><Input /></Form.Item>
-              <Form.Item name="avatar" label="Avatar URL"><Input /></Form.Item>
-              {canEditProfile && <Button type="primary" htmlType="submit" loading={update.isPending}>Lưu thông tin</Button>}
+
+              {canEditProfile && (
+                <Space>
+                  <Button type="primary" htmlType="submit" loading={update.isPending}>Lưu thông tin</Button>
+                  {canChangePassword && (
+                    <Button onClick={() => setPasswordModalOpen(true)}>Đổi mật khẩu</Button>
+                  )}
+                </Space>
+              )}
             </Form>
           </div>
-          {canChangePassword && (
+          {!canEditProfile && canChangePassword && (
             <div className={styles.passwordSection}>
               <Typography.Title level={4}>Đổi mật khẩu</Typography.Title>
               <Form<PasswordFields>
@@ -65,6 +181,35 @@ export default function ProfilePage() {
           )}
         </div>
       </Card>
+
+      <Modal
+        title="Đổi mật khẩu"
+        open={passwordModalOpen}
+        onCancel={() => setPasswordModalOpen(false)}
+        footer={null}
+        destroyOnHidden
+      >
+        <Form<PasswordFields>
+          form={passwordForm}
+          layout="vertical"
+          onFinish={(values) => {
+            changePassword.mutate(values, {
+              onSuccess: () => {
+                passwordForm.resetFields();
+                setPasswordModalOpen(false);
+              }
+            });
+          }}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item name="currentPassword" label="Mật khẩu hiện tại" rules={[{ required: true }]}><Input.Password /></Form.Item>
+          <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
+          <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+            <Button onClick={() => setPasswordModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={changePassword.isPending}>Đổi mật khẩu</Button>
+          </Space>
+        </Form>
+      </Modal>
     </div>
   );
 }

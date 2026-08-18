@@ -11,15 +11,73 @@
  * - MKT (non-admin): chỉ thấy đơn của chính mình (filter `marketingEmployeeId`).
  * - ADMIN / GLOBAL: thấy tất cả MKT, có thể chọn riêng 1 MKT qua query `marketingEmployeeId`.
  * - Báo cáo Ads cũng filter theo cùng scope.
+ *
+ * Sprint 8.X — Additional filters:
+ * - `areaId`: lọc theo khu vực (được resolve thành danh sách employeeId trong area đó).
+ * - `teamId`: lọc theo team (được resolve thành danh sách employeeId trong team đó).
+ * - Priority: marketingEmployeeId > teamId > areaId (mỗi param override previous).
  */
+
+import mongoose from "mongoose";
 
 import { connectDB } from "@/lib/mongodb";
 import { Order } from "@/models/Order";
 import { MarketingExpenseReport } from "@/models/MarketingExpenseReport";
+import Employee from "@/models/Employee";
+import Team from "@/models/Team";
+import Area from "@/models/Area";
 import { OrderStatus } from "@/constants/orderStatus";
 import { getCurrentUser, UnauthorizedError, ForbiddenError } from "@/lib/auth";
 import { getAccountScope } from "@/lib/account-scope";
 import { success, error as errorResponse } from "@/utils/response";
+
+/**
+ * Resolve an areaId or teamId into a list of marketing employee ObjectIds.
+ * Returns undefined when no such filter should be applied.
+ *
+ * NOTE: areaId/teamId values are CODE strings (e.g., "PVD"), not ObjectIds.
+ */
+async function resolveMarketingEmployeeIds(params: {
+  areaId?: string | null;
+  teamId?: string | null;
+  marketingEmployeeId?: string | null;
+}): Promise<string[] | undefined> {
+  if (params.marketingEmployeeId) {
+    return [params.marketingEmployeeId];
+  }
+
+  const { areaId, teamId } = params;
+
+  if (teamId && teamId !== "__all__") {
+    // Query by code (string) since Team uses code as identifier
+    const team = await Team.findOne({ code: teamId }).select("leaderId managerId").lean();
+    if (!team) return [];
+    const ids = new Set<string>();
+    if (team.leaderId) ids.add(team.leaderId.toString());
+    if (team.managerId) ids.add(team.managerId.toString());
+    const members = await Employee.find({ teamId: team._id })
+      .select("_id")
+      .lean();
+    members.forEach((e) => ids.add(e._id.toString()));
+    return ids.size > 0 ? Array.from(ids) : undefined;
+  }
+
+  if (areaId && areaId !== "__all__") {
+    // Query by code (string) since Area uses code as identifier (e.g., "PVD")
+    const area = await Area.findOne({ code: areaId }).select("teamIds").lean();
+    if (!area || !area.teamIds || area.teamIds.length === 0) return [];
+    const employeeIds = new Set<string>();
+    for (const teamId2 of area.teamIds) {
+      const members = await Employee.find({ teamId: teamId2 })
+        .select("_id")
+        .lean();
+      members.forEach((e) => employeeIds.add(e._id.toString()));
+    }
+    return employeeIds.size > 0 ? Array.from(employeeIds) : undefined;
+  }
+
+  return undefined;
+}
 
 export async function GET(request: Request) {
   try {
@@ -29,6 +87,10 @@ export async function GET(request: Request) {
     const period = searchParams.get("period") || "7d";
     const dateStr = searchParams.get("date"); // Optional: filter by specific date
     const marketingEmployeeIdParam = searchParams.get("marketingEmployeeId");
+    const areaIdParam = searchParams.get("areaId");
+    const teamIdParam = searchParams.get("teamId");
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
 
     // ----------------------------------------------------------------
     // Auth & scope
@@ -49,6 +111,7 @@ export async function GET(request: Request) {
     // Resolve effective marketingEmployeeId filter:
     // - Non-GLOBAL user bị khoá cứng theo chính mình.
     // - GLOBAL user: nếu truyền marketingEmployeeId thì lọc theo; không truyền = tất cả.
+    // Priority: marketingEmployeeId > teamId > areaId.
     let effectiveMarketingEmployeeId: string | null = null;
     if (!isGlobal) {
       effectiveMarketingEmployeeId = currentUser.employee._id.toString();
@@ -56,12 +119,22 @@ export async function GET(request: Request) {
       effectiveMarketingEmployeeId = marketingEmployeeIdParam.trim();
     }
 
-    // Calculate date range
+    // Resolve area/team into a list of marketing employee IDs for $in queries.
+    const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+      marketingEmployeeId: effectiveMarketingEmployeeId,
+      areaId: areaIdParam,
+      teamId: teamIdParam,
+    });
+
+    // Calculate date range (from explicit params OR period)
     const now = new Date();
     let startDate: Date;
     let endDate: Date;
 
-    if (dateStr) {
+    if (startDateParam && endDateParam) {
+      startDate = new Date(startDateParam);
+      endDate = new Date(endDateParam);
+    } else if (dateStr) {
       // Filter by specific date
       startDate = new Date(dateStr);
       endDate = new Date(dateStr);
@@ -91,16 +164,16 @@ export async function GET(request: Request) {
       isActive: true,
       status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
     };
-    if (effectiveMarketingEmployeeId) {
-      orderMatch.marketingEmployeeId = effectiveMarketingEmployeeId;
+    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      orderMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
     }
 
     const adsMatch: Record<string, unknown> = {
       reportDate: { $gte: startDate, $lte: endDate },
       isActive: { $ne: false },
     };
-    if (effectiveMarketingEmployeeId) {
-      adsMatch.marketingEmployeeId = effectiveMarketingEmployeeId;
+    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      adsMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
     }
 
     // Fetch Revenue Data (Orders) by day

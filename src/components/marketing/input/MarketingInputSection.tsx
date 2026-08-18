@@ -31,6 +31,7 @@ import {
   SnippetsOutlined,
   TeamOutlined,
   InfoCircleOutlined,
+  EditOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
 import { toast } from "@/components/common/feedback/Toast";
@@ -102,6 +103,11 @@ export default function MarketingInputSection({
   const [stagedLeads, setStagedLeads] = useState<StagedLead[]>([]);
   /** Sprint 8.x: cấu hình thứ tự cột khi dán (lưu localStorage theo user). */
   const columnMapping = useColumnMapping();
+  /** Sprint 8.x: Modal sửa lead trong staging. */
+  const [editLeadModalOpen, setEditLeadModalOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<StagedLead | null>(null);
+  /** Sprint 8.x: Form sửa lead. */
+  const [editLeadForm] = Form.useForm();
   const [columnMappingOpen, setColumnMappingOpen] = useState(false);
   /**
    * Draft layout cho CẢ 2 mode (comment + ladi). User có thể switch tab
@@ -403,6 +409,9 @@ export default function MarketingInputSection({
     let leadIdCounter = Date.now();
     let errorCount = 0;
     let autoDetectCount = 0;
+    let noProductInfoCount = 0;
+    /** Lưu STT (1-based) của các dòng thiếu product info trong staging. */
+    const noProductInfoRows: number[] = [];
     /**
      * Số dòng bị SKIP hoàn toàn (không tạo lead, không có trong staging).
      * Nguyên nhân thường gặp: thiếu cột phone, hoặc paste từ nguồn làm tab
@@ -821,6 +830,16 @@ export default function MarketingInputSection({
         if (comboError) errorCount++;
         if (!comboError && combo) autoDetectCount++;
 
+        // Detect: nếu dữ liệu paste không có comboInfo lẫn productInfo
+        // VÀ hệ thống cũng không resolve được combo (không có selection để fallback)
+        // → báo "CHƯA CÓ thông tin sản phẩm/combo"
+        if (!comboInfo && !productInfo && !combo) {
+          noProductInfoCount++;
+          // STT trong staging = số lead đã có + số lead mới đã thêm trong batch + 1
+          const stagedSoFar = stagedLeads.length + newLeads.length;
+          noProductInfoRows.push(stagedSoFar + 1);
+        }
+
         const finalProductId = combo?.productId || resolvedProductId || "";
         const finalProductName = combo?.productName || resolvedProductName || "";
 
@@ -890,6 +909,15 @@ export default function MarketingInputSection({
 
         if (comboError) errorCount++;
         if (!comboError && combo) autoDetectCount++;
+
+        // Detect: nếu dữ liệu paste không có comboInfo lẫn productInfo
+        // VÀ hệ thống cũng không resolve được combo (không có selection để fallback)
+        // → báo "CHƯA CÓ thông tin sản phẩm/combo"
+        if (!comboInfo && !productInfo && !combo) {
+          noProductInfoCount++;
+          const stagedSoFar = stagedLeads.length + newLeads.length;
+          noProductInfoRows.push(stagedSoFar + 1);
+        }
 
         const finalProductId = combo?.productId || resolvedProductId || "";
         const finalProductName = combo?.productName || resolvedProductName || "";
@@ -961,6 +989,15 @@ export default function MarketingInputSection({
       toast.success(`Đã thêm ${newLeads.length} lead vào staging`);
     }
 
+    // Trường hợp paste không có thông tin sản phẩm/combo → báo ngắn gọn
+    if (noProductInfoCount > 0) {
+      const rowsText = noProductInfoRows.join(", ");
+      toast.warning(
+        `⚠ Dòng STT: ${rowsText} đang thiếu dữ liệu sản phẩm/combo — hãy chọn sản phẩm/combo ở trên.`,
+        { duration: 6 }
+      );
+    }
+
     // Cảnh báo mismatch giữa dữ liệu paste và sản phẩm/combo đang chọn
     if (uniqueWarnings.length > 0) {
       const warningText =
@@ -983,6 +1020,54 @@ export default function MarketingInputSection({
     setStagedLeads([]);
     toast.success("Đã xóa tất cả leads trong staging");
   }, []);
+
+  // Sprint 8.x: Mở modal sửa lead
+  const handleOpenEditLead = useCallback((lead: StagedLead) => {
+    setEditingLead(lead);
+    editLeadForm.setFieldsValue({
+      customerName: lead.customerName,
+      phone: lead.phone,
+      address: lead.address || "",
+      productId: lead.productId || undefined,
+      comboId: lead.comboId || undefined,
+    });
+    setEditLeadModalOpen(true);
+  }, [editLeadForm]);
+
+  // Sprint 8.x: Lưu lead sau khi sửa
+  const handleSaveEditLead = useCallback(() => {
+    editLeadForm.validateFields().then((values) => {
+      if (!editingLead) return;
+      const { customerName, phone, address, productId, comboId } = values;
+      // Resolve productName và comboName
+      const allProducts = categories.flatMap((c) => c.products);
+      const product = allProducts.find((p) => p._id === productId);
+      const combo = productId && comboId ? comboMap[comboId] : undefined;
+      const comboPrice = combo?.sellingPrice ?? 0;
+      setStagedLeads((prev) =>
+        prev.map((l) =>
+          l.id === editingLead.id
+            ? {
+                ...l,
+                customerName: customerName || "Khách hàng",
+                phone,
+                address: address || undefined,
+                productId: productId || "",
+                productName: product?.name || "",
+                comboId: comboId || "",
+                comboName: combo?.name || "",
+                price: comboPrice,
+                error: undefined,
+              }
+            : l
+        )
+      );
+      toast.success("Đã cập nhật lead");
+      setEditLeadModalOpen(false);
+      setEditingLead(null);
+      editLeadForm.resetFields();
+    });
+  }, [editingLead, editLeadForm, categories, comboMap]);
 
   // Handle push to Sale - SPRINT 8.5.2 ENHANCED
   const handlePushToSale = useCallback(async () => {
@@ -1592,6 +1677,87 @@ export default function MarketingInputSection({
         </Form>
       </Modal>
 
+      {/* Sprint 8.x: Modal sửa lead trong staging */}
+      <Modal
+        title={`Sửa lead — STT: ${editingLead ? stagedLeads.indexOf(editingLead) + 1 : ""}`}
+        open={editLeadModalOpen}
+        onOk={handleSaveEditLead}
+        onCancel={() => {
+          setEditLeadModalOpen(false);
+          setEditingLead(null);
+          editLeadForm.resetFields();
+        }}
+        okText="Lưu"
+        cancelText="Hủy"
+        width={480}
+      >
+        <Form
+          form={editLeadForm}
+          layout="vertical"
+        >
+          <Form.Item
+            name="customerName"
+            label="Tên khách hàng"
+            rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+          >
+            <Input placeholder="Nhập tên khách hàng" />
+          </Form.Item>
+
+          <Form.Item
+            name="phone"
+            label="Số điện thoại"
+            rules={[{ required: true, message: "Vui lòng nhập SĐT" }]}
+          >
+            <Input placeholder="Nhập số điện thoại" />
+          </Form.Item>
+
+          <Form.Item name="address" label="Địa chỉ">
+            <Input placeholder="Nhập địa chỉ (tùy chọn)" />
+          </Form.Item>
+
+          <Form.Item
+            name="productId"
+            label="Sản phẩm"
+            rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
+          >
+            <Select
+              placeholder="Chọn sản phẩm"
+              showSearch
+              optionFilterProp="label"
+              options={categories.flatMap((c) => c.products).map((p) => ({
+                value: p._id,
+                label: `${p.name} (${p.code})`,
+              }))}
+              onChange={() => {
+                editLeadForm.setFieldValue("comboId", undefined);
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.productId !== curr.productId}>
+            {({ getFieldValue }) => {
+              const productId = getFieldValue("productId");
+              const combosForProduct = productId
+                ? Object.values(comboByNameMap).filter((c) => c.productId === productId)
+                : [];
+
+              return (
+                <Form.Item name="comboId" label="Combo">
+                  <Select
+                    placeholder={productId ? "Chọn combo" : "Chọn sản phẩm trước"}
+                    allowClear
+                    options={combosForProduct.map((c) => ({
+                      value: c._id,
+                      label: `${c.name} — ${(c.sellingPrice ?? 0).toLocaleString()}₮`,
+                    }))}
+                  />
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
+        </Form>
+      </Modal>
+
       {/* Quick Product Drawer */}
       <QuickProductDrawer
         open={quickProductDrawerOpen}
@@ -1679,6 +1845,7 @@ export default function MarketingInputSection({
               <thead>
                 <tr>
                   <th></th>
+                  <th></th>
                   <th>#</th>
                   <th>Nguồn</th>
                   <th>Sản phẩm</th>
@@ -1702,6 +1869,15 @@ export default function MarketingInputSection({
                         icon={<DeleteOutlined />}
                         onClick={() => handleRemoveStagedLead(lead.id)}
                         danger
+                      />
+                    </td>
+                    <td>
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => handleOpenEditLead(lead)}
+                        title="Sửa"
                       />
                     </td>
                     <td>{index + 1}</td>

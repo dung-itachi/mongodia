@@ -9,7 +9,7 @@ import { dashboardKeys } from "@/hooks/dashboardKeys";
 import type { DrillDownData } from "@/types/marketing-dashboard";
 import type { MarketingDashboardFilter } from "@/types/marketing-dashboard-filter";
 
-function buildDrillDownQueryString(filter: MarketingDashboardFilter): string {
+function buildDrillDownQueryString(filter: MarketingDashboardFilter, cardKey?: string): string {
   const params = new URLSearchParams();
   params.set("period", filter.period);
   if (filter.dateRange) {
@@ -21,11 +21,15 @@ function buildDrillDownQueryString(filter: MarketingDashboardFilter): string {
   if (filter.campaignId) params.set("campaignId", filter.campaignId);
   if (filter.source) params.set("source", filter.source);
   if (filter.status) params.set("status", filter.status);
+  // Sprint 8.0: Area/Team filters
+  if (filter.teamId) params.set("teamId", filter.teamId);
+  if (filter.areaId) params.set("areaId", filter.areaId);
+  // Sprint 8.x: card key filter
+  if (cardKey) params.set("cardKey", cardKey);
   return params.toString();
 }
 
-const fetchDrillDownData = async (filter: MarketingDashboardFilter): Promise<DrillDownData> => {
-  const queryString = buildDrillDownQueryString(filter);
+const fetchDrillDownData = async (queryString: string): Promise<DrillDownData> => {
   const response = await fetch(`/api/marketing/dashboard/drill-down?${queryString}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
@@ -43,12 +47,16 @@ const fetchDrillDownData = async (filter: MarketingDashboardFilter): Promise<Dri
   return result.data;
 };
 
-export function useMarketingDashboardDrillDown(filter: MarketingDashboardFilter | null) {
+export function useMarketingDashboardDrillDown(
+  filter: MarketingDashboardFilter | null,
+  cardKey?: string
+) {
   const { data, isLoading, error, refetch } = useQuery<DrillDownData, Error>({
-    queryKey: [...dashboardKeys.marketing(), "drill-down", filter],
+    queryKey: [...dashboardKeys.marketing(), "drill-down", filter, cardKey],
     queryFn: () => {
       if (!filter) throw new Error("No filter provided");
-      return fetchDrillDownData(filter);
+      const queryString = buildDrillDownQueryString(filter, cardKey);
+      return fetchDrillDownData(queryString);
     },
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,

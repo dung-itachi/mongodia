@@ -148,7 +148,6 @@ export default function AccountCreateDrawer({
         {
           id: selected._id,
           input: {
-            username: values.username,
             fullName: values.fullName,
             email: values.email,
             phone: values.phone,

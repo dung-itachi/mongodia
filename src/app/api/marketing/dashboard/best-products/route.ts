@@ -9,15 +9,64 @@
  * Scope (Sprint 7.4):
  * - MKT (non-admin): chỉ thấy đơn của chính mình (filter `marketingEmployeeId`).
  * - ADMIN / GLOBAL: thấy tất cả MKT, có thể chọn riêng 1 MKT qua query `marketingEmployeeId`.
+ *
+ * Sprint 8.X — Additional filters:
+ * - `areaId`: lọc theo khu vực.
+ * - `teamId`: lọc theo team.
+ * - Priority: marketingEmployeeId > teamId > areaId.
  */
+
+import mongoose from "mongoose";
 
 import { connectDB } from "@/lib/mongodb";
 import { Order } from "@/models/Order";
 import { Product } from "@/models/Product";
+import Employee from "@/models/Employee";
+import Team from "@/models/Team";
+import Area from "@/models/Area";
 import { OrderStatus } from "@/constants/orderStatus";
 import { getCurrentUser, UnauthorizedError, ForbiddenError } from "@/lib/auth";
 import { getAccountScope } from "@/lib/account-scope";
 import { success, error as errorResponse } from "@/utils/response";
+
+/**
+ * Resolve an areaId or teamId into a list of marketing employee ObjectIds.
+ * NOTE: areaId/teamId values are CODE strings (e.g., "PVD"), not ObjectIds.
+ */
+async function resolveMarketingEmployeeIds(params: {
+  areaId?: string | null;
+  teamId?: string | null;
+  marketingEmployeeId?: string | null;
+}): Promise<string[] | undefined> {
+  if (params.marketingEmployeeId) {
+    return [params.marketingEmployeeId];
+  }
+  const { areaId, teamId } = params;
+  if (teamId && teamId !== "__all__") {
+    // Query by code (string) since Team uses code as identifier
+    const team = await Team.findOne({ code: teamId }).select("leaderId managerId").lean();
+    if (!team) return [];
+    const ids = new Set<string>();
+    if (team.leaderId) ids.add(team.leaderId.toString());
+    if (team.managerId) ids.add(team.managerId.toString());
+    const members = await Employee.find({ teamId: team._id })
+      .select("_id").lean();
+    members.forEach((e) => ids.add(e._id.toString()));
+    return ids.size > 0 ? Array.from(ids) : undefined;
+  }
+  if (areaId && areaId !== "__all__") {
+    // Query by code (string) since Area uses code as identifier (e.g., "PVD")
+    const area = await Area.findOne({ code: areaId }).select("teamIds").lean();
+    if (!area || !area.teamIds || area.teamIds.length === 0) return [];
+    const employeeIds = new Set<string>();
+    for (const tId of area.teamIds) {
+      const members = await Employee.find({ teamId: tId }).select("_id").lean();
+      members.forEach((e) => employeeIds.add(e._id.toString()));
+    }
+    return employeeIds.size > 0 ? Array.from(employeeIds) : undefined;
+  }
+  return undefined;
+}
 
 type Period = "7d" | "30d" | "90d";
 
@@ -53,6 +102,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const period = (searchParams.get("period") || "7d") as Period;
     const marketingEmployeeIdParam = searchParams.get("marketingEmployeeId");
+    const areaIdParam = searchParams.get("areaId");
+    const teamIdParam = searchParams.get("teamId");
     const limitParam = parseInt(searchParams.get("limit") || "8", 10);
 
     // Auth & scope
@@ -76,6 +127,13 @@ export async function GET(request: Request) {
       effectiveMarketingEmployeeId = marketingEmployeeIdParam.trim();
     }
 
+    // Resolve area/team into a list of marketing employee IDs.
+    const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+      marketingEmployeeId: effectiveMarketingEmployeeId,
+      areaId: areaIdParam,
+      teamId: teamIdParam,
+    });
+
     const { startDate, endDate } = getDateRange(period);
 
     const orderMatch: Record<string, unknown> = {
@@ -87,8 +145,8 @@ export async function GET(request: Request) {
       // Chỉ lấy đơn có productId (không bao gồm combo)
       productId: { $exists: true, $ne: null },
     };
-    if (effectiveMarketingEmployeeId) {
-      orderMatch.marketingEmployeeId = effectiveMarketingEmployeeId;
+    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      orderMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
     }
 
     // Aggregate by productId + use $lookup to get product name

@@ -142,7 +142,7 @@ export async function POST(request: Request) {
           username: employee.username,
           fullName: employee.fullName,
           email: employee.email,
-          avatar: employee.avatar,
+          avatar: employee.avatar || undefined,
           role: role.code,
           roleName: role.name,
           permissions: permissionCodes,

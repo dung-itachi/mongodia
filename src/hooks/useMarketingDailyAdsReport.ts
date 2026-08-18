@@ -64,6 +64,8 @@ export type DailyAdsReportResponse = {
 export type UseMarketingDailyAdsReportFilter = {
   period?: ChartPeriod;
   marketingEmployeeId?: string;
+  areaId?: string;
+  teamId?: string;
 };
 
 const fetchDailyAdsReport = async (
@@ -74,6 +76,8 @@ const fetchDailyAdsReport = async (
   if (filter.marketingEmployeeId) {
     params.set("employeeId", filter.marketingEmployeeId);
   }
+  if (filter.areaId) params.set("areaId", filter.areaId);
+  if (filter.teamId) params.set("teamId", filter.teamId);
 
   const response = await api.get(
     `/api/marketing/dashboard/daily-ads-report?${params.toString()}`
@@ -100,7 +104,7 @@ export type UseMarketingDailyAdsReportReturn = {
 export function useMarketingDailyAdsReport(
   filter: UseMarketingDailyAdsReportFilter = {}
 ): UseMarketingDailyAdsReportReturn {
-  const { period = "7d", marketingEmployeeId } = filter;
+  const { period = "7d", marketingEmployeeId, areaId, teamId } = filter;
 
   const {
     data,
@@ -113,8 +117,10 @@ export function useMarketingDailyAdsReport(
       "daily-ads-report",
       period,
       marketingEmployeeId ?? null,
+      areaId ?? null,
+      teamId ?? null,
     ],
-    queryFn: () => fetchDailyAdsReport({ period, marketingEmployeeId }),
+    queryFn: () => fetchDailyAdsReport({ period, marketingEmployeeId, areaId, teamId }),
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,

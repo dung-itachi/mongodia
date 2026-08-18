@@ -14,6 +14,10 @@ console.error = (...args: unknown[]) => {
     if (message.includes("Instance created by `useForm` is not connected")) {
       return;
     }
+    // Ant Design: Static message API without App context
+    if (message.includes("Static function can not consume context like dynamic theme")) {
+      return;
+    }
     // Next.js DevTools: IndexedDB persistence (dev-only, benign)
     if (
       message.includes("Persisting failed") ||

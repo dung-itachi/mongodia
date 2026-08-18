@@ -43,10 +43,15 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const duplicateEmail = await Employee.exists({ email: parsed.data.email.toLowerCase(), _id: { $ne: currentUser.employee._id } });
+    const duplicateEmail = parsed.data.email && await Employee.exists({ email: parsed.data.email.toLowerCase(), _id: { $ne: currentUser.employee._id } });
     if (duplicateEmail) return errorResponse("Email đã tồn tại", 400);
-    const employee = await Employee.findByIdAndUpdate(currentUser.employee._id, { $set: { ...parsed.data, email: parsed.data.email.toLowerCase() } }, { new: true }).select("-password").lean();
-    await writeAccountAudit({ actorId: currentUser.employee._id, targetId: currentUser.employee._id, action: "UPDATE_PROFILE", newData: { fullName: parsed.data.fullName, email: parsed.data.email }, request });
+    const updateData: Record<string, unknown> = {};
+    if (parsed.data.fullName !== undefined) updateData.fullName = parsed.data.fullName;
+    if (parsed.data.email !== undefined) updateData.email = parsed.data.email.toLowerCase();
+    if (parsed.data.phone !== undefined) updateData.phone = parsed.data.phone;
+    if (parsed.data.avatar !== undefined) updateData.avatar = parsed.data.avatar;
+    const employee = await Employee.findByIdAndUpdate(currentUser.employee._id, { $set: updateData }, { new: true }).select("-password").lean();
+    await writeAccountAudit({ actorId: currentUser.employee._id, targetId: currentUser.employee._id, action: "UPDATE_PROFILE", newData: { fullName: parsed.data.fullName ?? undefined, email: parsed.data.email ?? undefined }, request });
     return success(mapProfile(employee, currentUser.role, currentUser.permissions), "Cập nhật hồ sơ thành công");
   } catch (error) {
     if (error instanceof UnauthorizedError) return errorResponse(error.message, 401);

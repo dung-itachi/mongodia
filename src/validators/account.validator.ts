@@ -17,6 +17,14 @@ const identity = {
   ...bankFields,
 };
 
+const identityOptional = {
+  fullName: z.string().trim().min(2).max(100).optional(),
+  email: z.string().trim().email().optional().or(z.literal("")),
+  phone: z.string().trim().max(30).optional(),
+  avatar: z.string().trim().max(500).optional(),
+  ...bankFields,
+};
+
 export const createAccountSchema = z.object({
   username: z.string().trim().min(3).max(50),
   password: z.string().min(6).max(100),
@@ -28,7 +36,7 @@ export const createAccountSchema = z.object({
 }).strict();
 
 export const updateAccountSchema = z.object({
-  ...identity,
+  ...identityOptional,
   roleCode: z.string().trim().min(1).max(30).optional(),
   teamId: optionalId,
   leaderId: optionalId,
@@ -36,7 +44,7 @@ export const updateAccountSchema = z.object({
   isActive: z.boolean().optional(),
 }).strict();
 
-export const updateMyProfileSchema = z.object(identity).strict();
+export const updateMyProfileSchema = z.object(identityOptional).strict();
 
 export const changeMyPasswordSchema = z.object({
   currentPassword: z.string().min(1),

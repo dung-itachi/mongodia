@@ -178,7 +178,15 @@ export default function Header() {
               id="tUser"
               title={`${user.fullName} · ${user.role}`}
             >
-              <span id="userLbl">👤</span>{" "}
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.fullName}
+                  style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover", marginRight: 6 }}
+                />
+              ) : (
+                <span id="userLbl">👤</span>
+              )}{" "}
               <b id="userName">{user.fullName || user.username}</b>
             </div>
             <div className="vb vb-b" id="tRole" title="Vai trò">

@@ -120,13 +120,13 @@ export const marketingEmployeesColumns: Column[] = [
 export const campaignsColumns: Column[] = [
   {
     key: "campaignName",
-    title: "Campaign",
+    title: "Chiến dịch",
     dataIndex: "campaignName",
     render: (value: unknown) => <span style={{ fontWeight: 500 }}>{value as string}</span>,
   },
   {
     key: "totalSpent",
-    title: "Spent",
+    title: "Chi phí",
     dataIndex: "totalSpent",
     width: 110,
     align: "right",
@@ -134,7 +134,7 @@ export const campaignsColumns: Column[] = [
   },
   {
     key: "totalRevenue",
-    title: "Revenue",
+    title: "Doanh thu",
     dataIndex: "totalRevenue",
     width: 120,
     align: "right",
@@ -181,7 +181,7 @@ export const MARKETING_DASHBOARD_RANKINGS: RankingDefinition<unknown>[] = [
   },
   {
     id: "topCampaigns",
-    title: "Top Campaigns",
+    title: "Top Chiến dịch",
     type: "campaigns",
     selector: (data) => data.topCampaigns,
     columns: campaignsColumns,

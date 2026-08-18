@@ -4,6 +4,7 @@ export interface User {
     username: string;
     email: string;
     fullName: string;
+    avatar?: string;
     /** Role code (e.g. "ADMIN", "SALE", "MKT"). Stable identifier. */
     role: string;
     /** Display label for role (e.g. "Quản trị viên"). Optional — older

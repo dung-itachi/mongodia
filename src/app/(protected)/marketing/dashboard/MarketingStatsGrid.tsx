@@ -21,18 +21,22 @@ function MarketingStatsGridInner({ stats, onCardClick }: MarketingStatsGridProps
   return (
     <div className={styles["mk-fill"]} aria-label="Thống kê marketing">
       <StatGrid columns={6} minItemWidth={180} gap={12}>
-        {stats.map((stat, index) => (
-          <StatCard
-            key={`${stat.key || stat.title}-${index}`}
-            size="compact"
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-            trend={stat.trend}
-            onClick={onCardClick ? () => onCardClick(`card-${index}`, stat.title) : undefined}
-          />
-        ))}
+        {stats.map((stat) => (
+            <StatCard
+              key={stat.key}
+              size="compact"
+              title={stat.title}
+              value={stat.value}
+              icon={stat.icon}
+              color={stat.color}
+              trend={stat.trend}
+              onClick={
+                onCardClick && stat.key
+                  ? () => onCardClick(stat.key, stat.title)
+                  : undefined
+              }
+            />
+          ))}
       </StatGrid>
     </div>
   );

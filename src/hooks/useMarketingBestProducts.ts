@@ -30,6 +30,8 @@ export type BestProductsResponse = {
 export type UseMarketingBestProductsFilter = {
   period?: ChartPeriod;
   marketingEmployeeId?: string;
+  areaId?: string;
+  teamId?: string;
   limit?: number;
 };
 
@@ -41,6 +43,8 @@ const fetchBestProducts = async (
   if (filter.marketingEmployeeId) {
     params.set("marketingEmployeeId", filter.marketingEmployeeId);
   }
+  if (filter.areaId) params.set("areaId", filter.areaId);
+  if (filter.teamId) params.set("teamId", filter.teamId);
   if (filter.limit) params.set("limit", String(filter.limit));
 
   const response = await fetch(
@@ -72,7 +76,7 @@ export type UseMarketingBestProductsReturn = {
 export function useMarketingBestProducts(
   filter: UseMarketingBestProductsFilter = {}
 ): UseMarketingBestProductsReturn {
-  const { period = "7d", marketingEmployeeId, limit = 8 } = filter;
+  const { period = "7d", marketingEmployeeId, areaId, teamId, limit = 8 } = filter;
 
   const {
     data,
@@ -80,8 +84,8 @@ export function useMarketingBestProducts(
     error,
     refetch,
   } = useQuery<BestProductsResponse["data"], Error>({
-    queryKey: ["marketing", "best-products", period, marketingEmployeeId ?? null, limit],
-    queryFn: () => fetchBestProducts({ period, marketingEmployeeId, limit }),
+    queryKey: ["marketing", "best-products", period, marketingEmployeeId ?? null, areaId ?? null, teamId ?? null, limit],
+    queryFn: () => fetchBestProducts({ period, marketingEmployeeId, areaId, teamId, limit }),
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,

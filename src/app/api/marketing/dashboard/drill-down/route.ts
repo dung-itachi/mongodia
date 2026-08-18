@@ -43,6 +43,15 @@ export async function GET(request: Request) {
     if (searchParams.get("status")) {
       filter.status = searchParams.get("status") as MarketingDashboardFilter["status"];
     }
+    if (searchParams.get("cardKey")) {
+      filter.cardKey = searchParams.get("cardKey")!;
+    }
+    if (searchParams.get("teamId")) {
+      filter.teamId = searchParams.get("teamId")!;
+    }
+    if (searchParams.get("areaId")) {
+      filter.areaId = searchParams.get("areaId")!;
+    }
 
     const data = await marketingDashboardService.getDrillDown(filter);
 

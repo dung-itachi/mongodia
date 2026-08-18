@@ -8,7 +8,14 @@
  * - MKT (non-GLOBAL): chỉ thấy báo cáo của chính mình (filter `marketingEmployeeId`).
  * - ADMIN/GLOBAL: thấy tất cả MKT, có thể chọn riêng 1 MKT qua query `employeeId`.
  * - Order revenue cũng được filter theo cùng scope.
+ *
+ * Sprint 8.X — Additional filters:
+ * - `areaId`: lọc theo khu vực (được resolve thành danh sách employeeId trong area đó).
+ * - `teamId`: lọc theo team (được resolve thành danh sách employeeId trong team đó).
+ * - Priority: marketingEmployeeId > teamId > areaId (mỗi param override previous).
  */
+
+import mongoose from "mongoose";
 
 import { connectDB } from "@/lib/mongodb";
 import {
@@ -21,6 +28,56 @@ import { success, error as errorResponse } from "@/utils/response";
 import { MarketingExpenseReport } from "@/models/MarketingExpenseReport";
 import { Order } from "@/models/Order";
 import { MarketingExpenseReportStatus } from "@/constants/marketing-expense";
+import Employee from "@/models/Employee";
+import Team from "@/models/Team";
+import Area from "@/models/Area";
+
+/**
+ * Resolve an areaId or teamId into a list of marketing employee ObjectIds.
+ * Returns undefined when no such filter should be applied.
+ * NOTE: areaId/teamId values are CODE strings (e.g., "PVD"), not ObjectIds.
+ */
+async function resolveMarketingEmployeeIds(params: {
+  areaId?: string | null;
+  teamId?: string | null;
+  marketingEmployeeId?: string | null;
+}): Promise<string[] | undefined> {
+  if (params.marketingEmployeeId) {
+    return [params.marketingEmployeeId];
+  }
+
+  const { areaId, teamId } = params;
+
+  if (teamId && teamId !== "__all__") {
+    // Query by code (string) since Team uses code as identifier
+    const team = await Team.findOne({ code: teamId }).select("leaderId managerId").lean();
+    if (!team) return [];
+    const ids = new Set<string>();
+    if (team.leaderId) ids.add(team.leaderId.toString());
+    if (team.managerId) ids.add(team.managerId.toString());
+    const members = await Employee.find({ teamId: team._id })
+      .select("_id")
+      .lean();
+    members.forEach((e) => ids.add(e._id.toString()));
+    return ids.size > 0 ? Array.from(ids) : undefined;
+  }
+
+  if (areaId && areaId !== "__all__") {
+    // Query by code (string) since Area uses code as identifier (e.g., "PVD")
+    const area = await Area.findOne({ code: areaId }).select("teamIds").lean();
+    if (!area || !area.teamIds || area.teamIds.length === 0) return [];
+    const employeeIds = new Set<string>();
+    for (const teamId2 of area.teamIds) {
+      const members = await Employee.find({ teamId: teamId2 })
+        .select("_id")
+        .lean();
+      members.forEach((e) => employeeIds.add(e._id.toString()));
+    }
+    return employeeIds.size > 0 ? Array.from(employeeIds) : undefined;
+  }
+
+  return undefined;
+}
 
 // ============================================================================
 // GET /api/marketing/dashboard/daily-ads-report
@@ -33,6 +90,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "7d";
     const employeeIdParam = searchParams.get("employeeId");
+    const areaIdParam = searchParams.get("areaId");
+    const teamIdParam = searchParams.get("teamId");
 
     // ----------------------------------------------------------------
     // Auth & scope
@@ -53,12 +112,20 @@ export async function GET(request: Request) {
     // Resolve effective marketingEmployeeId filter:
     // - Non-GLOBAL: khoá cứng theo chính mình.
     // - GLOBAL: nếu truyền employeeId thì lọc theo; không truyền = tất cả.
+    // Priority: marketingEmployeeId > teamId > areaId.
     let effectiveMarketingEmployeeId: string | null = null;
     if (!isGlobal) {
       effectiveMarketingEmployeeId = currentUser.employee._id.toString();
     } else if (employeeIdParam && employeeIdParam.trim()) {
       effectiveMarketingEmployeeId = employeeIdParam.trim();
     }
+
+    // Resolve area/team into a list of marketing employee IDs for $in queries.
+    const resolvedEmployeeIds = await resolveMarketingEmployeeIds({
+      marketingEmployeeId: effectiveMarketingEmployeeId,
+      areaId: areaIdParam,
+      teamId: teamIdParam,
+    });
 
     // Calculate date range
     const now = new Date();
@@ -85,8 +152,8 @@ export async function GET(request: Request) {
       isActive: { $ne: false },
     };
 
-    if (effectiveMarketingEmployeeId) {
-      matchFilter.marketingEmployeeId = effectiveMarketingEmployeeId;
+    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      matchFilter.marketingEmployeeId = { $in: resolvedEmployeeIds };
     }
 
     const orderMatch: Record<string, unknown> = {
@@ -96,8 +163,8 @@ export async function GET(request: Request) {
       status: "DELIVERED",
       marketingEmployeeId: { $exists: true, $ne: null },
     };
-    if (effectiveMarketingEmployeeId) {
-      orderMatch.marketingEmployeeId = effectiveMarketingEmployeeId;
+    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      orderMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
     }
 
     // First, get ads report data grouped by date

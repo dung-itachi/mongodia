@@ -24,12 +24,15 @@ export type MarketingDashboardFilter = {
   // Sprint 8.0: Area/Team/MKT filtering
   teamId?: string;
   areaId?: string;
+  // Sprint 8.x: card key filter for drill-down
+  cardKey?: string;
 };
 
 export type DrillDownContext = {
   type: "card" | "chart" | "ranking";
   id: string;
   label: string;
+  cardKey?: string; // Sprint 8.x: filter by card key (e.g. "totalPushed", "called", etc.)
   filter: MarketingDashboardFilter;
 };
 

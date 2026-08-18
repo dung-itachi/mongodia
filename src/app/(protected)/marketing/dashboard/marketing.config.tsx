@@ -37,6 +37,7 @@ import type {
 import { formatNumber } from "@/lib/format";
 
 export type MarketingStatItem = {
+  key: string;
   title: string;
   value: string;
   icon: StatCardProps["icon"];
@@ -294,6 +295,7 @@ function formatCardValue(value: number, formatter: CardFormatter): string {
  */
 export function buildMarketingStats(data: MarketingDashboardData): MarketingStatItem[] {
   return MARKETING_DASHBOARD_CARDS.map((card) => ({
+    key: card.key,
     title: card.title,
     value: formatCardValue(card.selector(data), card.formatter),
     icon: card.icon,

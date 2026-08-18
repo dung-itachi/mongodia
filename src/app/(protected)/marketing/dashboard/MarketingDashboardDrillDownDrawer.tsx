@@ -20,6 +20,20 @@ export type MarketingDashboardDrillDownDrawerProps = {
   onClose: () => void;
 };
 
+function getCardTabPriority(cardKey?: string): string[] {
+  if (!cardKey) return ["leads", "expenses", "revenues"];
+  const orderCards = ["totalPushed", "called", "notCalled", "closingRate", "orderRevenue", "deliveredOk"];
+  const leadCards = ["todayLead", "monthLead", "assignedLead", "closedLead", "conversionRate"];
+  const expenseCards = ["totalSpent", "roas"];
+  const revenueCards = ["monthRevenue"];
+
+  if (orderCards.includes(cardKey)) return ["leads", "expenses", "revenues"];
+  if (leadCards.includes(cardKey)) return ["leads"];
+  if (expenseCards.includes(cardKey)) return ["expenses"];
+  if (revenueCards.includes(cardKey)) return ["revenues"];
+  return ["leads", "expenses", "revenues"];
+}
+
 function MarketingDashboardDrillDownDrawerInner({
   open,
   context,
@@ -27,8 +41,13 @@ function MarketingDashboardDrillDownDrawerInner({
 }: MarketingDashboardDrillDownDrawerProps) {
   const [activeTab, setActiveTab] = useState("leads");
   const { data, loading, error } = useMarketingDashboardDrillDown(
-    context ? context.filter : null
+    context ? context.filter : null,
+    context?.type === "card" ? context.cardKey : undefined
   );
+
+  // Reset active tab when context changes
+  const cardKey = context?.type === "card" ? context.cardKey : undefined;
+  const tabPriority = getCardTabPriority(cardKey);
 
   const handleTabChange = (key: string) => {
     setActiveTab(key);
@@ -111,29 +130,25 @@ function MarketingDashboardDrillDownDrawerInner({
           <Tabs
             activeKey={activeTab}
             onChange={handleTabChange}
-            items={[
-              {
-                key: "leads",
-                label: `Leads (${data.leads.length})`,
-                children: (
-                  <LeadTable leads={data.leads} loading={loading} />
-                ),
-              },
-              {
-                key: "expenses",
-                label: `Chi phí (${data.expenses.length})`,
-                children: (
-                  <ExpenseTable expenses={data.expenses} loading={loading} />
-                ),
-              },
-              {
-                key: "revenues",
-                label: `Doanh thu (${data.revenues.length})`,
-                children: (
-                  <RevenueTable revenues={data.revenues} loading={loading} />
-                ),
-              },
-            ]}
+            items={
+              tabPriority.map((tabKey) => ({
+                key: tabKey,
+                label:
+                  tabKey === "leads"
+                    ? `Leads (${data.leads.length})`
+                    : tabKey === "expenses"
+                      ? `Chi phí (${data.expenses.length})`
+                      : `Doanh thu (${data.revenues.length})`,
+                children:
+                  tabKey === "leads" ? (
+                    <LeadTable leads={data.leads} loading={loading} />
+                  ) : tabKey === "expenses" ? (
+                    <ExpenseTable expenses={data.expenses} loading={loading} />
+                  ) : (
+                    <RevenueTable revenues={data.revenues} loading={loading} />
+                  ),
+              })) as Parameters<typeof Tabs>[0]["items"]
+            }
           />
         </>
       )}

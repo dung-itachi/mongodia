@@ -80,6 +80,13 @@ export default function MarketingDashboardPage() {
     areaId: selectedAreaForOverview && selectedAreaForOverview !== "__all__" ? selectedAreaForOverview : undefined,
   };
 
+  // Build filter cho drill-down (bao gồm Area/Team/MKT)
+  const drillDownFilter: MarketingDashboardFilter = {
+    ...advancedFilter,
+    teamId: selectedTeamForOverview && selectedTeamForOverview !== "__all__" ? selectedTeamForOverview : undefined,
+    areaId: selectedAreaForOverview && selectedAreaForOverview !== "__all__" ? selectedAreaForOverview : undefined,
+  };
+
   const { data, loading, error, refetch } = useMarketingDashboard({ filter: dashboardFilter });
   const { data: exportData } = useMarketingDashboardExport(advancedFilter);
 
@@ -95,19 +102,31 @@ export default function MarketingDashboardPage() {
   // Nếu chọn Area thì bỏ qua Team và MKT
   // Nếu chọn Team thì bỏ qua MKT
   const mktIdForOverview = selectedAreaForOverview || selectedTeamForOverview ? undefined : selectedMktForOverview;
-  
+
+  const effectiveTeamId = selectedTeamForOverview && selectedTeamForOverview !== "__all__"
+    ? selectedTeamForOverview
+    : undefined;
+  const effectiveAreaId = selectedAreaForOverview && selectedAreaForOverview !== "__all__"
+    ? selectedAreaForOverview
+    : undefined;
+
   const { data: dailyReport } = useMarketingDailyReport({
     period,
     marketingEmployeeId: mktIdForOverview,
-    // TODO: Add teamId/areaId params when API supports
+    teamId: effectiveTeamId,
+    areaId: effectiveAreaId,
   });
   const { data: adsReport } = useMarketingDailyAdsReport({
     period,
     marketingEmployeeId: mktIdForOverview,
+    teamId: effectiveTeamId,
+    areaId: effectiveAreaId,
   });
   const { data: bestProducts } = useMarketingBestProducts({
     period,
     marketingEmployeeId: mktIdForOverview,
+    teamId: effectiveTeamId,
+    areaId: effectiveAreaId,
     limit: 8,
   });
 
@@ -232,12 +251,13 @@ export default function MarketingDashboardPage() {
         {/* Stats Grid */}
         <MarketingStatsGrid
           stats={stats}
-          onCardClick={(key, label) => {
+          onCardClick={(cardKey, label) => {
             handleDrillDown({
               type: "card",
-              id: key,
+              id: cardKey,
               label,
-              filter: advancedFilter,
+              cardKey,
+              filter: drillDownFilter,
             });
           }}
         />

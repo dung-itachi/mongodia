@@ -43,9 +43,9 @@ export class MarketingDashboardService {
       dashboardRepository.aggregateChartData(),
       dashboardRepository.aggregateLeadSource(),
       dashboardRepository.aggregateTopMarketingChannels(),
-      dashboardRepository.aggregateLeadTrendSummary(),
-      dashboardRepository.aggregateExpenseTrendSummary(),
-      dashboardRepository.aggregateRevenueTrendSummary(),
+      dashboardRepository.aggregateLeadTrendSummary(filter),
+      dashboardRepository.aggregateExpenseTrendSummary(filter),
+      dashboardRepository.aggregateRevenueTrendSummary(filter),
       dashboardRepository.aggregateOrderTrendSummary(filter),
     ]);
 

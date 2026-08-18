@@ -74,6 +74,10 @@ export type DailyReportResponse = {
 export type UseMarketingDailyReportFilter = {
   period?: ChartPeriod;
   marketingEmployeeId?: string;
+  /** Filter by area (resolves to MKT employees in that area). */
+  areaId?: string;
+  /** Filter by team (resolves to MKT employees in that team). */
+  teamId?: string;
 };
 
 const fetchDailyReport = async (
@@ -84,6 +88,8 @@ const fetchDailyReport = async (
   if (filter.marketingEmployeeId) {
     params.set("marketingEmployeeId", filter.marketingEmployeeId);
   }
+  if (filter.areaId) params.set("areaId", filter.areaId);
+  if (filter.teamId) params.set("teamId", filter.teamId);
 
   const response = await fetch(
     `/api/marketing/dashboard/daily-report?${params.toString()}`,
@@ -120,7 +126,7 @@ export type UseMarketingDailyReportReturn = {
 export function useMarketingDailyReport(
   filter: UseMarketingDailyReportFilter = {}
 ): UseMarketingDailyReportReturn {
-  const { period = "7d", marketingEmployeeId } = filter;
+  const { period = "7d", marketingEmployeeId, areaId, teamId } = filter;
 
   const {
     data,
@@ -128,8 +134,8 @@ export function useMarketingDailyReport(
     error,
     refetch,
   } = useQuery<DailyReportResponse["data"], Error>({
-    queryKey: ["marketing", "daily-report", period, marketingEmployeeId ?? null],
-    queryFn: () => fetchDailyReport({ period, marketingEmployeeId }),
+    queryKey: ["marketing", "daily-report", period, marketingEmployeeId ?? null, areaId ?? null, teamId ?? null],
+    queryFn: () => fetchDailyReport({ period, marketingEmployeeId, areaId, teamId }),
     staleTime: 60 * 1000, // 60 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
