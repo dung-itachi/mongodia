@@ -560,7 +560,7 @@ function NavGroups({
             </span>
           }
           mouseEnterDelay={0}
-          overlayStyle={{ fontSize: 12 }}
+          styles={{ root: { fontSize: 12 } }}
           placement="right"
         >
           <button
