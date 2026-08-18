@@ -17,6 +17,8 @@ export interface IEmployee {
 
   teamId?: Types.ObjectId | null;
 
+  departmentId?: Types.ObjectId | null;
+
   /** Direct manager relation used by hierarchical account authorization. */
   leaderId?: Types.ObjectId | null;
 
@@ -89,6 +91,12 @@ const EmployeeSchema = new Schema<IEmployee>(
     teamId: {
       type: Schema.Types.ObjectId,
       ref: "Team",
+      default: null,
+    },
+
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
       default: null,
     },
 

@@ -17,6 +17,7 @@ export interface IFacebookPage extends mongoose.Document {
   name: string;
   pageUrl: string;
   facebookPageId: string;
+  avatarUrl: string;
   description: string;
   /** Business Manager ID */
   businessManager?: string;
@@ -51,6 +52,11 @@ const FacebookPageSchema = new Schema<IFacebookPage>(
       trim: true,
     },
     facebookPageId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    avatarUrl: {
       type: String,
       default: "",
       trim: true,

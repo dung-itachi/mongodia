@@ -20,6 +20,7 @@ export interface FacebookPage {
   name: string;
   pageUrl: string;
   facebookPageId: string;
+  avatarUrl: string;
   description: string;
   businessManager: string;
   currency: string;
@@ -47,6 +48,7 @@ export interface CreateFacebookPageInput {
   name: string;
   pageUrl?: string;
   facebookPageId?: string;
+  avatarUrl?: string;
   description?: string;
   businessManager?: string;
   currency?: string;

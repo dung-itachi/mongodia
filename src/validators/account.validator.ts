@@ -3,6 +3,8 @@ import { z } from "zod";
 const id = z.string().regex(/^[a-f\d]{24}$/i, "ID không hợp lệ");
 const optionalId = id.nullable().optional();
 
+const departmentIdField = { departmentId: optionalId };
+
 const bankFields = {
   bankName: z.string().trim().max(100).optional(),
   bankAccountNumber: z.string().trim().max(50).optional(),
@@ -31,6 +33,7 @@ export const createAccountSchema = z.object({
   ...identity,
   roleCode: z.string().trim().min(1).max(30),
   teamId: optionalId,
+  departmentId: optionalId,
   leaderId: optionalId,
   areaId: optionalId,
 }).strict();
@@ -39,6 +42,7 @@ export const updateAccountSchema = z.object({
   ...identityOptional,
   roleCode: z.string().trim().min(1).max(30).optional(),
   teamId: optionalId,
+  departmentId: optionalId,
   leaderId: optionalId,
   areaId: optionalId,
   isActive: z.boolean().optional(),

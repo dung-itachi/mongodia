@@ -100,6 +100,11 @@ export default function AccountsPage() {
     return items.map((a) => ({ value: a._id, label: `${a.code ?? ""} — ${a.name ?? ""}` }));
   }, [areasData]);
 
+  const departmentOptions = useMemo(() => {
+    const items = (departmentsData ?? []) as unknown as Array<{ _id: string; code?: string; name?: string }>;
+    return items.map((d) => ({ value: d._id, label: `${d.code ?? ""} — ${d.name ?? ""}` }));
+  }, [departmentsData]);
+
   const leaderOptions = useMemo(() => {
     const items = (employeesData ?? []) as unknown as Array<{ _id: string; fullName?: string; employeeCode?: string; role?: { code?: string } }>;
     return items.filter((e) => e.role?.code === "LEADER").map((e) => ({ value: e._id, label: `${e.fullName ?? ""} (${e.employeeCode ?? ""})` }));
@@ -329,6 +334,7 @@ export default function AccountsPage() {
         defaultValues={mode === "create" ? draftData ?? undefined : undefined}
         roleOptions={roleOptions}
         teamOptions={teamOptions}
+        departmentOptions={departmentOptions}
         leaderOptions={leaderOptions}
         areaOptions={areaOptions}
         onSuccess={handleSaved}

@@ -65,6 +65,9 @@ export type AccountCreateDrawerProps = {
   /** Areas selectable in the form. */
   areaOptions: Array<{ value: string; label: string }>;
 
+  /** Departments selectable in the form. */
+  departmentOptions: Array<{ value: string; label: string }>;
+
   /** Called after a successful create/update. */
   onSuccess?: () => void;
 
@@ -72,7 +75,7 @@ export type AccountCreateDrawerProps = {
   showBankFields?: boolean;
 };
 
-type FormValues = AccountInput & { departmentCode?: string };
+type FormValues = AccountInput & { departmentCode?: string; departmentId?: string };
 
 export default function AccountCreateDrawer({
   open,
@@ -83,6 +86,7 @@ export default function AccountCreateDrawer({
   lockedFields,
   roleOptions,
   teamOptions,
+  departmentOptions,
   leaderOptions,
   areaOptions,
   onSuccess,
@@ -102,6 +106,7 @@ export default function AccountCreateDrawer({
       form.setFieldsValue({
         roleCode: defaultValues?.roleCode ?? "EMPLOYEE",
         teamId: defaultValues?.teamId ?? undefined,
+        departmentId: defaultValues?.departmentId ?? undefined,
         leaderId: defaultValues?.leaderId ?? undefined,
         areaId: defaultValues?.areaId ?? undefined,
       });
@@ -109,6 +114,7 @@ export default function AccountCreateDrawer({
       form.setFieldsValue({
         ...selected,
         roleCode: selected.role?.code,
+        departmentId: selected.departmentId?._id,
         areaId: selected.area?._id,
       });
     }
@@ -129,6 +135,7 @@ export default function AccountCreateDrawer({
           avatar: values.avatar,
           roleCode: values.roleCode,
           teamId: values.teamId ?? null,
+          departmentId: values.departmentId ?? null,
           leaderId: values.leaderId ?? null,
           areaId: values.areaId ?? null,
           bankName: values.bankName,
@@ -154,6 +161,7 @@ export default function AccountCreateDrawer({
             avatar: values.avatar,
             roleCode: values.roleCode,
             teamId: values.teamId ?? null,
+            departmentId: values.departmentId ?? null,
             leaderId: values.leaderId ?? null,
             areaId: values.areaId ?? null,
             bankName: values.bankName,
@@ -209,7 +217,7 @@ export default function AccountCreateDrawer({
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>Department:</b>{" "}
-            <Tag color="purple">{selected.department?.name ?? "-"}</Tag>
+            <Tag color="purple">{selected.department?.name ?? selected.departmentId?.name ?? "-"}</Tag>
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>Team:</b> {selected.team?.code ?? "-"} {" "}
@@ -302,6 +310,14 @@ export default function AccountCreateDrawer({
               allowClear
               placeholder="Chọn team"
               disabled={locked.has("teamId")}
+            />
+          </Form.Item>
+
+          <Form.Item name="departmentId" label="Phòng ban">
+            <Select
+              options={departmentOptions}
+              allowClear
+              placeholder="Chọn phòng ban"
             />
           </Form.Item>
 

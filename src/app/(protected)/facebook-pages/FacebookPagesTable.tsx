@@ -3,7 +3,7 @@
  */
 
 import { memo } from "react";
-import { Table, Tag, Button, Space, Dropdown, Switch, Tooltip } from "antd";
+import { Table, Tag, Button, Space, Dropdown, Switch, Tooltip, Image } from "antd";
 import type { TablePaginationConfig } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined, MoreOutlined, UserOutlined } from "@ant-design/icons";
@@ -95,6 +95,35 @@ function FacebookPagesTableInner({
   };
 
   const columns: ColumnsType<FacebookPage> = [
+    {
+      title: "",
+      key: "avatar",
+      width: 60,
+      render: (_: unknown, record: FacebookPage) => record.avatarUrl ? (
+        <Image
+          src={record.avatarUrl}
+          alt={record.name}
+          width={40}
+          height={40}
+          style={{ borderRadius: 8, objectFit: "cover" }}
+          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        />
+      ) : (
+        <div style={{
+          width: 40,
+          height: 40,
+          borderRadius: 8,
+          backgroundColor: "#f0f0f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 16,
+          color: "#999"
+        }}>
+          FB
+        </div>
+      ),
+    },
     {
       title: "Mã",
       dataIndex: "code",

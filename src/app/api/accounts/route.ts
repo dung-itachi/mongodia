@@ -27,6 +27,7 @@ const accountPopulate = [
     { path: "managerId", select: "employeeCode fullName username" },
     { path: "leaderId", select: "employeeCode fullName username" },
   ] },
+  { path: "departmentId", select: "code name", strictPopulate: false },
   { path: "leaderId", select: "employeeCode fullName username" },
   { path: "areaId", select: "code name" },
 ];
@@ -43,7 +44,8 @@ function mapAccount(employee: any) {
     isActive: employee.isActive,
     role: employee.roleId,
     team: employee.teamId,
-    department: employee.teamId?.departmentId ?? null,
+    department: employee.teamId?.departmentId ?? employee.departmentId ?? null,
+    departmentId: employee.departmentId,
     leader: employee.leaderId,
     area: employee.areaId,
     createdAt: employee.createdAt,
@@ -167,7 +169,9 @@ export async function POST(request: Request) {
       employeeCode: await generateEmployeeCode(), username: parsed.data.username.toLowerCase(), password: await hashPassword(parsed.data.password),
       fullName: parsed.data.fullName, email: emailLower, phone: parsed.data.phone ?? "", avatar: parsed.data.avatar ?? "",
       bankName: parsed.data.bankName ?? "", bankAccountNumber: parsed.data.bankAccountNumber ?? "", bankAccountHolder: parsed.data.bankAccountHolder ?? "",
-      roleId: role._id, teamId: teamId ? new mongoose.Types.ObjectId(teamId) : null, leaderId: leaderId ? new mongoose.Types.ObjectId(leaderId) : null,
+      roleId: role._id, teamId: teamId ? new mongoose.Types.ObjectId(teamId) : null,
+      departmentId: parsed.data.departmentId ? new mongoose.Types.ObjectId(parsed.data.departmentId) : null,
+      leaderId: leaderId ? new mongoose.Types.ObjectId(leaderId) : null,
       areaId: parsed.data.areaId ? new mongoose.Types.ObjectId(parsed.data.areaId) : null,
     });
     await writeAccountAudit({ actorId: currentUser.employee._id, targetId: employee._id, action: "CREATE_ACCOUNT", newData: { roleCode: role.code, teamId, leaderId }, request });

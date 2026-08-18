@@ -59,6 +59,7 @@ import ConnectorLayer from "./ConnectorLayer";
 import { layoutTree, buildIndex } from "./layout";
 import AccountCreateDrawer from "@/components/accounts/AccountCreateDrawer";
 import { useAccount } from "@/hooks/useAccounts";
+import { useDepartments } from "@/hooks/useDepartments";
 import { useAuthStore } from "@/store/auth.store";
 import type { OrgNode, OrgFlatEntry } from "./types";
 import "./chart.css";
@@ -108,6 +109,7 @@ export default function OrganizationChart({
     null
   );
   const { data: anchorAccount } = useAccount(createAnchorId);
+  const { data: departmentsData } = useDepartments();
   const anchorAccountId = anchorAccount?._id ?? null;
   const anchorTeamId = anchorAccount?.team?._id ?? null;
   const anchorLeaderId = anchorAccount?.leader?._id ?? null;
@@ -141,6 +143,11 @@ export default function OrganizationChart({
     ],
     []
   );
+
+  const createDepartmentOptions = useMemo(() => {
+    const items = (departmentsData ?? []) as unknown as Array<{ _id: string; code?: string; name?: string }>;
+    return items.map((d) => ({ value: d._id, label: `${d.code ?? ""} — ${d.name ?? ""}` }));
+  }, [departmentsData]);
 
   // Default roleCode for the drawer, derived from the anchor:
   //   - sibling mode: mirror the anchor's role so the new account sits
@@ -698,6 +705,7 @@ export default function OrganizationChart({
           defaultValues={createDefaultValues}
           roleOptions={createRoleOptions}
           teamOptions={[]}
+          departmentOptions={createDepartmentOptions}
           leaderOptions={[]}
           showBankFields={false}
           onSuccess={onCreateSuccess}

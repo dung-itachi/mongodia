@@ -21,6 +21,7 @@ import {
   Space,
   InputNumber,
   Popover,
+  Image,
 } from "antd";
 import {
   SendOutlined,
@@ -79,6 +80,8 @@ export interface StagedLead {
   facebookPageId?: string;
   /** Cached page name for display in the staging list. */
   facebookPageName?: string;
+  /** Cached page avatar URL for display in the staging list. */
+  facebookPageAvatarUrl?: string;
   error?: string;
 }
 
@@ -362,6 +365,7 @@ export default function MarketingInputSection({
         price: combo?.sellingPrice || 0,
         facebookPageId,
         facebookPageName: facebookPages.find(p => p._id === facebookPageId)?.name,
+        facebookPageAvatarUrl: facebookPages.find(p => p._id === facebookPageId)?.avatarUrl,
       };
 
       setStagedLeads(prev => [...prev, newLead]);
@@ -563,13 +567,15 @@ export default function MarketingInputSection({
         }
       }
 
-      // Fallback: nếu không có combo match và không có productName match
-      // → cắt đến emoji/giá đầu tiên
-      if (!comboText && !productNameMatch) {
+      // Fallback: nếu không tìm được combo trong DB → extract raw combo info
+      // (emoji + price + description) từ afterPhone để resolveComboAndProduct
+      // có thể match bằng price hoặc partial name
+      if (!comboText) {
         const comboStart = addressText.match(
-          /[✅📦🎁⭐🌟]|\d[\d,.]*\s*[₮₹$]/
+          /[✅📦🎁⭐🌟].*/
         );
         if (comboStart) {
+          comboText = comboStart[0].trim();
           const idx = addressText.indexOf(comboStart[0]);
           addressText = addressText.substring(0, idx).trim();
         }
@@ -752,15 +758,14 @@ export default function MarketingInputSection({
           finalCombo = autoCombo;
         } else if (autoCombo && autoCombo.productId &&
                    autoCombo.productId !== selectedProductId) {
-          // autoCombo thuộc product khác → warn, fallback về combo đầu tiên của product đang chọn
+          // autoCombo thuộc product khác → warn, KHÔNG fallback về combo đầu tiên
           warnings.push(
             `Combo "${autoCombo.name}" thuộc sản phẩm "${autoCombo.productName || "?"}" ` +
             `KHÔNG khớp sản phẩm đang chọn "${selectedProductName}"`
           );
-          finalCombo = productCombos[0];
-        } else if (productCombos.length > 0) {
-          finalCombo = productCombos[0];
+          // KHÔNG gán combo → giữ trống để user tự chọn
         }
+        // Nếu autoCombo undefined (text không khớp combo nào trong DB) → giữ trống, không gán combo
 
         // Nếu parsed product khác → warn
         if (autoProductName && autoProductName.toLowerCase() !== selectedProductName.toLowerCase()) {
@@ -779,13 +784,13 @@ export default function MarketingInputSection({
           finalProductId = autoCombo.productId || "";
           finalProductName = autoCombo.productName || "";
         }
-      }
 
-      // Fallback: nếu vẫn chưa có combo nhưng có productId → lấy combo đầu tiên của product đó
-      if (!finalCombo && finalProductId) {
-        finalCombo = Object.values(comboByNameMap).find(
-          (c) => c.productId === finalProductId
-        );
+        // Fallback: nếu vẫn chưa có combo nhưng có productId → lấy combo đầu tiên
+        if (!finalCombo && finalProductId) {
+          finalCombo = Object.values(comboByNameMap).find(
+            (c) => c.productId === finalProductId
+          );
+        }
       }
 
       if (!finalCombo) {
@@ -859,6 +864,9 @@ export default function MarketingInputSection({
             facebookPageName:
               facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
               undefined,
+            facebookPageAvatarUrl:
+              facebookPages.find((p) => p._id === selectedFacebookPageId)?.avatarUrl ??
+              undefined,
           });
         } else {
           // Vẫn push lead với error để user thấy trong staging
@@ -876,6 +884,9 @@ export default function MarketingInputSection({
             facebookPageId: selectedFacebookPageId ?? undefined,
             facebookPageName:
               facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
+              undefined,
+            facebookPageAvatarUrl:
+              facebookPages.find((p) => p._id === selectedFacebookPageId)?.avatarUrl ??
               undefined,
             error: comboError,
           });
@@ -938,6 +949,9 @@ export default function MarketingInputSection({
             facebookPageName:
               facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
               undefined,
+            facebookPageAvatarUrl:
+              facebookPages.find((p) => p._id === selectedFacebookPageId)?.avatarUrl ??
+              undefined,
             error: comboError,
           });
         } else {
@@ -955,6 +969,9 @@ export default function MarketingInputSection({
             facebookPageId: selectedFacebookPageId ?? undefined,
             facebookPageName:
               facebookPages.find((p) => p._id === selectedFacebookPageId)?.name ??
+              undefined,
+            facebookPageAvatarUrl:
+              facebookPages.find((p) => p._id === selectedFacebookPageId)?.avatarUrl ??
               undefined,
             error: comboError || "Không tìm thấy combo",
           });
@@ -1219,7 +1236,13 @@ export default function MarketingInputSection({
             <Select
               value={productCategoryFilter}
               onChange={setProductCategoryFilter}
-              style={{ minWidth: 140 }}
+              style={{ minWidth: 160 }}
+              placeholder="Tìm kiếm danh mục..."
+              showSearch
+              allowClear
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
               options={[
                 { value: "all", label: `Tất cả danh mục (${categories.length})` },
                 ...categories.map((c) => ({
@@ -1400,19 +1423,53 @@ export default function MarketingInputSection({
                   ? "Đang tải danh sách trang..."
                   : facebookPages.length === 0
                     ? "Chưa có Facebook Page nào (liên hệ Admin)"
-                    : "Chọn trang Facebook để gắn cho các lead sắp tạo (bắt buộc)"
+                    : "Chọn trang Facebook"
               }
-              options={facebookPages.map((p) => ({
-                value: p._id,
-                label: `${p.name} (${p.code})`,
-              }))}
               showSearch
               optionFilterProp="label"
               disabled={pagesLoading || facebookPages.length === 0}
               notFoundContent={
                 pagesLoading ? null : "Không có trang nào đang hoạt động"
               }
-            />
+            >
+              {facebookPages.map((page) => (
+                <Select.Option
+                  key={page._id}
+                  value={page._id}
+                  label={`${page.name} (${page.code})`}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {page.avatarUrl ? (
+                      <Image
+                        src={page.avatarUrl}
+                        width={36}
+                        height={36}
+                        style={{ borderRadius: 8, objectFit: "cover" }}
+                        fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+                      />
+                    ) : (
+                      <div style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        background: "#f0f0f0",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        color: "#999"
+                      }}>
+                        {page.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{page.name}</div>
+                      <div style={{ fontSize: 11, color: "#999" }}>{page.code}</div>
+                    </div>
+                  </div>
+                </Select.Option>
+              ))}
+            </Select>
             <Button
               icon={<PlusOutlined />}
               onClick={() => setFacebookPageDrawerOpen(true)}
@@ -1846,6 +1903,7 @@ export default function MarketingInputSection({
                 <tr>
                   <th></th>
                   <th></th>
+                  <th></th>
                   <th>#</th>
                   <th>Nguồn</th>
                   <th>Sản phẩm</th>
@@ -1870,6 +1928,31 @@ export default function MarketingInputSection({
                         onClick={() => handleRemoveStagedLead(lead.id)}
                         danger
                       />
+                    </td>
+                    <td>
+                      {lead.facebookPageAvatarUrl ? (
+                        <Image
+                          src={lead.facebookPageAvatarUrl}
+                          width={28}
+                          height={28}
+                          style={{ borderRadius: 4, objectFit: "cover" }}
+                          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+                        />
+                      ) : (
+                        <div style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 4,
+                          background: "#f0f0f0",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          color: "#999"
+                        }}>
+                          {lead.facebookPageName?.charAt(0).toUpperCase() || "?"}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <Button

@@ -65,6 +65,7 @@ export class FacebookPageService {
       name: input.name.trim(),
       pageUrl: input.pageUrl?.trim() ?? "",
       facebookPageId: input.facebookPageId?.trim() ?? "",
+      avatarUrl: input.avatarUrl?.trim() ?? "",
       description: input.description?.trim() ?? "",
       businessManager: input.businessManager?.trim() ?? "",
       currency: input.currency?.trim() ?? "VND",
@@ -137,6 +138,7 @@ export class FacebookPageService {
 
     if (input.pageUrl !== undefined) data.pageUrl = input.pageUrl.trim();
     if (input.facebookPageId !== undefined) data.facebookPageId = input.facebookPageId.trim();
+    if (input.avatarUrl !== undefined) data.avatarUrl = input.avatarUrl.trim();
     if (input.description !== undefined) data.description = input.description.trim();
     if (input.businessManager !== undefined) data.businessManager = input.businessManager.trim();
     if (input.currency !== undefined) data.currency = input.currency.trim();

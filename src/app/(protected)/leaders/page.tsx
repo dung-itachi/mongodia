@@ -1,15 +1,50 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Avatar, Button, Space, Table, Tag, Typography } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
+import { Avatar, Button, Input, Space, Table, Tag, Typography } from "antd";
+import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useTeams } from "@/hooks/useTeams";
+import { useAreas } from "@/hooks/useAreas";
+import { useDepartments } from "@/hooks/useDepartments";
+import { useEmployees as useEmployeesAll } from "@/hooks/useEmployees";
+import { useAuthStore } from "@/store/auth.store";
 import type { Employee } from "@/hooks/useEmployees";
+import AccountCreateDrawer from "@/components/accounts/AccountCreateDrawer";
 
 export default function LeadersPage() {
+  const user = useAuthStore((state) => state.user);
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
   const { data, isLoading, error, refetch } = useEmployees({ pageSize: 200 });
+  const { data: teamsData } = useTeams();
+  const { data: areasData } = useAreas();
+  const { data: departmentsData } = useDepartments();
+  const { data: employeesData } = useEmployeesAll({ pageSize: 100 });
+
+  const roleOptions = useMemo(() => [
+    { value: "LEADER", label: "LEADER" },
+  ], []);
+
+  const teamOptions = useMemo(() => {
+    const items = (teamsData ?? []) as unknown as Array<{ _id: string; code?: string; name?: string }>;
+    return items.map((t) => ({ value: t._id, label: `${t.code ?? ""} — ${t.name ?? ""}` }));
+  }, [teamsData]);
+
+  const areaOptions = useMemo(() => {
+    const items = (areasData ?? []) as unknown as Array<{ _id: string; code?: string; name?: string }>;
+    return items.map((a) => ({ value: a._id, label: `${a.code ?? ""} — ${a.name ?? ""}` }));
+  }, [areasData]);
+
+  const departmentOptions = useMemo(() => {
+    const items = (departmentsData ?? []) as unknown as Array<{ _id: string; code?: string; name?: string }>;
+    return items.map((d) => ({ value: d._id, label: `${d.code ?? ""} — ${d.name ?? ""}` }));
+  }, [departmentsData]);
+
+  const leaderOptions = useMemo(() => {
+    const items = (employeesData ?? []) as unknown as Array<{ _id: string; fullName?: string; employeeCode?: string; role?: { code?: string } }>;
+    return items.filter((e) => e.role?.code === "MANAGER" || e.role?.code === "ADMIN").map((e) => ({ value: e._id, label: `${e.fullName ?? ""} (${e.employeeCode ?? ""}) - ${e.role?.code ?? ""}` }));
+  }, [employeesData]);
 
   const leaders = useMemo(() => {
     return (data ?? []).filter((e) => e.role?.code === "LEADER");
@@ -62,14 +97,14 @@ export default function LeadersPage() {
         <Space style={{ justifyContent: "space-between", width: "100%" }}>
           <Typography.Title level={3} style={{ margin: 0 }}>Quản lý Leaders</Typography.Title>
           <Space>
-            <Button
+            <Input.Search
               placeholder="Tìm kiếm leader"
-              onChange={(e) => setSearch(e.target.value)}
+              onSearch={setSearch}
+              allowClear
               style={{ width: 250 }}
-            >
-              {search || "Tất cả leaders"}
-            </Button>
+            />
             <Button icon={<ReloadOutlined />} onClick={() => void refetch()}>Làm mới</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Thêm Leader</Button>
           </Space>
         </Space>
         {error && <Typography.Text type="danger">Lỗi tải dữ liệu: {(error as Error).message}</Typography.Text>}
@@ -83,6 +118,20 @@ export default function LeadersPage() {
             scroll={{ x: 900 }}
           />
         </div>
+
+        <AccountCreateDrawer
+          open={open}
+          onClose={() => setOpen(false)}
+          mode="create"
+          selected={null}
+          defaultValues={{ roleCode: "LEADER" }}
+          roleOptions={roleOptions}
+          teamOptions={teamOptions}
+          departmentOptions={departmentOptions}
+          leaderOptions={leaderOptions}
+          areaOptions={areaOptions}
+          onSuccess={() => void refetch()}
+        />
       </Space>
     </div>
   );

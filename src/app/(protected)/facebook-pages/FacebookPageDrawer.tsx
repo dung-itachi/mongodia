@@ -3,7 +3,7 @@
  */
 
 import { memo, useEffect, useMemo } from "react";
-import { Drawer, Input, Select, Button, Space, Form, Switch, DatePicker } from "antd";
+import { Drawer, Input, Select, Button, Space, Form, Switch, DatePicker, Image } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import api from "@/lib/axios";
 import { toast } from "@/components/common/feedback/Toast";
@@ -103,6 +103,7 @@ function FacebookPageDrawerInner({
         name: recordData.name,
         pageUrl: recordData.pageUrl ?? "",
         facebookPageId: recordData.facebookPageId ?? "",
+        avatarUrl: recordData.avatarUrl ?? "",
         description: recordData.description ?? "",
         businessManager: recordData.businessManager ?? "",
         currency: recordData.currency ?? DEFAULT_CURRENCY,
@@ -178,6 +179,7 @@ function FacebookPageDrawerInner({
         name: values.name as string,
         pageUrl: values.pageUrl as string | undefined,
         facebookPageId: values.facebookPageId as string | undefined,
+        avatarUrl: values.avatarUrl as string | undefined,
         description: values.description as string | undefined,
         businessManager: values.businessManager as string | undefined,
         currency: values.currency as string | undefined,
@@ -217,6 +219,7 @@ function FacebookPageDrawerInner({
         name: values.name as string,
         pageUrl: values.pageUrl as string | undefined,
         facebookPageId: values.facebookPageId as string | undefined,
+        avatarUrl: values.avatarUrl as string | undefined,
         description: values.description as string | undefined,
         businessManager: values.businessManager as string | undefined,
         currency: values.currency as string | undefined,
@@ -289,6 +292,14 @@ function FacebookPageDrawerInner({
 
         <Form.Item name="pageUrl" label="URL Page">
           <Input placeholder="https://www.facebook.com/..." />
+        </Form.Item>
+
+        <Form.Item
+          name="avatarUrl"
+          label="Avatar URL"
+          tooltip="Mở ảnh đại diện trên Facebook (đã đăng nhập) → Chuột phải → Mở hình ảnh trong tab mới → Copy URL và dán vào đây"
+        >
+          <Input placeholder="Dán URL avatar từ Facebook" />
         </Form.Item>
 
         <Form.Item name="facebookPageId" label="Facebook Page ID">

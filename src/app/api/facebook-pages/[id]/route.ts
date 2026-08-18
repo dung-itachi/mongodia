@@ -58,6 +58,7 @@ export async function PATCH(
       name: body.name,
       pageUrl: body.pageUrl,
       facebookPageId: body.facebookPageId,
+      avatarUrl: body.avatarUrl,
       description: body.description,
       businessManager: body.businessManager,
       currency: body.currency,

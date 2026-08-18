@@ -22,6 +22,7 @@ export interface CreateFacebookPageData {
   name: string;
   pageUrl?: string;
   facebookPageId?: string;
+  avatarUrl?: string;
   description?: string;
   businessManager?: string;
   currency?: string;
@@ -35,6 +36,7 @@ export interface UpdateFacebookPageData {
   name?: string;
   pageUrl?: string;
   facebookPageId?: string;
+  avatarUrl?: string;
   description?: string;
   businessManager?: string;
   currency?: string;
@@ -82,6 +84,7 @@ function mapToPage(
     name: doc.name,
     pageUrl: doc.pageUrl ?? "",
     facebookPageId: doc.facebookPageId ?? "",
+    avatarUrl: doc.avatarUrl ?? "",
     description: doc.description ?? "",
     businessManager: doc.businessManager ?? "",
     currency: doc.currency ?? "VND",
