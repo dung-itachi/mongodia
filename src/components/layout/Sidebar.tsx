@@ -4,6 +4,7 @@ import { Suspense, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { Tooltip } from "antd";
 
 import {
   NAV_GROUPS,
@@ -552,48 +553,42 @@ function NavGroups({
     <>
       {/* Expand/Collapse all controls */}
       <div style={{ display: "flex", gap: "4px", padding: "4px 8px", marginBottom: "4px" }}>
-        <button
-          type="button"
-          onClick={handleExpandAll}
-          style={{
-            flex: 1,
-            padding: "4px 8px",
-            fontSize: "9px",
-            fontWeight: 600,
-            background: "rgba(255,255,255,0.06)",
-            color: "var(--sb-txt)",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-          title={t("Expand", language)}
+        <Tooltip
+          title={
+            <span style={{ fontSize: 12 }}>
+              {openGroups.size === visibleGroups.length ? "Thu gọn tất cả" : "Mở rộng tất cả"}
+            </span>
+          }
+          mouseEnterDelay={0}
+          overlayStyle={{ fontSize: 12 }}
+          placement="right"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 10, height: 10, marginRight: 4 }}>
-            <path d="M4 8l8-6 8 6M4 16l8 6 8-6" strokeWidth="2" />
-          </svg>
-          {t("Expand", language)}
-        </button>
-        <button
-          type="button"
-          onClick={handleCollapseAll}
-          style={{
-            flex: 1,
-            padding: "4px 8px",
-            fontSize: "9px",
-            fontWeight: 600,
-            background: "rgba(255,255,255,0.06)",
-            color: "var(--sb-txt)",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-          title={t("Collapse", language)}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 10, height: 10, marginRight: 4 }}>
-            <path d="M4 8l8 6 8-6M4 16l8-6 8 6" strokeWidth="2" />
-          </svg>
-          {t("Collapse", language)}
-        </button>
+          <button
+            type="button"
+            onClick={openGroups.size === visibleGroups.length ? handleCollapseAll : handleExpandAll}
+            style={{
+              padding: "6px",
+              background: "rgba(255,255,255,0.06)",
+              color: "var(--sb-txt)",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {openGroups.size === visibleGroups.length ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 14, height: 14 }}>
+                <path d="M4 8l8 6 8-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: 14, height: 14 }}>
+                <path d="M4 8l8-6 8 6M4 16l8 6 8-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </button>
+        </Tooltip>
       </div>
       {visibleGroups.map((group) => (
         <NavGroupBlock
