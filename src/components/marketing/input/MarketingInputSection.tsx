@@ -493,6 +493,7 @@ export default function MarketingInputSection({
     function smartParseRow(
       line: string,
       productNames: string[],
+      productIdByName: Record<string, string>,
       combosByProductId: Record<string, Array<{ name: string; sellingPrice?: number }>>
     ): Record<string, string> {
       const out: Record<string, string> = {
@@ -526,7 +527,7 @@ export default function MarketingInputSection({
       if (productNameMatch) out.product = productNameMatch;
 
       // 3. Tìm phone (8-11 digits)
-      const phoneMatch = line.match(/\b(\d{8,11})\b/);
+      const phoneMatch = line.match(/\b(\d{6,11})\b/);
       if (!phoneMatch) return out;
       out.phone = phoneMatch[1];
       const phoneIdx = phoneMatch.index!;
@@ -534,9 +535,27 @@ export default function MarketingInputSection({
       const beforePhone = line.substring(0, phoneIdx).trim();
       const afterPhone = line.substring(phoneIdx + phoneMatch[0].length).trim();
 
-      // 4. Từ productName match → tìm combo thuộc product đó match với afterPhone
+      // 4. Tìm combo trong afterPhone — luôn luôn tìm, không cần productNameMatch
+      // Nếu có productNameMatch → ưu tiên combos của product đó
+      // Nếu không → tìm trong tất cả combos (user đã chọn product ở trên)
       let comboText = "";
       if (productNameMatch) {
+        const matchedProductId = productIdByName[productNameMatch.toLowerCase()];
+        const productCombos = matchedProductId ? combosByProductId[matchedProductId] : undefined;
+        if (productCombos) {
+          const sortedCombos = [...productCombos].sort(
+            (a, b) => b.name.length - a.name.length
+          );
+          for (const c of sortedCombos) {
+            if (afterPhone.toLowerCase().includes(c.name.toLowerCase())) {
+              comboText = c.name;
+              break;
+            }
+          }
+        }
+      }
+      // Nếu không tìm được → tìm trong tất cả combos
+      if (!comboText) {
         for (const combos of Object.values(combosByProductId)) {
           const sortedCombos = [...combos].sort(
             (a, b) => b.name.length - a.name.length
@@ -591,6 +610,13 @@ export default function MarketingInputSection({
     const productNames = categories.flatMap((c) =>
       (c.products || []).map((p) => p.name)
     );
+    // productIdByName: productName -> productId
+    const productIdByName: Record<string, string> = {};
+    categories.forEach((c) => {
+      (c.products || []).forEach((p) => {
+        productIdByName[p.name.toLowerCase()] = p._id;
+      });
+    });
     // combosByProductId: productId -> [{name, sellingPrice}]
     const combosByProductId: Record<
       string,
@@ -623,7 +649,7 @@ export default function MarketingInputSection({
       // Nếu line bắt đầu bằng date (YYYY-MM-DD) → dùng smartParseRow
       // để tách date+time riêng, tránh dính vào name khi split theo 2-space.
       if (/^\d{4}-\d{1,2}-\d{1,2}\b/.test(trimmed)) {
-        return smartParseRow(line, productNames, combosByProductId);
+        return smartParseRow(line, productNames, productIdByName, combosByProductId);
       }
       const parts = splitRow(line);
       // Nếu split được nhiều cột → dùng position-based theo layout user đã cấu hình
@@ -631,7 +657,7 @@ export default function MarketingInputSection({
         return parseRowByLayout(parts);
       }
       // Fallback: heuristic parse với productName anchor
-      return smartParseRow(line, productNames, combosByProductId);
+      return smartParseRow(line, productNames, productIdByName, combosByProductId);
     }
 
     // Create combo lookup by price (primary) and by partial name match.
@@ -991,7 +1017,7 @@ export default function MarketingInputSection({
       toast.warning(
         `Đã thêm ${newLeads.length} lead, BỎ QUA ${skippedCount} dòng thiếu phone.\n` +
           `Mẫu:\n• ${sampleText}\n` +
-          `💡 Phone phải là 8-11 chữ số liên tục (vd "96621013"). ` +
+          `💡 Phone phải là 6-11 chữ số liên tục (vd "96621013"). ` +
           `Nếu paste từ nguồn không có tab, hệ thống sẽ tự tìm phone bằng regex — ` +
           `đảm bảo có ít nhất 1 chuỗi số điện thoại rõ ràng trong dòng.`,
         { duration: 8 }

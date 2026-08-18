@@ -59,7 +59,7 @@ export function buildDashboardStats(
 
   return [
     {
-      title: "Tổng Leads",
+      title: "Tổng số khách hàng",
       value: formatNumber(summary.totalLeads),
       icon: <TeamOutlined />,
       color: "blue",

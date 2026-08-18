@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Empty turbopack config to silence the webpack/turbopack warning
-  turbopack: {},
+  serverExternalPackages: ['mongoose'],
 };
 
 export default nextConfig;

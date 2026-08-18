@@ -482,7 +482,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
         </Col>
         <Col span={4}>
           <Statistic
-            title="Tổng Leads"
+            title="Tổng số khách hàng"
             value={summary.totalLeads}
             styles={{ content: { fontSize: "18px" } }}
           />

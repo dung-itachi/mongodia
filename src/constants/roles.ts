@@ -130,6 +130,10 @@ export const ROLES = [
       "facebook-page-assignment.create",
       "facebook-page-assignment.update",
 
+      "campaign.view",
+      "campaign.create",
+      "campaign.update",
+
       "combo.view",
       "combo.create",
       "combo.update",
@@ -380,6 +384,8 @@ export const ROLES = [
 
       "facebook-page-assignment.view",
 
+      "campaign.view",
+
       "combo.view",
 
       // ---- Gift (Leader cần xem quà) -------------------------------
@@ -479,6 +485,10 @@ export const ROLES = [
       "facebook-page-assignment.view",
       "facebook-page-assignment.create",
       "facebook-page-assignment.update",
+
+      "campaign.view",
+      "campaign.create",
+      "campaign.update",
 
       "customer.view",
       "customer.create",

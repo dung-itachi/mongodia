@@ -491,3 +491,9 @@
 .sb.col .logout-btn span {
   display: none;
 }
+
+/* Expand/Collapse all buttons hover */
+.nav button[title]:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}

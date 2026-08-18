@@ -190,7 +190,7 @@ function CampaignDrawerInner({
     <Drawer
       title={isEdit ? "Sửa Campaign" : "Tạo Campaign"}
       placement="right"
-      width={500}
+      styles={{ wrapper: { width: 500 } }}
       open={open}
       onClose={onClose}
       footer={

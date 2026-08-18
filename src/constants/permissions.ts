@@ -375,6 +375,24 @@ export const PERMISSIONS = [
   name: "Delete Facebook Page Assignment",
 },
 
+// Campaign
+{
+  code: "campaign.view",
+  name: "View Campaign",
+},
+{
+  code: "campaign.create",
+  name: "Create Campaign",
+},
+{
+  code: "campaign.update",
+  name: "Update Campaign",
+},
+{
+  code: "campaign.delete",
+  name: "Delete Campaign",
+},
+
 // Combo
 {
   code: "combo.view",
