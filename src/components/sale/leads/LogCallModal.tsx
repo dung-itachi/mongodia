@@ -127,7 +127,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
       onCancel={handleClose}
       footer={null}
       width={480}
-      destroyOnClose
+      destroyOnHidden
     >
       {lead && (
         <div className={styles.leadInfo}>

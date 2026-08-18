@@ -64,7 +64,7 @@ function MarketingDashboardDrillDownDrawerInner({
       styles={{ wrapper: { width: 800 } }}
       open={open}
       onClose={onClose}
-      destroyOnClose
+      destroyOnHidden
     >
       {loading && (
         <div className={styles["mk-drawer-loading"]}>

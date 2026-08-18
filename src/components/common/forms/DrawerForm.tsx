@@ -52,7 +52,7 @@ export default function DrawerForm({
       styles={drawerStyles}
       open={open}
       onClose={onClose}
-      destroyOnClose
+      destroyOnHidden
       footer={
         footer !== undefined ? (
           footer

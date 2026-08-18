@@ -388,7 +388,7 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
       width={680}
       open={open}
       onClose={handleClose}
-      destroyOnClose
+      destroyOnHidden
       footer={
         <Space style={{ width: "100%", justifyContent: "flex-end" }}>
           <Button onClick={handleClose}>Hủy</Button>
