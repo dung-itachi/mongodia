@@ -55,6 +55,20 @@ export default function ComboPage() {
   const combos = data?.items ?? [];
   const products: ProductListItem[] = productsData?.items ?? [];
 
+  // Get existing combo codes for the selected product
+  const existingComboCodes = useMemo(() => {
+    if (!pendingProductId) return [];
+    return combos
+      .filter((c) => {
+        const productId =
+          typeof c.product === "object" && c.product !== null
+            ? (c.product as { _id: string })._id
+            : c.productId;
+        return productId === pendingProductId;
+      })
+      .map((c) => c.code);
+  }, [combos, pendingProductId]);
+
   const categoryOptions: CategoryOption[] = useMemo(() => {
     const categoryMap = new Map<string, CategoryOption>();
     products.forEach((p) => {
@@ -261,6 +275,7 @@ export default function ComboPage() {
         onSubmit={handleSubmit}
         initialProductId={pendingProductId ?? undefined}
         lockProductSelection={!!pendingProductId}
+        existingCodes={existingComboCodes}
       />
     </PageContainer>
   );

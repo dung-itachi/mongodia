@@ -17,9 +17,9 @@ export const MARKETING_LEAD_ACTIONS = ["view", "edit", "delete", "assign", "conv
 export type MarketingLeadAction = (typeof MARKETING_LEAD_ACTIONS)[number];
 
 export const MARKETING_LEAD_ACTION_LABELS: Record<MarketingLeadAction, string> = {
-  view: "Xem",
-  edit: "Sửa",
-  delete: "Xóa",
+  view: "View",
+  edit: "Edit",
+  delete: "Delete",
   assign: "Assign",
   convert: "Convert",
 };

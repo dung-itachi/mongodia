@@ -50,7 +50,7 @@ export const facebookPagesColumns: Column[] = [
   },
   {
     key: "totalLeads",
-    title: "Lead",
+    title: "Khách hàng",
     dataIndex: "totalLeads",
     width: 80,
     align: "right",
@@ -84,7 +84,7 @@ export const marketingEmployeesColumns: Column[] = [
   },
   {
     key: "totalLeads",
-    title: "Lead",
+    title: "Khách hàng",
     dataIndex: "totalLeads",
     width: 70,
     align: "right",
@@ -150,7 +150,7 @@ export const campaignsColumns: Column[] = [
   },
   {
     key: "totalLeads",
-    title: "Lead",
+    title: "Khách hàng",
     dataIndex: "totalLeads",
     width: 70,
     align: "right",

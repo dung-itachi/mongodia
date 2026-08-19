@@ -336,12 +336,66 @@ export class LeadRepository {
 
   /**
    * Find all leads with pagination
+   * Sprint 8.x: Added teamId filter support via aggregation lookup
    */
   async findAll(params: LeadSearchParams) {
     const page = params.page ?? 1;
     const limit = params.limit ?? 20;
     const skip = (page - 1) * limit;
     const filter = buildFilter(params);
+
+    // Sprint 8.x: If teamId is provided, use aggregation to join with Employee for team filtering
+    if (params.teamId && params.teamId !== "__all__") {
+      return this.findAllWithTeamFilter(params, page, limit, skip);
+    }
+
+    const [items, total] = await Promise.all([
+      Lead.find(filter)
+        .populate("marketingEmployeeId", "_id employeeCode name")
+        .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("comboId", "_id code name")
+        .populate("productId", "_id code name")
+        .populate("facebookPageId", "_id code name")
+        .sort(buildSort(params))
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Lead.countDocuments(filter),
+    ]);
+
+    return {
+      items: items.map((doc) => mapToLead(doc as ILead)),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  /**
+   * Sprint 8.x: Find leads with team filter using aggregation
+   * Joins with Employee to filter by teamId
+   */
+  private async findAllWithTeamFilter(params: LeadSearchParams, page: number, limit: number, skip: number) {
+    // First, find all employees in the team
+    const Team = mongoose.model("Team");
+    const EmployeeModel = mongoose.model("Employee");
+
+    const team = await Team.findOne({ code: params.teamId }).select("_id").lean();
+    if (!team) {
+      return { items: [], total: 0, page, limit, totalPages: 1 };
+    }
+
+    const teamEmployees = await EmployeeModel.find({ teamId: team._id }).select("_id").lean();
+    const employeeIds = teamEmployees.map((e) => e._id);
+
+    if (employeeIds.length === 0) {
+      return { items: [], total: 0, page, limit, totalPages: 1 };
+    }
+
+    // Build base filter
+    const filter = buildFilter(params);
+    filter.marketingEmployeeId = { $in: employeeIds };
 
     const [items, total] = await Promise.all([
       Lead.find(filter)

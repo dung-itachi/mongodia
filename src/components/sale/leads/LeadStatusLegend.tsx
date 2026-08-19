@@ -1,88 +1,95 @@
 /**
- * Lead Status Legend - Giải thích ý nghĩa các trạng thái lead
+ * Lead Status Legend - Status meaning explanation
  */
 
 import { Modal, Tag } from "antd";
 import { LeadStatus } from "@/constants/leadStatus";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 interface StatusInfo {
   status: LeadStatus;
-  label: string;
+  labelKey: string;
   color: string;
-  description: string;
   emoji: string;
+  descriptionKey: string;
 }
 
 const STATUS_INFO: StatusInfo[] = [
-  {
-    status: LeadStatus.NEW,
-    label: "Mới",
-    color: "blue",
-    emoji: "🆕",
-    description: "Lead vừa được tạo, chưa liên hệ lần nào. Cần gọi điện sớm.",
-  },
+      {
+        status: LeadStatus.NEW,
+        labelKey: "Mới",
+        color: "blue",
+        emoji: "🆕",
+        descriptionKey: "Khách hàng vừa được tạo, chưa liên hệ lần nào. Cần gọi điện sớm.",
+      },
   {
     status: LeadStatus.CONTACTED,
-    label: "Đã liên hệ",
+    labelKey: "Đã liên hệ",
     color: "cyan",
     emoji: "📞",
-    description: "Đã trao đổi với khách hàng nhưng chưa xác định nhu cầu rõ ràng.",
+    descriptionKey: "Đã trao đổi với khách hàng nhưng chưa xác định nhu cầu rõ ràng.",
   },
   {
     status: LeadStatus.NO_ANSWER,
-    label: "Không nghe máy",
+    labelKey: "Không nghe máy",
     color: "gold",
     emoji: "📵",
-    description: "Gọi nhưng khách không nghe. Nên gọi lại sau 2-4 tiếng hoặc hôm khác.",
+    descriptionKey: "Gọi nhưng khách không nghe. Nên gọi lại sau 2-4 tiếng hoặc hôm khác.",
   },
   {
     status: LeadStatus.QUALIFIED,
-    label: "Đủ điều kiện",
+    labelKey: "Đủ điều kiện",
     color: "geekblue",
     emoji: "✅",
-    description: "Khách có nhu cầu, đủ khả năng tài chính. Sẵn sàng tư vấn sản phẩm.",
+    descriptionKey: "Khách có nhu cầu, đủ khả năng tài chính. Sẵn sàng tư vấn sản phẩm.",
   },
   {
     status: LeadStatus.POTENTIAL,
-    label: "Tiềm năng",
+    labelKey: "Tiềm năng",
     color: "purple",
     emoji: "⭐",
-    description: "Khách quan tâm, có thể chốt đơn. Cần theo sát và chăm sóc.",
+    descriptionKey: "Khách quan tâm, có thể chốt đơn. Cần theo sát và chăm sóc.",
   },
   {
     status: LeadStatus.CLOSED,
-    label: "Đã chốt",
+    labelKey: "Đã chốt",
     color: "green",
     emoji: "🎉",
-    description: "Khách đã đồng ý mua. Tiến hành tạo đơn hàng.",
+    descriptionKey: "Khách đã đồng ý mua. Tiến hành tạo đơn hàng.",
   },
-  {
-    status: LeadStatus.LOST,
-    label: "Không mua",
-    color: "red",
-    emoji: "❌",
-    description: "Khách từ chối, không có nhu cầu. Kết thúc chăm sóc lead này.",
-  },
-  {
-    status: LeadStatus.ORDER_CREATED,
-    label: "Đã tạo đơn",
-    color: "success",
-    emoji: "📦",
-    description: "Lead đã chuyển thành đơn hàng thành công.",
-  },
+      {
+        status: LeadStatus.LOST,
+        labelKey: "Không mua",
+        color: "red",
+        emoji: "❌",
+        descriptionKey: "Khách hàng từ chối, không có nhu cầu. Kết thúc chăm sóc khách hàng này.",
+      },
+      {
+        status: LeadStatus.ORDER_CREATED,
+        labelKey: "Đã tạo đơn",
+        color: "success",
+        emoji: "📦",
+        descriptionKey: "Khách hàng đã chuyển thành đơn hàng thành công.",
+      },
   {
     status: LeadStatus.CANCELLED,
-    label: "Hủy",
+    labelKey: "Hủy",
     color: "default",
     emoji: "🚫",
-    description: "Đơn hàng hoặc quá trình xử lý bị hủy bỏ.",
+    descriptionKey: "Đơn hàng hoặc quá trình xử lý bị hủy bỏ.",
   },
   {
     status: LeadStatus.REJECTED,
-    label: "Từ chối",
+    labelKey: "Từ chối",
     color: "volcano",
     emoji: "⛔",
-    description: "Bị từ chối từ đầu (không đủ điều kiện, không phù hợp).",
+    descriptionKey: "Bị từ chối từ đầu (không đủ điều kiện, không phù hợp).",
   },
 ];
 
@@ -94,7 +101,7 @@ interface LeadStatusLegendProps {
 export default function LeadStatusLegend({ open, onClose }: LeadStatusLegendProps) {
   return (
     <Modal
-      title="📖 Ý nghĩa các trạng thái Lead"
+      title={getTranslated("📖 Ý nghĩa các trạng thái")}
       open={open}
       onCancel={onClose}
       footer={null}
@@ -116,10 +123,10 @@ export default function LeadStatusLegend({ open, onClose }: LeadStatusLegendProp
             <span style={{ fontSize: 20 }}>{info.emoji}</span>
             <div style={{ flex: 1 }}>
               <Tag color={info.color} style={{ fontWeight: 600 }}>
-                {info.label}
+                {getTranslated(info.labelKey)}
               </Tag>
               <div style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
-                {info.description}
+                {getTranslated(info.descriptionKey)}
               </div>
             </div>
           </div>

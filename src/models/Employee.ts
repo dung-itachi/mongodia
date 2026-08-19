@@ -35,6 +35,9 @@ export interface IEmployee {
   lastLogin?: Date;
 
   isActive: boolean;
+
+  /** Account ID để phân quyền dữ liệu theo tài khoản */
+  accountId?: Types.ObjectId | null;
 }
 
 const EmployeeSchema = new Schema<IEmployee>(
@@ -147,6 +150,13 @@ const EmployeeSchema = new Schema<IEmployee>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    accountId: {
+      type: Schema.Types.ObjectId,
+      ref: "Account",
+      default: null,
+      index: true,
     },
   },
   {

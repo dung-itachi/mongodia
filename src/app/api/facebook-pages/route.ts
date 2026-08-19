@@ -34,12 +34,16 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") as "ACTIVE" | "INACTIVE" | null;
     const isActive = searchParams.get("isActive");
 
+    // Get current user for account filtering
+    const currentUser = await getCurrentUser(request);
+
     const result = await facebookPageService.getList({
       page,
       pageSize,
       keyword: keyword || undefined,
       status: status ?? undefined,
       isActive: isActive === "true" ? true : isActive === "false" ? false : undefined,
+      accountId: currentUser.role !== "ADMIN" ? currentUser.accountId : undefined,
     });
 
     return success(result);
@@ -57,6 +61,8 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
+    const currentUser = await getCurrentUser(request);
+
     const body = await request.json();
 
     const result = await facebookPageService.create({
@@ -71,6 +77,7 @@ export async function POST(request: NextRequest) {
       timezone: body.timezone,
       status: body.status,
       note: body.note,
+      accountId: currentUser.accountId,
     });
 
     if (!result.success) {

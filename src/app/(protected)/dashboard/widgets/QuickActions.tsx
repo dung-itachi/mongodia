@@ -1,7 +1,7 @@
 /**
  * QuickActions Widget (Sprint 4.4 — Dashboard Polish)
  *
- * Displays quick action buttons: Lead, Order, Customer, Facebook, Product, Warehouse.
+ * Displays quick action buttons: Customer, Order, Customer, Facebook, Product, Warehouse.
  * UI only — no CRUD wired up.
  * Memoized to avoid re-render when other widgets change.
  */

@@ -7,6 +7,16 @@
 import { Table, Empty } from "antd";
 import type { TableProps, TablePaginationConfig } from "antd";
 import type { ReactNode } from "react";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+/**
+ * Get translated text synchronously (for default props)
+ */
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export type Column = {
   key: string;
@@ -40,7 +50,7 @@ export default function DataTable({
   rowKey = "id",
   onChange,
   rowSelection,
-  emptyText = "Không có dữ liệu",
+  emptyText,
   scroll,
   size = "middle",
   onRow,
@@ -53,7 +63,7 @@ export default function DataTable({
           showSizeChanger: true,
           showQuickJumper: true,
           pageSizeOptions: ["10", "20", "50", "100"],
-          showTotal: (total: number) => `Tổng: ${total}`,
+          showTotal: (total: number) => `${getTranslated("Tổng: ${total}").replace("${total}", String(total))}`,
         };
 
   return (
@@ -72,7 +82,7 @@ export default function DataTable({
         emptyText: (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={emptyText}
+            description={emptyText ?? getTranslated("Không có dữ liệu")}
           />
         ),
       }}

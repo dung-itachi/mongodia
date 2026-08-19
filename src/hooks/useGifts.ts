@@ -1,5 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export interface GiftListItem {
   _id: string;
@@ -62,32 +69,32 @@ async function fetchGiftList(params?: {
   const response = await api.get<ApiResponse<GiftListResponse>>(
     `/api/gifts${qs ? `?${qs}` : ""}`
   );
-  if (!response.data.success) throw new Error("Không thể tải danh sách quà tặng");
+  if (!response.data.success) throw new Error(getTranslated("Không thể tải danh sách quà tặng"));
   return response.data.data;
 }
 
 async function createGift(input: CreateGiftInput): Promise<GiftListItem> {
   const response = await api.post<ApiResponse<GiftListItem>>("/api/gifts", input);
-  if (!response.data.success) throw new Error(response.data.message ?? "Không thể tạo quà tặng");
+  if (!response.data.success) throw new Error(response.data.message ?? getTranslated("Không thể tạo quà tặng"));
   return response.data.data;
 }
 
 async function updateGift(id: string, input: UpdateGiftInput): Promise<GiftListItem> {
   const response = await api.put<ApiResponse<GiftListItem>>(`/api/gifts/${id}`, input);
-  if (!response.data.success) throw new Error(response.data.message ?? "Không thể cập nhật quà tặng");
+  if (!response.data.success) throw new Error(response.data.message ?? getTranslated("Không thể cập nhật quà tặng"));
   return response.data.data;
 }
 
 async function deleteGift(id: string): Promise<void> {
   const response = await api.delete<ApiResponse<null>>(`/api/gifts/${id}`);
-  if (!response.data.success) throw new Error(response.data.message ?? "Không thể xóa quà tặng");
+  if (!response.data.success) throw new Error(response.data.message ?? getTranslated("Không thể xóa quà tặng"));
 }
 
 async function fetchGiftInventoryHistory(id: string): Promise<GiftInventoryHistoryResponse> {
   const response = await api.get<ApiResponse<GiftInventoryHistoryResponse>>(
     `/api/gifts/${id}/inventory`
   );
-  if (!response.data.success) throw new Error("Không thể tải lịch sử tồn quà tặng");
+  if (!response.data.success) throw new Error(getTranslated("Không thể tải lịch sử tồn quà tặng"));
   return response.data.data;
 }
 
@@ -101,7 +108,7 @@ async function changeGiftInventory(
     `/api/gifts/${id}/inventory`,
     input
   );
-  if (!response.data.success) throw new Error(response.data.message ?? "Không thể thay đổi tồn quà tặng");
+  if (!response.data.success) throw new Error(response.data.message ?? getTranslated("Không thể thay đổi tồn quà tặng"));
   return response.data.data.gift;
 }
 

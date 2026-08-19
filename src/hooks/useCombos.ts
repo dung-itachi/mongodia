@@ -42,6 +42,7 @@ export interface ComboListItem {
   image?: string;
   isActive?: boolean;
   itemCount?: number;
+  createdAt?: string;
 }
 
 export interface ComboDetail extends ComboListItem {

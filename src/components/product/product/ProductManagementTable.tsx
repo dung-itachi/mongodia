@@ -24,6 +24,13 @@ import type {
   ProductManagementItem,
   ComboListItem,
 } from "@/hooks/useProductCrud";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 interface ProductManagementTableProps {
   data: ProductManagementItem[];
@@ -51,9 +58,21 @@ function formatNumber(num: number): string {
 
 function ComboTag({ combo }: { combo: ComboListItem }) {
   return (
-    <Tag color={combo.isActive ? "blue" : "default"} style={{ marginBottom: 2 }}>
-      {combo.name} ({combo.packageQuantity})
-    </Tag>
+    <Tooltip title={`${combo.name} (${combo.packageQuantity})`} placement="top">
+      <Tag
+        color={combo.isActive ? "blue" : "default"}
+        style={{
+          marginBottom: 2,
+          maxWidth: 150,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          cursor: "default",
+        }}
+      >
+        {combo.name} ({combo.packageQuantity})
+      </Tag>
+    </Tooltip>
   );
 }
 
@@ -128,13 +147,13 @@ export default function ProductManagementTable({
     },
     {
       key: "code",
-      title: "Mã SP",
+      title: getTranslated("Mã sản phẩm"),
       dataIndex: "code",
       width: 100,
     },
     {
       key: "name",
-      title: "Tên sản phẩm",
+      title: getTranslated("Tên sản phẩm"),
       dataIndex: "name",
       width: 200,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -151,7 +170,7 @@ export default function ProductManagementTable({
     },
     {
       key: "comboCount",
-      title: "Combo",
+      title: getTranslated("Combo"),
       width: 100,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -165,7 +184,7 @@ export default function ProductManagementTable({
     },
     {
       key: "combos",
-      title: "Danh sách Combo",
+      title: getTranslated("Danh mục"),
       width: 300,
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductManagementItem;
@@ -181,7 +200,7 @@ export default function ProductManagementTable({
                   }}
                   style={{ marginLeft: 8 }}
                 >
-                  + Tạo combo
+                  + {getTranslated("Tạo")}
                 </a>
               )}
             </span>
@@ -197,15 +216,59 @@ export default function ProductManagementTable({
               ))}
             </div>
             {onOpenCombos && (
-              <a
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenCombos(item);
-                }}
-                style={{ fontSize: 12 }}
-              >
-                {remaining > 0 ? `+${remaining} khác · ` : ""}Quản lý
-              </a>
+              <Tooltip title={getTranslated("Click để quản lý combo")} placement="top">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenCombos(item);
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 12,
+                    color: "#1890ff",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                    background: "linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)",
+                    border: "1px solid #91d5ff",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)";
+                    e.currentTarget.style.color = "#fff";
+                    e.currentTarget.style.borderColor = "#1890ff";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(24, 144, 255, 0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)";
+                    e.currentTarget.style.color = "#1890ff";
+                    e.currentTarget.style.borderColor = "#91d5ff";
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <GiftOutlined style={{ fontSize: 11 }} />
+                  {getTranslated("Sửa")}
+                  {remaining > 0 && (
+                    <span style={{
+                      background: "#ff4d4f",
+                      color: "#fff",
+                      borderRadius: "50%",
+                      fontSize: 10,
+                      padding: "0 5px",
+                      lineHeight: "16px",
+                      minWidth: 16,
+                      textAlign: "center",
+                    }}>
+                      +{remaining}
+                    </span>
+                  )}
+                </span>
+              </Tooltip>
             )}
           </div>
         );
@@ -244,7 +307,7 @@ export default function ProductManagementTable({
     },
     {
       key: "lastImportDate",
-      title: "Ngày nhập",
+      title: getTranslated("Ngày tạo"),
       width: 110,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {

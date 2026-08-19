@@ -7,13 +7,26 @@
 
 import { memo, useMemo } from "react";
 import { Button, Space, Tag, Badge } from "antd";
-import { PhoneOutlined, SwapOutlined, UserSwitchOutlined } from "@ant-design/icons";
+import {
+  PhoneOutlined,
+  SwapOutlined,
+  UserSwitchOutlined,
+  EyeOutlined,
+  EditOutlined,
+} from "@ant-design/icons";
 import { DataTable, StatusBadge } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LEAD_STATUS_LABELS, LeadStatus } from "@/constants/leadStatus";
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import styles from "./sale-leads.module.css";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export interface SaleLeadTableProps {
   data: SaleLead[];
@@ -21,6 +34,8 @@ export interface SaleLeadTableProps {
   onConvert: (lead: SaleLead) => void;
   onLogCall?: (lead: SaleLead) => void;
   onReassign?: (lead: SaleLead) => void;
+  onViewDetail?: (lead: SaleLead) => void;
+  onEdit?: (lead: SaleLead) => void;
   loading?: boolean;
   canReassign?: boolean;
   // Row selection for bulk operations
@@ -35,6 +50,8 @@ function SaleLeadTableInner({
   onConvert,
   onLogCall,
   onReassign,
+  onViewDetail,
+  onEdit,
   loading,
   canReassign = false,
   selectedRowKeys = [],
@@ -45,13 +62,13 @@ function SaleLeadTableInner({
     () => [
       {
         key: "leadCode",
-        title: "Mã",
+        title: getTranslated("Mã"),
         dataIndex: "leadCode",
         width: 130,
       },
       {
         key: "customerName",
-        title: "Tên khách hàng",
+        title: getTranslated("Tên khách hàng"),
         dataIndex: "customerName",
         width: 180,
         render: (value: unknown) => (
@@ -60,7 +77,7 @@ function SaleLeadTableInner({
       },
       {
         key: "phone",
-        title: "SĐT",
+        title: getTranslated("SĐT"),
         dataIndex: "phone",
         width: 120,
         render: (value: unknown) => (
@@ -69,14 +86,14 @@ function SaleLeadTableInner({
       },
       {
         key: "address",
-        title: "Địa chỉ",
+        title: getTranslated("Địa chỉ"),
         dataIndex: "address",
         width: 200,
         render: (value: unknown) => String(value) || "-",
       },
       {
         key: "saleEmployee",
-        title: "Sale phụ trách",
+        title: getTranslated("Sale phụ trách"),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -88,13 +105,13 @@ function SaleLeadTableInner({
             );
           }
           return (
-            <Tag color="default">Chưa phân công</Tag>
+            <Tag color="default">{getTranslated("Chưa phân công")}</Tag>
           );
         },
       },
       {
         key: "sourceType",
-        title: "Nguồn",
+        title: getTranslated("Nguồn"),
         width: 130,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -103,16 +120,35 @@ function SaleLeadTableInner({
       },
       {
         key: "product",
-        title: "Sản phẩm",
+        title: getTranslated("Sản phẩm"),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
-          return lead.product?.name || "-";
+          if (lead.product?.name) {
+            return (
+              <span className={styles.primaryText}>{lead.product.name}</span>
+            );
+          }
+          return <span className={styles.mutedText}>-</span>;
+        },
+      },
+      {
+        key: "combo",
+        title: getTranslated("Combo"),
+        width: 150,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as SaleLead;
+          if (lead.combo?.name) {
+            return (
+              <span>{lead.combo.name}</span>
+            );
+          }
+          return <span className={styles.mutedText}>-</span>;
         },
       },
       {
         key: "facebookPage",
-        title: "Trang FB",
+        title: getTranslated("Trang FB"),
         width: 130,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -123,7 +159,7 @@ function SaleLeadTableInner({
       },
       {
         key: "price",
-        title: "Giá",
+        title: getTranslated("Giá"),
         width: 120,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -139,7 +175,7 @@ function SaleLeadTableInner({
       },
       {
         key: "status",
-        title: "Trạng thái",
+        title: getTranslated("Trạng thái"),
         dataIndex: "status",
         width: 160,
         render: (value: unknown, record: Record<string, unknown>) => {
@@ -152,9 +188,9 @@ function SaleLeadTableInner({
                 <Tag
                   color={noAnswerCount >= 3 ? "red" : "gold"}
                   style={{ fontSize: 11, margin: 0, lineHeight: "18px" }}
-                  title={`Đã gọi ${noAnswerCount} lần không nghe máy`}
+                  title={getTranslated("Đã gọi ${count} lần không nghe máy").replace("${count}", String(noAnswerCount))}
                 >
-                  📵 K nghe: {noAnswerCount}
+                  📵 {getTranslated("K nghe")}: {noAnswerCount}
                 </Tag>
               )}
             </div>
@@ -163,7 +199,7 @@ function SaleLeadTableInner({
       },
       {
         key: "actions",
-        title: "Thao tác",
+        title: getTranslated("Thao tác"),
         width: 380,
         align: "center" as const,
         render: (_value: unknown, record: Record<string, unknown>) => {
@@ -181,7 +217,7 @@ function SaleLeadTableInner({
                   disabled={lead.status === LeadStatus.CLOSED}
                   className={styles.callBtn}
                 >
-                  Gọi
+                  {getTranslated("Gọi")}
                 </Button>
               )}
 
@@ -204,11 +240,11 @@ function SaleLeadTableInner({
                   disabled={lead.status === LeadStatus.CLOSED}
                   title={
                     noAnswerCount > 0
-                      ? `Đã gọi ${noAnswerCount} lần không nghe${noAnswerCount >= 3 ? " - CẢNH BÁO!" : ""}`
-                      : "Chuyển sang trạng thái Không nghe máy"
+                      ? getTranslated("Đã gọi ${count} lần không nghe").replace("${count}", String(noAnswerCount)) + (noAnswerCount >= 3 ? " - CẢNH BÁO!" : "")
+                      : getTranslated("Chuyển sang trạng thái Không nghe máy")
                   }
                 >
-                  K nghe
+                  {getTranslated("K nghe")}
                 </Button>
               </Badge>
 
@@ -220,7 +256,7 @@ function SaleLeadTableInner({
                 onClick={() => onUpdateStatus(lead, LeadStatus.POTENTIAL)}
                 disabled={lead.status === LeadStatus.CLOSED}
               >
-                Tiềm năng
+                {getTranslated("Tiềm năng")}
               </Button>
 
               {/* Qualified Button */}
@@ -230,7 +266,7 @@ function SaleLeadTableInner({
                 onClick={() => onUpdateStatus(lead, LeadStatus.QUALIFIED)}
                 disabled={lead.status === LeadStatus.CLOSED}
               >
-                Đủ điều kiện
+                {getTranslated("Đủ điều kiện")}
               </Button>
 
               {/* Lost Button */}
@@ -240,9 +276,9 @@ function SaleLeadTableInner({
                 type={lead.status === LeadStatus.LOST ? "primary" : "default"}
                 onClick={() => onUpdateStatus(lead, LeadStatus.LOST)}
                 disabled={lead.status === LeadStatus.CLOSED}
-                title="Không mua - Khách từ chối, không có nhu cầu"
+                title={getTranslated("Khách từ chối, không có nhu cầu")}
               >
-                Không mua
+                {getTranslated("Không mua")}
               </Button>
 
               {/* Convert Button */}
@@ -257,7 +293,7 @@ function SaleLeadTableInner({
                 }
                 className={styles.convertBtn}
               >
-                Chốt
+                {getTranslated("Chốt")}
               </Button>
 
               {/* Reassign Button - Only for Admin/Manager */}
@@ -267,7 +303,31 @@ function SaleLeadTableInner({
                   icon={<UserSwitchOutlined />}
                   onClick={() => onReassign(lead)}
                 >
-                  Phân công
+                  {getTranslated("Phân công")}
+                </Button>
+              )}
+
+              {/* View Detail Button */}
+              {onViewDetail && (
+                <Button
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() => onViewDetail(lead)}
+                  title={getTranslated("Xem chi tiết khách hàng")}
+                >
+                  {getTranslated("Chi tiết")}
+                </Button>
+              )}
+
+              {/* Edit Button */}
+              {onEdit && (
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={() => onEdit(lead)}
+                  title={getTranslated("Sửa thông tin khách hàng")}
+                >
+                  {getTranslated("Sửa")}
                 </Button>
               )}
             </div>
@@ -275,7 +335,7 @@ function SaleLeadTableInner({
         },
       },
     ],
-    [onUpdateStatus, onConvert, onLogCall, onReassign, canReassign]
+    [onUpdateStatus, onConvert, onLogCall, onReassign, onViewDetail, onEdit, canReassign]
   );
 
   // Row selection config
@@ -292,9 +352,9 @@ function SaleLeadTableInner({
               fontWeight: 600,
               cursor: "help",
             }}
-            title="Phân công - Tick chọn các đơn rồi dùng thanh công cụ phía trên để phân công cho nhân viên Sale"
+            title={getTranslated("Phân công - Tick chọn các đơn rồi dùng thanh công cụ phía trên để phân công cho nhân viên Sale")}
           >
-            Phân công
+            {getTranslated("Phân công")}
           </div>
         ),
         width: 90,
@@ -309,7 +369,7 @@ function SaleLeadTableInner({
       pagination={false}
       rowKey="_id"
       size="small"
-      scroll={{ x: 1650 }}
+      scroll={{ x: 1800 }}
       rowSelection={rowSelection}
     />
   );

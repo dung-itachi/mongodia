@@ -300,22 +300,24 @@ export const updateCategorySchema =
     code: z
       .string()
       .min(2, "Mã sản phẩm phải có ít nhất 2 ký tự")
-      .max(50, "Mã sản phẩm không được quá 50 ký tự"),
-  
+      .max(50, "Mã sản phẩm không được quá 50 ký tự")
+      .optional()
+      .or(z.literal("")),
+
     name: z
       .string()
       .min(2, "Tên sản phẩm phải có ít nhất 2 ký tự")
       .max(200, "Tên sản phẩm không được quá 200 ký tự"),
-  
+
     categoryCode: z
       .string()
       .min(2, "Mã danh mục không hợp lệ"),
-  
+
     image: z
       .string()
       .optional()
       .default(""),
-  
+
     description: z
       .string()
       .optional()

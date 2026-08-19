@@ -11,6 +11,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button, Table, Switch, Image, Tag, Collapse, Empty, Space, Typography } from "antd";
 import {
   EditOutlined,
@@ -19,6 +20,7 @@ import {
   PlusOutlined,
   RightOutlined,
   DownOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import type { ComboListItem } from "@/hooks/useCombos";
 import type { ProductListItem } from "@/hooks/useProductCrud";
@@ -54,6 +56,7 @@ export default function ProductComboList({
   onDeleteCombo,
   onToggleActive,
 }: ProductComboListProps) {
+  const router = useRouter();
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
 
   const getProductName = (product: ProductListItem["category"]) => {
@@ -295,6 +298,18 @@ export default function ProductComboList({
                     <Tag color={productCombos.length > 0 ? "blue" : "default"}>
                       {productCombos.length} combo
                     </Tag>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<EyeOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/products/${productId}/combos`);
+                      }}
+                      style={{ padding: "0 4px" }}
+                    >
+                      Chi tiết
+                    </Button>
                   </Space>
                 </div>
               ),

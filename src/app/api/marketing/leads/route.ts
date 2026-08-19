@@ -92,6 +92,8 @@ export async function GET(request: Request) {
     const limit = Math.min(Math.max(Number(searchParams.get("pageSize") ?? searchParams.get("limit")) || 20, 1), 100);
     const sort = getSortField(searchParams.get("sort"));
     const order = getSortOrder(searchParams.get("order"));
+    const teamId = searchParams.get("team") || undefined;
+    const marketingEmployeeId = searchParams.get("marketingEmployeeId") || undefined;
 
     const result = await leadService.search({
       keyword,
@@ -102,6 +104,8 @@ export async function GET(request: Request) {
       sort,
       order,
       isActive: true,
+      teamId,
+      marketingEmployeeId,
     });
 
     return success(mapMarketingLeadList(result));

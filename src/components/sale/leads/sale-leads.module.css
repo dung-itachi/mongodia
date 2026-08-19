@@ -19,6 +19,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.checkCustomerInput {
+  min-width: 280px;
+  max-width: 360px;
 }
 
 .statusFilters {
@@ -77,6 +83,16 @@
 .callBtn {
   background-color: #1890ff !important;
   border-color: #1890ff !important;
+}
+
+.checkCustomerToolbarBtn {
+  background-color: #722ed1 !important;
+  border-color: #722ed1 !important;
+}
+
+.checkCustomerToolbarBtn:hover:not(:disabled) {
+  background-color: #9254de !important;
+  border-color: #9254de !important;
 }
 
 /* Stats Grid */

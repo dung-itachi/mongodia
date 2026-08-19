@@ -20,6 +20,9 @@ export default function ThemeProvider({ children }: Props) {
           borderRadius: 8,
         },
       }}
+      componentSize="middle"
+      popupTriggerType="hover"
+      popupMatchSelectWidth={false}
     >
       <App>
         <ToastContainer />

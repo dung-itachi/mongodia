@@ -17,8 +17,8 @@ export type LeadSourceChartProps = {
 function LeadSourceChartInner(_props: LeadSourceChartProps) {
   return (
     <ChartContainer
-      title="Nguồn Leads"
-      subtitle="Phân bố nguồn leads"
+      title="Nguồn Khách hàng"
+      subtitle="Phân bố nguồn khách hàng"
       height={280}
     >
       <div className={styles["mk-coming-soon"]}>

@@ -20,6 +20,16 @@ import {
   WarningOutlined,
   UserSwitchOutlined,
 } from "@ant-design/icons";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+/**
+ * Get translated label for a status badge
+ */
+function getTranslatedLabel(label: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(label, language);
+}
 
 /**
  * Icon mapping for status badges (Sprint 6.2)
@@ -168,7 +178,7 @@ export default function StatusBadge({
       {showIcon && icon && (
         <span style={{ marginRight: 6 }}>{icon}</span>
       )}
-      {config.label}
+      {getTranslatedLabel(config.label)}
     </Tag>
   );
 }

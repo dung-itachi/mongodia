@@ -5,6 +5,13 @@ import { Form, Input, InputNumber, Modal } from "antd";
 import { useCreateAdjustment } from "@/hooks/useWarehouseAdjustments";
 import type { NormalizedInventoryItem } from "@/hooks/useWarehouseInventory";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export interface AdjustInventoryModalProps {
   open: boolean;
@@ -63,7 +70,7 @@ export default function AdjustInventoryModal({
     if (!item) return;
     const warehouseId = item.warehouseId;
     if (!warehouseId) {
-      message.error("Không xác định được kho của dòng tồn kho này");
+      message.error(getTranslated("Không xác định được kho của dòng tồn kho này"));
       return;
     }
     try {
@@ -84,9 +91,10 @@ export default function AdjustInventoryModal({
 
       const result = await createAdjustment.mutateAsync(payload);
       const code = (result as { adjustmentCode?: string })?.adjustmentCode;
-      message.success(
-        code ? `Điều chỉnh tồn kho thành công. Mã: ${code}` : "Điều chỉnh tồn kho thành công"
-      );
+      const successMsg = code
+        ? getTranslated("Điều chỉnh tồn kho thành công. Mã: ${code}").replace("${code}", code)
+        : getTranslated("Điều chỉnh tồn kho thành công");
+      message.success(successMsg);
       form.resetFields();
       onClose();
       onSuccess?.();
@@ -113,13 +121,13 @@ export default function AdjustInventoryModal({
 
   return (
     <Modal
-      title="Sửa số lượng tồn kho"
+      title={getTranslated("Sửa số lượng tồn kho")}
       open={open}
       onCancel={handleCancel}
       onOk={handleOk}
       confirmLoading={createAdjustment.isPending}
-      okText="Lưu điều chỉnh"
-      cancelText="Hủy"
+      okText={getTranslated("Lưu điều chỉnh")}
+      cancelText={getTranslated("Hủy")}
       width={640}
       destroyOnHidden
     >

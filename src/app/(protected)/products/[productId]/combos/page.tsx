@@ -10,8 +10,9 @@
 "use client";
 
 import { use, useState, useCallback, useMemo, useEffect } from "react";
-import { Button, Result, Spin, Select, App } from "antd";
+import { Button, Result, Spin, Select, App, DatePicker, Segmented, Input } from "antd";
 import { PlusOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 import {
   PageContainer,
   PageHeader,
@@ -31,6 +32,8 @@ import { useCategoryList } from "@/hooks/useCategories";
 import ComboTable from "@/components/product/combo/ComboTable";
 import ComboForm, { type ComboFormProductOption } from "@/components/product/combo/ComboForm";
 
+const { RangePicker } = DatePicker;
+
 interface PageProps {
   params: Promise<{ productId: string }>;
 }
@@ -41,9 +44,15 @@ export default function ProductCombosPage({ params }: PageProps) {
   const [editingItem, setEditingItem] = useState<ComboListItem | null>(null);
   const { modal } = App.useApp();
 
+  // Filter states
+  const [filterKeyword, setFilterKeyword] = useState<string | undefined>();
+  const [filterDateRange, setFilterDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+
   const { data: product, isLoading: productLoading } = useProductDetail(productId);
   const { data: combosData, isLoading: combosLoading, refetch } = useComboList({
     productId,
+    keyword: filterKeyword,
     limit: 1000,
   });
   const { data: categoryData } = useCategoryList();
@@ -52,6 +61,47 @@ export default function ProductCombosPage({ params }: PageProps) {
   const deleteMutation = useDeleteCombo();
 
   const combos = combosData?.items ?? [];
+
+  // Get existing combo codes for auto-generation (must be before early returns per Rules of Hooks)
+  const existingComboCodes = useMemo(
+    () => combos.map((c) => c.code),
+    [combos]
+  );
+
+  // Filter combos by date range and status (client-side filter)
+  const filteredCombos = useMemo(() => {
+    let result = combos;
+
+    // Filter by keyword (client-side for instant feedback)
+    if (filterKeyword) {
+      const keywordLower = filterKeyword.toLowerCase();
+      result = result.filter((c) =>
+        c.code.toLowerCase().includes(keywordLower) ||
+        c.name.toLowerCase().includes(keywordLower)
+      );
+    }
+
+    // Filter by status
+    if (filterStatus === "active") {
+      result = result.filter((c) => c.isActive !== false);
+    } else if (filterStatus === "inactive") {
+      result = result.filter((c) => c.isActive === false);
+    }
+
+    // Filter by date range
+    if (filterDateRange && filterDateRange[0] && filterDateRange[1]) {
+      const startDate = filterDateRange[0].startOf("day");
+      const endDate = filterDateRange[1].endOf("day");
+      result = result.filter((c) => {
+        if (!c.createdAt) return false;
+        const createdDate = dayjs(c.createdAt);
+        return createdDate.isAfter(startDate) && createdDate.isBefore(endDate);
+      });
+    }
+
+    return result;
+  }, [combos, filterKeyword, filterStatus, filterDateRange]);
+
   const categories = categoryData?.items ?? [];
 
   const productOptions: ComboFormProductOption[] = useMemo(() => {
@@ -229,15 +279,50 @@ export default function ProductCombosPage({ params }: PageProps) {
           style={{
             marginBottom: 16,
             display: "flex",
-            gap: 8,
+            gap: 12,
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
           }}
         >
-          <div style={{ color: "#595959" }}>
-            Tổng: <strong>{combos.length}</strong> combo
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <RangePicker
+              value={filterDateRange}
+              onChange={(dates) => setFilterDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
+              style={{ width: 260 }}
+              placeholder={["Từ ngày", "Đến ngày"]}
+              format="DD/MM/YYYY"
+            />
+            <Input.Search
+              placeholder="Tìm tên, mã combo..."
+              style={{ width: 200 }}
+              value={filterKeyword}
+              onChange={(e) => setFilterKeyword(e.target.value || undefined)}
+              onSearch={() => {}}
+              allowClear
+            />
+            <Segmented
+              value={filterStatus}
+              onChange={(value) => setFilterStatus(value as "all" | "active" | "inactive")}
+              options={[
+                { label: "Tất cả", value: "all" },
+                { label: "Hoạt động", value: "active" },
+                { label: "Không hoạt động", value: "inactive" },
+              ]}
+            />
           </div>
+          <div style={{ color: "#595959" }}>
+            Hiển thị: <strong>{filteredCombos.length}</strong> / {combos.length} combo
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -255,7 +340,7 @@ export default function ProductCombosPage({ params }: PageProps) {
         )}
 
         <ComboTable
-          data={combos}
+          data={filteredCombos}
           loading={combosLoading}
           onEdit={handleEdit}
           onDelete={handleDelete}
@@ -272,6 +357,7 @@ export default function ProductCombosPage({ params }: PageProps) {
         onSubmit={handleSubmit}
         initialProductId={product._id}
         lockProductSelection
+        existingCodes={existingComboCodes}
       />
 
       {/* hidden Select to silence "Select imported but unused" linter rule if any */}

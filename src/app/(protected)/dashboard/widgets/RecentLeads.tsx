@@ -61,7 +61,7 @@ function RecentLeadsInner({ data }: RecentLeadsProps) {
   );
 
   return (
-    <CardSection title="Lead mới">
+    <CardSection title="Khách hàng mới">
       <DataTable
         columns={columns}
         data={tableData}

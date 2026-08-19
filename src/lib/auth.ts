@@ -86,5 +86,7 @@ export async function getCurrentUser(request: Request) {
     employee,
     role,
     permissions,
+    accountId: (employee as unknown as { accountId?: string }).accountId,
+    roleCode: role.code,
   };
 }

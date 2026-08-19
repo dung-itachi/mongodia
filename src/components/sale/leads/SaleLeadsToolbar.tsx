@@ -4,10 +4,18 @@
  * Toolbar for Sale leads page with status filters.
  */
 
-import { Button } from "antd";
-import { ReloadOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { Button, Input } from "antd";
+import { ReloadOutlined, QuestionCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import { LeadStatus } from "@/constants/leadStatus";
 import styles from "./sale-leads.module.css";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export interface SaleLeadsToolbarProps {
   statusFilter: LeadStatus | "all";
@@ -15,20 +23,23 @@ export interface SaleLeadsToolbarProps {
   keyword: string;
   onKeywordChange: (keyword: string) => void;
   onRefresh: () => void;
+  checkCustomerValue?: string;
+  onCheckCustomerChange?: (value: string) => void;
+  onCheckCustomer?: (value: string) => void;
   loading?: boolean;
   total: number;
   onShowLegend?: () => void;
 }
 
-const STATUS_OPTIONS: { value: LeadStatus | "all"; label: string }[] = [
-  { value: "all" as const, label: "Tất cả" },
-  { value: LeadStatus.NEW, label: "Mới" },
-  { value: LeadStatus.CONTACTED, label: "Đã liên hệ" },
-  { value: LeadStatus.NO_ANSWER, label: "K nghe" },
-  { value: LeadStatus.QUALIFIED, label: "Đủ điều kiện" },
-  { value: LeadStatus.POTENTIAL, label: "Tiềm năng" },
-  { value: LeadStatus.CLOSED, label: "Đã chốt" },
-  { value: LeadStatus.LOST, label: "Không mua" },
+const STATUS_OPTIONS: { value: LeadStatus | "all"; labelKey: string }[] = [
+  { value: "all" as const, labelKey: "Tất cả" },
+  { value: LeadStatus.NEW, labelKey: "Mới" },
+  { value: LeadStatus.CONTACTED, labelKey: "Đã liên hệ" },
+  { value: LeadStatus.NO_ANSWER, labelKey: "K nghe" },
+  { value: LeadStatus.QUALIFIED, labelKey: "Đủ điều kiện" },
+  { value: LeadStatus.POTENTIAL, labelKey: "Tiềm năng" },
+  { value: LeadStatus.CLOSED, labelKey: "Đã chốt" },
+  { value: LeadStatus.LOST, labelKey: "Không mua" },
 ];
 
 export default function SaleLeadsToolbar({
@@ -37,10 +48,22 @@ export default function SaleLeadsToolbar({
   keyword,
   onKeywordChange,
   onRefresh,
+  checkCustomerValue,
+  onCheckCustomerChange,
+  onCheckCustomer,
   loading,
   total,
   onShowLegend,
 }: SaleLeadsToolbarProps) {
+  const [checkInput, setCheckInput] = useState("");
+
+  const handleCheckSubmit = () => {
+    const value = checkCustomerValue ?? checkInput;
+    if (value.trim()) {
+      onCheckCustomer?.(value.trim());
+    }
+  };
+
   return (
     <div className={styles.toolbar}>
       <div className={styles.toolbarLeft}>
@@ -53,21 +76,43 @@ export default function SaleLeadsToolbar({
               onClick={() => onStatusChange(option.value)}
               className={statusFilter === option.value ? styles.activeFilter : ""}
             >
-              {option.label}
+              {getTranslated(option.labelKey)}
             </Button>
           ))}
         </div>
       </div>
 
       <div className={styles.toolbarRight}>
-        <span className={styles.totalCount}>Tổng: {total}</span>
+        <Input.Search
+          placeholder={getTranslated("Nhập SĐT hoặc tên khách hàng để tra cứu...")}
+          value={checkCustomerValue ?? checkInput}
+          onChange={(e) => {
+            const val = e.target.value;
+            setCheckInput(val);
+            onCheckCustomerChange?.(val);
+          }}
+          onSearch={handleCheckSubmit}
+          onPressEnter={handleCheckSubmit}
+          enterButton={
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              className={styles.checkCustomerToolbarBtn}
+            >
+              {getTranslated("Check khách")}
+            </Button>
+          }
+          className={styles.checkCustomerInput}
+          allowClear
+        />
+        <span className={styles.totalCount}>{getTranslated("Tổng: ${total}").replace("${total}", String(total))}</span>
         {onShowLegend && (
           <Button
             icon={<QuestionCircleOutlined />}
             onClick={onShowLegend}
-            title="Xem ý nghĩa các trạng thái"
+            title={getTranslated("Xem ý nghĩa các trạng thái")}
           >
-            Trạng thái
+            {getTranslated("Trạng thái")}
           </Button>
         )}
         <Button
@@ -75,7 +120,7 @@ export default function SaleLeadsToolbar({
           onClick={onRefresh}
           loading={loading}
         >
-          Làm mới
+          {getTranslated("Làm mới")}
         </Button>
       </div>
     </div>

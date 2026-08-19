@@ -9,9 +9,9 @@
  * Status workflow with dropdown actions and Timeline from MongoDB.
  */
 
-import { use, useState, useCallback, useEffect } from "react";
+import { use, useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Row, Col, Table, Button, Dropdown, Space, Form, Input, Modal, Checkbox } from "antd";
+import { Row, Col, Table, Button, Dropdown, Space, Form, Input, Modal, Checkbox, Select, Divider, Alert } from "antd";
 import type { TableColumnsType } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -36,10 +36,16 @@ import { useMessage } from "@/contexts/MessageContext";
 
 import { useOrder, useDeleteOrder, useChangeOrderStatus, useUpdateOrder } from "@/hooks/useOrders";
 import { useShipOrder, useReturnOrderStock } from "@/hooks/useWarehouseWorkflow";
-import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS, ORDER_SOURCE_LABELS, OrderStatus } from "@/constants/orderStatus";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useProducts, useCombosByProduct } from "@/hooks/useProducts";
+import { useProductWithVariants } from "@/hooks/useProductVariants";
+import OrderProductDetail from "@/components/order/OrderProductDetail";
+import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS, ORDER_SOURCE_LABELS, OrderStatus, OrderType } from "@/constants/orderStatus";
 import { getStatusActions } from "@/configs/order-status.config";
-import type { OrderHistoryItem, OrderItem } from "@/types/order";
+import type { OrderHistoryItem, OrderItem, UpdateOrderInput, CreateOrderItemInput } from "@/types/order";
+import type { ProductWithVariants, OrderItem as VariantOrderItem } from "@/types/variant";
 import { formatMNT, formatNumber } from "@/lib/format";
+import { validateOrderItem } from "@/types/variant";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -61,6 +67,72 @@ export default function OrderDetailPage({ params }: PageProps) {
   // Sprint 6.x: Watch checkbox "Cần giao hàng" để ẩn/hiện nhóm thông tin giao hàng
   const needShipping = Form.useWatch("needShipping", editForm);
 
+  // ========== Extended Edit State (Sprint 6.x) ==========
+  // Order items editing
+  const [editOrderItems, setEditOrderItems] = useState<VariantOrderItem[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedComboId, setSelectedComboId] = useState<string | null>(null);
+
+  // Fetch product with variants for editing
+  const { product: editingProduct, loading: productLoading } = useProductWithVariants(selectedProductId);
+
+  // Fetch products list for dropdown
+  const { products: productsList } = useProducts();
+  const { combos: combosList, loading: combosLoading } = useCombosByProduct(selectedProductId);
+
+  // Fetch employees for sale/marketing assignment
+  const { data: employeesData } = useEmployees({ isActive: true, pageSize: 500 });
+
+  // Order items validation
+  const orderItemsValidation = useMemo(() => {
+    if (editOrderItems.length === 0) return { isValid: true, errors: [] as string[] };
+    const errors: string[] = [];
+    for (const item of editOrderItems) {
+      const validation = validateOrderItem(item);
+      if (!validation.isValid) {
+        if (validation.detailsError) errors.push(validation.detailsError);
+        if (validation.giftsError) errors.push(validation.giftsError);
+      }
+    }
+    return { isValid: errors.length === 0, errors };
+  }, [editOrderItems]);
+
+  // Reset order items when modal opens or order changes
+  useEffect(() => {
+    if (!order || !editOpen) return;
+
+    // Convert existing orderItems from API to VariantOrderItem format for editing
+    const convertedItems: VariantOrderItem[] = (order.orderItems || []).map((item, idx) => ({
+      // _tempId: temporary ID for React keys (UI only)
+      _tempId: `existing_${idx}`,
+      comboId: item.comboId || "",
+      productId: item.productId || "",
+      comboName: item.comboName || item.productName || "",
+      comboCode: item.comboCode || "",
+      comboQuantity: item.comboQuantity || item.quantity || 1,
+      packageQuantity: item.packageQuantity || 1,
+      giftQuantity: item.giftQuantity || 0,
+      giftMode: item.giftMode || "RANDOM",
+      giftSelections: item.giftSelections || [],
+      sellingPrice: item.sellingPrice || item.unitPrice || 0,
+      discount: item.discount || 0,
+      subtotal: item.subtotal || (item.sellingPrice || item.unitPrice || 0) * (item.comboQuantity || item.quantity || 1),
+      details: item.details || [],
+    }));
+
+    setEditOrderItems(convertedItems);
+
+    // Set initial product/combo selection
+    const firstItem = convertedItems[0];
+    if (firstItem?.productId) {
+      setSelectedProductId(firstItem.productId);
+    }
+    if (firstItem?.comboId) {
+      setSelectedComboId(firstItem.comboId);
+    }
+  }, [editOpen, order]);
+
+  // Extended form reset effect with all new fields
   useEffect(() => {
     if (!order || !editOpen) return;
 
@@ -73,12 +145,18 @@ export default function OrderDetailPage({ params }: PageProps) {
 
     editForm.resetFields();
     editForm.setFieldsValue({
+      // Basic info
       customerName: order.customerName ?? "",
       customerPhone: order.customerPhone ?? "",
       note: order.note ?? "",
-      // UX: Nếu đơn đã có thông tin giao hàng → fill giá trị thật.
-      //     Nếu chưa có → mặc định Người nhận/SĐT người nhận = Tên/SĐT khách
-      //     để tránh cảm giác "thừa ô" và người dùng không phải nhập lại.
+      // Status & Type
+      status: order.status,
+      orderType: order.orderType,
+      orderSource: order.orderSource,
+      // Sale assignment
+      saleEmployeeId: order.saleEmployeeId,
+      marketingEmployeeId: order.marketingEmployeeId,
+      // Shipping
       needShipping: hasShipping,
       receiverName:
         order.shipping?.receiverName ||
@@ -153,28 +231,64 @@ export default function OrderDetailPage({ params }: PageProps) {
       return;
     }
 
+    // Validate order items if present
+    if (editOrderItems.length > 0 && !orderItemsValidation.isValid) {
+      message.error("Vui lòng kiểm tra lại chi tiết sản phẩm: " + orderItemsValidation.errors.join(", "));
+      return;
+    }
+
     setEditLoading(true);
     try {
+      // Prepare order items for API
+      const orderItemsForApi: CreateOrderItemInput[] | undefined = editOrderItems.length > 0
+        ? editOrderItems.map((item) => ({
+            comboId: item.comboId || undefined,
+            productId: item.productId || undefined,
+            comboName: item.comboName || undefined,
+            comboCode: item.comboCode || undefined,
+            comboQuantity: item.comboQuantity,
+            packageQuantity: item.packageQuantity,
+            giftQuantity: item.giftQuantity,
+            giftMode: item.giftMode,
+            giftSelections: item.giftSelections,
+            sellingPrice: item.sellingPrice,
+            discount: item.discount,
+            subtotal: item.subtotal,
+            details: item.details,
+          }))
+        : undefined;
+
+      const updateData: UpdateOrderInput = {
+        customerName: values.customerName.trim(),
+        customerPhone: values.customerPhone?.trim() || undefined,
+        note: values.note?.trim() || undefined,
+        // Status & Type
+        status: values.status !== order?.status ? values.status : undefined,
+        orderType: values.orderType !== order?.orderType ? values.orderType : undefined,
+        orderSource: values.orderSource !== order?.orderSource ? values.orderSource : undefined,
+        // Sale assignment
+        saleEmployeeId: values.saleEmployeeId || undefined,
+        marketingEmployeeId: values.marketingEmployeeId || undefined,
+        // Order items
+        orderItems: orderItemsForApi,
+        // Shipping
+        shipping: needShipping
+          ? {
+              receiverName: values.receiverName?.trim() || "",
+              receiverPhone: values.receiverPhone?.trim() || "",
+              address: values.address?.trim() || "",
+              carrier: values.carrier?.trim() || undefined,
+              trackingNumber: values.trackingNumber?.trim() || undefined,
+              shippingFee: Number(values.shippingFee ?? 0),
+              shippingFeeCurrency: order?.shipping?.shippingFeeCurrency ?? order?.currency ?? "VND",
+            }
+          : null,
+        summaryShippingFee: needShipping ? Number(values.shippingFee ?? 0) : 0,
+      };
+
       await updateMutation.mutateAsync({
         id,
-        data: {
-          customerName: values.customerName.trim(),
-          customerPhone: values.customerPhone?.trim() || undefined,
-          note: values.note?.trim() || undefined,
-          // null = xoá block giao hàng; undefined = giữ nguyên (không đụng đến).
-          shipping: needShipping
-            ? {
-                receiverName: values.receiverName?.trim() || "",
-                receiverPhone: values.receiverPhone?.trim() || "",
-                address: values.address?.trim() || "",
-                carrier: values.carrier?.trim() || undefined,
-                trackingNumber: values.trackingNumber?.trim() || undefined,
-                shippingFee: Number(values.shippingFee ?? 0),
-                shippingFeeCurrency: order?.shipping?.shippingFeeCurrency ?? order?.currency ?? "VND",
-              }
-            : null,
-          summaryShippingFee: needShipping ? Number(values.shippingFee ?? 0) : 0,
-        },
+        data: updateData,
       });
       message.success("Cập nhật đơn hàng thành công");
       closeEditModal();
@@ -184,7 +298,7 @@ export default function OrderDetailPage({ params }: PageProps) {
     } finally {
       setEditLoading(false);
     }
-  }, [closeEditModal, editForm, id, order, refetch, updateMutation]);
+  }, [closeEditModal, editForm, id, order, refetch, updateMutation, editOrderItems, orderItemsValidation]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -909,67 +1023,171 @@ export default function OrderDetailPage({ params }: PageProps) {
         onOk={() => void handleEditSave()}
         onCancel={closeEditModal}
         forceRender
+        width={900}
+        styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
       >
         <Form form={editForm} layout="vertical" preserve={false}>
-          <Form.Item
-            name="customerName"
-            label="Tên khách hàng"
-            rules={[{ required: true, whitespace: true, message: "Vui lòng nhập tên khách hàng" }]}
-          >
-            <Input maxLength={200} />
-          </Form.Item>
-          <Form.Item name="customerPhone" label="Số điện thoại">
-            <Input maxLength={20} />
-          </Form.Item>
-          {/* Tóm tắt sản phẩm/combo đang sửa — read-only để người dùng
-              biết mình đang sửa đơn có sản phẩm nào. */}
-          {(order.product || order.combo) && (
-            <div
-              style={{
-                marginBottom: 16,
-                padding: 12,
-                background: "#fafafa",
-                border: "1px solid #f0f0f0",
-                borderRadius: 6,
-              }}
-            >
-              <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 6 }}>Sản phẩm của đơn</div>
-              {order.combo && (
-                <div>
-                  <strong>Combo:</strong> {order.combo.name}
-                  {order.combo.code && <span style={{ color: "#8c8c8c" }}> ({order.combo.code})</span>}
-                </div>
-              )}
-              {order.product && (
-                <div>
-                  <strong>Sản phẩm:</strong> {order.product.name}
-                  {order.product.code && <span style={{ color: "#8c8c8c" }}> ({order.product.code})</span>}
-                </div>
-              )}
-              <div style={{ fontSize: 12, color: "#8c8c8c", marginTop: 4 }}>
-                Để đổi sản phẩm/combo, vui lòng xoá đơn và tạo đơn mới.
-              </div>
-            </div>
+          {/* ========== Section 1: Thông tin cơ bản ========== */}
+          <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
+            Thông tin khách hàng
+          </Divider>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="customerName"
+                label="Tên khách hàng"
+                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập tên khách hàng" }]}
+              >
+                <Input maxLength={200} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="customerPhone" label="Số điện thoại">
+                <Input maxLength={20} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* ========== Section 2: Trạng thái & Loại đơn ========== */}
+          <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
+            Trạng thái & Phân loại
+          </Divider>
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item name="status" label="Trạng thái đơn hàng">
+                <Select
+                  placeholder="Chọn trạng thái"
+                  allowClear
+                  options={Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="orderType" label="Loại đơn hàng">
+                <Select
+                  placeholder="Chọn loại"
+                  allowClear
+                  options={Object.entries(ORDER_TYPE_LABELS).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="orderSource" label="Nguồn đơn">
+                <Select
+                  placeholder="Chọn nguồn"
+                  allowClear
+                  options={Object.entries(ORDER_SOURCE_LABELS).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* ========== Section 3: Phân công Sale ========== */}
+          <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
+            Phân công nhân viên
+          </Divider>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="saleEmployeeId" label="Sale phụ trách">
+                <Select
+                  placeholder="Chọn Sale"
+                  allowClear
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                  loading={!employeesData}
+                  options={employeesData?.map((emp) => ({
+                    value: emp._id,
+                    label: `${emp.fullName} (${emp.employeeCode})`,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="marketingEmployeeId" label="Marketing phụ trách">
+                <Select
+                  placeholder="Chọn Marketing"
+                  allowClear
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                  loading={!employeesData}
+                  options={employeesData?.map((emp) => ({
+                    value: emp._id,
+                    label: `${emp.fullName} (${emp.employeeCode})`,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* ========== Section 4: Sản phẩm & Combo ========== */}
+          <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
+            Sản phẩm / Combo
+          </Divider>
+          {orderItemsValidation.errors.length > 0 && (
+            <Alert
+              type="warning"
+              message="Lỗi chi tiết sản phẩm"
+              description={
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {orderItemsValidation.errors.map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+              }
+              style={{ marginBottom: 12 }}
+              showIcon
+            />
           )}
+          <OrderProductDetail
+            items={editOrderItems}
+            product={editingProduct}
+            loading={productLoading}
+            onChange={(items) => setEditOrderItems(items)}
+            disabled={false}
+          />
+
+          {/* ========== Section 5: Giao hàng ========== */}
+          <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
+            Thông tin giao hàng
+          </Divider>
           <Form.Item name="needShipping" valuePropName="checked" style={{ marginBottom: 12 }}>
             <Checkbox>Cần giao hàng</Checkbox>
           </Form.Item>
           {needShipping && (
             <>
-              <Form.Item
-                name="receiverName"
-                label="Người nhận"
-                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập người nhận" }]}
-              >
-                <Input maxLength={200} />
-              </Form.Item>
-              <Form.Item
-                name="receiverPhone"
-                label="SĐT người nhận"
-                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập số điện thoại người nhận" }]}
-              >
-                <Input maxLength={20} />
-              </Form.Item>
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="receiverName"
+                    label="Người nhận"
+                    rules={[{ required: true, whitespace: true, message: "Vui lòng nhập người nhận" }]}
+                  >
+                    <Input maxLength={200} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="receiverPhone"
+                    label="SĐT người nhận"
+                    rules={[{ required: true, whitespace: true, message: "Vui lòng nhập số điện thoại người nhận" }]}
+                  >
+                    <Input maxLength={20} />
+                  </Form.Item>
+                </Col>
+              </Row>
               <Form.Item
                 name="address"
                 label="Địa chỉ giao hàng"
@@ -977,13 +1195,13 @@ export default function OrderDetailPage({ params }: PageProps) {
               >
                 <Input.TextArea rows={2} maxLength={500} />
               </Form.Item>
-              <Row gutter={12}>
-                <Col span={12}>
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
                   <Form.Item name="carrier" label="Đơn vị vận chuyển">
                     <Input maxLength={100} />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                <Col xs={24} sm={12}>
                   <Form.Item name="trackingNumber" label="Mã vận đơn">
                     <Input maxLength={100} />
                   </Form.Item>
@@ -994,8 +1212,13 @@ export default function OrderDetailPage({ params }: PageProps) {
               </Form.Item>
             </>
           )}
+
+          {/* ========== Section 6: Ghi chú ========== */}
+          <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
+            Ghi chú
+          </Divider>
           <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea rows={3} maxLength={1000} />
+            <Input.TextArea rows={3} maxLength={1000} placeholder="Nhập ghi chú cho đơn hàng..." />
           </Form.Item>
         </Form>
       </Modal>

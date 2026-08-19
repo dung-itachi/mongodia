@@ -36,6 +36,10 @@ export type MarketingLeadFilters = {
   source?: LeadSource;
   page?: number;
   limit?: number;
+  /** Filter by marketing employee (MKT) ID */
+  marketingEmployeeId?: string;
+  /** Filter by team code */
+  teamId?: string;
 };
 
 // ============================================================================
@@ -61,6 +65,12 @@ async function fetchMarketingLeads(
   }
   if (filters.limit) {
     params.set("limit", String(filters.limit));
+  }
+  if (filters.teamId) {
+    params.set("team", filters.teamId);
+  }
+  if (filters.marketingEmployeeId) {
+    params.set("marketingEmployeeId", filters.marketingEmployeeId);
   }
 
   const queryString = params.toString();
@@ -266,4 +276,72 @@ export function useConvertLead() {
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
+}
+
+// ============================================================================
+// Pushed Count (Sprint 8.X)
+// ============================================================================
+
+async function fetchPushedLeadsCount(): Promise<{ pushedCount: number }> {
+  const response = await api.get("/api/marketing/leads/pushed-count");
+  return response.data.data;
+}
+
+/**
+ * Hook to fetch count of leads that have been pushed to Sale
+ */
+export function usePushedLeadsCount() {
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<{ pushedCount: number }, Error>({
+    queryKey: ["pushed-leads-count"],
+    queryFn: fetchPushedLeadsCount,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  return {
+    pushedCount: data?.pushedCount ?? 0,
+    loading: isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
+}
+
+// ============================================================================
+// Orders Count (Sprint 8.X)
+// ============================================================================
+
+async function fetchOrdersCount(): Promise<{ orderCount: number }> {
+  const response = await api.get("/api/marketing/orders/count");
+  return response.data.data;
+}
+
+/**
+ * Hook to fetch count of orders for the marketing employee
+ */
+export function useOrdersCount() {
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<{ orderCount: number }, Error>({
+    queryKey: ["marketing-orders-count"],
+    queryFn: fetchOrdersCount,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  return {
+    orderCount: data?.orderCount ?? 0,
+    loading: isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }

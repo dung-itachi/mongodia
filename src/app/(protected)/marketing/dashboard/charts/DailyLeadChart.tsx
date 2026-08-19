@@ -17,8 +17,8 @@ export type DailyLeadChartProps = {
 function DailyLeadChartInner(_props: DailyLeadChartProps) {
   return (
     <ChartContainer
-      title="Leads theo ngày"
-      subtitle="Số leads được tạo trong 7 ngày gần nhất"
+      title="Khách hàng theo ngày"
+      subtitle="Số khách hàng được tạo trong 7 ngày gần nhất"
       height={280}
     >
       <div className={styles["mk-coming-soon"]}>

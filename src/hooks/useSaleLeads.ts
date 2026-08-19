@@ -136,6 +136,34 @@ async function updateLeadStatus(
   return response.data.data;
 }
 
+async function updateLead(
+  leadId: string,
+  payload: {
+    customerName?: string;
+    phone?: string;
+    address?: string;
+    productId?: string;
+    comboId?: string;
+    comboQuantity?: number;
+    unitPriceMNT?: number;
+    exchangeRate?: number;
+    variantDetails?: Array<{
+      quantity: number;
+      attributes: Array<{ optionId: string; valueId: string }>;
+      variantId?: string;
+    }>;
+    giftMode?: string;
+    giftSelections?: Array<{
+      giftProductId: string;
+      giftProductName?: string;
+      quantity: number;
+    }>;
+  }
+): Promise<SaleLead> {
+  const response = await api.patch(`/api/sale/leads/${leadId}`, payload);
+  return response.data.data;
+}
+
 // ============================================================================
 // Hooks
 // ============================================================================
@@ -239,6 +267,50 @@ export function useUpdateLeadStatus() {
       void queryClient.invalidateQueries({ queryKey: ["sale-leads"] });
       void queryClient.invalidateQueries({ queryKey: ["sale-lead-counts"] });
       // Invalidate marketing tracking (they see the same leads)
+      void queryClient.invalidateQueries({ queryKey: ["marketing-lead-tracking"] });
+    },
+  });
+}
+
+/**
+ * Hook to update lead details (Sale editing)
+ */
+export function useUpdateLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      leadId,
+      payload,
+    }: {
+      leadId: string;
+      payload: {
+        customerName?: string;
+        phone?: string;
+        address?: string;
+        productId?: string;
+        comboId?: string;
+        comboQuantity?: number;
+        unitPriceMNT?: number;
+        exchangeRate?: number;
+        variantDetails?: Array<{
+          quantity: number;
+          attributes: Array<{ optionId: string; valueId: string }>;
+          variantId?: string;
+        }>;
+        giftMode?: string;
+        giftSelections?: Array<{
+          giftProductId: string;
+          giftProductName?: string;
+          quantity: number;
+        }>;
+      };
+    }) => updateLead(leadId, payload),
+    onSuccess: () => {
+      // Invalidate sale leads to refetch
+      void queryClient.invalidateQueries({ queryKey: ["sale-leads"] });
+      void queryClient.invalidateQueries({ queryKey: ["sale-lead-counts"] });
+      // Invalidate marketing tracking
       void queryClient.invalidateQueries({ queryKey: ["marketing-lead-tracking"] });
     },
   });

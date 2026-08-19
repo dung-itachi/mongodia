@@ -35,14 +35,23 @@ import type { OrderStatus } from "@/constants/orderStatus";
 import type { OrderListItem } from "@/types/order";
 import type { CustomerResponse } from "@/types/customer";
 import OrderDetailModal from "@/components/orders/OrderDetailModal";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import styles from "./CheckCustomerForm.module.css";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 const ORDER_LIMIT = 5;
 
 export type CheckCustomerFormProps = {
   /** Placeholder cho input. */
   placeholder?: string;
+  /** Giá trị khởi tạo cho input. */
+  initialValue?: string;
   /** Số đơn tối đa hiển thị trong lịch sử. */
   orderLimit?: number;
   /** Khi người dùng nhấn "Chọn khách này" (nếu được bật). */
@@ -89,14 +98,15 @@ function getOrderSummary(order: OrderListItem): string {
 }
 
 export default function CheckCustomerForm({
-  placeholder = "Nhập SĐT hoặc tên khách hàng để tra cứu...",
+  placeholder,
+  initialValue,
   orderLimit = ORDER_LIMIT,
   onPickCustomer,
   showPickButton = false,
-  buttonLabel = "Check khách",
+  buttonLabel,
 }: CheckCustomerFormProps) {
-  const [input, setInput] = useState("");
-  const [query, setQuery] = useState("");
+  const [input, setInput] = useState(initialValue ?? "");
+  const [query, setQuery] = useState(initialValue ?? "");
   /** Modal hiển thị kết quả. */
   const [modalOpen, setModalOpen] = useState(false);
   /** Modal hiển thị chi tiết đơn hàng (stack popup). */
@@ -140,15 +150,18 @@ export default function CheckCustomerForm({
     setDetailOrderId(null);
   }, []);
 
+  const defaultPlaceholder = placeholder ?? getTranslated("Nhập SĐT hoặc tên khách hàng để tra cứu...");
+  const defaultButtonLabel = buttonLabel ?? getTranslated("Check khách");
+
   return (
     <>
       {/* Form inline ở đầu trang */}
       <div className={styles.container}>
         <div className={styles.header}>
           <SearchOutlined className={styles.headerIcon} />
-          <span>Check khách hàng</span>
+          <span>{getTranslated("Check khách hàng")}</span>
           <span className={styles.headerHint}>
-            Tra cứu SĐT / tên khách — xem lịch sử đơn trước khi paste số
+            {getTranslated("Tra cứu SĐT / tên khách — xem lịch sử đơn trước khi paste số")}
           </span>
         </div>
 
@@ -159,7 +172,7 @@ export default function CheckCustomerForm({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onPressEnter={handleSubmit}
-              placeholder={placeholder}
+              placeholder={defaultPlaceholder}
               allowClear
               prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
               disabled={loading}
@@ -173,11 +186,11 @@ export default function CheckCustomerForm({
             loading={fetching}
             disabled={!input.trim()}
           >
-            {buttonLabel}
+            {defaultButtonLabel}
           </Button>
           {query && (
             <Button size="large" onClick={handleClear} disabled={loading}>
-              Xóa
+              {getTranslated("Xóa")}
             </Button>
           )}
         </div>
@@ -194,20 +207,20 @@ export default function CheckCustomerForm({
         title={
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <ShoppingOutlined />
-            <span>Check khách — {query}</span>
+            <span>{getTranslated("Check khách — ${query}").replace("${query}", query)}</span>
           </span>
         }
       >        <div className={styles.modalBody}>
           {!result && loading ? (
             <div style={{ textAlign: "center", padding: 36, color: "#8c8c8c" }}>
-              <Spin /> &nbsp; Đang tra cứu...
+              <Spin /> &nbsp; {getTranslated("Đang tra cứu...")}
             </div>
           ) : !result ? (
-            <Empty description="Có lỗi xảy ra khi tra cứu" />
+            <Empty description={getTranslated("Có lỗi xảy ra khi tra cứu")} />
           ) : !result.customer ? (
             <div className={styles.notFound}>
               <div className={styles.notFoundTitle}>
-                ✓ Khách mới — chưa có trong hệ thống
+                {getTranslated("✓ Khách mới — chưa có trong hệ thống")}
               </div>
               <div className={styles.notFoundHint}>
                 Không tìm thấy khách với từ khoá <strong>"{query}"</strong>. Có thể

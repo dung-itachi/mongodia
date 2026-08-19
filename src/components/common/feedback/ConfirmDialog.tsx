@@ -7,6 +7,16 @@
 import { Modal } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { ReactNode } from "react";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+/**
+ * Get translated text synchronously (for default props)
+ */
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export type ConfirmDialogProps = {
   open: boolean;
@@ -30,12 +40,15 @@ export default function ConfirmDialog({
   title,
   content,
   type = "confirm",
-  confirmText = "Xác nhận",
-  cancelText = "Hủy",
+  confirmText,
+  cancelText,
   loading,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const defaultConfirmText = confirmText ?? getTranslated("Xác nhận");
+  const defaultCancelText = cancelText ?? getTranslated("Hủy");
+
   // Icon based on type
   const getIcon = () => {
     switch (type) {
@@ -73,8 +86,8 @@ export default function ConfirmDialog({
           {title}
         </div>
       }
-      okText={confirmText}
-      cancelText={cancelText}
+      okText={defaultConfirmText}
+      cancelText={defaultCancelText}
       onOk={onConfirm}
       onCancel={onCancel}
       confirmLoading={loading}

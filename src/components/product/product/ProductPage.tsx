@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Button, Tooltip } from "antd";
 import { PlusOutlined, GiftOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
@@ -38,6 +38,7 @@ import { useCategoryList } from "@/hooks/useCategories";
 import { useDebounce } from "@/hooks/useDebounce";
 import ProductManagementTable from "./ProductManagementTable";
 import ProductForm from "./ProductForm";
+import type { CategoryListItem } from "@/hooks/useCategories";
 
 type ProductFilters = {
   keyword: string;
@@ -58,6 +59,7 @@ export default function ProductPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProductManagementItem | null>(null);
   const [filters, setFilters] = useState<ProductFilters>(DEFAULT_FILTERS);
+  const [categories, setCategories] = useState<CategoryListItem[]>([]);
 
   const debouncedKeyword = useDebounce(filters.keyword, 400);
 
@@ -69,16 +71,20 @@ export default function ProductPage() {
     dateTo: filters.dateRange?.[1],
   });
   const { data: categoryData } = useCategoryList();
+
+  // Sync categories from API
+  useEffect(() => {
+    if (categoryData?.items) {
+      setCategories(categoryData.items);
+    }
+  }, [categoryData]);
+
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
   const deleteMutation = useDeleteProduct();
 
   const products = useMemo(() => data?.items ?? [], [data?.items]);
   const warehouses = useMemo(() => data?.warehouses ?? [], [data?.warehouses]);
-  const categories = useMemo(
-    () => categoryData?.items ?? [],
-    [categoryData?.items]
-  );
 
   // Build filter items for the FilterBar
   const filterItems = useMemo<FilterItem[]>(
@@ -238,6 +244,10 @@ export default function ProductPage() {
     [updateMutation, refetch]
   );
 
+  const handleCategoriesChange = useCallback((newCategories: CategoryListItem[]) => {
+    setCategories(newCategories);
+  }, []);
+
   const handleOpenCombos = useCallback(
     (item: ProductManagementItem) => {
       router.push(`/products/${item._id}/combos`);
@@ -302,6 +312,7 @@ export default function ProductPage() {
         loading={createMutation.isPending || updateMutation.isPending}
         onClose={handleClose}
         onSubmit={handleSubmit}
+        onCategoriesChange={handleCategoriesChange}
       />
     </PageContainer>
   );

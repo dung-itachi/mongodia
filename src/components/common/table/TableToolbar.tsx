@@ -7,6 +7,16 @@
 import { Button, Space } from "antd";
 import { ReloadOutlined, ExportOutlined } from "@ant-design/icons";
 import { ReactNode } from "react";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+/**
+ * Get translated text synchronously (for default props)
+ */
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export type TableToolbarProps = {
   searchValue?: string;
@@ -23,7 +33,7 @@ export type TableToolbarProps = {
 export default function TableToolbar({
   searchValue,
   onSearchChange,
-  searchPlaceholder = "Tìm kiếm...",
+  searchPlaceholder,
   actions,
   selectedCount,
   onRefresh,
@@ -31,6 +41,8 @@ export default function TableToolbar({
   onFilter,
   loading,
 }: TableToolbarProps) {
+  const defaultPlaceholder = searchPlaceholder ?? getTranslated("Tìm kiếm...");
+
   return (
     <div
       style={{
@@ -47,7 +59,7 @@ export default function TableToolbar({
           type="text"
           value={searchValue || ""}
           onChange={(e) => onSearchChange?.(e.target.value)}
-          placeholder={searchPlaceholder}
+          placeholder={defaultPlaceholder}
           style={{
             width: 280,
             height: 32,
@@ -58,7 +70,7 @@ export default function TableToolbar({
           }}
         />
         {onFilter && (
-          <Button onClick={onFilter}>Lọc</Button>
+          <Button onClick={onFilter}>{getTranslated("Tìm kiếm")}</Button>
         )}
         {onRefresh && (
           <Button
@@ -66,18 +78,18 @@ export default function TableToolbar({
             onClick={onRefresh}
             disabled={loading}
           >
-            Làm mới
+            {getTranslated("Làm mới")}
           </Button>
         )}
         {onExport && (
-          <Button icon={<ExportOutlined />}>Export</Button>
+          <Button icon={<ExportOutlined />}>{getTranslated("Xuất kho")}</Button>
         )}
       </Space>
 
       <Space>
         {selectedCount !== undefined && selectedCount > 0 && (
           <span style={{ color: "#8c8c8c" }}>
-            Đã chọn: {selectedCount}
+            {getTranslated("Đã chọn")}: {selectedCount}
           </span>
         )}
         {actions}

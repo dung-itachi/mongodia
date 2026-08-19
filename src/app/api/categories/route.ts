@@ -37,9 +37,13 @@ export async function GET(request: Request) {
 
     await connectDB();
 
-    const categories = await Category.find({
-      isActive: true,
-    })
+    // Build query: ADMIN sees all categories, others see only their accountId categories
+    const query: Record<string, unknown> = { isActive: true };
+    if (currentUser.role !== "ADMIN") {
+      query.accountId = currentUser.accountId ?? null;
+    }
+
+    const categories = await Category.find(query)
       .sort({
         sortOrder: 1,
         code: 1,
@@ -151,6 +155,7 @@ export async function POST(request: Request) {
           parentId: parent?._id ?? null,
           description: data.description ?? "",
           sortOrder: data.sortOrder,
+          accountId: currentUser.accountId,
         });
   
       const createdCategory =

@@ -9,6 +9,16 @@
 
 import { Drawer, Button, Space } from "antd";
 import { ReactNode } from "react";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+/**
+ * Get translated text synchronously (for default props)
+ */
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export type DrawerFormProps = {
   open: boolean;
@@ -34,8 +44,8 @@ export default function DrawerForm({
   loading,
   onClose,
   onSubmit,
-  submitText = "Lưu",
-  cancelText = "Hủy",
+  submitText,
+  cancelText,
   footer,
   children,
 }: DrawerFormProps) {
@@ -43,6 +53,9 @@ export default function DrawerForm({
   const drawerStyles = size
     ? undefined
     : { wrapper: { width: width ?? 600 } };
+
+  const defaultSubmitText = submitText ?? getTranslated("Lưu");
+  const defaultCancelText = cancelText ?? getTranslated("Hủy");
 
   return (
     <Drawer
@@ -58,14 +71,14 @@ export default function DrawerForm({
           footer
         ) : (
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={onClose}>{cancelText}</Button>
+            <Button onClick={onClose}>{defaultCancelText}</Button>
             {onSubmit && (
               <Button
                 type="primary"
                 onClick={onSubmit}
                 loading={loading}
               >
-                {loading ? "Đang lưu..." : submitText}
+                {loading ? getTranslated("Đang lưu...") : defaultSubmitText}
               </Button>
             )}
           </Space>

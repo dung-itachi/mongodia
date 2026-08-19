@@ -30,6 +30,8 @@ export interface IFacebookPage extends mongoose.Document {
   /** Additional notes */
   note?: string;
   isActive: boolean;
+  /** Account ID để phân quyền xem page theo tài khoản */
+  accountId?: mongoose.Types.ObjectId;
 }
 
 const FacebookPageSchema = new Schema<IFacebookPage>(
@@ -95,6 +97,12 @@ const FacebookPageSchema = new Schema<IFacebookPage>(
       type: Boolean,
       default: true,
     },
+    accountId: {
+      type: Schema.Types.ObjectId,
+      ref: "Account",
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -106,6 +114,8 @@ const FacebookPageSchema = new Schema<IFacebookPage>(
 FacebookPageSchema.index({ name: 1 });
 FacebookPageSchema.index({ status: 1 });
 FacebookPageSchema.index({ isActive: 1 });
+// Compound index for filtering by accountId and isActive
+FacebookPageSchema.index({ accountId: 1, isActive: 1 });
 
 export const FacebookPage =
   (mongoose.models.FacebookPage as Model<IFacebookPage>) ||

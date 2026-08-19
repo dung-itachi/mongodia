@@ -1,9 +1,9 @@
 /**
  * Sale Leads Page - Số cần gọi (Sprint 8.5)
  *
- * Trang này hiển thị danh sách leads được phân công cho Sale.
- * Sale có thể cập nhật trạng thái lead và chốt đơn.
- * Admin/Manager có thể xem tất cả leads và phân công lại.
+ * Trang này hiển thị danh sách khách hàng được phân công cho Sale.
+ * Sale có thể cập nhật trạng thái và chốt đơn.
+ * Admin/Manager có thể xem tất cả và phân công lại.
  */
 
 "use client";
@@ -41,8 +41,18 @@ import SaleLeadsToolbar from "@/components/sale/leads/SaleLeadsToolbar";
 import SaleLeadTable from "@/components/sale/leads/SaleLeadTable";
 import LogCallModal from "@/components/sale/leads/LogCallModal";
 import LeadStatusLegend from "@/components/sale/leads/LeadStatusLegend";
+import LeadDetailModal from "@/components/sale/leads/LeadDetailModal";
+import EditLeadModal from "@/components/sale/leads/EditLeadModal";
+import CheckCustomerForm from "@/components/marketing/input/CheckCustomerForm";
 import { useAuthStore } from "@/store/auth.store";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "@/components/sale/leads/sale-leads.module.css";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export default function SaleLeadsPage() {
   // Get user role from auth store
@@ -58,6 +68,10 @@ export default function SaleLeadsPage() {
   const [convertingLead, setConvertingLead] = useState<SaleLead | null>(null);
   const [reassigningLead, setReassigningLead] = useState<SaleLead | null>(null);
   const [loggingCallLead, setLoggingCallLead] = useState<SaleLead | null>(null);
+  const [viewingLead, setViewingLead] = useState<SaleLead | null>(null);
+  const [editingLead, setEditingLead] = useState<SaleLead | null>(null);
+  const [checkCustomerQuery, setCheckCustomerQuery] = useState<string | null>(null);
+  const [checkCustomerInput, setCheckCustomerInput] = useState("");
   // Row selection for bulk operations
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [legendOpen, setLegendOpen] = useState(false);
@@ -87,10 +101,10 @@ export default function SaleLeadsPage() {
         { leadId: lead._id, status: newStatus },
         {
           onSuccess: () => {
-            void message.success(`Đã cập nhật trạng thái`);
+            void message.success(getTranslated("Đã cập nhật trạng thái"));
           },
           onError: (err) => {
-            void message.error(`Lỗi: ${err.message}`);
+            void message.error(getTranslated("Lỗi: ${err.message}").replace("${err.message}", err.message));
           },
         }
       );
@@ -105,7 +119,7 @@ export default function SaleLeadsPage() {
         lead.status !== LeadStatus.POTENTIAL &&
         lead.status !== LeadStatus.QUALIFIED
       ) {
-        void message.warning("Lead phải ở trạng thái Tiềm năng hoặc Đủ điều kiện để chốt đơn");
+        void message.warning(getTranslated("Khách hàng phải ở trạng thái Tiềm năng hoặc Đủ điều kiện để chốt đơn"));
         return;
       }
 
@@ -119,12 +133,12 @@ export default function SaleLeadsPage() {
 
     convertMutation.mutate({ leadId: convertingLead._id, orderItem }, {
       onSuccess: () => {
-        void message.success("Đã tạo đơn hàng thành công");
+        void message.success(getTranslated("Đã tạo đơn hàng thành công"));
         setConvertingLead(null);
         void refetch();
       },
       onError: (err) => {
-        void message.error(`Lỗi: ${err.message}`);
+        void message.error(getTranslated("Lỗi: ${err.message}").replace("${err.message}", err.message));
       },
     });
   }, [convertingLead, convertMutation, refetch]);
@@ -153,6 +167,43 @@ export default function SaleLeadsPage() {
     void refetch();
   }, [refetch]);
 
+  // Handle view detail
+  const handleViewDetail = useCallback((lead: SaleLead) => {
+    setViewingLead(lead);
+  }, []);
+
+  const handleCloseDetail = useCallback(() => {
+    setViewingLead(null);
+  }, []);
+
+  // Handle edit
+  const handleEdit = useCallback((lead: SaleLead) => {
+    setEditingLead(lead);
+  }, []);
+
+  const handleEditSuccess = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
+  const handleCloseEdit = useCallback(() => {
+    setEditingLead(null);
+  }, []);
+
+  // Handle check customer - open the check customer form with query
+  const handleOpenCheckCustomer = useCallback((query?: string) => {
+    setCheckCustomerQuery(query ?? "");
+    if (query) setCheckCustomerInput(query);
+  }, []);
+
+  const handleCheckCustomerChange = useCallback((value: string) => {
+    setCheckCustomerInput(value);
+  }, []);
+
+  const handleCloseCheckCustomer = useCallback(() => {
+    setCheckCustomerQuery(null);
+    setCheckCustomerInput("");
+  }, []);
+
   // Handle selection change
   const handleSelectionChange = useCallback((keys: string[]) => {
     setSelectedKeys(keys);
@@ -165,8 +216,8 @@ export default function SaleLeadsPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Số cần gọi"
-        subtitle={isAdminOrManager ? "Danh sách leads - Quản lý toàn bộ" : "Danh sách leads được phân công cho bạn"}
+        title={getTranslated("Số cần gọi")}
+        subtitle={isAdminOrManager ? getTranslated("Danh sách khách hàng - Quản lý toàn bộ / Danh sách khách hàng được phân công cho bạn") : getTranslated("Danh sách khách hàng - Quản lý toàn bộ / Danh sách khách hàng được phân công cho bạn")}
       />
 
       <CardSection>
@@ -176,35 +227,35 @@ export default function SaleLeadsPage() {
             {
               key: "total",
               value: counts.total,
-              label: "Tổng số",
+              label: getTranslated("Tổng số"),
               icon: <PhoneOutlined style={{ color: "#1890ff" }} />,
               color: "blue",
             },
             {
               key: "new",
               value: counts.new,
-              label: "Mới",
+              label: getTranslated("Mới"),
               icon: <PlusOutlined style={{ color: "#722ed1" }} />,
               color: "purple",
             },
             {
               key: "noAnswer",
               value: counts.noAnswer,
-              label: "Không nghe máy",
+              label: getTranslated("Không nghe máy"),
               icon: <ClockCircleOutlined style={{ color: "#fa8c16" }} />,
               color: "orange",
             },
             {
               key: "potential",
               value: counts.potential,
-              label: "Tiềm năng",
+              label: getTranslated("Tiềm năng"),
               icon: <TrophyOutlined style={{ color: "#52c41a" }} />,
               color: "green",
             },
             {
               key: "closed",
               value: counts.closed,
-              label: "Đã chốt đơn",
+              label: getTranslated("Đã chốt đơn"),
               icon: <CheckCircleOutlined style={{ color: "#13c2c2" }} />,
               color: "cyan",
             },
@@ -222,6 +273,9 @@ export default function SaleLeadsPage() {
           onRefresh={() => {
             void refetch();
           }}
+          checkCustomerValue={checkCustomerInput}
+          onCheckCustomerChange={handleCheckCustomerChange}
+          onCheckCustomer={handleOpenCheckCustomer}
           loading={loading}
           total={total}
           onShowLegend={() => setLegendOpen(true)}
@@ -247,7 +301,7 @@ export default function SaleLeadsPage() {
           </div>
         ) : leads.length === 0 ? (
           <div className={styles.emptyContainer}>
-            <p className={styles.emptyText}>Không có lead nào cần xử lý</p>
+            <p className={styles.emptyText}>Không có khách hàng nào cần xử lý</p>
           </div>
         ) : (
           <>
@@ -257,6 +311,8 @@ export default function SaleLeadsPage() {
               onConvert={handleConvert}
               onLogCall={handleLogCall}
               onReassign={isAdminOrManager ? handleReassign : undefined}
+              onViewDetail={handleViewDetail}
+              onEdit={handleEdit}
               canReassign={isAdminOrManager}
               loading={loading}
               selectionType={isAdminOrManager ? "checkbox" : "none"}
@@ -270,7 +326,7 @@ export default function SaleLeadsPage() {
                 pageSize={limit}
                 total={total}
                 onChange={handlePageChange}
-                showTotal={(t) => `Tổng: ${t} leads`}
+                showTotal={(t) => `Tổng: ${t} khách hàng`}
               />
             )}
           </>
@@ -302,6 +358,32 @@ export default function SaleLeadsPage() {
         onClose={() => setLoggingCallLead(null)}
         onSuccess={handleLogCallSuccess}
       />
+
+      {/* Lead Detail Modal */}
+      <LeadDetailModal
+        open={!!viewingLead}
+        lead={viewingLead}
+        onClose={handleCloseDetail}
+      />
+
+      {/* Edit Lead Modal */}
+      <EditLeadModal
+        open={!!editingLead}
+        lead={editingLead}
+        onClose={handleCloseEdit}
+        onSuccess={handleEditSuccess}
+      />
+
+      {/* Check Customer Form - hiển thị khi click nút Check khách */}
+      {checkCustomerQuery !== undefined && (
+        <div style={{ marginTop: 16 }}>
+          <CheckCustomerForm
+            initialValue={checkCustomerQuery}
+            placeholder="Nhập SĐT hoặc tên khách hàng để tra cứu..."
+            buttonLabel="Tra cứu"
+          />
+        </div>
+      )}
     </PageContainer>
   );
 }

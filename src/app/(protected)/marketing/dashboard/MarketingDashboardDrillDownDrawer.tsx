@@ -86,7 +86,7 @@ function MarketingDashboardDrillDownDrawerInner({
             <Row gutter={16}>
               <Col span={6}>
                 <Statistic
-                  title="Tổng Lead"
+                  title="Tổng Khách hàng"
                   value={data.summary.totalLeads}
                   formatter={(val) => formatNumber(Number(val))}
                 />
@@ -135,7 +135,7 @@ function MarketingDashboardDrillDownDrawerInner({
                 key: tabKey,
                 label:
                   tabKey === "leads"
-                    ? `Leads (${data.leads.length})`
+                    ? `Khách hàng (${data.leads.length})`
                     : tabKey === "expenses"
                       ? `Chi phí (${data.expenses.length})`
                       : `Doanh thu (${data.revenues.length})`,
@@ -168,7 +168,7 @@ interface LeadTableProps {
 function LeadTable({ leads, loading }: LeadTableProps) {
   const columns: ColumnsType<DrillDownData["leads"][number]> = [
     {
-      title: "Mã Lead",
+      title: "Mã Khách hàng",
       dataIndex: "leadCode",
       key: "leadCode",
       width: 120,
@@ -272,7 +272,7 @@ function ExpenseTable({ expenses, loading }: ExpenseTableProps) {
       render: (val: number) => formatNumber(val),
     },
     {
-      title: "Lead",
+      title: "Khách hàng",
       dataIndex: "totalLeads",
       key: "totalLeads",
       width: 80,

@@ -1,0 +1,32 @@
+/* Lead Detail Modal Styles */
+
+.body {
+  padding: 8px 0;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: #8c8c8c;
+}
+
+.section {
+  margin-bottom: 0;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: #262626;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.muted {
+  color: #8c8c8c;
+  font-size: 12px;
+}

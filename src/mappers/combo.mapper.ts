@@ -56,7 +56,9 @@ export interface MappedCombo {
   updatedAt?: string;
 }
 
-export interface MappedComboListItem extends Omit<MappedCombo, "description" | "createdAt" | "updatedAt"> {}
+export interface MappedComboListItem extends Omit<MappedCombo, "description" | "updatedAt"> {
+  createdAt?: string;
+}
 
 export function mapCombo(combo: Record<string, unknown>): MappedCombo {
   const productId = combo.productId as MaybeObjectId;
@@ -82,9 +84,8 @@ export function mapCombo(combo: Record<string, unknown>): MappedCombo {
 
 export function mapComboList(combo: Record<string, unknown>): MappedComboListItem {
   const mapped = mapCombo(combo);
-  const { description, createdAt, updatedAt, ...rest } = mapped;
+  const { description, updatedAt, ...rest } = mapped;
   void description;
-  void createdAt;
   void updatedAt;
   return rest;
 }

@@ -119,7 +119,7 @@ export default function AssignSaleDrawer({
         {lead && (
           <div style={{ padding: "12px 16px", background: "#fafafa", borderRadius: 8 }}>
             <div style={{ fontSize: 14, color: "#8c8c8c", marginBottom: 4 }}>
-              Lead
+              Khách hàng
             </div>
             <div style={{ fontWeight: 600, fontSize: 16 }}>{lead.customerName}</div>
             <div style={{ fontSize: 13, color: "#8c8c8c" }}>{lead.phone ?? lead.email ?? "—"}</div>

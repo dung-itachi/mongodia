@@ -1,8 +1,9 @@
 /**
- * Marketing Lead Toolbar Component (Sprint 5.2, 8.5)
+ * Marketing Lead Toolbar Component (Sprint 5.2, 8.5, 8.x)
  *
  * Toolbar for debounced search, filters, and actions.
  * Sprint 8.5: Added "Đẩy sang Sale" button for bulk push.
+ * Sprint 8.x: Added Team and MKT filters for /marketing/orders page.
  */
 
 import { memo, useEffect, useState } from "react";
@@ -11,6 +12,7 @@ import { ActionButton, FilterBar, SearchInput } from "@/components/common";
 import { ReloadOutlined, PlusOutlined, SendOutlined } from "@ant-design/icons";
 import type { MarketingLeadFilters } from "@/hooks/useMarketingLeads";
 import { LEAD_SOURCE_OPTIONS, LEAD_STATUS_OPTIONS } from "@/constants/marketing";
+import { useTeamsForMarketingDashboard, useMarketingEmployeesByTeam } from "@/hooks/useMarketingExpenseLookups";
 import styles from "./marketing-input.module.css";
 
 export type MarketingLeadToolbarProps = {
@@ -23,6 +25,8 @@ export type MarketingLeadToolbarProps = {
   loading?: boolean;
   /** Label for the primary create button. Defaults to "Thêm Lead". */
   createLabel?: string;
+  /** Show Team and MKT filters (default: true) */
+  showTeamFilters?: boolean;
 };
 
 function MarketingLeadToolbarInner({
@@ -33,9 +37,16 @@ function MarketingLeadToolbarInner({
   onPushToSale,
   selectedCount,
   loading,
-  createLabel = "Thêm Lead",
+  createLabel = "Thêm Khách hàng",
+  showTeamFilters = true,
 }: MarketingLeadToolbarProps) {
   const [searchValue, setSearchValue] = useState(filters.keyword ?? "");
+
+  // Sprint 8.x: Team and MKT filter hooks
+  const { teams, loading: teamsLoading } = useTeamsForMarketingDashboard();
+  const { employees: mktEmployees, loading: mktLoading } = useMarketingEmployeesByTeam(
+    showTeamFilters ? filters.teamId : undefined
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -50,7 +61,58 @@ function MarketingLeadToolbarInner({
   const filterValues: Record<string, unknown> = {
     status: filters.status ?? "",
     source: filters.source ?? "",
+    teamId: filters.teamId ?? "",
+    marketingEmployeeId: filters.marketingEmployeeId ?? "",
   };
+
+  const filterItems = [
+    {
+      type: "select",
+      key: "status",
+      label: "Trạng thái",
+      placeholder: "Trạng thái",
+      options: [
+        { value: "", label: "Tất cả trạng thái" },
+        ...LEAD_STATUS_OPTIONS,
+      ],
+    },
+    {
+      type: "select",
+      key: "source",
+      label: "Nguồn",
+      placeholder: "Nguồn",
+      options: [
+        { value: "", label: "Tất cả nguồn" },
+        ...LEAD_SOURCE_OPTIONS,
+      ],
+    },
+  ];
+
+  // Sprint 8.x: Add Team and MKT filters
+  if (showTeamFilters) {
+    filterItems.push(
+      {
+        type: "select",
+        key: "teamId",
+        label: "Team",
+        placeholder: "Team",
+        options: [
+          { value: "", label: "Tất cả team" },
+          ...teams,
+        ],
+      },
+      {
+        type: "select",
+        key: "marketingEmployeeId",
+        label: "MKT",
+        placeholder: "MKT",
+        options: [
+          { value: "", label: "Tất cả MKT" },
+          ...mktEmployees,
+        ],
+      }
+    );
+  }
 
   return (
     <div className={styles["mi-toolbar"]}>
@@ -63,28 +125,7 @@ function MarketingLeadToolbarInner({
           style={{ width: 240 }}
         />
         <FilterBar
-          items={[
-            {
-              type: "select",
-              key: "status",
-              label: "Trạng thái",
-              placeholder: "Trạng thái",
-              options: [
-                { value: "", label: "Tất cả trạng thái" },
-                ...LEAD_STATUS_OPTIONS,
-              ],
-            },
-            {
-              type: "select",
-              key: "source",
-              label: "Nguồn",
-              placeholder: "Nguồn",
-              options: [
-                { value: "", label: "Tất cả nguồn" },
-                ...LEAD_SOURCE_OPTIONS,
-              ],
-            },
-          ]}
+          items={filterItems}
           values={filterValues}
           onChange={(values) =>
             onFiltersChange({
@@ -94,10 +135,15 @@ function MarketingLeadToolbarInner({
                 typeof values.source === "string"
                   ? (values.source as MarketingLeadFilters["source"])
                   : undefined,
+              teamId: typeof values.teamId === "string" ? values.teamId : undefined,
+              marketingEmployeeId:
+                typeof values.marketingEmployeeId === "string"
+                  ? values.marketingEmployeeId
+                  : undefined,
               page: 1,
             })
           }
-          loading={loading}
+          loading={loading || teamsLoading || mktLoading}
         />
       </div>
 

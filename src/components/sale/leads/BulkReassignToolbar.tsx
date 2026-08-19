@@ -72,7 +72,7 @@ export default function BulkReassignToolbar({
         leadIds: selectedKeys,
         saleEmployeeIds: selectedEmployeeIds,
       });
-      message.success(`Đã phân công ${selectedKeys.length} lead cho ${selectedEmployeeIds.length} nhân viên`);
+      message.success(`Đã phân công ${selectedKeys.length} khách hàng cho ${selectedEmployeeIds.length} nhân viên`);
       setConfirmOpen(false);
       onClearSelection();
       setSelectedEmployeeIds([]);
@@ -104,7 +104,7 @@ export default function BulkReassignToolbar({
       <Space>
         <CheckCircleOutlined style={{ color: "#1890ff", fontSize: 18 }} />
         <span style={{ fontWeight: 500 }}>
-          Đã chọn <span style={{ color: "#1890ff", fontSize: 16 }}>{selectedCount}</span> lead
+          Đã chọn <span style={{ color: "#1890ff", fontSize: 16 }}>{selectedCount}</span> khách hàng
         </span>
         <Button size="small" onClick={onClearSelection}>
           Bỏ chọn
@@ -152,11 +152,11 @@ export default function BulkReassignToolbar({
         cancelText="Hủy"
       >
         <p>
-          Bạn có chắc muốn phân công <strong>{selectedKeys.length}</strong> lead cho{" "}
+          Bạn có chắc muốn phân công <strong>{selectedKeys.length}</strong> khách hàng cho{" "}
           <strong>{selectedEmployeeIds.length}</strong> nhân viên Sale đã chọn?
         </p>
         <p style={{ color: "#888", marginTop: 8 }}>
-          Mỗi lead sẽ được phân công cho một nhân viên (phân theo vòng tròn).
+          Mỗi khách hàng sẽ được phân công cho một nhân viên (phân theo vòng tròn).
         </p>
       </Modal>
     </div>

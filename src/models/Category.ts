@@ -12,6 +12,9 @@ export interface ICategory {
   sortOrder: number;
 
   isActive: boolean;
+
+  /** Account ID để phân quyền xem danh mục theo tài khoản */
+  accountId?: Types.ObjectId;
 }
 
 const CategorySchema = new Schema<ICategory>(
@@ -50,11 +53,21 @@ const CategorySchema = new Schema<ICategory>(
       type: Boolean,
       default: true,
     },
+
+    accountId: {
+      type: Schema.Types.ObjectId,
+      ref: "Account",
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Compound index for filtering by accountId and isActive
+CategorySchema.index({ accountId: 1, isActive: 1 });
 
 const Category: Model<ICategory> =
   mongoose.models.Category ||

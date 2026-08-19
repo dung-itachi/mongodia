@@ -71,6 +71,7 @@ export function usePushLeadsToSale() {
       // Invalidate dashboard counts
       void queryClient.invalidateQueries({ queryKey: ["marketing-dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["marketing-orders-count"] });
     },
   });
 }

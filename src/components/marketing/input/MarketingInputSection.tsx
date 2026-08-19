@@ -35,6 +35,7 @@ import {
   EditOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import { Tooltip } from "antd";
 import { toast } from "@/components/common/feedback/Toast";
 import CheckCustomerForm from "./CheckCustomerForm";
 import BatchCheckCustomersModal from "./BatchCheckCustomersModal";
@@ -45,7 +46,7 @@ import {
   useAllCombosNormalized,
   type ComboWithProduct,
 } from "@/hooks/useProducts";
-import { useCreateLead, useMarketingLeads } from "@/hooks/useMarketingLeads";
+import { useCreateLead, useMarketingLeads, useOrdersCount } from "@/hooks/useMarketingLeads";
 import { usePushLeadsToSale } from "@/hooks/usePushLeadsToSale";
 import { useActiveFacebookPages } from "@/hooks/useFacebookPages";
 import { LeadSource } from "@/constants/leadSource";
@@ -151,8 +152,11 @@ export default function MarketingInputSection({
   // Fetch ALL combos for landing parser lookup
   const { comboByNameMap, comboMap, loading: allCombosLoading } = useAllCombosNormalized();
 
-  // Fetch existing leads for stats
-  const { leads: existingLeads, refetch: refetchLeads } = useMarketingLeads({
+  // Fetch orders count (orders with marketingEmployeeId = pushed to Sale)
+  const { orderCount, refetch: refetchOrdersCount } = useOrdersCount();
+
+  // Fetch existing leads for staging count
+  const { leads: existingLeads } = useMarketingLeads({
     page: 1,
     limit: 1000,
   });
@@ -261,7 +265,6 @@ export default function MarketingInputSection({
 
   // Stats for cards
   const stats = useMemo(() => {
-    const pushedCount = existingLeads.length;
     const stagingCount = stagedLeads.length;
     const commentCount = stagedLeads.filter(
       (l) => l.source === LeadSource.FACEBOOK_COMMENT
@@ -270,8 +273,8 @@ export default function MarketingInputSection({
       (l) => l.source === LeadSource.LANDING_PAGE
     ).length;
     const errorCount = stagedLeads.filter((l) => l.error).length;
-    return { pushedCount, stagingCount, commentCount, ladiCount, errorCount };
-  }, [existingLeads, stagedLeads]);
+    return { orderCount, stagingCount, commentCount, ladiCount, errorCount };
+  }, [orderCount, stagedLeads]);
 
   /** Unique SĐT từ staging (dùng cho "Check khách loạt"). */
   const stagingPhones = useMemo(() => {
@@ -1146,13 +1149,12 @@ export default function MarketingInputSection({
         const result = await createLeadMutation.mutateAsync({
           customerName: lead.customerName,
           phone: lead.phone,
-          address: lead.address, // Sprint 8.x: lưu địa chỉ cùng lead
+          address: lead.address,
           sourceType: lead.source,
-          // Sprint 8.5.2: Include product/combo info for Order
           productId: lead.productId,
           comboId: lead.comboId,
-          // Sprint 8.6: Tag lead with the Facebook Page it came from
           facebookPageId: lead.facebookPageId,
+          unitPriceMNT: lead.price,
         } as never);
         leadIds.push(result._id);
       } catch (err) {
@@ -1171,6 +1173,7 @@ export default function MarketingInputSection({
       setStagedLeads([]);
       toast.success(`Đã đẩy ${leadIds.length} lead sang Sale`);
       onLeadsCreated?.();
+      refetchOrdersCount();
     } catch (err) {
       // Log chi tiết lỗi để debug
       console.error("Push to sale error:", err);
@@ -1178,7 +1181,7 @@ export default function MarketingInputSection({
       toast.error(`Lỗi khi đẩy sang Sale: ${errorMessage}`);
       // Giữ stagedLeads để user có thể thử lại
     }
-  }, [stagedLeads, createLeadMutation, pushToSaleMutation, onLeadsCreated]);
+  }, [stagedLeads, createLeadMutation, pushToSaleMutation, onLeadsCreated, refetchOrdersCount]);
 
   // ============================================================
   // RENDER
@@ -1194,7 +1197,7 @@ export default function MarketingInputSection({
       {/* Stats Cards */}
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
-          <div className={styles.statValue}>{stats.pushedCount}</div>
+          <div className={styles.statValue}>{stats.orderCount}</div>
           <div className={styles.statLabel}>Đã đẩy</div>
         </div>
         <div className={styles.statCard}>
@@ -1215,6 +1218,99 @@ export default function MarketingInputSection({
           </div>
         )}
       </div>
+
+      {/* Sprint 8.6: Facebook Page selection. Persists across batches
+          until the user changes it or clears it. */}
+      <Card
+        title="① Chọn trang Facebook"
+        size="small"
+        className={styles.card}
+      >
+        <div className={styles.facebookPageRow}>
+          <div className={styles.facebookPageActions}>
+            <Select
+              style={{ width: "100%" }}
+              loading={pagesLoading}
+              value={selectedFacebookPageId ?? undefined}
+              onChange={(value: string | undefined) =>
+                setSelectedFacebookPageId(value ?? null)
+              }
+              placeholder={
+                pagesLoading
+                  ? "Đang tải danh sách trang..."
+                  : facebookPages.length === 0
+                    ? "Chưa có Facebook Page nào (liên hệ Admin)"
+                    : "Vui lòng chọn trang Facebook"
+              }
+              showSearch
+              optionFilterProp="label"
+              disabled={pagesLoading || facebookPages.length === 0}
+              notFoundContent={
+                pagesLoading ? null : "Không có trang nào đang hoạt động"
+              }
+            >
+              {facebookPages.map((page) => (
+                <Select.Option
+                  key={page._id}
+                  value={page._id}
+                  label={`${page.name} (${page.code})`}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {page.avatarUrl ? (
+                      <Image
+                        src={page.avatarUrl}
+                        width={36}
+                        height={36}
+                        style={{ borderRadius: 8, objectFit: "cover" }}
+                        fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+                      />
+                    ) : (
+                      <div style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        background: "#f0f0f0",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        color: "#999"
+                      }}>
+                        {page.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{page.name}</div>
+                      <div style={{ fontSize: 11, color: "#999" }}>{page.code}</div>
+                    </div>
+                  </div>
+                </Select.Option>
+              ))}
+            </Select>
+            <Button
+              icon={<PlusOutlined />}
+              onClick={() => setFacebookPageDrawerOpen(true)}
+              aria-label="Tạo Facebook Page"
+              title="Tạo Facebook Page"
+            >
+              Tạo mới
+            </Button>
+          </div>
+          {selectedFacebookPageId && (
+            <div className={styles.facebookPageHint}>
+              Tất cả lead paste phía dưới sẽ được gắn với trang đã chọn cho đến
+              khi bạn đổi trang khác.
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <FacebookPageDrawer
+        mode="create"
+        open={facebookPageDrawerOpen}
+        onClose={() => setFacebookPageDrawerOpen(false)}
+        onSuccess={handleFacebookPageCreated}
+      />
 
       {/* Product Selection - SPRINT 8.5.2: From Product Module */}
       <Card
@@ -1428,99 +1524,6 @@ export default function MarketingInputSection({
         )}
       </Card>
 
-      {/* Sprint 8.6: Facebook Page selection. Persists across batches
-          until the user changes it or clears it. */}
-      <Card
-        title="①·bis Chọn trang Facebook"
-        size="small"
-        className={styles.card}
-      >
-        <div className={styles.facebookPageRow}>
-          <div className={styles.facebookPageActions}>
-            <Select
-              style={{ width: "100%" }}
-              loading={pagesLoading}
-              value={selectedFacebookPageId ?? undefined}
-              onChange={(value: string | undefined) =>
-                setSelectedFacebookPageId(value ?? null)
-              }
-              placeholder={
-                pagesLoading
-                  ? "Đang tải danh sách trang..."
-                  : facebookPages.length === 0
-                    ? "Chưa có Facebook Page nào (liên hệ Admin)"
-                    : "Chọn trang Facebook"
-              }
-              showSearch
-              optionFilterProp="label"
-              disabled={pagesLoading || facebookPages.length === 0}
-              notFoundContent={
-                pagesLoading ? null : "Không có trang nào đang hoạt động"
-              }
-            >
-              {facebookPages.map((page) => (
-                <Select.Option
-                  key={page._id}
-                  value={page._id}
-                  label={`${page.name} (${page.code})`}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {page.avatarUrl ? (
-                      <Image
-                        src={page.avatarUrl}
-                        width={36}
-                        height={36}
-                        style={{ borderRadius: 8, objectFit: "cover" }}
-                        fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-                      />
-                    ) : (
-                      <div style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 8,
-                        background: "#f0f0f0",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 14,
-                        color: "#999"
-                      }}>
-                        {page.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div>
-                      <div style={{ fontWeight: 500 }}>{page.name}</div>
-                      <div style={{ fontSize: 11, color: "#999" }}>{page.code}</div>
-                    </div>
-                  </div>
-                </Select.Option>
-              ))}
-            </Select>
-            <Button
-              icon={<PlusOutlined />}
-              onClick={() => setFacebookPageDrawerOpen(true)}
-              aria-label="Tạo Facebook Page"
-              title="Tạo Facebook Page"
-            >
-              Tạo mới
-            </Button>
-          </div>
-          {selectedFacebookPageId && (
-            <div className={styles.facebookPageHint}>
-              Tất cả lead paste phía dưới sẽ được gắn với trang đã chọn cho đến
-              khi bạn đổi trang khác.
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <FacebookPageDrawer
-        mode="create"
-        open={facebookPageDrawerOpen}
-        onClose={() => setFacebookPageDrawerOpen(false)}
-        onSuccess={handleFacebookPageCreated}
-      />
-
       <QuickProductDrawer
         open={quickProductDrawerOpen}
         onClose={() => setQuickProductDrawerOpen(false)}
@@ -1572,42 +1575,63 @@ export default function MarketingInputSection({
           </button>
         </div>
 
-        <TextArea
-          placeholder={
-            inputType === "comment"
-              ? `Nhập: ${columnMapping.getLayout("comment").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: Гантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Sản phẩm & Combo tự detect nếu để trống)`
-              : `Nhập: ${columnMapping.getLayout("ladi").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: 2026-08-15\tГантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Баянчандман = địa chỉ — nằm ngay sau SĐT)`
-          }
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          rows={4}
-          className={styles.textArea}
-          disabled={!selectedFacebookPageId}
-        />
+        {!selectedFacebookPageId ? (
+          <Tooltip title="Vui lòng chọn trang Facebook" mouseEnterDelay={0}>
+            <TextArea
+              placeholder={
+                inputType === "comment"
+                  ? `Nhập: ${columnMapping.getLayout("comment").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: Гантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Sản phẩm & Combo tự detect nếu để trống)`
+                  : `Nhập: ${columnMapping.getLayout("ladi").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: 2026-08-15\tГантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Баянчандман = địa chỉ — nằm ngay sau SĐT)`
+              }
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              rows={4}
+              className={styles.textArea}
+              disabled
+            />
+          </Tooltip>
+        ) : (
+          <TextArea
+            placeholder={
+              inputType === "comment"
+                ? `Nhập: ${columnMapping.getLayout("comment").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: Гантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Sản phẩm & Combo tự detect nếu để trống)`
+                : `Nhập: ${columnMapping.getLayout("ladi").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: 2026-08-15\tГантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Баянчандман = địa chỉ — nằm ngay sau SĐT)`
+            }
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            rows={4}
+            className={styles.textArea}
+          />
+        )}
 
         <div className={styles.inputActions}>
-          <Popover
-            content={<div style={{ width: 520, maxWidth: "90vw" }}><FieldOrderPreview inputType={inputType} /></div>}
-            title={null}
-            trigger="hover"
-            placement="topLeft"
-          >
-            <Button
-              type="primary"
-              icon={<InfoCircleOutlined />}
-              onClick={handleParseLeads}
-              disabled={!selectedFacebookPageId || !inputText.trim()}
+          <Tooltip title={!selectedFacebookPageId ? "Vui lòng chọn trang Facebook" : !inputText.trim() ? "Nhập dữ liệu trước" : ""} mouseEnterDelay={0}>
+            <Popover
+              content={<div style={{ width: 520, maxWidth: "90vw" }}><FieldOrderPreview inputType={inputType} /></div>}
+              title={null}
+              trigger="hover"
+              placement="topLeft"
+              mouseEnterDelay={0}
             >
-              Phân loại
+              <Button
+                type="primary"
+                icon={<InfoCircleOutlined />}
+                onClick={handleParseLeads}
+                disabled={!selectedFacebookPageId || !inputText.trim()}
+              >
+                Phân loại
+              </Button>
+            </Popover>
+          </Tooltip>
+          <Tooltip title={!selectedFacebookPageId ? "Vui lòng chọn trang Facebook" : ""} mouseEnterDelay={0}>
+            <Button
+              icon={<SnippetsOutlined />}
+              onClick={handlePasteFromClipboard}
+              disabled={!selectedFacebookPageId}
+            >
+              Dán
             </Button>
-          </Popover>
-          <Button
-            icon={<SnippetsOutlined />}
-            onClick={handlePasteFromClipboard}
-            disabled={!selectedFacebookPageId}
-          >
-            Dán
-          </Button>
+          </Tooltip>
           <Button
             icon={<SettingOutlined />}
             onClick={() => {

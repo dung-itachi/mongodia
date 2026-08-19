@@ -166,7 +166,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   // Lead cards
   {
     key: "todayLead",
-    title: "Lead hôm nay",
+    title: "Khách hàng hôm nay",
     icon: <ThunderboltOutlined />,
     color: "orange",
     selector: (data) => data.summary.todayLead,
@@ -178,7 +178,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "monthLead",
-    title: "Lead tháng",
+    title: "Khách hàng tháng",
     icon: <CalendarOutlined />,
     color: "blue",
     selector: (data) => data.summary.monthLead,
@@ -190,7 +190,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "assignedLead",
-    title: "Lead đã giao Sale",
+    title: "Đã giao Sale",
     icon: <UserSwitchOutlined />,
     color: "purple",
     selector: (data) => data.summary.assignedLead,
@@ -202,7 +202,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "closedLead",
-    title: "Lead chốt",
+    title: "Đã chốt",
     icon: <CheckCircleOutlined />,
     color: "green",
     selector: (data) => data.summary.closedLead,

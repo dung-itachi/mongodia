@@ -5,11 +5,12 @@
  * - Product là dữ liệu cha, chọn trước.
  * - Category lấy từ Product, hiển thị READONLY.
  * - Combo chỉ có: code, name, packageQuantity, sellingPrice, giftQuantity.
+ * - Mã combo có thể tự sinh nếu không nhập.
  */
 
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { Form, Input, InputNumber, Select, Switch, Alert } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
 import type {
@@ -20,6 +21,47 @@ import type {
 } from "@/hooks/useCombos";
 
 const { TextArea } = Input;
+
+/**
+ * Convert any string to a safe uppercase code (alphanumeric only).
+ * Handles Vietnamese, Chinese, Japanese, Korean, and other languages.
+ */
+function toSafeCode(input: string): string {
+  if (!input) return "";
+  // Remove diacritics and normalize
+  return input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+    .replace(/[^\w\s-]/g, "") // Remove special chars
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.substring(0, 4))
+    .join("")
+    .toUpperCase();
+}
+
+/**
+ * Generate combo code from product code and combo name.
+ * Format: {PRODUCT_CODE}C{number}
+ */
+function generateComboCode(productCode: string, existingCodes: string[], index: number): string {
+  const productPrefix = toSafeCode(productCode);
+  // Try incremental suffix: 01, 02, 03...
+  const suffix = String(index + 1).padStart(2, "0");
+  const candidate = `${productPrefix}C${suffix}`;
+  if (!existingCodes.includes(candidate)) {
+    return candidate;
+  }
+  // If exists, try different suffixes
+  for (let i = index + 2; i <= 99; i++) {
+    const candidate2 = `${productPrefix}C${String(i).padStart(2, "0")}`;
+    if (!existingCodes.includes(candidate2)) {
+      return candidate2;
+    }
+  }
+  // Fallback: add random suffix
+  return `${productPrefix}C${suffix}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+}
 
 export interface ComboFormProductOption {
   _id: string;
@@ -42,6 +84,8 @@ interface ComboFormProps {
   lockProductSelection?: boolean;
   /** Product preselected (khi đã biết productId từ route). */
   initialProductId?: string;
+  /** Danh sách mã combo hiện có của product (để tránh trùng khi tạo mới). */
+  existingCodes?: string[];
 }
 
 interface FormValues {
@@ -66,6 +110,7 @@ export default function ComboForm({
   onSubmit,
   lockProductSelection = false,
   initialProductId,
+  existingCodes = [],
 }: ComboFormProps) {
   const [form] = Form.useForm<FormValues>();
   const isEditing = !!editingItem;
@@ -112,8 +157,15 @@ export default function ComboForm({
       if (!product) {
         return;
       }
+
+      // Auto-generate code if not provided and not editing
+      let finalCode = values.code?.trim();
+      if (!isEditing && !finalCode && product.code) {
+        finalCode = generateComboCode(product.code, existingCodes, 0);
+      }
+
       onSubmit({
-        code: values.code ?? "",
+        code: finalCode ?? "",
         name: values.name ?? "",
         productId: product._id,
         productCode: product.code,
@@ -123,6 +175,7 @@ export default function ComboForm({
         displayOrder: values.displayOrder ?? 0,
         image: values.image ?? "",
         description: values.description ?? "",
+        ...(isEditing && { isActive: values.isActive ?? true }),
       } as CreateComboInput | UpdateComboInput);
     });
   };
@@ -178,13 +231,13 @@ export default function ComboForm({
         <Form.Item
           name="code"
           label="Mã combo"
+          extra="Để trống để tự sinh mã: {Mã sản phẩm}C01"
           rules={[
-            { required: true, message: "Vui lòng nhập mã combo" },
             { min: 1, message: "Mã tối thiểu 1 ký tự" },
             { max: 50, message: "Mã tối đa 50 ký tự" },
           ]}
         >
-          <Input placeholder="VD: COMBO001" disabled={isEditing} />
+          <Input placeholder="VD: SANPHAM001 (để trống để tự sinh)" disabled={isEditing} />
         </Form.Item>
 
         <Form.Item
@@ -280,7 +333,7 @@ export default function ComboForm({
         <Alert
           type="info"
           showIcon
-          title="Combo không lưu variant và quà cụ thể. Variant sẽ được Sale chọn khi chốt đơn."
+          title="Combo không lưu phân loại sản phẩm và quà cụ thể. Phân loại sản phẩm sẽ được Sale chọn khi chốt đơn."
           style={{ marginTop: 8 }}
         />
       </Form>

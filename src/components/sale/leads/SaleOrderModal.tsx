@@ -9,6 +9,13 @@ import { useProductWithVariants } from "@/hooks/useProductVariants";
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import { validateOrderItem, type OrderItem } from "@/types/variant";
 import { formatMNT } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 interface SaleOrderModalProps {
   lead: SaleLead | null;
@@ -71,17 +78,17 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
   const hasVariantResolutionError = Boolean(product && product.variantOptions && product.variantOptions.length > 0 && item?.details.some((detail) => !detail.variantId));
   const validation = {
     isValid: genericValidation.isValid && !hasVariantResolutionError,
-    detailsError: hasVariantResolutionError ? "Không tìm thấy biến thể phù hợp." : genericValidation.detailsError,
+    detailsError: hasVariantResolutionError ? getTranslated("Không tìm thấy biến thể phù hợp.") : genericValidation.detailsError,
     giftsError: genericValidation.giftsError,
   };
   return (
     <Modal
-      title={<><SwapOutlined style={{ marginRight: 8, color: "#52c41a" }} />Chốt đơn</>}
+      title={<><SwapOutlined style={{ marginRight: 8, color: "#52c41a" }} />{getTranslated("Chốt đơn")}</>}
       open={Boolean(lead)}
       width={900}
       destroyOnHidden
-      okText="Chốt đơn"
-      cancelText="Hủy"
+      okText={getTranslated("Chốt đơn")}
+      cancelText={getTranslated("Hủy")}
       onCancel={onClose}
       onOk={() => item && onConfirm(item)}
       okButtonProps={{ loading, disabled: !item || productLoading || !validation.isValid }}
@@ -92,18 +99,18 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
         {lead.address && <div><Typography.Text type="secondary">{lead.address}</Typography.Text></div>}
       </div>}
       <div style={{ marginBottom: 16 }}>
-        <Typography.Text strong>Combo</Typography.Text>
+        <Typography.Text strong>{getTranslated("Combo")}</Typography.Text>
         <Select
           value={selectedComboId}
           onChange={selectCombo}
           loading={combosLoading}
           style={{ display: "block", marginTop: 6, width: "100%" }}
-          placeholder="Chọn combo"
+          placeholder={getTranslated("Chọn combo")}
           options={combos.map((combo) => ({ label: `${combo.name} - ${formatMNT(combo.sellingPrice)}`, value: combo._id }))}
         />
       </div>
-      {!combosLoading && combos.length === 0 && <Alert type="warning" title="Không có combo đang hoạt động cho sản phẩm của lead." showIcon />}
-      {item && !validation.isValid && <Alert type="warning" title={validation.detailsError || validation.giftsError || "Thông tin đơn hàng chưa hợp lệ."} showIcon style={{ marginBottom: 12 }} />}
+      {!combosLoading && combos.length === 0 && <Alert type="warning" title={getTranslated("Không có combo đang hoạt động cho sản phẩm của khách hàng này.")} showIcon />}
+      {item && !validation.isValid && <Alert type="warning" title={validation.detailsError || validation.giftsError || getTranslated("Thông tin đơn hàng chưa hợp lệ.")} showIcon style={{ marginBottom: 12 }} />}
       {productLoading ? <Spin /> : item && <OrderProductDetail items={items} product={product} onChange={setItems} disabled={loading} />}
     </Modal>
   );

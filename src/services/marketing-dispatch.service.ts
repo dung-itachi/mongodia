@@ -546,8 +546,20 @@ export class MarketingDispatchService {
         address: doc.address,
         sourceType: doc.sourceType,
         status: doc.status,
-        product: doc.product,
-        combo: doc.combo,
+        product: doc.productId && typeof doc.productId === "object" && "name" in doc.productId
+          ? {
+              _id: (doc.productId as { _id: { toString(): string } })._id.toString(),
+              code: (doc.productId as { code: string }).code,
+              name: (doc.productId as { name: string }).name,
+            }
+          : undefined,
+        combo: doc.comboId && typeof doc.comboId === "object" && "name" in doc.comboId
+          ? {
+              _id: (doc.comboId as { _id: { toString(): string } })._id.toString(),
+              code: (doc.comboId as { code: string }).code,
+              name: (doc.comboId as { name: string }).name,
+            }
+          : undefined,
         quantity: doc.quantity,
         unitPriceMNT: doc.unitPriceMNT,
         exchangeRate: doc.exchangeRate,
@@ -757,6 +769,22 @@ export class MarketingDispatchService {
       closed: closedCount,
       converted: convertedCount,
     };
+  }
+
+  /**
+   * Đếm số leads đã được đẩy sang Sale (có saleEmployeeId)
+   */
+  async countPushedLeads(marketingEmployeeId?: string): Promise<number> {
+    const filter: Record<string, unknown> = {
+      isActive: true,
+      saleEmployeeId: { $exists: true, $ne: null },
+    };
+
+    if (marketingEmployeeId) {
+      filter.marketingEmployeeId = new mongoose.Types.ObjectId(marketingEmployeeId);
+    }
+
+    return Lead.countDocuments(filter);
   }
 }
 

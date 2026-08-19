@@ -12,6 +12,9 @@ export interface IProduct {
   description?: string;
 
   isActive: boolean;
+
+  /** Account ID để phân quyền xem sản phẩm theo tài khoản */
+  accountId?: Types.ObjectId;
 }
 
 const ProductSchema = new Schema<IProduct>(
@@ -50,11 +53,21 @@ const ProductSchema = new Schema<IProduct>(
       type: Boolean,
       default: true,
     },
+
+    accountId: {
+      type: Schema.Types.ObjectId,
+      ref: "Account",
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Compound index for filtering by accountId and isActive
+ProductSchema.index({ accountId: 1, isActive: 1 });
 
 const Product: Model<IProduct> =
   mongoose.models.Product ||

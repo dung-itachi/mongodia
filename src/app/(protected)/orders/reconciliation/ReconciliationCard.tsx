@@ -117,6 +117,7 @@ function ProductComboPopover({ order }: { order: OrderListItem }) {
       title={null}
       trigger="hover"
       placement="left"
+      mouseEnterDelay={0}
     >
       <Button
         type="link"

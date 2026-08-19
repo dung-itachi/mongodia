@@ -177,7 +177,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             type="warning"
             message={
               <Text>
-                Lead sẽ được chuyển sang trạng thái <Text strong>"Không nghe máy"</Text>.
+                Khách hàng sẽ được chuyển sang trạng thái <Text strong>"Không nghe máy"</Text>.
                 Số lần gọi không nghe sẽ được cập nhật.
               </Text>
             }
@@ -191,7 +191,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             type="info"
             message={
               <Text>
-                Lead sẽ được chuyển sang trạng thái <Text strong>"Đã liên hệ"</Text> và
+                Khách hàng sẽ được chuyển sang trạng thái <Text strong>"Đã liên hệ"</Text> và
                 được hẹn gọi lại sau.
               </Text>
             }
@@ -205,7 +205,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             type="success"
             message={
               <Text>
-                Lead sẽ được chuyển sang trạng thái <Text strong>"Tiềm năng"</Text>.
+                Khách hàng sẽ được chuyển sang trạng thái <Text strong>"Tiềm năng"</Text>.
                 Bạn có thể tiến hành chốt đơn.
               </Text>
             }
@@ -219,7 +219,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             type="success"
             message={
               <Text>
-                Lead sẽ được chuyển sang trạng thái <Text strong>"Đã chốt"</Text>.
+                Khách hàng sẽ được chuyển sang trạng thái <Text strong>"Đã chốt"</Text>.
                 Bạn có thể tiến hành tạo đơn hàng.
               </Text>
             }

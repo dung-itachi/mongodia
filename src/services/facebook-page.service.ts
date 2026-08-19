@@ -72,6 +72,7 @@ export class FacebookPageService {
       timezone: input.timezone?.trim() ?? "Asia/Ho_Chi_Minh",
       status: input.status ?? "ACTIVE",
       note: input.note?.trim() ?? "",
+      accountId: input.accountId,
     };
 
     const page = await facebookPageRepository.create(data);

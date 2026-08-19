@@ -25,6 +25,13 @@ import {
 } from "@/hooks/useCategories";
 import CategoryTable from "./CategoryTable";
 import CategoryForm from "./CategoryForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 export default function CategoryPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -113,8 +120,8 @@ export default function CategoryPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Danh mục sản phẩm"
-        subtitle="Quản lý danh mục sản phẩm"
+        title={getTranslated("Danh mục sản phẩm")}
+        subtitle={getTranslated("Quản lý danh mục sản phẩm")}
       />
 
       <CardSection>
@@ -124,7 +131,7 @@ export default function CategoryPage() {
             icon={<PlusOutlined />}
             onClick={handleOpenCreate}
           >
-            Thêm danh mục
+            {getTranslated("Thêm danh mục")}
           </Button>
         </div>
 

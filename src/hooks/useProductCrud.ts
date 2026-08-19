@@ -35,7 +35,7 @@ export interface ProductDetail extends ProductListItem {
 }
 
 export interface CreateProductInput {
-  code: string;
+  code?: string;
   name: string;
   categoryCode: string;
   image?: string;

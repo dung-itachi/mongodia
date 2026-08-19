@@ -17,6 +17,13 @@ import type {
   UpdateCustomerActivityInput,
   FollowUpStats,
 } from "@/types/customer-activity";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 // ============================================================================
 // API Functions
@@ -44,7 +51,7 @@ async function fetchCustomerActivities(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Không thể lấy danh sách hoạt động");
+    throw new Error(data.message || getTranslated("Không thể lấy danh sách hoạt động"));
   }
 
   return data.data;
@@ -55,7 +62,7 @@ async function fetchActivity(id: string): Promise<CustomerActivityResponse> {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Không thể lấy hoạt động");
+    throw new Error(data.message || getTranslated("Không thể lấy hoạt động"));
   }
 
   return data.data;
@@ -66,7 +73,7 @@ async function fetchFollowUpStats(): Promise<FollowUpStats> {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Không thể lấy thống kê");
+    throw new Error(data.message || getTranslated("Không thể lấy thống kê"));
   }
 
   return data.data;
@@ -84,7 +91,7 @@ async function createActivity(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Không thể tạo hoạt động");
+    throw new Error(data.message || getTranslated("Không thể tạo hoạt động"));
   }
 
   return data.data;
@@ -102,7 +109,7 @@ async function updateActivity(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Không thể cập nhật hoạt động");
+    throw new Error(data.message || getTranslated("Không thể cập nhật hoạt động"));
   }
 
   return data.data;
@@ -115,7 +122,7 @@ async function deleteActivity(id: string): Promise<void> {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Không thể xóa hoạt động");
+    throw new Error(data.message || getTranslated("Không thể xóa hoạt động"));
   }
 }
 

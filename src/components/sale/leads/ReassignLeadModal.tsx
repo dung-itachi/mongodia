@@ -10,6 +10,13 @@ import { UserSwitchOutlined } from "@ant-design/icons";
 import api from "@/lib/axios";
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
+function getTranslated(key: string): string {
+  const language = useLanguageStore.getState().language;
+  return t(key, language);
+}
 
 interface Employee {
   _id: string;
@@ -50,7 +57,7 @@ export default function ReassignModal({
       setEmployees(response.data.data.items || []);
     } catch (err) {
       console.error("Failed to fetch employees:", err);
-      message.error("Không thể tải danh sách nhân viên Sale");
+      message.error(getTranslated("Không thể tải danh sách nhân viên Sale"));
     } finally {
       setLoading(false);
     }
@@ -58,7 +65,7 @@ export default function ReassignModal({
 
   const handleSubmit = async () => {
     if (!lead || !selectedEmployeeId) {
-      message.warning("Vui lòng chọn nhân viên Sale");
+      message.warning(getTranslated("Vui lòng chọn nhân viên Sale"));
       return;
     }
 
@@ -67,13 +74,13 @@ export default function ReassignModal({
       await api.patch(`/api/sale/leads/${lead._id}/reassign`, {
         saleEmployeeId: selectedEmployeeId,
       });
-      message.success("Phân công thành công!");
+      message.success(getTranslated("Phân công thành công!"));
       onSuccess();
       handleClose();
     } catch (err: unknown) {
       console.error("Reassign failed:", err);
       const error = err as { response?: { data?: { message?: string } } };
-      message.error(error.response?.data?.message || "Phân công thất bại");
+      message.error(error.response?.data?.message || getTranslated("Phân công thất bại"));
     } finally {
       setSubmitting(false);
     }
@@ -84,21 +91,21 @@ export default function ReassignModal({
     onClose();
   };
 
-  const currentSaleName = lead?.saleEmployeeId?.name || lead?.saleEmployeeId?.employeeCode || "Chưa phân công";
+  const currentSaleName = lead?.saleEmployeeId?.name || lead?.saleEmployeeId?.employeeCode || getTranslated("Chưa phân công");
 
   return (
     <Modal
       title={
         <span>
           <UserSwitchOutlined style={{ marginRight: 8 }} />
-          Phân công Lead cho Sale
+          {getTranslated("Phân công Khách hàng cho Sale")}
         </span>
       }
       open={open}
       onCancel={handleClose}
       onOk={handleSubmit}
-      okText="Phân công"
-      cancelText="Hủy"
+      okText={getTranslated("Phân công")}
+      cancelText={getTranslated("Hủy")}
       confirmLoading={submitting}
       destroyOnHidden
       width={500}
@@ -111,9 +118,9 @@ export default function ReassignModal({
             icon={<UserSwitchOutlined />}
             message={
               <div>
-                <div><strong>Lead:</strong> {lead.leadCode} - {lead.customerName}</div>
-                <div><strong>Điện thoại:</strong> {lead.phone || "-"}</div>
-                <div><strong>Sale hiện tại:</strong> {currentSaleName}</div>
+                <div><strong>{getTranslated("Khách hàng")}:</strong> {lead.leadCode} - {lead.customerName}</div>
+                <div><strong>{getTranslated("Điện thoại")}:</strong> {lead.phone || "-"}</div>
+                <div><strong>{getTranslated("Sale hiện tại")}:</strong> {currentSaleName}</div>
               </div>
             }
           />
@@ -122,16 +129,16 @@ export default function ReassignModal({
 
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
-          Chọn nhân viên Sale:
+          {getTranslated("Chọn nhân viên Sale:")}
         </label>
         {loading ? (
           <div style={{ textAlign: "center", padding: 20 }}>
-            <Spin /> Đang tải...
+            <Spin /> {getTranslated("Đang tải...")}
           </div>
         ) : (
           <Select
             style={{ width: "100%" }}
-            placeholder="Chọn nhân viên Sale"
+            placeholder={getTranslated("Chọn nhân viên Sale")}
             value={selectedEmployeeId}
             onChange={setSelectedEmployeeId}
             showSearch

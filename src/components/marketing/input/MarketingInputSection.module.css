@@ -329,3 +329,8 @@
   font-style: italic;
   padding: 0 4px;
 }
+
+/* Red placeholder for Facebook Page Select */
+.facebookPageActions :global(.ant-select-selection-placeholder) {
+  color: #ff4d4f !important;
+}

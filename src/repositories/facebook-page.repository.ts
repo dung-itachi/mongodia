@@ -29,6 +29,8 @@ export interface CreateFacebookPageData {
   timezone?: string;
   status?: "ACTIVE" | "INACTIVE";
   note?: string;
+  /** Account ID để phân quyền page theo tài khoản */
+  accountId?: string;
 }
 
 export interface UpdateFacebookPageData {
@@ -54,6 +56,8 @@ export interface FacebookPageFilter {
   pageSize?: number;
   sortField?: string;
   sortOrder?: "asc" | "desc";
+  /** Account ID để lọc page theo tài khoản (undefined = lấy tất cả) */
+  accountId?: string;
 }
 
 export interface MarketingEmployeeRef {
@@ -192,6 +196,11 @@ function buildFilter(params: FacebookPageFilter): Record<string, unknown> {
 
   if (params.status) {
     filter.status = params.status;
+  }
+
+  // Filter by accountId if provided
+  if (params.accountId) {
+    filter.accountId = params.accountId;
   }
 
   return filter;

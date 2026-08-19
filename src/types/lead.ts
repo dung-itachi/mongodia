@@ -104,6 +104,8 @@ export interface LeadSearchParams {
   limit?: number;
   sort?: string;
   order?: "asc" | "desc";
+  /** Filter by team code (Sprint 8.x — Marketing Orders Team/MKT Filter) */
+  teamId?: string;
 }
 
 /**

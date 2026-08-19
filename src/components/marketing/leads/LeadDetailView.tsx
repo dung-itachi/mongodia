@@ -104,12 +104,12 @@ function LeadInfoTab({ lead }: { lead: MarketingLead }) {
     <div className={styles["tab-content"]}>
       <CardSection>
         <DescriptionList
-          title="Thông tin Lead"
+          title="Thông tin Khách hàng"
           columns={3}
           size="small"
           items={[
             {
-              label: "Mã Lead",
+              label: "Mã Khách hàng",
               value: <span className={styles["lead-code"]}>{lead.leadCode}</span>,
             },
             {
@@ -338,7 +338,7 @@ function TimelineTab({ leadId }: { leadId: string }) {
         <CardSection>
           <EmptyState
             title="Chưa có lịch sử Timeline"
-            description="Các thay đổi của Lead sẽ hiển thị tại đây."
+            title="Các thay đổi của Khách hàng sẽ hiển thị tại đây."
           />
         </CardSection>
       </div>
@@ -356,7 +356,7 @@ function TimelineTab({ leadId }: { leadId: string }) {
 
             return {
               color: getActionColor(item.action),
-              children: (
+              content: (
                 <div>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>{actionLabel}</div>
                   {description && (
@@ -379,8 +379,8 @@ function TimelineTab({ leadId }: { leadId: string }) {
 
 function getActionLabel(action: string): string {
   const labels: Record<string, string> = {
-    CREATED: "Lead được tạo",
-    UPDATED: "Lead được cập nhật",
+    CREATED: "Khách hàng được tạo",
+    UPDATED: "Khách hàng được cập nhật",
     ASSIGNED: "Sale được gán",
     UNASSIGNED: "Sale bị hủy gán",
     STATUS_CHANGED: "Trạng thái thay đổi",
@@ -389,7 +389,7 @@ function getActionLabel(action: string): string {
     SALE_CHANGED: "Sale phụ trách thay đổi",
     MARKETING_CHANGED: "Marketing phụ trách thay đổi",
     NOTE_UPDATED: "Ghi chú được cập nhật",
-    DELETED: "Lead bị xóa",
+    DELETED: "Khách hàng bị xóa",
   };
   return labels[action] ?? action;
 }
@@ -572,7 +572,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
   const handleConvertConfirm = () => {
     convertMutation.mutate(lead._id, {
       onSuccess: (result) => {
-        void message.success("Convert Lead thành công");
+        void message.success("Chuyển đổi Khách hàng thành công");
         setConvertModalOpen(false);
         void router.push(`/orders/${result.orderId}`);
       },
@@ -675,7 +675,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
     { type: "divider" as const },
     {
       key: "delete",
-      label: "Xóa Lead",
+      label: "Xóa Khách hàng",
       icon: <DeleteOutlined />,
       danger: true,
     },
@@ -796,7 +796,7 @@ function StatusChangeConfirmModal({
       okButtonProps={{ loading }}
     >
       <p>
-        Chuyển trạng thái lead <strong>{lead.leadCode}</strong> từ{" "}
+        Chuyển trạng thái khách hàng <strong>{lead.leadCode}</strong> từ{" "}
         <StatusBadge
           status={lead.status}
           mapping={{
@@ -836,7 +836,7 @@ function ConvertConfirmModal({
 }) {
   return (
     <Modal
-      title="Xác nhận Convert Lead"
+      title="Xác nhận Chuyển đổi Khách hàng"
       open={open}
       okText="Convert"
       cancelText="Hủy"
@@ -845,7 +845,7 @@ function ConvertConfirmModal({
       okButtonProps={{ loading }}
     >
       <p>
-        Bạn có chắc muốn chuyển đổi lead <strong>{lead.leadCode}</strong> —{" "}
+        Bạn có chắc muốn chuyển đổi khách hàng <strong>{lead.leadCode}</strong> —{" "}
         <strong>{lead.customerName}</strong> thành đơn hàng?
       </p>
       <p style={{ color: "#8c8c8c", fontSize: 13 }}>
