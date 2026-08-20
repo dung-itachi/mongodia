@@ -2,12 +2,13 @@
  * Product Variant Table Component (Sprint 8.4.1)
  *
  * Table for displaying and managing Product Variants.
+ * Shows product name, SKU, and variant attributes clearly.
  */
 
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { Switch, Popconfirm, Tag, InputNumber } from "antd";
+import { Switch, Popconfirm, Tag, Tooltip } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
@@ -21,6 +22,14 @@ interface ProductVariantTableProps {
   onToggleActive?: (item: ProductVariantListItem) => void;
 }
 
+interface VariantValueWithOption {
+  _id: string;
+  code: string;
+  name: string;
+  optionId: string;
+  optionName: string;
+}
+
 export default function ProductVariantTable({
   data,
   loading,
@@ -28,26 +37,96 @@ export default function ProductVariantTable({
   onDelete,
   onToggleActive,
 }: ProductVariantTableProps) {
-  const getProductName = useCallback((productId: ProductVariantListItem["productId"]) => {
+  const getProductInfo = useCallback((productId: ProductVariantListItem["productId"]) => {
     if (typeof productId === "object" && productId !== null) {
-      return (productId as { name: string }).name;
+      return {
+        name: (productId as { name: string }).name,
+        code: (productId as { code: string }).code || "",
+      };
     }
-    return "-";
+    return { name: "-", code: "" };
   }, []);
 
-  const formatVariantValues = useCallback((variantValues: ProductVariantListItem["variantValues"]) => {
-    if (!Array.isArray(variantValues) || variantValues.length === 0) {
-      return "-";
-    }
-    return variantValues
-      .map((v) => {
-        if (typeof v === "object" && v !== null) {
-          return (v as { name: string }).name;
+  const parseVariantValues = useCallback(
+    (variantValues: ProductVariantListItem["variantValues"]): VariantValueWithOption[] => {
+      if (!Array.isArray(variantValues) || variantValues.length === 0) {
+        return [];
+      }
+      return variantValues
+        .map((v) => {
+          if (typeof v === "object" && v !== null) {
+            const obj = v as Record<string, unknown>;
+            const variantOptionId = obj.variantOptionId;
+            let optionId = "";
+            let optionName = "";
+
+            if (typeof variantOptionId === "object" && variantOptionId !== null) {
+              const optionObj = variantOptionId as Record<string, unknown>;
+              optionId = (optionObj._id as string) || "";
+              optionName = (optionObj.name as string) || "";
+            }
+
+            return {
+              _id: (obj._id as string) || "",
+              code: (obj.code as string) || "",
+              name: (obj.name as string) || "",
+              optionId,
+              optionName,
+            };
+          }
+          return null;
+        })
+        .filter((v): v is VariantValueWithOption => v !== null);
+    },
+    []
+  );
+
+  const groupVariantValuesByOption = useCallback(
+    (variantValues: VariantValueWithOption[]) => {
+      const groups: Record<string, { optionName: string; values: VariantValueWithOption[] }> = {};
+      for (const vv of variantValues) {
+        if (!groups[vv.optionId]) {
+          groups[vv.optionId] = { optionName: vv.optionName || vv.optionId, values: [] };
         }
-        return String(v);
-      })
-      .join(" | ");
-  }, []);
+        groups[vv.optionId].values.push(vv);
+      }
+      return groups;
+    },
+    []
+  );
+
+  const formatVariantDisplay = useCallback(
+    (variantValues: ProductVariantListItem["variantValues"]) => {
+      const parsed = parseVariantValues(variantValues);
+      if (parsed.length === 0) {
+        return <span style={{ color: "#999" }}>Không có thuộc tính</span>;
+      }
+
+      const groups = groupVariantValuesByOption(parsed);
+
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {Object.entries(groups).map(([optionId, group]) => (
+            <div key={optionId} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ color: "#666", fontSize: 12, minWidth: 60 }}>{group.optionName}:</span>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {group.values.map((vv) => (
+                  <Tag
+                    key={vv._id}
+                    color="blue"
+                    style={{ margin: 0, fontSize: 11 }}
+                  >
+                    {vv.name}
+                  </Tag>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    },
+    [parseVariantValues, groupVariantValuesByOption]
+  );
 
   const handleToggleActive = useCallback(
     (item: ProductVariantListItem) => {
@@ -60,30 +139,63 @@ export default function ProductVariantTable({
     {
       key: "product",
       title: "Sản phẩm",
-      width: 150,
+      width: 180,
+      fixed: "left",
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductVariantListItem;
-        return getProductName(item.productId);
+        const productInfo = getProductInfo(item.productId);
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Tooltip title={productInfo.name}>
+              <span style={{
+                fontWeight: 500,
+                maxWidth: 160,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                display: "block"
+              }}>
+                {productInfo.name}
+              </span>
+            </Tooltip>
+            {productInfo.code && (
+              <span style={{ fontSize: 11, color: "#999" }}>
+                {productInfo.code}
+              </span>
+            )}
+          </div>
+        );
       },
     },
     {
       key: "sku",
       title: "SKU",
       dataIndex: "sku",
-      width: 120,
+      width: 130,
+      render: (value: unknown) => (
+        <span style={{ fontFamily: "monospace", fontSize: 12 }}>
+          {String(value || "-")}
+        </span>
+      ),
     },
     {
       key: "barcode",
       title: "Barcode",
       dataIndex: "barcode",
       width: 120,
+      render: (value: unknown) => (
+        <span style={{ fontFamily: "monospace", fontSize: 11 }}>
+          {String(value || "-")}
+        </span>
+      ),
     },
     {
       key: "variantValues",
-      title: "Biến thể",
+      title: "Thuộc tính biến thể",
+      width: 280,
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductVariantListItem;
-        return formatVariantValues(item.variantValues);
+        return formatVariantDisplay(item.variantValues);
       },
     },
     // Sprint 8.x: Combo giữ giá, biến thể chỉ mô tả SKU/variant values.

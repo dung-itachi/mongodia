@@ -161,7 +161,17 @@ export interface OrderResponse {
 
   // ---- Employees ---------------------------------------------------
   marketingEmployeeId?: string;
+  marketingEmployee?: {
+    _id: string;
+    employeeCode: string;
+    fullName: string;
+  };
   saleEmployeeId?: string;
+  saleEmployee?: {
+    _id: string;
+    employeeCode: string;
+    fullName: string;
+  };
 
   // ---- Status ------------------------------------------------------
   status: OrderStatus;
@@ -374,6 +384,26 @@ function extractPopulatedProductAndCombo(order: IOrder): {
 
 export function mapOrder(order: IOrder): OrderResponse {
   const populated = extractPopulatedProductAndCombo(order);
+
+  // Extract populated employee objects
+  const rawMarketingEmp = (order as unknown as { marketingEmployeeId?: unknown }).marketingEmployeeId;
+  const marketingEmployee = rawMarketingEmp && typeof rawMarketingEmp === "object" && "fullName" in rawMarketingEmp
+    ? {
+        _id: (rawMarketingEmp as { _id: { toString(): string } })._id.toString(),
+        employeeCode: (rawMarketingEmp as { employeeCode: string }).employeeCode,
+        fullName: (rawMarketingEmp as { fullName: string }).fullName,
+      }
+    : undefined;
+
+  const rawSaleEmp = (order as unknown as { saleEmployeeId?: unknown }).saleEmployeeId;
+  const saleEmployee = rawSaleEmp && typeof rawSaleEmp === "object" && "fullName" in rawSaleEmp
+    ? {
+        _id: (rawSaleEmp as { _id: { toString(): string } })._id.toString(),
+        employeeCode: (rawSaleEmp as { employeeCode: string }).employeeCode,
+        fullName: (rawSaleEmp as { fullName: string }).fullName,
+      }
+    : undefined;
+
   return {
     _id: order._id.toString(),
     orderCode: order.orderCode,
@@ -399,7 +429,9 @@ export function mapOrder(order: IOrder): OrderResponse {
     warehouseId: order.warehouseId?.toString(),
     stockReservedAt: order.stockReservedAt?.toISOString(),
     marketingEmployeeId: order.marketingEmployeeId?.toString(),
+    marketingEmployee,
     saleEmployeeId: order.saleEmployeeId?.toString(),
+    saleEmployee,
     status: order.status as OrderStatus,
     statusLabel: ORDER_STATUS_LABELS[order.status as OrderStatus],
     isPrepaid: order.isPrepaid,

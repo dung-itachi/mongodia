@@ -11,13 +11,15 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Input, App, Select } from "antd";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { Input, App, Select, Button, Space, Typography } from "antd";
+import { ExclamationCircleOutlined, PlusOutlined, GiftOutlined, ThunderboltOutlined, DollarOutlined, AppstoreOutlined } from "@ant-design/icons";
 import {
   PageContainer,
   PageHeader,
   CardSection,
 } from "@/components/common";
+import StatGrid from "@/components/common/cards/StatGrid";
+import StatCard from "@/components/common/cards/StatCard";
 import {
   useComboList,
   useCreateCombo,
@@ -30,6 +32,8 @@ import {
 import { useProductList, type ProductListItem } from "@/hooks/useProductCrud";
 import ProductComboList from "./ProductComboList";
 import ComboForm, { type ComboFormProductOption } from "./ComboForm";
+
+const { Text } = Typography;
 
 interface CategoryOption {
   _id: string;
@@ -54,6 +58,29 @@ export default function ComboPage() {
 
   const combos = data?.items ?? [];
   const products: ProductListItem[] = productsData?.items ?? [];
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalCombos = combos.length;
+    const activeCombos = combos.filter((c) => c.isActive !== false).length;
+    const inactiveCombos = totalCombos - activeCombos;
+    const totalGiftQuantity = combos.reduce((sum, c) => sum + (c.giftQuantity ?? 0), 0);
+    const productsWithCombos = new Set(
+      combos.map((c) =>
+        typeof c.product === "object" && c.product !== null
+          ? (c.product as { _id: string })._id
+          : c.product
+      )
+    ).size;
+
+    return {
+      totalCombos,
+      activeCombos,
+      inactiveCombos,
+      totalGiftQuantity,
+      productsWithCombos,
+    };
+  }, [combos]);
 
   // Get existing combo codes for the selected product
   const existingComboCodes = useMemo(() => {
@@ -227,44 +254,111 @@ export default function ComboPage() {
     [updateMutation, refetch]
   );
 
+  const handleQuickAdd = () => {
+    if (products.length > 0) {
+      setPendingProductId(products[0]._id);
+      setEditingItem(null);
+      setDrawerOpen(true);
+    }
+  };
+
   return (
     <PageContainer>
-      <PageHeader title="Combo" subtitle="Quản lý combo theo sản phẩm" />
+      <PageHeader
+        title="Combo"
+        subtitle="Quản lý combo theo sản phẩm"
+        actions={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleQuickAdd}
+          >
+            Thêm combo nhanh
+          </Button>
+        }
+      />
 
-      <CardSection>
-        <div style={{ marginBottom: 16, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <Select
-            placeholder="Lọc theo danh mục"
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            style={{ width: 200 }}
-            value={filterCategoryId}
-            onChange={(v) => setFilterCategoryId(v)}
-            options={categorySelectOptions}
+      {/* Statistics Cards */}
+      <CardSection style={{ padding: "16px 24px" }}>
+        <StatGrid columns={5} gap={16} minItemWidth={160}>
+          <StatCard
+            title="Tổng số combo"
+            value={stats.totalCombos}
+            icon={<GiftOutlined />}
+            color="blue"
+            loading={isLoading}
           />
-          <Input.Search
-            placeholder="Tìm kiếm sản phẩm..."
-            style={{ width: 250 }}
-            value={filterKeyword}
-            onChange={(e) => setFilterKeyword(e.target.value || undefined)}
-            onSearch={() => {}}
-            allowClear
+          <StatCard
+            title="Combo đang hoạt động"
+            value={stats.activeCombos}
+            icon={<ThunderboltOutlined />}
+            color="green"
+            loading={isLoading}
           />
-        </div>
-
-        <ProductComboList
-          products={products}
-          combos={combos}
-          loading={isLoading}
-          filterCategoryId={filterCategoryId}
-          filterKeyword={filterKeyword}
-          onAddCombo={handleOpenCreate}
-          onEditCombo={handleEdit}
-          onDeleteCombo={handleDelete}
-          onToggleActive={handleToggleActive}
-        />
+          <StatCard
+            title="Combo bị vô hiệu"
+            value={stats.inactiveCombos}
+            icon={<GiftOutlined />}
+            color="orange"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Tổng quà tặng"
+            value={stats.totalGiftQuantity}
+            icon={<DollarOutlined />}
+            color="purple"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Sản phẩm có combo"
+            value={`${stats.productsWithCombos}/${products.length}`}
+            icon={<AppstoreOutlined />}
+            color="default"
+            loading={isLoading}
+          />
+        </StatGrid>
       </CardSection>
+
+      {/* Filter Section */}
+      <CardSection style={{ padding: "16px 24px" }}>
+        <div style={{ display: "flex", gap: 12, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+          <Space size={12}>
+            <Select
+              placeholder="Lọc theo danh mục"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              style={{ width: 200 }}
+              value={filterCategoryId}
+              onChange={(v) => setFilterCategoryId(v)}
+              options={categorySelectOptions}
+            />
+            <Input.Search
+              placeholder="Tìm kiếm sản phẩm..."
+              style={{ width: 280 }}
+              value={filterKeyword}
+              onChange={(e) => setFilterKeyword(e.target.value || undefined)}
+              onSearch={() => {}}
+              allowClear
+            />
+          </Space>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            Hiển thị {stats.totalCombos} combo
+          </Text>
+        </div>
+      </CardSection>
+
+      <ProductComboList
+        products={products}
+        combos={combos}
+        loading={isLoading}
+        filterCategoryId={filterCategoryId}
+        filterKeyword={filterKeyword}
+        onAddCombo={handleOpenCreate}
+        onEditCombo={handleEdit}
+        onDeleteCombo={handleDelete}
+        onToggleActive={handleToggleActive}
+      />
 
       <ComboForm
         open={drawerOpen}

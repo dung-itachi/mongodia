@@ -366,6 +366,10 @@ function NavGroupBlock({
   // highlights "Đơn hàng" itself.
   const isGroupActive = isExactRoot(pathname, search, group.href);
 
+  // Find the longest-matching item to highlight only ONE item, not multiple.
+  // E.g. when at /products/variants, highlight /products/variants (not /products too).
+  const activeHref = getLongestMatchingHref(group.items, pathname, search);
+
   const headerIcon = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
       <g dangerouslySetInnerHTML={{ __html: group.iconSvg }} />
@@ -423,7 +427,7 @@ function NavGroupBlock({
           <NavItemLink
             key={item.key}
             item={item}
-            active={isActive(pathname, search, item.href)}
+            active={item.href === activeHref}
             language={language}
           />
         ))}
@@ -493,6 +497,38 @@ function isExactRoot(pathname: string, search: string, href?: string): boolean {
   if (queryString) return pathname === pathOnly;
 
   return pathname === pathOnly && search === "";
+}
+
+/**
+ * Sprint — Longest-prefix match for sidebar item highlighting.
+ *
+ * When the URL is /products/variants, both /products and /products/variants
+ * match via `startsWith`. We highlight only the LONGEST matching item within
+ * a group so the user never sees two items lit up simultaneously.
+ *
+ * Returns the href of the best-matching item, or undefined if nothing matches.
+ */
+function getLongestMatchingHref(
+  items: NavItem[],
+  pathname: string,
+  search: string
+): string | undefined {
+  let bestHref: string | undefined;
+  let bestLen = 0;
+
+  for (const item of items) {
+    if (!item.href) continue;
+    if (!isActive(pathname, search, item.href)) continue;
+
+    const [pathOnly] = item.href.split("?");
+    // Prefer the href with the longest path string (more specific = better)
+    if (pathOnly.length > bestLen) {
+      bestLen = pathOnly.length;
+      bestHref = item.href;
+    }
+  }
+
+  return bestHref;
 }
 
 /**

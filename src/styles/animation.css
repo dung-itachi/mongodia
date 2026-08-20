@@ -2,6 +2,75 @@
    Currently: pulsing halo for the push-sale banner (.pb).
 */
 
+/* Product Combo Card Animations */
+.product-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.product-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Fade in animation for cards */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.product-combo-list .product-card {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Staggered animation delay */
+.product-combo-list .product-card:nth-child(1) { animation-delay: 0ms; }
+.product-combo-list .product-card:nth-child(2) { animation-delay: 50ms; }
+.product-combo-list .product-card:nth-child(3) { animation-delay: 100ms; }
+.product-combo-list .product-card:nth-child(4) { animation-delay: 150ms; }
+.product-combo-list .product-card:nth-child(5) { animation-delay: 200ms; }
+.product-combo-list .product-card:nth-child(n+6) { animation-delay: 250ms; }
+
+/* Expand/collapse animation */
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+/* Pulse animation for new items */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.combo-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Badge shine effect */
+@keyframes shine {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 @keyframes sp2 {
   0%,
   100% {

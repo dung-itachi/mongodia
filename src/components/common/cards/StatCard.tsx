@@ -134,7 +134,7 @@ export default function StatCard({
             height: sz.minHeight - 32,
           }}
         >
-          <Spin size={size === "compact" ? "small" : "default"} />
+          <Spin size={size === "compact" ? "small" : "medium"} />
         </div>
       </div>
     );

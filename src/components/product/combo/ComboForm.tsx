@@ -225,7 +225,7 @@ export default function ComboForm({
       onClose={onClose}
       onSubmit={handleSubmit}
       submitText={isEditing ? "Cập nhật" : "Tạo mới"}
-      width={620}
+      width={600}
     >
       <Form<FormValues> form={form} layout="vertical">
         <Form.Item
@@ -277,16 +277,26 @@ export default function ComboForm({
           )}
         </Form.Item>
 
-        <Form.Item
-          name="packageQuantity"
-          label="Số lượng sản phẩm / combo"
-          rules={[
-            { required: true, message: "Vui lòng nhập số lượng" },
-            { type: "number", min: 1, message: "Số lượng phải > 0" },
-          ]}
-        >
-          <InputNumber min={1} style={{ width: "100%" }} />
-        </Form.Item>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <Form.Item
+            name="packageQuantity"
+            label="Số lượng sản phẩm / combo"
+            rules={[
+              { required: true, message: "Vui lòng nhập số lượng" },
+              { type: "number", min: 1, message: "Số lượng phải > 0" },
+            ]}
+          >
+            <InputNumber min={1} style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item
+            name="giftQuantity"
+            label="Số lượng quà / combo"
+            rules={[{ type: "number", min: 0, message: "Số quà phải >= 0" }]}
+          >
+            <InputNumber min={0} style={{ width: "100%" }} placeholder="0 = không có quà" />
+          </Form.Item>
+        </div>
 
         <Form.Item
           name="sellingPrice"
@@ -301,19 +311,12 @@ export default function ComboForm({
             style={{ width: "100%" }}
             formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
             parser={(value) => Number((value ?? "").replace(/,/g, "") || 0) as 0}
+            placeholder="Nhập giá bán"
           />
         </Form.Item>
 
-        <Form.Item
-          name="giftQuantity"
-          label="Số lượng quà / combo"
-          rules={[{ type: "number", min: 0, message: "Số quà phải >= 0" }]}
-        >
-          <InputNumber min={0} style={{ width: "100%" }} />
-        </Form.Item>
-
         <Form.Item name="displayOrder" label="Thứ tự hiển thị">
-          <InputNumber min={0} style={{ width: "100%" }} />
+          <InputNumber min={0} style={{ width: "100%" }} placeholder="0" />
         </Form.Item>
 
         <Form.Item name="image" label="URL hình ảnh">

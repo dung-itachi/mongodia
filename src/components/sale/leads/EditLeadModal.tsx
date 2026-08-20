@@ -282,7 +282,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             exchangeRate: lead.exchangeRate,
           }}
         >
-          <Divider orientation="left" orientationMargin="left" plain style={{ marginTop: 0 }}>
+          <Divider titlePlacement="left" styles={{ content: { marginInlineStart: 0 } }} plain style={{ marginTop: 0 }}>
             <UserOutlined /> Thông tin khách hàng
           </Divider>
 
@@ -313,7 +313,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             />
           </Form.Item>
 
-          <Divider orientation="left" orientationMargin="left" plain>
+          <Divider titlePlacement="left" styles={{ content: { marginInlineStart: 0 } }} plain>
             <ShopOutlined /> Sản phẩm & Combo
           </Divider>
 
@@ -356,7 +356,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
               ) : combos.length === 0 ? (
                 <Alert
                   type="warning"
-                  message="Sản phẩm này chưa có combo nào"
+                  title="Sản phẩm này chưa có combo nào"
                   showIcon
                   style={{ marginTop: 8 }}
                 />
@@ -404,7 +404,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             </div>
           )}
 
-          <Divider orientation="left" orientationMargin="left" plain>
+          <Divider titlePlacement="left" styles={{ content: { marginInlineStart: 0 } }} plain>
             <DollarOutlined /> Giá & Tỷ giá
           </Divider>
 
@@ -457,7 +457,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
           {item && (
             <Alert
               type="info"
-              message={
+              title={
                 <Space>
                   <Text>Thành tiền:</Text>
                   <Text strong style={{ color: "#1890ff", fontSize: 16 }}>

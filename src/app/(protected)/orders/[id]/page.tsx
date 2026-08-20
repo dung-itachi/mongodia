@@ -143,6 +143,21 @@ export default function OrderDetailPage({ params }: PageProps) {
       Boolean(order.shipping?.carrier) ||
       Boolean(order.shipping?.trackingNumber);
 
+    // Extract employee IDs - handle both string IDs and populated objects
+    const getEmployeeId = (field: unknown): string | undefined => {
+      if (!field) return undefined;
+      if (typeof field === "string" && field.length > 0) return field;
+      if (typeof field === "object" && field !== null && "_id" in field) {
+        const obj = field as { _id: { toString?: () => string } | string };
+        if (typeof obj._id === "string") return obj._id;
+        if (obj._id && typeof obj._id.toString === "function") return obj._id.toString();
+      }
+      return undefined;
+    };
+
+    const saleEmpId = getEmployeeId(order.saleEmployee) ?? getEmployeeId(order.saleEmployeeId);
+    const mktEmpId = getEmployeeId(order.marketingEmployee) ?? getEmployeeId(order.marketingEmployeeId);
+
     editForm.resetFields();
     editForm.setFieldsValue({
       // Basic info
@@ -153,9 +168,9 @@ export default function OrderDetailPage({ params }: PageProps) {
       status: order.status,
       orderType: order.orderType,
       orderSource: order.orderSource,
-      // Sale assignment
-      saleEmployeeId: order.saleEmployeeId,
-      marketingEmployeeId: order.marketingEmployeeId,
+      // Sale assignment - ensure we always pass a string ID
+      saleEmployeeId: saleEmpId,
+      marketingEmployeeId: mktEmpId,
       // Shipping
       needShipping: hasShipping,
       receiverName:
@@ -687,6 +702,28 @@ export default function OrderDetailPage({ params }: PageProps) {
                   <Col xs={24} sm={12}>
                     <div style={{ color: "#8c8c8c", fontSize: 12 }}>Mã NV</div>
                     <div>{order.saleEmployee.employeeCode}</div>
+                  </Col>
+                </Row>
+              ) : (
+                <div style={{ textAlign: "center", color: "#8c8c8c", padding: 16 }}>
+                  Chưa phân công
+                </div>
+              )}
+            </CardSection>
+          </div>
+
+          {/* Marketing Card */}
+          <div style={{ marginBottom: 16 }}>
+            <CardSection title="Nhân viên Marketing">
+              {order.marketingEmployee ? (
+                <Row gutter={[16, 8]}>
+                  <Col xs={24} sm={12}>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Tên</div>
+                    <div>{order.marketingEmployee.fullName}</div>
+                  </Col>
+                  <Col xs={24} sm={12}>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Mã NV</div>
+                    <div>{order.marketingEmployee.employeeCode}</div>
                   </Col>
                 </Row>
               ) : (

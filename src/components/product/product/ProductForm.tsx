@@ -203,7 +203,7 @@ export default function ProductForm({
                 <Divider style={{ margin: "8px 0" }} />
                 {isCreatingCategory ? (
                   <div style={{ padding: "8px 12px" }}>
-                    <Space direction="vertical" style={{ width: "100%" }} size="small">
+                    <Space orientation="vertical" style={{ width: "100%" }} size="small">
                       <Input
                         placeholder={getTranslated("Mã danh mục (VD: FOOD)")}
                         value={newCategoryCode}

@@ -567,3 +567,48 @@ export function useDeleteProductVariant() {
     },
   });
 }
+
+// ============================================================================
+// Hooks - Product Variant Options (Sprint 8.4.1)
+// ============================================================================
+
+export interface ProductVariantOptionWithValues {
+  _id: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+  values: VariantValueItem[];
+}
+
+export interface ProductVariantOptionsResponse {
+  productId: string;
+  productName: string;
+  productCode: string;
+  hasVariants: boolean;
+  variantOptions: ProductVariantOptionWithValues[];
+}
+
+async function fetchProductVariantOptions(
+  productId: string
+): Promise<ProductVariantOptionsResponse> {
+  const response = await api.get<{
+    success: boolean;
+    data: ProductVariantOptionsResponse;
+  }>(`/api/products/${productId}/variant-options`);
+
+  if (!response.data.success) {
+    throw new Error("Failed to fetch product variant options");
+  }
+
+  return response.data.data;
+}
+
+export function useProductVariantOptions(productId: string | null) {
+  return useQuery({
+    queryKey: ["product-variant-options", productId],
+    queryFn: () => fetchProductVariantOptions(productId!),
+    enabled: !!productId,
+    staleTime: 0,
+  });
+}

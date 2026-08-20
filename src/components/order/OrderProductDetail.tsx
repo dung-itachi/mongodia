@@ -10,6 +10,7 @@
  * - Product không có VariantOption (CASE 1): Chỉ render số lượng
  * - Product có 1 VariantOption (CASE 2): Render 1 dropdown
  * - Product có nhiều VariantOption (CASE 3): Render nhiều dropdown động
+ * - Chọn biến thể từ danh sách biến thể có sẵn của sản phẩm
  *
  * Quà tặng:
  * - giftMode = RANDOM: Shop tự chọn quà (mặc định)
@@ -33,9 +34,9 @@
 
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { Card, InputNumber, Button, Space, Tag, Select, Typography, Divider, Alert, Radio } from "antd";
-import { PlusOutlined, DeleteOutlined, ShoppingOutlined, GiftOutlined, QuestionOutlined } from "@ant-design/icons";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { Card, InputNumber, Button, Space, Tag, Select, Typography, Divider, Alert, Radio, Empty, List } from "antd";
+import { PlusOutlined, DeleteOutlined, ShoppingOutlined, GiftOutlined, QuestionOutlined, AppstoreOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import type { RadioChangeEvent, SelectProps } from "antd";
 import type {
   ProductWithVariants,
@@ -44,6 +45,7 @@ import type {
   ProductAttribute,
   GiftSelection,
   OrderGiftMode,
+  ProductVariant,
 } from "@/types/variant";
 import { resolveVariantId, validateOrderItem } from "@/types/variant";
 import { useGiftList, type GiftListItem } from "@/hooks/useGifts";
@@ -72,6 +74,12 @@ interface OrderProductDetailProps {
 interface SelectedAttributes {
   [optionId: string]: string | undefined;
 }
+
+// ============================================================================
+// Variant Selection Mode Enum
+// ============================================================================
+
+type VariantSelectionMode = "dropdown" | "preset";
 
 // ============================================================================
 // Helpers
@@ -141,6 +149,64 @@ function getVariantDisplayString(
     .join(" / ");
 }
 
+/**
+ * Get variant display string from ProductVariant object
+ */
+function getVariantFromVariantObject(
+  product: ProductWithVariants,
+  variant: ProductVariant
+): string {
+  if (!product.variantOptions || !variant.variantValues || variant.variantValues.length === 0) {
+    return variant.sku || "Unknown";
+  }
+
+  return variant.variantValues
+    .map((vv) => {
+      const valueId = typeof vv === "string" ? vv : vv._id;
+      const valueObj = typeof vv === "string" ? null : vv;
+
+      // Find option and value
+      for (const opt of product.variantOptions || []) {
+        const foundValue = opt.values.find((v) => v._id === valueId);
+        if (foundValue) {
+          return `${opt.name}: ${foundValue.name}`;
+        }
+      }
+      return valueObj?.name || valueId;
+    })
+    .filter(Boolean)
+    .join(" | ");
+}
+
+/**
+ * Convert ProductVariant to attributes array
+ */
+function variantToAttributes(product: ProductWithVariants, variant: ProductVariant): ProductAttribute[] {
+  const attributes: ProductAttribute[] = [];
+
+  if (!product.variantOptions || !variant.variantValues) return attributes;
+
+  for (const vv of variant.variantValues) {
+    const valueId = typeof vv === "string" ? vv : vv._id;
+    const valueName = typeof vv === "string" ? "" : vv.name;
+
+    for (const opt of product.variantOptions) {
+      const foundValue = opt.values.find((v) => v._id === valueId);
+      if (foundValue) {
+        attributes.push({
+          optionId: opt._id,
+          valueId: foundValue._id,
+          optionName: opt.name,
+          valueName: foundValue.name,
+        });
+        break;
+      }
+    }
+  }
+
+  return attributes;
+}
+
 function sumDetailsQuantity(details: ProductVariantSelection[]): number {
   return details.reduce((sum, d) => sum + d.quantity, 0);
 }
@@ -150,7 +216,7 @@ function sumGiftSelectionsQuantity(selections: GiftSelection[]): number {
 }
 
 // ============================================================================
-// Variant Detail Row Component
+// Variant Detail Row Component (Enhanced with Preset Variants)
 // ============================================================================
 
 interface VariantDetailRowProps {
@@ -174,6 +240,7 @@ function VariantDetailRow({
 }: VariantDetailRowProps) {
   const variantOptions = product?.variantOptions || [];
   const hasVariants = variantOptions.length > 0;
+  const hasPresetVariants = (product?.variants || []).length > 0;
 
   const [selectedAttributes, setSelectedAttributes] = useState<SelectedAttributes>(() => {
     const initial: SelectedAttributes = {};
@@ -181,6 +248,24 @@ function VariantDetailRow({
       initial[attr.optionId] = attr.valueId;
     });
     return initial;
+  });
+
+  // Selection mode: dropdown vs preset variant
+  const [selectionMode, setSelectionMode] = useState<VariantSelectionMode>(() => {
+    // If detail has a variantId, use preset mode
+    if (detail.variantId) return "preset";
+    // If product has preset variants, default to preset
+    if (hasPresetVariants) return "preset";
+    return "dropdown";
+  });
+
+  const [selectedPresetVariantId, setSelectedPresetVariantId] = useState<string | undefined>(() => {
+    // Find matching preset variant from attributes
+    if (product?.variants && detail.attributes.length > 0) {
+      const resolvedId = resolveVariantId(product.variants, detail.attributes);
+      return resolvedId || undefined;
+    }
+    return detail.variantId;
   });
 
   const displayString = useMemo(
@@ -233,27 +318,179 @@ function VariantDetailRow({
     return options;
   }, [variantOptions]);
 
+  // Preset variant options
+  const presetVariantOptions = useMemo(() => {
+    if (!product?.variants) return [];
+    return product.variants.map((v) => ({
+      label: (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontWeight: 500 }}>{v.sku}</span>
+          <span style={{ fontSize: 11, color: "#999" }}>
+            {getVariantFromVariantObject(product, v)}
+          </span>
+        </div>
+      ),
+      value: v._id,
+      variant: v,
+    }));
+  }, [product]);
+
+  const handlePresetVariantChange = useCallback(
+    (variantId: string) => {
+      setSelectedPresetVariantId(variantId);
+      const variant = product?.variants?.find((v) => v._id === variantId);
+      if (variant && product) {
+        const attributes = variantToAttributes(product, variant);
+        const resolvedId = resolveVariantId(product.variants || [], attributes);
+        onUpdate({
+          ...detail,
+          variantId,
+          attributes,
+        });
+      }
+    },
+    [detail, product, onUpdate]
+  );
+
+  // If product has no variants, show simple quantity only
+  if (!hasVariants) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          padding: "8px 12px",
+          background: "#fafafa",
+          borderRadius: 4,
+          marginBottom: 8,
+        }}
+      >
+        <Text type="secondary" style={{ minWidth: 24 }}>
+          #{detailIndex + 1}
+        </Text>
+        <Text type="secondary">Sản phẩm không có biến thể</Text>
+        <div style={{ minWidth: 80, marginLeft: "auto" }}>
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            SL
+          </Text>
+          <InputNumber
+            min={1}
+            value={detail.quantity}
+            onChange={handleQuantityChange}
+            style={{ width: "100%" }}
+            size="small"
+            disabled={disabled}
+          />
+        </div>
+        {!disabled && canDelete && (
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={onDelete}
+            size="small"
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
         display: "flex",
+        flexDirection: "column",
         gap: 8,
-        alignItems: "center",
         padding: "8px 12px",
         background: "#fafafa",
         borderRadius: 4,
         marginBottom: 8,
-        flexWrap: "wrap",
+        border: "1px solid #e8e8e8",
       }}
     >
-      <Text type="secondary" style={{ minWidth: 24 }}>
-        #{detailIndex + 1}
-      </Text>
+      {/* Header Row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Text type="secondary" style={{ minWidth: 24 }}>
+          #{detailIndex + 1}
+        </Text>
 
-      {hasVariants && (
+        {/* Selection Mode Toggle */}
+        {hasPresetVariants && !disabled && (
+          <Radio.Group
+            value={selectionMode}
+            onChange={(e) => {
+              setSelectionMode(e.target.value);
+              if (e.target.value === "preset" && presetVariantOptions.length > 0) {
+                handlePresetVariantChange(presetVariantOptions[0].value);
+              }
+            }}
+            size="small"
+          >
+            <Radio.Button value="preset">
+              <AppstoreOutlined /> Biến thể có sẵn
+            </Radio.Button>
+            <Radio.Button value="dropdown">
+              <UnorderedListOutlined /> Chọn riêng
+            </Radio.Button>
+          </Radio.Group>
+        )}
+
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            SL
+          </Text>
+          <InputNumber
+            min={1}
+            value={detail.quantity}
+            onChange={handleQuantityChange}
+            style={{ width: 80 }}
+            size="small"
+            disabled={disabled}
+          />
+        </div>
+
+        {!disabled && canDelete && (
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={onDelete}
+            size="small"
+          />
+        )}
+      </div>
+
+      {/* Preset Variant Selection */}
+      {selectionMode === "preset" && hasPresetVariants && (
+        <div>
+          <Text type="secondary" style={{ fontSize: 12, marginBottom: 4, display: "block" }}>
+            Chọn biến thể:
+          </Text>
+          <Select
+            placeholder="Chọn biến thể"
+            value={selectedPresetVariantId}
+            onChange={handlePresetVariantChange}
+            options={presetVariantOptions}
+            style={{ width: "100%" }}
+            size="small"
+            disabled={disabled}
+            showSearch
+            optionFilterProp="label"
+          />
+          {detail.variantId && (
+            <Tag color="green" style={{ marginTop: 4 }}>
+              SKU: {product?.variants?.find((v) => v._id === detail.variantId)?.sku || detail.variantId}
+            </Tag>
+          )}
+        </div>
+      )}
+
+      {/* Dropdown Selection Mode */}
+      {selectionMode === "dropdown" && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {variantOptions.map((option) => (
-            <div key={option._id} style={{ minWidth: 100 }}>
+            <div key={option._id} style={{ minWidth: 120 }}>
               <Text type="secondary" style={{ fontSize: 11 }}>
                 {option.name}
               </Text>
@@ -277,40 +514,18 @@ function VariantDetailRow({
         </div>
       )}
 
-      {displayString && (
-        <Tag color="blue" style={{ margin: 0 }}>
+      {/* Display Selected Attributes */}
+      {displayString && selectionMode === "dropdown" && (
+        <Tag color="blue" style={{ alignSelf: "flex-start" }}>
           {displayString}
         </Tag>
       )}
 
+      {/* Variant Resolved Indicator */}
       {detail.variantId && (
-        <Tag color="green" style={{ fontSize: 10 }}>
-          SKU resolved
+        <Tag color="green" style={{ fontSize: 10, alignSelf: "flex-start" }}>
+          ✓ Đã resolve SKU
         </Tag>
-      )}
-
-      <div style={{ minWidth: 80 }}>
-        <Text type="secondary" style={{ fontSize: 11 }}>
-          SL
-        </Text>
-        <InputNumber
-          min={1}
-          value={detail.quantity}
-          onChange={handleQuantityChange}
-          style={{ width: "100%" }}
-          size="small"
-          disabled={disabled}
-        />
-      </div>
-
-      {!disabled && canDelete && (
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={onDelete}
-          size="small"
-        />
       )}
     </div>
   );
@@ -602,6 +817,10 @@ function OrderItemRow({
   const validation = useMemo(() => validateOrderItem(item), [item]);
   const totalDetailsQuantity = sumDetailsQuantity(item.details);
 
+  // Get available preset variants for display
+  const availableVariants = product?.variants || [];
+  const hasPresetVariants = availableVariants.length > 0;
+
   // Add new detail
   const handleAddDetail = useCallback(() => {
     const newDetail: ProductVariantSelection = {
@@ -802,6 +1021,36 @@ function OrderItemRow({
           </Text>
         </div>
       </div>
+
+      {/* Variant Summary - Show available variants */}
+      {hasVariants && hasPresetVariants && (
+        <div
+          style={{
+            padding: "8px 12px",
+            background: "#f0f9ff",
+            borderRadius: 4,
+            marginBottom: 12,
+            border: "1px solid #91d5ff",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Text strong style={{ fontSize: 12, color: "#1890ff" }}>
+              Biến thể có sẵn của sản phẩm:
+            </Text>
+            <Tag color="blue">{availableVariants.length} biến thể</Tag>
+          </div>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {availableVariants.slice(0, 6).map((v) => (
+              <Tag key={v._id} style={{ fontSize: 11 }}>
+                {v.sku}
+              </Tag>
+            ))}
+            {availableVariants.length > 6 && (
+              <Tag style={{ fontSize: 11 }}>+{availableVariants.length - 6} more</Tag>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Variant Details Section */}
       <Divider style={{ margin: "12px 0" }}>

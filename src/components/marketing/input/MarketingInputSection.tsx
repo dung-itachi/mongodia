@@ -103,7 +103,7 @@ export default function MarketingInputSection({
   /** Sprint 8.x: Drawer thêm combo nhanh cho sản phẩm đang chọn */
   const [quickComboDrawerOpen, setQuickComboDrawerOpen] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [inputType, setInputType] = useState<"comment" | "ladi">("comment");
+  const [inputType, setInputType] = useState<"comment" | "ladi">("ladi");
   const [stagedLeads, setStagedLeads] = useState<StagedLead[]>([]);
   /** Sprint 8.x: cấu hình thứ tự cột khi dán (lưu localStorage theo user). */
   const columnMapping = useColumnMapping();

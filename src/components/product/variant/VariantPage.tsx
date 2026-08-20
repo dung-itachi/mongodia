@@ -1,13 +1,15 @@
 /**
  * Variant Page (Sprint 8.4.1)
  *
- * Page for managing Variants (Options, Values, and Product Variants).
+ * Page for managing Variants with two main sections:
+ * 1. Biến thể theo sản phẩm: Danh sách sản phẩm và biến thể của từng sản phẩm
+ * 2. Quản lý Thuộc tính & Giá trị: Các tabs để quản lý options và values
  */
 
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Button, Tabs, Card, Empty, Select } from "antd";
+import { Button, Tabs, Space, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import {
   PageContainer,
@@ -26,6 +28,7 @@ import {
   useCreateProductVariant,
   useUpdateProductVariant,
   useDeleteProductVariant,
+  useProductVariantOptions,
   type VariantOptionItem,
   type VariantValueItem,
   type ProductVariantListItem,
@@ -41,12 +44,12 @@ import VariantOptionTable from "./VariantOptionTable";
 import VariantOptionForm from "./VariantOptionForm";
 import VariantValueTable from "./VariantValueTable";
 import VariantValueForm from "./VariantValueForm";
-import ProductVariantTable from "./ProductVariantTable";
+import ProductVariantsList from "./ProductVariantsList";
 import ProductVariantForm from "./ProductVariantForm";
 
 export default function VariantPage() {
   // State for active tab
-  const [activeTab, setActiveTab] = useState("options");
+  const [activeTab, setActiveTab] = useState("variants");
 
   // State for Option drawer
   const [optionDrawerOpen, setOptionDrawerOpen] = useState(false);
@@ -59,18 +62,19 @@ export default function VariantPage() {
   // State for Product Variant drawer
   const [variantDrawerOpen, setVariantDrawerOpen] = useState(false);
   const [editingVariant, setEditingVariant] = useState<ProductVariantListItem | null>(null);
-
-  // State for filtering
-  const [variantFilterProductId, setVariantFilterProductId] = useState<string | undefined>();
+  const [selectedProductIdForVariant, setSelectedProductIdForVariant] = useState<string | null>(null);
 
   // Data queries
   const { data: optionsData, isLoading: optionsLoading, refetch: refetchOptions } = useVariantOptionList();
   const { data: valuesData, isLoading: valuesLoading, refetch: refetchValues } = useVariantValueList();
-  const { data: variantsData, isLoading: variantsLoading, refetch: refetchVariants } = useProductVariantList({
-    productId: variantFilterProductId,
-  });
-  const { data: productsData } = useProductList();
-  const { data: allVariantValues } = useVariantValueList({ limit: 1000 });
+  const { data: variantsData, isLoading: variantsLoading, refetch: refetchVariants } = useProductVariantList();
+  const { data: productsData, isLoading: productsLoading } = useProductList();
+
+  // Fetch variant options for selected product (for variant creation)
+  const {
+    data: productVariantOptionsData,
+    refetch: refetchProductVariantOptions,
+  } = useProductVariantOptions(selectedProductIdForVariant);
 
   // Mutations
   const createOptionMutation = useCreateVariantOption();
@@ -86,7 +90,7 @@ export default function VariantPage() {
   const values = valuesData?.items ?? [];
   const variants = variantsData?.items ?? [];
   const products = productsData?.items ?? [];
-  const variantValues = allVariantValues?.items ?? [];
+  const productVariantOptions = productVariantOptionsData?.variantOptions ?? [];
 
   // Handlers - Options
   const handleOpenOptionCreate = useCallback(() => {
@@ -173,6 +177,7 @@ export default function VariantPage() {
       deleteValueMutation.mutate(item._id, {
         onSuccess: () => {
           void refetchValues();
+          message.success("Xóa giá trị thành công");
         },
       });
     },
@@ -210,19 +215,28 @@ export default function VariantPage() {
   );
 
   // Handlers - Product Variants
-  const handleOpenVariantCreate = useCallback(() => {
+  const handleAddVariant = useCallback((productId: string) => {
     setEditingVariant(null);
+    setSelectedProductIdForVariant(productId);
+    void refetchProductVariantOptions();
     setVariantDrawerOpen(true);
-  }, []);
+  }, [refetchProductVariantOptions]);
 
   const handleEditVariant = useCallback((item: ProductVariantListItem) => {
     setEditingVariant(item);
+    const productId =
+      typeof item.productId === "object"
+        ? (item.productId as { _id: string })._id
+        : String(item.productId);
+    setSelectedProductIdForVariant(productId);
+    void refetchProductVariantOptions();
     setVariantDrawerOpen(true);
-  }, []);
+  }, [refetchProductVariantOptions]);
 
   const handleCloseVariant = useCallback(() => {
     setVariantDrawerOpen(false);
     setEditingVariant(null);
+    setSelectedProductIdForVariant(null);
   }, []);
 
   const handleSubmitVariant = useCallback(
@@ -234,6 +248,7 @@ export default function VariantPage() {
             onSuccess: () => {
               handleCloseVariant();
               void refetchVariants();
+              message.success("Cập nhật biến thể thành công");
             },
           }
         );
@@ -242,6 +257,7 @@ export default function VariantPage() {
           onSuccess: () => {
             handleCloseVariant();
             void refetchVariants();
+            message.success("Tạo biến thể thành công");
           },
         });
       }
@@ -254,6 +270,7 @@ export default function VariantPage() {
       deleteVariantMutation.mutate(item._id, {
         onSuccess: () => {
           void refetchVariants();
+          message.success("Xóa biến thể thành công");
         },
       });
     },
@@ -287,7 +304,6 @@ export default function VariantPage() {
             sku: item.sku,
             barcode: item.barcode,
             variantValues: getVariantValueIds(item.variantValues),
-            // Sprint 8.x: Variant không còn giá — bỏ price khỏi input.
             cost: item.cost,
             weight: item.weight,
             sortOrder: item.sortOrder,
@@ -304,10 +320,40 @@ export default function VariantPage() {
     [updateVariantMutation, refetchVariants]
   );
 
+  const handleRefresh = useCallback(() => {
+    void refetchVariants();
+  }, [refetchVariants]);
+
+  const handleProductSelect = useCallback((productId: string | null) => {
+    setSelectedProductIdForVariant(productId);
+    if (productId) {
+      void refetchProductVariantOptions();
+    }
+  }, [refetchProductVariantOptions]);
+
   const tabItems = useMemo(() => [
     {
+      key: "variants",
+      label: "Biến thể theo sản phẩm",
+      children: (
+        <ProductVariantsList
+          products={products}
+          productsLoading={productsLoading}
+          variants={variants}
+          variantsLoading={variantsLoading}
+          variantOptions={productVariantOptions}
+          onEditVariant={handleEditVariant}
+          onDeleteVariant={handleDeleteVariant}
+          onToggleVariantActive={handleToggleVariantActive}
+          onAddVariant={handleAddVariant}
+          onRefresh={handleRefresh}
+          onProductSelect={handleProductSelect}
+        />
+      ),
+    },
+    {
       key: "options",
-      label: "Thuộc tính",
+      label: "Quản lý thuộc tính",
       children: (
         <div>
           <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
@@ -326,7 +372,7 @@ export default function VariantPage() {
     },
     {
       key: "values",
-      label: "Giá trị",
+      label: "Quản lý giá trị",
       children: (
         <div>
           <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
@@ -344,54 +390,18 @@ export default function VariantPage() {
         </div>
       ),
     },
-    {
-      key: "variants",
-      label: "Biến thể",
-      children: (
-        <div>
-          <div style={{ marginBottom: 16, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <Select
-              placeholder="Lọc theo sản phẩm"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              style={{ width: 250 }}
-              value={variantFilterProductId}
-              onChange={(v) => {
-                setVariantFilterProductId(v);
-                void refetchVariants();
-              }}
-              options={products.map((p) => ({
-                label: `${p.code} - ${p.name}`,
-                value: p._id,
-              }))}
-            />
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenVariantCreate}>
-              Thêm biến thể
-            </Button>
-          </div>
-          <ProductVariantTable
-            data={variants}
-            loading={variantsLoading}
-            onEdit={handleEditVariant}
-            onDelete={handleDeleteVariant}
-            onToggleActive={handleToggleVariantActive}
-          />
-        </div>
-      ),
-    },
   ], [
+    products, productsLoading, variants, variantsLoading, productVariantOptions,
+    handleEditVariant, handleDeleteVariant, handleToggleVariantActive, handleAddVariant, handleRefresh, handleProductSelect,
     options, optionsLoading, handleOpenOptionCreate, handleEditOption,
     values, valuesLoading, handleOpenValueCreate, handleEditValue, handleDeleteValue, handleToggleValueActive,
-    variants, variantsLoading, variantFilterProductId, products, handleOpenVariantCreate, handleEditVariant, handleDeleteVariant, handleToggleVariantActive,
-    refetchVariants,
   ]);
 
   return (
     <PageContainer>
       <PageHeader
         title="Biến thể"
-        subtitle="Quản lý thuộc tính và giá trị biến thể"
+        subtitle="Quản lý biến thể sản phẩm, thuộc tính và giá trị"
       />
 
       <CardSection>
@@ -426,7 +436,8 @@ export default function VariantPage() {
         open={variantDrawerOpen}
         editingItem={editingVariant}
         products={products}
-        variantValues={variantValues}
+        productVariantOptions={productVariantOptions}
+        selectedProductId={selectedProductIdForVariant}
         loading={createVariantMutation.isPending || updateVariantMutation.isPending}
         onClose={handleCloseVariant}
         onSubmit={handleSubmitVariant}
