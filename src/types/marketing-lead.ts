@@ -60,6 +60,8 @@ export interface MarketingLead {
   orderId?: string;
   /** Thời điểm convert (Sprint 5.7). */
   convertedAt?: string;
+  /** Ngày giờ từ Landing page (Sprint 8.x). */
+  leadDate?: string;
   createdAt: string;
   updatedAt: string;
 }

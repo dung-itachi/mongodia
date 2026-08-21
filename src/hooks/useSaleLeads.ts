@@ -53,6 +53,8 @@ export interface SaleLead {
     code: string;
     name: string;
   };
+  /** Ghi chú đơn hàng (Sprint 8.x). */
+  note?: string;
   assignedAt: string;
   isConverted: boolean;
   /** Sprint X: Số lần chuyển sang trạng thái "Không nghe máy" (NO_ANSWER). */

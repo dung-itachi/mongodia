@@ -40,13 +40,14 @@ import { toast } from "@/components/common/feedback/Toast";
 import CheckCustomerForm from "./CheckCustomerForm";
 import BatchCheckCustomersModal from "./BatchCheckCustomersModal";
 import FieldOrderPreview from "./FieldOrderPreview";
+import PasteTable from "./PasteTable";
 import {
   useProductsByCategory,
   useCombosWithProduct,
   useAllCombosNormalized,
   type ComboWithProduct,
 } from "@/hooks/useProducts";
-import { useCreateLead, useMarketingLeads, useOrdersCount } from "@/hooks/useMarketingLeads";
+import { useCreateLead, useMarketingLeads, useLeadsCount } from "@/hooks/useMarketingLeads";
 import { usePushLeadsToSale } from "@/hooks/usePushLeadsToSale";
 import { useActiveFacebookPages } from "@/hooks/useFacebookPages";
 import { LeadSource } from "@/constants/leadSource";
@@ -83,6 +84,10 @@ export interface StagedLead {
   facebookPageName?: string;
   /** Cached page avatar URL for display in the staging list. */
   facebookPageAvatarUrl?: string;
+  /** Ngày giờ từ Landing page (Sprint 8.x). */
+  leadDate?: string;
+  /** Ghi chú cho đơn hàng (Sprint 8.x). */
+  note?: string;
   error?: string;
 }
 
@@ -132,6 +137,8 @@ export default function MarketingInputSection({
   const [productCategoryFilter, setProductCategoryFilter] = useState<string | "all">("all");
   /** Combo list collapse state - true = thu gọn (chỉ 4 đầu), false = mở rộng hết */
   const [comboExpanded, setComboExpanded] = useState(false);
+  /** Product categories expanded state - Set of category IDs that are expanded */
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   /** Sprint 8.7: Manual order input */
   const [manualOrderOpen, setManualOrderOpen] = useState(false);
   const [manualOrderForm] = Form.useForm();
@@ -152,8 +159,8 @@ export default function MarketingInputSection({
   // Fetch ALL combos for landing parser lookup
   const { comboByNameMap, comboMap, loading: allCombosLoading } = useAllCombosNormalized();
 
-  // Fetch orders count (orders with marketingEmployeeId = pushed to Sale)
-  const { orderCount, refetch: refetchOrdersCount } = useOrdersCount();
+  // Fetch leads count (leads with marketingEmployeeId = current user, matches /marketing/orders)
+  const { leadCount, refetch: refetchLeadsCount } = useLeadsCount();
 
   // Fetch existing leads for staging count
   const { leads: existingLeads } = useMarketingLeads({
@@ -273,8 +280,9 @@ export default function MarketingInputSection({
       (l) => l.source === LeadSource.LANDING_PAGE
     ).length;
     const errorCount = stagedLeads.filter((l) => l.error).length;
-    return { orderCount, stagingCount, commentCount, ladiCount, errorCount };
-  }, [orderCount, stagedLeads]);
+    // Sprint 8.X: leadCount from API (refetched after push)
+    return { leadCount, stagingCount, commentCount, ladiCount, errorCount };
+  }, [leadCount, stagedLeads]);
 
   /** Unique SĐT từ staging (dùng cho "Check khách loạt"). */
   const stagingPhones = useMemo(() => {
@@ -510,11 +518,18 @@ export default function MarketingInputSection({
       };
 
       // 1. Date + optional Time ở đầu dòng (Landing mode)
+      // Sprint 8.x: Capture full datetime (YYYY-MM-DD HH:mm:ss hoặc YYYY-MM-DD HH:mm)
+      // Chỉ capture date và time, KHÔNG consume delimiter (tab/space) phía sau
       const dateTimeMatch = line.match(
-        /^(\d{4}-\d{1,2}-\d{1,2})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\s*/
+        /^(\d{4}-\d{1,2}-\d{1,2})[T\s]+(\d{1,2}:\d{2}(?::\d{2})?)/i
       );
       if (dateTimeMatch) {
-        out.date = dateTimeMatch[1];
+        // Build full ISO datetime string
+        const dateStr = dateTimeMatch[1]; // YYYY-MM-DD
+        const timeStr = dateTimeMatch[2]; // HH:mm hoặc HH:mm:ss
+        const [hours, minutes, seconds] = timeStr.split(":");
+        out.date = `${dateStr}T${hours}:${minutes}:${seconds || "00"}`;
+        // Remove date+time portion (including the space/tab delimiter)
         line = line.substring(dateTimeMatch[0].length).trim();
       }
 
@@ -529,47 +544,115 @@ export default function MarketingInputSection({
       }
       if (productNameMatch) out.product = productNameMatch;
 
-      // 3. Tìm phone (8-11 digits)
-      const phoneMatch = line.match(/\b(\d{6,11})\b/);
+      // 3. Tìm phone (6-11 digits) - hỗ trợ các format:
+      // - 89016888 (thường)
+      // - -89016888 (có dấu - đằng trước)
+      // - 89016888)- (có dấu )- đằng sau)
+      // - -89016888)- (cả 2)
+      const phoneMatch = line.match(/(?:^|[^\d-])(\d{6,11})(?:\D|$|-)*/);
       if (!phoneMatch) return out;
       out.phone = phoneMatch[1];
-      const phoneIdx = phoneMatch.index!;
+      const phoneStartIdx = phoneMatch.index! + (phoneMatch[0].indexOf(phoneMatch[1]));
+      const phoneEndIdx = phoneStartIdx + phoneMatch[1].length;
 
-      const beforePhone = line.substring(0, phoneIdx).trim();
-      const afterPhone = line.substring(phoneIdx + phoneMatch[0].length).trim();
+      const beforePhone = line.substring(0, phoneStartIdx).trim();
+      const afterPhone = line.substring(phoneEndIdx).trim();
 
       // 4. Tìm combo trong afterPhone — luôn luôn tìm, không cần productNameMatch
       // Nếu có productNameMatch → ưu tiên combos của product đó
       // Nếu không → tìm trong tất cả combos (user đã chọn product ở trên)
+      // Dữ liệu layout: name | phone | combo | address
+      // => combo nằm trước address, nên address = text SAU combo
       let comboText = "";
+      let addressText = "";
+
+      // Helper function để tìm và extract combo từ text
+      // Trả về: { comboName, remainingAfter (text sau combo) }
+      const findComboInText = (
+        text: string,
+        combos: Array<{ name: string; sellingPrice?: number }>
+      ): { comboName: string; remainingAfter: string } => {
+        let found = "";
+        let remainingAfter = text;
+        const sortedCombos = [...combos].sort((a, b) => b.name.length - a.name.length);
+
+        for (const c of sortedCombos) {
+          const comboLower = c.name.toLowerCase();
+          const idx = text.toLowerCase().indexOf(comboLower);
+          if (idx !== -1) {
+            found = c.name;
+            // Lấy text SAU combo (không phải trước!)
+            const afterIdx = idx + c.name.length;
+            remainingAfter = text.substring(afterIdx).trim();
+            break;
+          }
+        }
+
+        return { comboName: found, remainingAfter };
+      };
+
+      // Lấy tất cả combos (ưu tiên product đã chọn, nếu không thì tất cả)
+      let allCombos: Array<{ name: string; sellingPrice?: number }> = [];
       if (productNameMatch) {
         const matchedProductId = productIdByName[productNameMatch.toLowerCase()];
-        const productCombos = matchedProductId ? combosByProductId[matchedProductId] : undefined;
-        if (productCombos) {
-          const sortedCombos = [...productCombos].sort(
-            (a, b) => b.name.length - a.name.length
-          );
-          for (const c of sortedCombos) {
-            if (afterPhone.toLowerCase().includes(c.name.toLowerCase())) {
-              comboText = c.name;
+        allCombos = matchedProductId ? (combosByProductId[matchedProductId] || []) : [];
+      }
+      // Fallback: tìm trong tất cả combos nếu không có product match
+      if (allCombos.length === 0) {
+        allCombos = Object.values(combosByProductId).flat();
+      }
+
+      // Tìm combo bằng name (sort theo độ dài để match longest trước)
+      const nameResult = findComboInText(afterPhone, allCombos);
+      if (nameResult.comboName) {
+        comboText = nameResult.comboName;
+        addressText = nameResult.remainingAfter;
+      }
+
+      // Nếu không tìm được bằng name, thử match bằng price
+      if (!comboText) {
+        const priceMatch = afterPhone.match(/(\d[\d,]*)\s*[₮₹$]/);
+        if (priceMatch) {
+          const priceStr = priceMatch[1].replace(/,/g, "");
+          const price = parseInt(priceStr, 10);
+          // Tìm combo có sellingPrice = price
+          for (const combos of Object.values(combosByProductId)) {
+            const matchedCombo = combos.find(c => c.sellingPrice === price);
+            if (matchedCombo) {
+              comboText = matchedCombo.name;
+              // Address = text sau price
+              const priceIdx = afterPhone.indexOf(priceMatch[0]);
+              if (priceIdx !== -1) {
+                addressText = afterPhone.substring(priceIdx + priceMatch[0].length).trim();
+              }
               break;
             }
           }
         }
       }
-      // Nếu không tìm được → tìm trong tất cả combos
-      if (!comboText) {
-        for (const combos of Object.values(combosByProductId)) {
-          const sortedCombos = [...combos].sort(
-            (a, b) => b.name.length - a.name.length
+
+      // Nếu vẫn không tìm được, thử tìm keywords trong combo description
+      if (!comboText && allCombos.length > 0) {
+        for (const c of allCombos) {
+          // Tách các từ khóa từ combo name (các từ > 3 ký tự)
+          const keywords = c.name.split(/\s+/).filter(w => w.length > 3);
+          // Đếm số từ khóa match trong afterPhone
+          const matchedKeywords = keywords.filter(kw =>
+            afterPhone.toLowerCase().includes(kw.toLowerCase())
           );
-          for (const c of sortedCombos) {
-            if (afterPhone.toLowerCase().includes(c.name.toLowerCase())) {
-              comboText = c.name;
-              break;
+          // Nếu match >= 50% keywords hoặc >= 2 keywords
+          if (matchedKeywords.length >= Math.max(2, Math.ceil(keywords.length * 0.5))) {
+            comboText = c.name;
+            // Address = text SAU combo keywords
+            const lastMatchIdx = matchedKeywords.reduce((maxIdx, kw) => {
+              const idx = afterPhone.toLowerCase().lastIndexOf(kw.toLowerCase());
+              return idx > maxIdx ? idx : maxIdx;
+            }, 0);
+            if (lastMatchIdx > 0 && lastMatchIdx + matchedKeywords[0].length < afterPhone.length) {
+              addressText = afterPhone.substring(lastMatchIdx + matchedKeywords[0].length).trim();
             }
+            break;
           }
-          if (comboText) break;
         }
       }
 
@@ -578,28 +661,23 @@ export default function MarketingInputSection({
         .replace(/^\d{1,2}:\d{2}(?::\d{2})?\s*/, "")
         .trim();
 
-      // 6. Tách address từ afterPhone, cắt bỏ comboText nếu match
-      let addressText = afterPhone;
-      if (comboText) {
-        const comboIdx = afterPhone
-          .toLowerCase()
-          .indexOf(comboText.toLowerCase());
-        if (comboIdx !== -1) {
-          addressText = afterPhone.substring(0, comboIdx).trim();
-        }
+      // 6. Address đã được tính ở trên nếu có combo, ngược lại dùng full afterPhone
+      if (!comboText) {
+        addressText = afterPhone;
       }
 
       // Fallback: nếu không tìm được combo trong DB → extract raw combo info
       // (emoji + price + description) từ afterPhone để resolveComboAndProduct
       // có thể match bằng price hoặc partial name
       if (!comboText) {
-        const comboStart = addressText.match(
+        const comboStart = afterPhone.match(
           /[✅📦🎁⭐🌟].*/
         );
         if (comboStart) {
           comboText = comboStart[0].trim();
-          const idx = addressText.indexOf(comboStart[0]);
-          addressText = addressText.substring(0, idx).trim();
+          const idx = afterPhone.indexOf(comboStart[0]);
+          // Address = text SAU emoji combo
+          addressText = afterPhone.substring(idx + comboStart[0].length).trim();
         }
       }
 
@@ -649,8 +727,9 @@ export default function MarketingInputSection({
      */
     function parseRowSmart(line: string): Record<string, string> {
       const trimmed = line.trimStart();
-      // Nếu line bắt đầu bằng date (YYYY-MM-DD) → dùng smartParseRow
-      // để tách date+time riêng, tránh dính vào name khi split theo 2-space.
+      // Ưu tiên check date (Landing mode) TRƯỚC khi split
+      // vì Landing data có thể có tab/space separation nhưng cần smartParseRow
+      // để tách date+time riêng và extract combo → address đúng cách.
       if (/^\d{4}-\d{1,2}-\d{1,2}\b/.test(trimmed)) {
         return smartParseRow(line, productNames, productIdByName, combosByProductId);
       }
@@ -930,6 +1009,7 @@ export default function MarketingInputSection({
           address,
           combo: comboInfo,
           product: productInfo,
+          date: leadDate,
         } = parsed;
 
         if (!phone) {
@@ -981,6 +1061,8 @@ export default function MarketingInputSection({
             facebookPageAvatarUrl:
               facebookPages.find((p) => p._id === selectedFacebookPageId)?.avatarUrl ??
               undefined,
+            // Sprint 8.x: leadDate từ Landing page
+            leadDate: leadDate || undefined,
             error: comboError,
           });
         } else {
@@ -1002,6 +1084,8 @@ export default function MarketingInputSection({
             facebookPageAvatarUrl:
               facebookPages.find((p) => p._id === selectedFacebookPageId)?.avatarUrl ??
               undefined,
+            // Sprint 8.x: leadDate từ Landing page
+            leadDate: leadDate || undefined,
             error: comboError || "Không tìm thấy combo",
           });
         }
@@ -1080,11 +1164,11 @@ export default function MarketingInputSection({
     setEditLeadModalOpen(true);
   }, [editLeadForm]);
 
-  // Sprint 8.x: Lưu lead sau khi sửa
+  // Sprint 8.x: Lưu đơn hàng sau khi sửa
   const handleSaveEditLead = useCallback(() => {
     editLeadForm.validateFields().then((values) => {
       if (!editingLead) return;
-      const { customerName, phone, address, productId, comboId } = values;
+      const { customerName, phone, address, note, productId, comboId } = values;
       // Resolve productName và comboName
       const allProducts = categories.flatMap((c) => c.products);
       const product = allProducts.find((p) => p._id === productId);
@@ -1098,6 +1182,7 @@ export default function MarketingInputSection({
                 customerName: customerName || "Khách hàng",
                 phone,
                 address: address || undefined,
+                note: note || undefined,
                 productId: productId || "",
                 productName: product?.name || "",
                 comboId: comboId || "",
@@ -1108,7 +1193,7 @@ export default function MarketingInputSection({
             : l
         )
       );
-      toast.success("Đã cập nhật lead");
+      toast.success("Đã cập nhật đơn hàng");
       setEditLeadModalOpen(false);
       setEditingLead(null);
       editLeadForm.resetFields();
@@ -1155,6 +1240,10 @@ export default function MarketingInputSection({
           comboId: lead.comboId,
           facebookPageId: lead.facebookPageId,
           unitPriceMNT: lead.price,
+          // Sprint 8.x: leadDate từ Landing page
+          leadDate: lead.leadDate,
+          // Sprint 8.x: ghi chú đơn hàng
+          note: lead.note,
         } as never);
         leadIds.push(result._id);
       } catch (err) {
@@ -1169,11 +1258,11 @@ export default function MarketingInputSection({
 
     // Then push to sale
     try {
-      await pushToSaleMutation.mutateAsync({ leadIds });
+      const result = await pushToSaleMutation.mutateAsync({ leadIds });
       setStagedLeads([]);
-      toast.success(`Đã đẩy ${leadIds.length} lead sang Sale`);
+      toast.success(`Đã đẩy ${result?.pushedCount ?? leadIds.length} lead sang Sale`);
       onLeadsCreated?.();
-      refetchOrdersCount();
+      refetchLeadsCount();
     } catch (err) {
       // Log chi tiết lỗi để debug
       console.error("Push to sale error:", err);
@@ -1181,7 +1270,7 @@ export default function MarketingInputSection({
       toast.error(`Lỗi khi đẩy sang Sale: ${errorMessage}`);
       // Giữ stagedLeads để user có thể thử lại
     }
-  }, [stagedLeads, createLeadMutation, pushToSaleMutation, onLeadsCreated, refetchOrdersCount]);
+  }, [stagedLeads, createLeadMutation, pushToSaleMutation, onLeadsCreated, refetchLeadsCount]);
 
   // ============================================================
   // RENDER
@@ -1197,7 +1286,7 @@ export default function MarketingInputSection({
       {/* Stats Cards */}
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
-          <div className={styles.statValue}>{stats.orderCount}</div>
+          <div className={styles.statValue}>{stats.leadCount}</div>
           <div className={styles.statLabel}>Đã đẩy</div>
         </div>
         <div className={styles.statCard}>
@@ -1421,30 +1510,60 @@ export default function MarketingInputSection({
           </div>
         ) : (
           <div className={styles.productGrid}>
-            {filteredCategories.map((category) => (
-              <div key={category._id} className={styles.productCategory}>
-                <div className={styles.categoryName}>
-                  {category.name || "Khác"}
-                  <span style={{ fontSize: 11, color: "#999", marginLeft: 6 }}>
-                    ({category.products.length})
-                  </span>
-                </div>
-                <div className={styles.productList}>
-                  {category.products.map((product) => (
-                    <button
-                      key={product._id}
-                      className={`${styles.productBtn} ${
-                        selectedProductId === product._id ? styles.selected : ""
-                      }`}
-                      onClick={() => handleSelectProduct(product._id)}
-                      title={product.code}
+            {filteredCategories.map((category) => {
+              const maxVisibleProducts = 6;
+              const isExpanded = expandedCategories.has(category._id);
+              const visibleProducts = isExpanded
+                ? category.products
+                : category.products.slice(0, maxVisibleProducts);
+              const hiddenCount = category.products.length - maxVisibleProducts;
+              return (
+                <div key={category._id} className={styles.productCategory}>
+                  <div className={styles.categoryName}>
+                    {category.name || "Khác"}
+                    <span style={{ fontSize: 11, color: "#999", marginLeft: 6 }}>
+                      ({category.products.length})
+                    </span>
+                  </div>
+                  <div className={styles.productList}>
+                    {visibleProducts.map((product) => (
+                      <button
+                        key={product._id}
+                        className={`${styles.productBtn} ${
+                          selectedProductId === product._id ? styles.selected : ""
+                        }`}
+                        onClick={() => handleSelectProduct(product._id)}
+                        title={product.code}
+                      >
+                        {product.name}
+                      </button>
+                    ))}
+                  </div>
+                  {hiddenCount > 0 && (
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        setExpandedCategories((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(category._id)) {
+                            next.delete(category._id);
+                          } else {
+                            next.add(category._id);
+                          }
+                          return next;
+                        });
+                      }}
+                      style={{ padding: 0, marginTop: 4, fontSize: 12 }}
                     >
-                      {product.name}
-                    </button>
-                  ))}
+                      {isExpanded
+                        ? `Thu gọn (${hiddenCount} sản phẩm ẩn)`
+                        : `Mở rộng (+${hiddenCount} sản phẩm)`}
+                    </Button>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -1562,7 +1681,9 @@ export default function MarketingInputSection({
             onClick={() => handleInputTypeChange("comment")}
           >
             📝 Comment
-            <div className={styles.inputHint}>Tên · SĐT · Đ/c · Combo · SP</div>
+            <div className={styles.inputHint}>
+              {columnMapping.getLayout("comment").map(k => COLUMN_FIELD_LABELS[k]).join(" · ")}
+            </div>
           </button>
           <button
             className={`${styles.inputTab} ${
@@ -1571,36 +1692,27 @@ export default function MarketingInputSection({
             onClick={() => handleInputTypeChange("ladi")}
           >
             🌐 Landing
-            <div className={styles.inputHint}>Ngày · Tên · SĐT · Đ/c · Combo · SP</div>
+            <div className={styles.inputHint}>
+              {columnMapping.getLayout("ladi").map(k => COLUMN_FIELD_LABELS[k]).join(" · ")}
+            </div>
           </button>
         </div>
 
         {!selectedFacebookPageId ? (
           <Tooltip title="Vui lòng chọn trang Facebook" mouseEnterDelay={0}>
-            <TextArea
-              placeholder={
-                inputType === "comment"
-                  ? `Nhập: ${columnMapping.getLayout("comment").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: Гантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Sản phẩm & Combo tự detect nếu để trống)`
-                  : `Nhập: ${columnMapping.getLayout("ladi").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: 2026-08-15\tГантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Баянчандман = địa chỉ — nằm ngay sau SĐT)`
-              }
+            <PasteTable
+              inputType={inputType}
+              layout={columnMapping.getLayout(inputType)}
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              rows={4}
-              className={styles.textArea}
-              disabled
+              onChange={setInputText}
             />
           </Tooltip>
         ) : (
-          <TextArea
-            placeholder={
-              inputType === "comment"
-                ? `Nhập: ${columnMapping.getLayout("comment").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: Гантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Sản phẩm & Combo tự detect nếu để trống)`
-                : `Nhập: ${columnMapping.getLayout("ladi").map(k => COLUMN_FIELD_LABELS[k]).join("\t")}\nVí dụ: 2026-08-15\tГантуяа Толя\t96621013\tБаянчандман\t✅99,000₮-өөр 4 нь 10 нь үнэгүй\tEYE\n(Баянчандман = địa chỉ — nằm ngay sau SĐT)`
-            }
+          <PasteTable
+            inputType={inputType}
+            layout={columnMapping.getLayout(inputType)}
             value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            rows={4}
-            className={styles.textArea}
+            onChange={setInputText}
           />
         )}
 
@@ -1784,9 +1896,9 @@ export default function MarketingInputSection({
         </Form>
       </Modal>
 
-      {/* Sprint 8.x: Modal sửa lead trong staging */}
+      {/* Sprint 8.x: Modal sửa đơn hàng trong staging */}
       <Modal
-        title={`Sửa lead — STT: ${editingLead ? stagedLeads.indexOf(editingLead) + 1 : ""}`}
+        title={`Sửa đơn hàng — STT: ${editingLead ? stagedLeads.indexOf(editingLead) + 1 : ""}`}
         open={editLeadModalOpen}
         onOk={handleSaveEditLead}
         onCancel={() => {
@@ -1861,6 +1973,10 @@ export default function MarketingInputSection({
                 </Form.Item>
               );
             }}
+          </Form.Item>
+
+          <Form.Item name="note" label="Ghi chú">
+            <Input.TextArea placeholder="Nhập ghi chú (tùy chọn)" rows={2} />
           </Form.Item>
         </Form>
       </Modal>
@@ -1951,9 +2067,8 @@ export default function MarketingInputSection({
             <table>
               <thead>
                 <tr>
-                  <th></th>
-                  <th></th>
-                  <th></th>
+                  <th style={{ width: 60 }}>Thao tác</th>
+                  <th>Ảnh page</th>
                   <th>#</th>
                   <th>Nguồn</th>
                   <th>Sản phẩm</th>
@@ -1970,14 +2085,23 @@ export default function MarketingInputSection({
                     key={lead.id}
                     className={lead.error ? styles.errorRow : ""}
                   >
-                    <td>
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleRemoveStagedLead(lead.id)}
-                        danger
-                      />
+                    <td style={{ width: 60 }}>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleRemoveStagedLead(lead.id)}
+                          danger
+                        />
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => handleOpenEditLead(lead)}
+                          title="Sửa"
+                        />
+                      </div>
                     </td>
                     <td>
                       {lead.facebookPageAvatarUrl ? (
@@ -2003,15 +2127,6 @@ export default function MarketingInputSection({
                           {lead.facebookPageName?.charAt(0).toUpperCase() || "?"}
                         </div>
                       )}
-                    </td>
-                    <td>
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<EditOutlined />}
-                        onClick={() => handleOpenEditLead(lead)}
-                        title="Sửa"
-                      />
                     </td>
                     <td>{index + 1}</td>
                     <td>

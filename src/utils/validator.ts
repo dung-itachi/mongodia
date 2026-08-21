@@ -866,6 +866,16 @@ export const createLeadSchema = z.object({
     .optional(),
 
   isDuplicate: z.boolean().optional().default(false),
+
+  /** Ngày giờ từ Landing page (Sprint 8.x) - format: YYYY-MM-DDTHH:mm:ss hoặc YYYY-MM-DDTHH:mm:ss+07:00 */
+  leadDate: z
+    .string()
+    .regex(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2})?$/,
+      "Định dạng ngày giờ không hợp lệ"
+    )
+    .optional()
+    .nullable(),
 });
 
 export const updateLeadSchema = z.object({

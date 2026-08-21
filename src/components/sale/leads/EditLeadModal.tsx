@@ -5,11 +5,12 @@
  * EDIT LEAD MODAL (Sale Leads)
  * ==================================================
  *
- * Modal cho phép Sale/Admin sửa thông tin của một Lead.
+ * Modal cho phép Sale/Admin sửa thông tin của một Lead/Đơn hàng.
  * Bao gồm:
  * - Thông tin khách hàng (tên, SĐT, địa chỉ)
  * - Sản phẩm và Combo (với chi tiết biến thể)
  * - Giá & số lượng
+ * - Ghi chú đơn hàng (Sprint 8.x)
  */
 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
@@ -61,6 +62,7 @@ interface LeadFormValues {
   customerName: string;
   phone?: string;
   address?: string;
+  note?: string;
   productId?: string;
   comboId?: string;
   comboQuantity?: number;
@@ -109,6 +111,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
         customerName: lead.customerName,
         phone: lead.phone,
         address: lead.address,
+        note: lead.note,
         comboQuantity: 1,
         sellingPrice: lead.unitPriceMNT,
         exchangeRate: lead.exchangeRate,
@@ -202,6 +205,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
           customerName: values.customerName,
           phone: values.phone,
           address: values.address,
+          note: values.note,
           productId: selectedProductId,
           comboId: selectedComboId,
           comboQuantity: item.comboQuantity,
@@ -213,7 +217,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
         },
       });
 
-      void message.success("Đã cập nhật thông tin lead thành công");
+      void message.success("Đã cập nhật đơn hàng thành công");
       form.resetFields();
       onSuccess?.();
       onClose();
@@ -243,7 +247,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
       title={
         <Space>
           <EditOutlined />
-          <span>Sửa thông tin Lead</span>
+          <span>Sửa đơn hàng</span>
           <Text type="secondary" style={{ fontWeight: 400, fontSize: 13 }}>
             {lead.leadCode}
           </Text>
@@ -310,6 +314,13 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             <TextArea
               rows={2}
               placeholder="Nhập địa chỉ giao hàng"
+            />
+          </Form.Item>
+
+          <Form.Item name="note" label="Ghi chú">
+            <TextArea
+              rows={2}
+              placeholder="Nhập ghi chú đơn hàng (tùy chọn)"
             />
           </Form.Item>
 

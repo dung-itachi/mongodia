@@ -710,7 +710,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
               icon={<CheckCircleFilled />}
               onClick={handleConvert}
             >
-              Convert
+              Chuyển đổi
             </Button>
           )}
 
@@ -838,7 +838,7 @@ function ConvertConfirmModal({
     <Modal
       title="Xác nhận Chuyển đổi Khách hàng"
       open={open}
-      okText="Convert"
+      okText="Chuyển đổi"
       cancelText="Hủy"
       onCancel={onCancel}
       onOk={onConfirm}

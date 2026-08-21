@@ -199,8 +199,8 @@ function OrdersPageInner() {
     }
   }, [deleteId, deleteMutation, refetch]);
 
-  // Table columns
-  const columns = useMemo(() => [
+  // Table columns - for CONFIRMED status, each customer has 1 combo, no need for combo quantity column
+  const tableColumns = useMemo(() => [
     {
       key: "orderCode",
       title: "Mã đơn",
@@ -255,13 +255,6 @@ function OrdersPageInner() {
         }
         return <span style={{ color: "#bfbfbf" }}>-</span>;
       },
-    },
-    {
-      key: "comboQuantity",
-      title: "SL combo",
-      width: 95,
-      align: "center" as const,
-      render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).comboQuantity,
     },
     {
       key: "totalProducts",
@@ -539,7 +532,9 @@ function OrdersPageInner() {
         );
       },
     },
-  ], [router, orders, getOrderItemTotals, showQuickActions, handleQuickAction, toggleConfirmCallMutation]);
+  ], [router, getOrderItemTotals, showQuickActions, handleQuickAction, toggleConfirmCallMutation]);
+
+  const columns = tableColumns;
 
   // Pagination config
   const pagination = useMemo(() => ({

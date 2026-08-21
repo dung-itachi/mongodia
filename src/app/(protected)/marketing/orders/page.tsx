@@ -1,7 +1,8 @@
 /**
- * Marketing Orders Page - Quản lý đơn hàng (Sprint 8.5)
+ * Marketing Orders Page - Quản lý đơn hàng (Sprint 8.5, 8.x)
  *
  * Trang này hiển thị tất cả leads đã tạo, cho phép Marketing xem/sửa/xóa.
+ * Sprint 8.x: Admin thấy cột Marketing/Sale phụ trách.
  */
 
 "use client";
@@ -19,6 +20,7 @@ import {
   SkeletonTable,
 } from "@/components/common";
 import { useAntApp } from "@/providers/AntdProvider";
+import { useAuthStore } from "@/store/auth.store";
 import {
   useMarketingLeads,
   useCreateLead,
@@ -35,6 +37,19 @@ import { LeadDetailView } from "@/components/marketing/leads/LeadDetailView";
 
 export default function MarketingOrdersPage() {
   const { message } = useAntApp();
+  const user = useAuthStore((s) => s.user);
+
+  // Sprint 8.x: Check permissions for admin features
+  // - View all orders: marketing-order.viewAll (ADMIN/ADMIN equivalent)
+  // - Filter by area: marketing-order.filterByArea
+  const permissions = user?.permissions ?? [];
+  const canViewAllOrders = permissions.includes("*") ||
+    permissions.includes("account.manageAll") ||
+    permissions.includes("marketing-order.viewAll");
+  const canFilterByArea = permissions.includes("*") ||
+    permissions.includes("marketing-order.filterByArea") ||
+    canViewAllOrders;
+
   const [filters, setFilters] = useState<MarketingLeadFilters>({
     page: 1,
     limit: 20,
@@ -192,6 +207,7 @@ export default function MarketingOrdersPage() {
           selectedCount={0}
           loading={loading}
           createLabel="Thêm đơn hàng"
+          showAreaFilter={canFilterByArea}
         />
 
         {loading && leads.length === 0 ? (
@@ -222,6 +238,7 @@ export default function MarketingOrdersPage() {
               selectedRowKeys={[]}
               onSelectionChange={() => {}}
               loading={loading}
+              showEmployeeColumns={canViewAllOrders}
             />
 
             {total > 0 && (

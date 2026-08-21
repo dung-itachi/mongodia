@@ -132,12 +132,14 @@ export class MarketingDispatchService {
             continue;
           }
 
-          // 4. Update lead: assign sale — status giữ NEW (Sale chưa liên hệ)
+          // 4. Update lead: assign sale
           const oldStatus = lead.status;
           lead.saleEmployeeId = new mongoose.Types.ObjectId(targetSaleId);
           lead.assignedAt = new Date();
-          lead.status = LeadStatus.NEW; // Sale mới tiếp nhận, chưa gọi → NEW
           lead.assignmentType = saleEmployeeId ? "MANUAL" : "AUTO";
+          // Sprint 8.X: Set to POTENTIAL để có thể tự động convert thành đơn hàng
+          // (convertLead yêu cầu status QUALIFIED hoặc POTENTIAL)
+          lead.status = LeadStatus.POTENTIAL;
 
           await lead.save({ session });
 
@@ -149,8 +151,10 @@ export class MarketingDispatchService {
               lead.isConverted = true;
               lead.convertedOrderId = new mongoose.Types.ObjectId(convertResult.orderId);
               lead.convertedAt = new Date();
-              lead.status = LeadStatus.POTENTIAL; // Đã có đơn hàng = Tiềm năng
               await lead.save({ session });
+            } else {
+              // Nếu convert thất bại, vẫn giữ status POTENTIAL để Sale có thể convert sau
+              console.warn(`Convert failed for lead ${leadId}: ${convertResult.error}`);
             }
           } catch (orderError) {
             console.error(`Failed to create order for lead ${leadId}:`, orderError);

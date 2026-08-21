@@ -1,9 +1,10 @@
 /**
- * Marketing Lead Table Component (Sprint 5.2, 8.5)
+ * Marketing Lead Table Component (Sprint 5.2, 8.5, 8.x)
  *
  * Uses the UI Kit DataTable contract, including scroll, sorting callbacks,
  * and row selection support for bulk push to Sale.
  * Sprint 8.5: Added row selection for "Đẩy sang Sale" functionality.
+ * Sprint 8.x: Added Marketing/Sale employee columns for admin users.
  */
 
 import { memo, useMemo } from "react";
@@ -28,6 +29,8 @@ export type MarketingLeadTableProps = {
   selectedRowKeys?: string[];
   onSelectionChange?: (keys: string[]) => void;
   loading?: boolean;
+  /** Show Marketing/Sale employee columns (for admin users) - Sprint 8.x */
+  showEmployeeColumns?: boolean;
 };
 
 function MarketingLeadTableInner({
@@ -40,6 +43,7 @@ function MarketingLeadTableInner({
   selectedRowKeys = [],
   onSelectionChange,
   loading,
+  showEmployeeColumns = false,
 }: MarketingLeadTableProps) {
   const columns: Column[] = useMemo(
     () => [
@@ -131,6 +135,51 @@ function MarketingLeadTableInner({
         ),
       },
       {
+        key: "note",
+        title: "Ghi chú",
+        width: 150,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as MarketingLead;
+          if (lead.note) {
+            return (
+              <span className={styles["mi-note-text"]} title={lead.note}>
+                {lead.note.length > 20 ? `${lead.note.substring(0, 20)}...` : lead.note}
+              </span>
+            );
+          }
+          return <span className={styles["mi-muted-text"]}>-</span>;
+        },
+      },
+      // Sprint 8.x: Marketing and Sale employee columns (only shown for admin)
+      ...(showEmployeeColumns ? [
+        {
+          key: "marketingEmployee",
+          title: "MKT phụ trách",
+          width: 150,
+          render: (_value: unknown, record: Record<string, unknown>) => {
+            const lead = record as unknown as MarketingLead;
+            return lead.marketingEmployee ? (
+              <span className={styles["mi-combo-text"]}>{lead.marketingEmployee.name}</span>
+            ) : (
+              <span className={styles["mi-muted-text"]}>-</span>
+            );
+          },
+        },
+        {
+          key: "saleEmployee",
+          title: "Sale phụ trách",
+          width: 150,
+          render: (_value: unknown, record: Record<string, unknown>) => {
+            const lead = record as unknown as MarketingLead;
+            return lead.saleEmployee ? (
+              <span className={styles["mi-combo-text"]}>{lead.saleEmployee.name}</span>
+            ) : (
+              <span className={styles["mi-muted-text"]}>-</span>
+            );
+          },
+        },
+      ] : []),
+      {
         key: "actions",
         title: "Thao tác",
         width: 200,
@@ -147,7 +196,7 @@ function MarketingLeadTableInner({
         },
       },
     ],
-    [onDelete, onEdit, onView]
+    [onDelete, onEdit, onView, showEmployeeColumns]
   );
 
   const rowSelection: TableProps<Record<string, unknown>>["rowSelection"] = onSelectionChange

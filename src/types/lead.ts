@@ -72,6 +72,8 @@ export interface Lead {
   isConverted: boolean;
   convertedOrderId?: string;
   convertedAt?: Date;
+  /** Ngày giờ từ Landing page (Sprint 8.x) */
+  leadDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -106,6 +108,8 @@ export interface LeadSearchParams {
   order?: "asc" | "desc";
   /** Filter by team code (Sprint 8.x — Marketing Orders Team/MKT Filter) */
   teamId?: string;
+  /** Filter by area code (Sprint 8.x) */
+  areaId?: string;
 }
 
 /**
@@ -157,6 +161,8 @@ export interface CreateLeadInput {
   status?: LeadStatus;
   note?: string;
   isDuplicate?: boolean;
+  /** Ngày giờ từ Landing page (Sprint 8.x) */
+  leadDate?: Date;
 }
 
 /**

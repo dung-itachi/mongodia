@@ -40,6 +40,8 @@ export type MarketingLeadFilters = {
   marketingEmployeeId?: string;
   /** Filter by team code */
   teamId?: string;
+  /** Filter by area code (Sprint 8.x) */
+  areaId?: string;
 };
 
 // ============================================================================
@@ -71,6 +73,9 @@ async function fetchMarketingLeads(
   }
   if (filters.marketingEmployeeId) {
     params.set("marketingEmployeeId", filters.marketingEmployeeId);
+  }
+  if (filters.areaId) {
+    params.set("areaId", filters.areaId);
   }
 
   const queryString = params.toString();
@@ -313,33 +318,37 @@ export function usePushedLeadsCount() {
 }
 
 // ============================================================================
-// Orders Count (Sprint 8.X)
+// Leads Count — Sprint 8.X: Count leads for the marketing employee
+// (all leads created by the marketing employee, visible in /marketing/orders)
 // ============================================================================
 
-async function fetchOrdersCount(): Promise<{ orderCount: number }> {
-  const response = await api.get("/api/marketing/orders/count");
+async function fetchLeadsCount(): Promise<{ leadCount: number }> {
+  // Count all leads for the current marketing employee
+  // This matches the data shown in /marketing/orders page
+  const response = await api.get("/api/marketing/leads/count");
   return response.data.data;
 }
 
 /**
- * Hook to fetch count of orders for the marketing employee
+ * Hook to fetch count of leads for the marketing employee
+ * (all leads, matches /marketing/orders page)
  */
-export function useOrdersCount() {
+export function useLeadsCount() {
   const {
     data,
     isLoading,
     error,
     refetch,
-  } = useQuery<{ orderCount: number }, Error>({
-    queryKey: ["marketing-orders-count"],
-    queryFn: fetchOrdersCount,
+  } = useQuery<{ leadCount: number }, Error>({
+    queryKey: ["marketing-leads-count"],
+    queryFn: fetchLeadsCount,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   return {
-    orderCount: data?.orderCount ?? 0,
+    leadCount: data?.leadCount ?? 0,
     loading: isLoading,
     error: error?.message ?? null,
     refetch,

@@ -140,6 +140,10 @@ export const PERMISSION_MODULE_MAP: Record<string, string> = {
   "lead.delete": "Lead",
   "lead.assign": "Lead",
 
+  // Marketing Order (Sprint 8.x)
+  "marketing-order.viewAll": "MarketingOrder",
+  "marketing-order.filterByArea": "MarketingOrder",
+
   "marketing-expense.view": "MarketingExpense",
   "marketing-expense.create": "MarketingExpense",
   "marketing-expense.update": "MarketingExpense",

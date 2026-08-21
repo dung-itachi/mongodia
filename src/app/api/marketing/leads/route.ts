@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
+import { getAccountScope } from "@/lib/account-scope";
 import { leadService } from "@/services/lead.service";
 import { LEAD_SOURCE_LABELS, LEAD_STATUS_LABELS } from "@/constants/marketing";
 import { LeadSource } from "@/constants/leadSource";
@@ -48,6 +49,8 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     isConverted: leadAny.isConverted ?? false,
     orderId: leadAny.orderId,
     convertedAt: leadAny.convertedAt?.toISOString(),
+    // Sprint 8.x — leadDate từ Landing page
+    leadDate: (lead as Lead & { leadDate?: Date }).leadDate?.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
   };
@@ -83,7 +86,16 @@ async function getActorId(request: Request): Promise<string> {
 
 export async function GET(request: Request) {
   try {
+    const currentUser = await getCurrentUser(request);
     await connectDB();
+
+    const scope = getAccountScope(currentUser);
+    const isGlobal = scope === "GLOBAL";
+    const permissions = currentUser.permissions ?? [];
+    const canViewAll = permissions.includes("*") ||
+      permissions.includes("account.manageAll") ||
+      permissions.includes("marketing-order.viewAll");
+
     const { searchParams } = new URL(request.url);
     const keyword = searchParams.get("keyword")?.trim() || undefined;
     const status = searchParams.get("status") || undefined;
@@ -94,6 +106,10 @@ export async function GET(request: Request) {
     const order = getSortOrder(searchParams.get("order"));
     const teamId = searchParams.get("team") || undefined;
     const marketingEmployeeId = searchParams.get("marketingEmployeeId") || undefined;
+    const areaId = searchParams.get("areaId") || undefined;
+
+    // Sprint 8.x: Non-admin users can only see their own leads
+    const effectiveMarketingEmployeeId = canViewAll ? marketingEmployeeId : currentUser.employee._id.toString();
 
     const result = await leadService.search({
       keyword,
@@ -105,7 +121,8 @@ export async function GET(request: Request) {
       order,
       isActive: true,
       teamId,
-      marketingEmployeeId,
+      marketingEmployeeId: effectiveMarketingEmployeeId,
+      areaId,
     });
 
     return success(mapMarketingLeadList(result));
@@ -143,6 +160,10 @@ export async function POST(request: Request) {
     const sourceTypeValue = parsed.data.sourceType as LeadSource;
     const statusValue = parsed.data.status as LeadStatus | undefined;
 
+    // Sprint 8.X: Auto-set marketingEmployeeId from current user
+    // This ensures leads created from MarketingInputSection have the correct employee
+    const currentUserId = await getActorId(request);
+
     const createInput: CreateLeadInput = {
       ...parsed.data,
       customerId: parsed.data.customerId ?? undefined,
@@ -154,7 +175,8 @@ export async function POST(request: Request) {
       sourceType: sourceTypeValue,
       facebookPageId: parsed.data.facebookPageId ?? undefined,
       facebookPageAssignmentId: parsed.data.facebookPageAssignmentId ?? undefined,
-      marketingEmployeeId: parsed.data.marketingEmployeeId ?? undefined,
+      // Sprint 8.X: Auto-assign marketingEmployeeId from current user if not provided
+      marketingEmployeeId: parsed.data.marketingEmployeeId ?? currentUserId,
       saleEmployeeId: parsed.data.saleEmployeeId ?? undefined,
       categoryId: parsed.data.categoryId ?? undefined,
       productId: parsed.data.productId ?? undefined,
@@ -166,6 +188,10 @@ export async function POST(request: Request) {
       status: statusValue,
       note: parsed.data.note ?? undefined,
       isDuplicate: parsed.data.isDuplicate ?? undefined,
+      // Sprint 8.x: leadDate từ Landing page (VN timezone +07:00)
+      leadDate: parsed.data.leadDate
+        ? new Date(`${parsed.data.leadDate}+07:00`)
+        : undefined,
     };
 
     const created = await leadService.create(createInput, actorId);

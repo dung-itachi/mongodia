@@ -62,6 +62,12 @@
   color: #52c41a;
 }
 
+.noteText {
+  font-size: 12px;
+  color: #595959;
+  cursor: default;
+}
+
 .actionGroup {
   display: flex;
   gap: 4px;

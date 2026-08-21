@@ -174,6 +174,22 @@ function SaleLeadTableInner({
         },
       },
       {
+        key: "note",
+        title: getTranslated("Ghi chú"),
+        width: 180,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as SaleLead;
+          if (lead.note) {
+            return (
+              <span className={styles.noteText} title={lead.note}>
+                {lead.note.length > 25 ? `${lead.note.substring(0, 25)}...` : lead.note}
+              </span>
+            );
+          }
+          return <span className={styles.mutedText}>-</span>;
+        },
+      },
+      {
         key: "status",
         title: getTranslated("Trạng thái"),
         dataIndex: "status",

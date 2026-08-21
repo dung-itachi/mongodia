@@ -1,0 +1,291 @@
+/* ============================================================
+ * PasteTable — Excel-like table for paste input
+ * Sprint 8.x Nâng cấp dán số
+ * ============================================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px 6px 0 0;
+  border-bottom: none;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modeLabel {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #1890ff, #722ed1);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.headerLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+}
+
+/* Toggle group */
+.toggleGroup {
+  display: flex;
+  gap: 4px;
+}
+
+.toggleActive {
+  background: #1890ff !important;
+  border-color: #1890ff !important;
+  color: #fff !important;
+}
+
+/* Table wrapper */
+.tableWrapper {
+  border: 1px solid #d9d9d9;
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.tableWrapper:focus {
+  outline: 2px solid #1890ff;
+  outline-offset: -1px;
+}
+
+/* Paste hint */
+.pasteHint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
+.addRowBtn {
+  font-size: 11px !important;
+}
+
+/* The table */
+.pasteTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Header row */
+.pasteTable thead tr {
+  background: linear-gradient(135deg, #f0f5ff 0%, #e6f4ff 100%);
+}
+
+.pasteTable th {
+  padding: 0;
+  text-align: left;
+  border-bottom: 2px solid #adc6ff;
+  border-right: 1px solid #e8e8e8;
+  font-weight: 600;
+  color: #1d39c4;
+  white-space: nowrap;
+}
+
+.pasteTable th:last-child {
+  border-right: none;
+}
+
+.rowNumHeader {
+  width: 36px;
+  min-width: 36px;
+  text-align: center;
+  background: #f0f5ff;
+  color: #8c8c8c;
+  font-size: 10px;
+  padding: 8px 4px;
+  border-right: 1px solid #d9d9d9;
+}
+
+.headerCell {
+  padding: 8px 10px;
+  min-width: 80px;
+}
+
+.headerCellContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.headerNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: #1890ff;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.headerLabel {
+  font-weight: 600;
+  color: #1d39c4;
+}
+
+/* Data rows */
+.dataRow {
+  background: #fff;
+  transition: background 0.15s ease;
+}
+
+.dataRow:hover {
+  background: #fafafa;
+}
+
+.dataRow:nth-child(even) {
+  background: #fafafa;
+}
+
+.dataRow:nth-child(even):hover {
+  background: #f0f0f0;
+}
+
+/* Row number */
+.rowNum {
+  width: 36px;
+  min-width: 36px;
+  text-align: center;
+  background: #f5f5f5;
+  color: #bfbfbf;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 6px 4px;
+  border-right: 1px solid #e8e8e8;
+  border-bottom: 1px solid #f0f0f0;
+  user-select: none;
+}
+
+/* Cells */
+.cell {
+  padding: 2px 4px;
+  border-bottom: 1px solid #f0f0f0;
+  border-right: 1px solid #f0f0f0;
+}
+
+.cell:last-child {
+  border-right: none;
+}
+
+.cellInput {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 6px 8px;
+  color: #262626;
+  transition: background 0.15s ease;
+}
+
+.cellInput:focus {
+  background: #e6f4ff;
+  box-shadow: inset 0 0 0 2px #91caff;
+  border-radius: 3px;
+}
+
+.cellInput::placeholder {
+  color: #bfbfbf;
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* Textarea mode */
+.textArea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 100px;
+  background: #fafafa;
+}
+
+.textArea:focus {
+  outline: none;
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  background: #fff;
+}
+
+/* Quick reference */
+.reference {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #fafafa;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.refLabel {
+  color: #8c8c8c;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.refChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.refChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #595959;
+}
+
+.refNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: #1890ff;
+  color: #fff;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+}

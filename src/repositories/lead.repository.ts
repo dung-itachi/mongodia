@@ -150,6 +150,13 @@ function buildFilter(params: LeadSearchParams): Record<string, unknown> {
     filter.sourceType = params.sourceType;
   }
 
+  // Sprint 8.x: Area filter
+  if (params.areaId && params.areaId !== "__all__") {
+    // Area is linked to team via Employee.areaId
+    // We need to join with Employee to filter by area
+    filter.areaId = params.areaId;
+  }
+
   if (params.isDuplicate !== undefined) {
     filter.isDuplicate = params.isDuplicate;
   }
@@ -336,13 +343,18 @@ export class LeadRepository {
 
   /**
    * Find all leads with pagination
-   * Sprint 8.x: Added teamId filter support via aggregation lookup
+   * Sprint 8.x: Added teamId/areaId filter support via aggregation lookup
    */
   async findAll(params: LeadSearchParams) {
     const page = params.page ?? 1;
     const limit = params.limit ?? 20;
     const skip = (page - 1) * limit;
     const filter = buildFilter(params);
+
+    // Sprint 8.x: If areaId is provided, use area filter
+    if (params.areaId && params.areaId !== "__all__") {
+      return this.findAllWithAreaFilter(params, page, limit, skip);
+    }
 
     // Sprint 8.x: If teamId is provided, use aggregation to join with Employee for team filtering
     if (params.teamId && params.teamId !== "__all__") {
@@ -388,6 +400,48 @@ export class LeadRepository {
 
     const teamEmployees = await EmployeeModel.find({ teamId: team._id }).select("_id").lean();
     const employeeIds = teamEmployees.map((e) => e._id);
+
+    if (employeeIds.length === 0) {
+      return { items: [], total: 0, page, limit, totalPages: 1 };
+    }
+
+    // Build base filter
+    const filter = buildFilter(params);
+    filter.marketingEmployeeId = { $in: employeeIds };
+
+    const [items, total] = await Promise.all([
+      Lead.find(filter)
+        .populate("marketingEmployeeId", "_id employeeCode name")
+        .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("comboId", "_id code name")
+        .populate("productId", "_id code name")
+        .populate("facebookPageId", "_id code name")
+        .sort(buildSort(params))
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Lead.countDocuments(filter),
+    ]);
+
+    return {
+      items: items.map((doc) => mapToLead(doc as ILead)),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  /**
+   * Sprint 8.x: Find leads with area filter using aggregation
+   * Joins with Employee to filter by areaId
+   */
+  private async findAllWithAreaFilter(params: LeadSearchParams, page: number, limit: number, skip: number) {
+    const EmployeeModel = mongoose.model("Employee");
+
+    // Find all employees in the area
+    const areaEmployees = await EmployeeModel.find({ areaId: params.areaId }).select("_id").lean();
+    const employeeIds = areaEmployees.map((e) => e._id);
 
     if (employeeIds.length === 0) {
       return { items: [], total: 0, page, limit, totalPages: 1 };

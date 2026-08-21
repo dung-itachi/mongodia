@@ -451,6 +451,16 @@ export const PERMISSIONS = [
   name: "Assign Lead",
 },
 
+// Marketing Order (Sprint 8.x)
+{
+  code: "marketing-order.viewAll",
+  name: "View All Marketing Orders",
+},
+{
+  code: "marketing-order.filterByArea",
+  name: "Filter Marketing Orders by Area",
+},
+
 // Marketing Expense
 {
   code: "marketing-expense.view",

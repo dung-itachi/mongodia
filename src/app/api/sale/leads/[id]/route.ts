@@ -37,6 +37,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       customerName,
       phone,
       address,
+      note,
       productId,
       comboId,
       comboQuantity,
@@ -53,6 +54,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (customerName !== undefined) updateData.customerName = customerName;
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
+    if (note !== undefined) updateData.note = note;
     if (productId !== undefined) updateData.productId = productId;
     if (comboId !== undefined) updateData.comboId = comboId;
     if (comboQuantity !== undefined) updateData.quantity = comboQuantity;
@@ -85,6 +87,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       customerName: updatedLead.customerName,
       phone: updatedLead.phone,
       address: updatedLead.address,
+      note: updatedLead.note,
       sourceType: updatedLead.sourceType,
       status: updatedLead.status,
       product: updatedLead.productId && typeof updatedLead.productId === "object"

@@ -20,8 +20,8 @@ export enum LeadSource {
  */
 export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
   [LeadSource.LANDING_PAGE]: "Landing Page",
-  [LeadSource.FACEBOOK_COMMENT]: "Facebook Comment",
-  [LeadSource.FACEBOOK_INBOX]: "Facebook Inbox",
+  [LeadSource.FACEBOOK_COMMENT]: "Bình luận Facebook",
+  [LeadSource.FACEBOOK_INBOX]: "Hộp thư Facebook",
   [LeadSource.OTHER]: "Khác",
 };
 

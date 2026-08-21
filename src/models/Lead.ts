@@ -57,6 +57,8 @@ export interface ILead extends Document {
   convertedOrderId?: mongoose.Types.ObjectId;
   /** Thời điểm convert thành Order (Sprint 5.7). */
   convertedAt?: Date;
+  /** Ngày giờ từ Landing page (Sprint 8.x) - để track thời gian thực tế khách đăng ký. */
+  leadDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -110,6 +112,8 @@ quantity: { type: Number, min: 1 },
     isConverted: { type: Boolean, default: false },
     convertedOrderId: { type: Schema.Types.ObjectId, ref: "Order" },
     convertedAt: { type: Date },
+    // Sprint 8.x — leadDate từ Landing page (ngày giờ thực tế khách đăng ký)
+    leadDate: { type: Date },
   },
   {
     timestamps: true,
