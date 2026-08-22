@@ -20,6 +20,8 @@ import type { ColumnsType } from "antd/es/table";
 import { useMarketingDailyAdsReport } from "@/hooks/useMarketingDailyAdsReport";
 import { useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
 import { useAuthStore } from "@/store/auth.store";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { ChartPeriod } from "@/types/marketing-dashboard";
 import { formatNumber } from "@/lib/format";
 import api from "@/lib/axios";
@@ -79,6 +81,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
   const user = useAuthStore((state) => state.user);
   const isGlobal = isGlobalUser(user);
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
   const pageSize = getPageSize(period);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -122,15 +125,15 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       });
 
       if (response.data.success) {
-        message.success("Đã thêm báo cáo thành công!");
+        message.success(t("Đã thêm báo cáo thành công!", lang));
         setIsModalOpen(false);
         form.resetFields();
         refetch();
       } else {
-        message.error(response.data.message || "Không thể thêm báo cáo");
+        message.error(response.data.message || t("Không thể thêm báo cáo", lang));
       }
     } catch (err: any) {
-      message.error(err.response?.data?.message || "Đã xảy ra lỗi khi thêm báo cáo");
+      message.error(err.response?.data?.message || t("Đã xảy ra lỗi khi thêm báo cáo", lang));
     } finally {
       setSubmitting(false);
     }
@@ -161,17 +164,17 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       });
 
       if (response.data.success) {
-        message.success("Đã cập nhật báo cáo thành công!");
+        message.success(t("Đã cập nhật báo cáo thành công!", lang));
         setIsModalOpen(false);
         setIsEditMode(false);
         setEditingReport(null);
         form.resetFields();
         refetch();
       } else {
-        message.error(response.data.message || "Không thể cập nhật báo cáo");
+        message.error(response.data.message || t("Không thể cập nhật báo cáo", lang));
       }
     } catch (err: any) {
-      message.error(err.response?.data?.message || "Đã xảy ra lỗi khi cập nhật báo cáo");
+      message.error(err.response?.data?.message || t("Đã xảy ra lỗi khi cập nhật báo cáo", lang));
     } finally {
       setSubmitting(false);
     }
@@ -182,13 +185,13 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       const response = await api.delete(`/api/marketing/expenses/${id}`);
 
       if (response.data.success) {
-        message.success("Đã xóa báo cáo thành công!");
+        message.success(t("Đã xóa báo cáo thành công!", lang));
         refetch();
       } else {
-        message.error(response.data.message || "Không thể xóa báo cáo");
+        message.error(response.data.message || t("Không thể xóa báo cáo", lang));
       }
     } catch (err: any) {
-      message.error(err.response?.data?.message || "Đã xảy ra lỗi khi xóa báo cáo");
+      message.error(err.response?.data?.message || t("Đã xảy ra lỗi khi xóa báo cáo", lang));
     }
   };
 
@@ -242,7 +245,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
 
   const columns: ColumnsType<DailyAdsRow> = [
     {
-      title: "Ngày",
+      title: t("Ngày", lang),
       dataIndex: "dateDisplay",
       key: "dateDisplay",
       width: 100,
@@ -250,7 +253,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       render: (text: string) => <span style={{ fontWeight: 500 }}>{text}</span>,
     },
     {
-      title: "Xin sáng",
+      title: t("Xin sáng", lang),
       dataIndex: "xinSang",
       key: "xinSang",
       width: 140,
@@ -258,7 +261,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       render: (value: number) => formatNumber(value),
     },
     {
-      title: "Xin chiều",
+      title: t("Xin chiều", lang),
       dataIndex: "xinChieu",
       key: "xinChieu",
       width: 140,
@@ -266,7 +269,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       render: (value: number) => formatNumber(value),
     },
     {
-      title: "Xin gấp",
+      title: t("Xin gấp", lang),
       dataIndex: "xinGap",
       key: "xinGap",
       width: 130,
@@ -274,7 +277,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       render: (value: number) => formatNumber(value),
     },
     {
-      title: "Tổng tiêu",
+      title: t("Tổng tiêu", lang),
       dataIndex: "tongTieu",
       key: "tongTieu",
       width: 140,
@@ -284,7 +287,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       ),
     },
     {
-      title: "Tiền dư",
+      title: t("Tiền dư", lang),
       dataIndex: "tienDu",
       key: "tienDu",
       width: 130,
@@ -296,7 +299,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       ),
     },
     {
-      title: "DS",
+      title: t("DS", lang),
       dataIndex: "totalRevenue",
       key: "totalRevenue",
       width: 150,
@@ -306,7 +309,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       ),
     },
     {
-      title: "%Ads",
+      title: t("%Ads", lang),
       dataIndex: "percentAds",
       key: "percentAds",
       width: 80,
@@ -321,7 +324,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       ),
     },
     {
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       key: "actions",
       width: 120,
       fixed: "right",
@@ -333,18 +336,18 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
             icon={<EditOutlined />}
             onClick={() => openEditModal(record)}
           >
-            Sửa
+            {t("Sửa", lang)}
           </Button>
           <Popconfirm
-            title="Xóa báo cáo?"
-            description="Bạn có chắc muốn xóa báo cáo này?"
+            title={t("Xóa báo cáo?", lang)}
+            description={t("Bạn có chắc muốn xóa báo cáo này?", lang)}
             onConfirm={() => handleDeleteReport(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
+            okText={t("Xóa", lang)}
+            cancelText={t("Hủy", lang)}
             okButtonProps={{ danger: true }}
           >
             <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-              Xóa
+              {t("Xóa", lang)}
             </Button>
           </Popconfirm>
         </Space>
@@ -357,8 +360,8 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       ? marketingEmployeeOptions.find(
           (e) => e.value === selectedMarketingEmployeeId
         )?.label
-      : "Tất cả MKT"
-    : user?.fullName ?? "MKT của bạn";
+      : t("Tất cả MKT", lang)
+    : user?.fullName ?? t("MKT của bạn", lang);
 
   // Default summary values for empty/null state
   const defaultSummary = {
@@ -373,7 +376,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
 
   return (
     <Card
-      title="📊 Báo cáo Ads theo ngày"
+      title={t("📊 Báo cáo Ads theo ngày", lang)}
       className={styles["mk-daily-report-card"]}
       extra={
         <Space size={12}>
@@ -382,11 +385,11 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
               <UserOutlined style={{ color: "#8c8c8c" }} />
               <Select
                 allowClear
-                placeholder="Chọn MKT cụ thể"
+                placeholder={t("Chọn MKT cụ thể", lang)}
                 value={selectedMarketingEmployeeId}
                 onChange={(v) => setSelectedMarketingEmployeeId(v)}
                 options={[
-                  { value: "__all__", label: "Tất cả MKT" },
+                  { value: "__all__", label: t("Tất cả MKT", lang) },
                   ...marketingEmployeeOptions,
                 ]}
                 showSearch
@@ -410,7 +413,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
               setIsModalOpen(true);
             }}
           >
-            + Thêm báo cáo
+            {t("+ Thêm báo cáo", lang)}
           </Button>
         </Space>
       }
@@ -423,10 +426,10 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
           color: "#595959",
         }}
       >
-        Đang xem: <strong>{showingMktName}</strong>
+        {t("Đang xem:", lang)} <strong>{showingMktName}</strong>
         {scope === "SELF" && (
           <span style={{ marginLeft: 8, color: "#8c8c8c" }}>
-            (chỉ báo cáo Ads của bạn)
+            {t("(chỉ báo cáo Ads của bạn)", lang)}
           </span>
         )}
       </div>
@@ -434,7 +437,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
       <Row gutter={16} className={styles["mk-daily-report-summary"]}>
         <Col span={4}>
           <Statistic
-            title="Tổng xin"
+            title={t("Tổng xin", lang)}
             value={summary.tongXin}
             formatter={(value) => formatNumber(Number(value))}
             styles={{ content: { fontSize: "18px" } }}
@@ -442,7 +445,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
         </Col>
         <Col span={4}>
           <Statistic
-            title="Tổng tiêu"
+            title={t("Tổng tiêu", lang)}
             value={summary.tongTieu}
             formatter={(value) => formatNumber(Number(value))}
             styles={{ content: { color: "#fa8c16", fontSize: "18px" } }}
@@ -450,7 +453,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
         </Col>
         <Col span={4}>
           <Statistic
-            title="Tiền dư"
+            title={t("Tiền dư", lang)}
             value={summary.tienDu}
             formatter={(value) => formatNumber(Number(value))}
             styles={{
@@ -463,7 +466,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
         </Col>
         <Col span={4}>
           <Statistic
-            title="Doanh số"
+            title={t("Doanh số", lang)}
             value={summary.totalRevenue}
             formatter={(value) => formatNumber(Number(value))}
             styles={{ content: { color: "#13c2c2", fontSize: "18px" } }}
@@ -471,7 +474,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
         </Col>
         <Col span={4}>
           <Statistic
-            title="%Ads"
+            title={t("%Ads", lang)}
             value={summary.percentAds}
             formatter={(value) => `${value}%`}
             styles={{
@@ -484,7 +487,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
         </Col>
         <Col span={4}>
           <Statistic
-            title="Tổng số khách hàng"
+            title={t("Tổng số khách hàng", lang)}
             value={summary.totalLeads}
             styles={{ content: { fontSize: "18px" } }}
           />
@@ -505,7 +508,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
                   onChange: (page) => setCurrentPage(page),
                   showSizeChanger: false,
                   showTotal: (total, range) =>
-                    `${range[0]}-${range[1]} / ${total} ngày`,
+                    `${range[0]}-${range[1]} / ${total} ${t("ngày", lang)}`,
                 }
               : false
           }
@@ -515,12 +518,12 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
           bordered
         />
       ) : (
-        <Empty description="Chưa có dữ liệu báo cáo Ads" />
+        <Empty description={t("Chưa có dữ liệu báo cáo Ads", lang)} />
       )}
 
       {/* Add/Edit Report Modal */}
       <Modal
-        title={isEditMode ? "📝 Sửa báo cáo Ads" : "📝 Thêm báo cáo Ads"}
+        title={isEditMode ? t("📝 Sửa báo cáo Ads", lang) : t("📝 Thêm báo cáo Ads", lang)}
         open={isModalOpen}
         onCancel={closeModal}
         footer={null}
@@ -540,24 +543,24 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
         >
           {!isEditMode && (
             <Form.Item
-              label="Ngày báo cáo"
+              label={t("Ngày báo cáo", lang)}
               name="reportDate"
-              rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
+              rules={[{ required: true, message: t("Vui lòng chọn ngày", lang) }]}
             >
               <DatePicker
                 style={{ width: "100%" }}
                 format="DD/MM/YYYY"
-                placeholder="Chọn ngày"
+                placeholder={t("Chọn ngày", lang)}
                 disabledDate={(current) => current && current > dayjs().endOf("day")}
               />
             </Form.Item>
           )}
 
           <div style={{ marginBottom: 16, padding: "12px 16px", background: "#f5f5f5", borderRadius: 8 }}>
-            <div style={{ fontWeight: 600, marginBottom: 12, color: "#1890ff" }}>XIN</div>
+            <div style={{ fontWeight: 600, marginBottom: 12, color: "#1890ff" }}>{t("XIN", lang)}</div>
             <Row gutter={16}>
               <Col span={8}>
-                <Form.Item label="Xin sáng" name="xinSang" style={{ marginBottom: 8 }}>
+                <Form.Item label={t("Xin sáng", lang)} name="xinSang" style={{ marginBottom: 8 }}>
                   <InputNumber
                     style={{ width: "100%" }}
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -568,7 +571,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item label="Xin chiều" name="xinChieu" style={{ marginBottom: 8 }}>
+                <Form.Item label={t("Xin chiều", lang)} name="xinChieu" style={{ marginBottom: 8 }}>
                   <InputNumber
                     style={{ width: "100%" }}
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -579,7 +582,7 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item label="Xin gấp" name="xinGap" style={{ marginBottom: 8 }}>
+                <Form.Item label={t("Xin gấp", lang)} name="xinGap" style={{ marginBottom: 8 }}>
                   <InputNumber
                     style={{ width: "100%" }}
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -594,8 +597,8 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
 
           {isEditMode && (
             <div style={{ marginBottom: 16, padding: "12px 16px", background: "#fff7e6", borderRadius: 8, border: "1px solid #ffd591" }}>
-              <div style={{ fontWeight: 600, marginBottom: 12, color: "#fa8c16" }}>ĐÃ TIÊU</div>
-              <Form.Item label="Tổng tiêu" name="tongTieu" style={{ marginBottom: 0 }}>
+              <div style={{ fontWeight: 600, marginBottom: 12, color: "#fa8c16" }}>{t("ĐÃ TIÊU", lang)}</div>
+              <Form.Item label={t("Tổng tiêu", lang)} name="tongTieu" style={{ marginBottom: 0 }}>
                 <InputNumber
                   style={{ width: "100%" }}
                   formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -610,10 +613,10 @@ function DailyAdsReportInner({ period }: DailyAdsReportProps) {
           <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <Button onClick={closeModal}>
-                Hủy
+                {t("Hủy", lang)}
               </Button>
               <Button type="primary" htmlType="submit" loading={submitting}>
-                {isEditMode ? "Cập nhật" : "Thêm báo cáo"}
+                {isEditMode ? t("Cập nhật", lang) : t("Thêm báo cáo", lang)}
               </Button>
             </div>
           </Form.Item>

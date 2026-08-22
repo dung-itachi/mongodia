@@ -126,7 +126,7 @@ export default function AccountsPage() {
   };
 
   const columns = useMemo(() => [
-    { title: "STT", render: (_: unknown, __: Account, index: number) => index + 1, width: 60 },
+    { title: t("STT", lang), render: (_: unknown, __: Account, index: number) => index + 1, width: 60 },
     { title: t("Avatar", lang), render: (_: unknown, item: Account) => <Avatar src={item.avatar || undefined}>{item.fullName?.charAt(0)}</Avatar>, width: 70 },
     { title: t("Mã NV", lang), dataIndex: "employeeCode", width: 110 },
     { title: t("Họ tên", lang), dataIndex: "fullName" },

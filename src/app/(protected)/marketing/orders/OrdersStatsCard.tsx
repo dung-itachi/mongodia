@@ -28,6 +28,8 @@ import { StatCard, StatGrid } from "@/components/common";
 import { convertMNTtoVND, formatMNT, formatVND } from "@/lib/format";
 import type { MarketingLeadsStats, StatusCountItem } from "@/hooks/useMarketingLeads";
 import { LeadStatus } from "@/constants/leadStatus";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type OrdersStatsCardProps = {
   stats: MarketingLeadsStats;
@@ -57,7 +59,7 @@ const STATUS_TAG_COLOR: Record<string, string> = {
   [LeadStatus.CANCELLED]: "red",
 };
 
-const STATUS_TOOLTIP: Record<string, string> = {
+const STATUS_TOOLTIP_KEY: Record<string, string> = {
   [LeadStatus.NEW]: "Lead mới — chưa được Sale nào xử lý.",
   [LeadStatus.CONTACTED]: "Sale đã liên hệ khách nhưng chưa xác nhận nhu cầu.",
   [LeadStatus.QUALIFIED]: "Khách đủ điều kiện — đang chờ chốt đơn.",
@@ -72,6 +74,21 @@ const STATUS_TOOLTIP: Record<string, string> = {
   [LeadStatus.CANCELLED]: "Đơn hàng đã bị huỷ.",
 };
 
+const STATUS_LABEL_KEY: Record<string, string> = {
+  [LeadStatus.NEW]: "Mới",
+  [LeadStatus.CONTACTED]: "Đã liên hệ",
+  [LeadStatus.QUALIFIED]: "Qualified",
+  [LeadStatus.ASSIGNED]: "Đã phân công",
+  [LeadStatus.PROCESSING]: "Đang xử lý",
+  [LeadStatus.NO_ANSWER]: "Không nghe máy",
+  [LeadStatus.POTENTIAL]: "Tiềm năng",
+  [LeadStatus.CLOSED]: "Đã chốt",
+  [LeadStatus.LOST]: "Thất bại",
+  [LeadStatus.ORDER_CREATED]: "Đã tạo đơn",
+  [LeadStatus.REJECTED]: "Bị từ chối",
+  [LeadStatus.CANCELLED]: "Đã huỷ",
+};
+
 function OrdersStatsCardInner({
   stats,
   loading = false,
@@ -79,6 +96,7 @@ function OrdersStatsCardInner({
   onToggleCurrency,
   exchangeRate = 0,
 }: OrdersStatsCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const closedRevenueDisplay =
     currency === "VND" && exchangeRate > 0
       ? formatVND(convertMNTtoVND(stats.closedRevenueMNT, exchangeRate))
@@ -90,18 +108,18 @@ function OrdersStatsCardInner({
         <Tooltip
           title={
             <span>
-              Tổng doanh thu từ các đơn hàng đã chốt.
+              {t("Tổng doanh thu từ các đơn hàng đã chốt.", lang)}
               <br />
-              <b>Công thức:</b> Σ (giá combo − phí ship) trên mỗi đơn có status = CLOSED.
+              <b>{t("Công thức:", lang)}</b> {t("Σ (giá combo − phí ship) trên mỗi đơn có status = CLOSED.", lang)}
               <br />
-              Phí ship hiện tại: <b>{formatMNT(stats.shippingFeeMNT)}</b>.
+              {t("Phí ship hiện tại:", lang)} <b>{formatMNT(stats.shippingFeeMNT)}</b>.
             </span>
           }
           mouseEnterDelay={0.2}
         >
           <div>
             <StatCard
-              title="Doanh thu"
+              title={t("Doanh thu", lang)}
               value={closedRevenueDisplay}
               color="purple"
               size="default"
@@ -121,18 +139,18 @@ function OrdersStatsCardInner({
               }}
             >
               <InfoCircleOutlined style={{ fontSize: 11 }} />
-              Click vào icon để đổi MNT ↔ VND.
+              {t("Click vào icon để đổi MNT ↔ VND.", lang)}
             </div>
           </div>
         </Tooltip>
 
         <Tooltip
-          title="Tổng số đơn hàng (tất cả trạng thái) của bạn, sau khi áp dụng filter hiện tại trên thanh công cụ."
+          title={t("Tổng số đơn hàng (tất cả trạng thái) của bạn, sau khi áp dụng filter hiện tại trên thanh công cụ.", lang)}
           mouseEnterDelay={0.2}
         >
           <div>
             <StatCard
-              title="Tổng đơn"
+              title={t("Tổng đơn", lang)}
               value={stats.totalCount}
               color="blue"
               size="default"
@@ -150,7 +168,7 @@ function OrdersStatsCardInner({
               }}
             >
               <InfoCircleOutlined style={{ fontSize: 11 }} />
-              Trong đó có <b style={{ margin: "0 2px" }}>{stats.closedCount}</b> đơn đã chốt.
+              {t("Trong đó có", lang)} <b style={{ margin: "0 2px" }}>{stats.closedCount}</b> {t("đơn đã chốt.", lang)}
             </div>
           </div>
         </Tooltip>
@@ -176,7 +194,7 @@ function OrdersStatsCardInner({
           }}
         >
           <PieChartOutlined />
-          <span>Phân bổ theo trạng thái:</span>
+          <span>{t("Phân bổ theo trạng thái:", lang)}</span>
         </div>
         <div
           style={{
@@ -195,9 +213,14 @@ function OrdersStatsCardInner({
 }
 
 function StatusChip({ item, loading }: { item: StatusCountItem; loading: boolean }) {
+  const lang = useLanguageStore((s) => s.language);
   const tooltipText =
-    STATUS_TOOLTIP[item.status] ??
-    `Số đơn đang ở trạng thái "${item.label}".`;
+    STATUS_TOOLTIP_KEY[item.status]
+      ? t(STATUS_TOOLTIP_KEY[item.status], lang)
+      : `${t("Số đơn đang ở trạng thái", lang)} "${item.label}".`;
+  const chipLabel = STATUS_LABEL_KEY[item.status]
+    ? t(STATUS_LABEL_KEY[item.status], lang)
+    : item.label;
 
   return (
     <Tooltip title={tooltipText} mouseEnterDelay={0.2}>
@@ -213,7 +236,7 @@ function StatusChip({ item, loading }: { item: StatusCountItem; loading: boolean
         bordered
       >
         <span style={{ fontWeight: 600 }}>{loading ? "…" : item.count}</span>
-        <span style={{ marginLeft: 4, opacity: 0.85 }}>{item.label}</span>
+        <span style={{ marginLeft: 4, opacity: 0.85 }}>{chipLabel}</span>
       </Tag>
     </Tooltip>
   );

@@ -2,15 +2,12 @@
  * Facebook Pages Toolbar Component (Sprint 7.4)
  */
 
-import { memo } from "react";
-import { Button, Input, Space, Select, Tag } from "antd";
+import { memo, useMemo } from "react";
+import { Button, Input, Space, Select } from "antd";
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./facebook-pages.module.css";
-
-const STATUS_OPTIONS = [
-  { value: "ACTIVE", label: "Hoạt động" },
-  { value: "INACTIVE", label: "Không hoạt động" },
-];
 
 export type FacebookPagesToolbarProps = {
   keyword: string;
@@ -27,11 +24,20 @@ function FacebookPagesToolbarInner({
   onCreate,
   onRefresh,
 }: FacebookPagesToolbarProps) {
+  const lang = useLanguageStore((s) => s.language);
+  const statusOptions = useMemo(
+    () => [
+      { value: "ACTIVE", label: t("Hoạt động", lang) },
+      { value: "INACTIVE", label: t("Không hoạt động", lang) },
+    ],
+    [lang]
+  );
+
   return (
     <div className={styles["fb-toolbar"]}>
       <div className={styles["fb-toolbar-left"]}>
         <Input
-          placeholder="Tìm kiếm..."
+          placeholder={t("Tìm kiếm...", lang)}
           prefix={<SearchOutlined />}
           value={keyword}
           onChange={(e) => onFiltersChange({ keyword: e.target.value, status })}
@@ -40,10 +46,10 @@ function FacebookPagesToolbarInner({
         />
 
         <Select
-          placeholder="Trạng thái"
+          placeholder={t("Trạng thái", lang)}
           value={status}
           onChange={(value) => onFiltersChange({ keyword, status: value })}
-          options={STATUS_OPTIONS}
+          options={statusOptions}
           allowClear
           style={{ width: 150 }}
         />
@@ -55,14 +61,14 @@ function FacebookPagesToolbarInner({
             icon={<ReloadOutlined />}
             onClick={onRefresh}
           >
-            Làm mới
+            {t("Làm mới", lang)}
           </Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={onCreate}
           >
-            Tạo Facebook Page
+            {t("Tạo Facebook Page", lang)}
           </Button>
         </Space>
       </div>

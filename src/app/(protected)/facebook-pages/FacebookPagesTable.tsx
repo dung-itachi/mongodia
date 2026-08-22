@@ -3,11 +3,13 @@
  */
 
 import { memo } from "react";
-import { Table, Tag, Button, Space, Dropdown, Switch, Tooltip, Image } from "antd";
+import { Table, Tag, Button, Space, Switch, Tooltip, Image } from "antd";
 import type { TablePaginationConfig } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { EditOutlined, DeleteOutlined, MoreOutlined, UserOutlined } from "@ant-design/icons";
+import { EditOutlined, UserOutlined } from "@ant-design/icons";
 import type { FacebookPage } from "@/hooks/useFacebookPages";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./facebook-pages.module.css";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -15,7 +17,7 @@ const STATUS_COLORS: Record<string, string> = {
   INACTIVE: "default",
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABEL_KEY: Record<string, string> = {
   ACTIVE: "Hoạt động",
   INACTIVE: "Không hoạt động",
 };
@@ -27,12 +29,13 @@ function formatDate(value?: string | null) {
   return d.toLocaleDateString("vi-VN");
 }
 
-function renderMarketingEmployee(record: FacebookPage) {
+function MarketingEmployeeCell({ record }: { record: FacebookPage }) {
+  const lang = useLanguageStore((s) => s.language);
   const assignment = record.currentAssignment;
   const employee = assignment?.marketingEmployee;
 
   if (!assignment || !employee) {
-    return <span style={{ color: "#999" }}>Chưa phân công</span>;
+    return <span style={{ color: "#999" }}>{t("Chưa phân công", lang)}</span>;
   }
 
   const tooltipContent = (
@@ -40,10 +43,10 @@ function renderMarketingEmployee(record: FacebookPage) {
       <div>
         <strong>{employee.employeeCode}</strong> - {employee.fullName}
       </div>
-      <div>Bắt đầu: {formatDate(assignment.startDate)}</div>
+      <div>{t("Bắt đầu:", lang)} {formatDate(assignment.startDate)}</div>
       <div>
-        Kết thúc:{" "}
-        {assignment.endDate ? formatDate(assignment.endDate) : "Hiện tại"}
+        {t("Kết thúc:", lang)}{" "}
+        {assignment.endDate ? formatDate(assignment.endDate) : t("Hiện tại", lang)}
       </div>
     </div>
   );
@@ -83,6 +86,8 @@ function FacebookPagesTableInner({
   onEdit,
   onToggleActive,
 }: FacebookPagesTableProps) {
+  const lang = useLanguageStore((s) => s.language);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleTableChange = (pagination: TablePaginationConfig, _filters: any, sorter: any) => {
     onPageChange(pagination.current ?? 1, pagination.pageSize ?? 20);
@@ -125,7 +130,7 @@ function FacebookPagesTableInner({
       ),
     },
     {
-      title: "Mã",
+      title: t("Mã", lang),
       dataIndex: "code",
       key: "code",
       width: 120,
@@ -133,7 +138,7 @@ function FacebookPagesTableInner({
       sortOrder: sortField === "code" ? (sortOrder === "asc" ? "ascend" : "descend") as "ascend" | "descend" : undefined,
     },
     {
-      title: "Tên Page",
+      title: t("Tên Page", lang),
       dataIndex: "name",
       key: "name",
       width: 200,
@@ -159,31 +164,31 @@ function FacebookPagesTableInner({
       ellipsis: true,
     },
     {
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "status",
       key: "status",
       width: 130,
       render: (status: "ACTIVE" | "INACTIVE") => (
         <Tag color={STATUS_COLORS[status]}>
-          {STATUS_LABELS[status]}
+          {t(STATUS_LABEL_KEY[status] ?? status, lang)}
         </Tag>
       ),
     },
     {
-      title: "MKT phụ trách",
+      title: t("MKT phụ trách", lang),
       key: "marketingEmployee",
       width: 200,
-      render: (_: unknown, record: FacebookPage) => renderMarketingEmployee(record),
+      render: (_: unknown, record: FacebookPage) => <MarketingEmployeeCell record={record} />,
     },
     {
-      title: "Mô tả",
+      title: t("Mô tả", lang),
       dataIndex: "description",
       key: "description",
       ellipsis: true,
       minWidth: 260,
     },
     {
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       key: "active",
       width: 100,
       align: "center",
@@ -225,7 +230,7 @@ function FacebookPagesTableInner({
         total: total,
         showSizeChanger: true,
         showQuickJumper: true,
-        showTotal: (t: number) => `Tổng: ${t}`,
+        showTotal: (total: number) => `${t("Tổng:", lang)} ${total}`,
       }}
       scroll={{ x: "max-content" }}
       tableLayout="auto"

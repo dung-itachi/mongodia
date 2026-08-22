@@ -5,11 +5,13 @@
  * Supports toggle between bar chart and line chart views.
  */
 
-import { memo, useState } from "react";
+import { memo, useState, useMemo } from "react";
 import { Card, Skeleton, Button, Space, Tooltip, Empty } from "antd";
 import { BarChartOutlined, LineChartOutlined } from "@ant-design/icons";
 import { useMarketingChartData } from "@/hooks/useMarketingChartData";
-import { MARKETING_DASHBOARD_CHARTS } from "./marketing-dashboard-chart.config";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+import { MARKETING_DASHBOARD_CHARTS, translateChartTitle } from "./marketing-dashboard-chart.config";
 import type { ChartPeriod } from "@/types/marketing-dashboard";
 import { formatNumber } from "@/lib/format";
 import styles from "./marketing.module.css";
@@ -23,6 +25,7 @@ type ChartViewType = "bar" | "line";
 
 function MarketingDashboardChartsInner({ period, onChartClick }: MarketingDashboardChartsProps) {
   const [chartType, setChartType] = useState<ChartViewType>("bar");
+  const lang = useLanguageStore((s) => s.language);
 
   const { data, loading, error } = useMarketingChartData(period);
 
@@ -30,7 +33,7 @@ function MarketingDashboardChartsInner({ period, onChartClick }: MarketingDashbo
     return (
       <div className={styles["mk-charts-grid"]}>
         {MARKETING_DASHBOARD_CHARTS.slice(0, 2).map((chart) => (
-          <Card key={chart.id} title={chart.title}>
+          <Card key={chart.id} title={translateChartTitle(chart, lang)}>
             <Skeleton active paragraph={{ rows: 6 }} />
           </Card>
         ))}
@@ -41,7 +44,7 @@ function MarketingDashboardChartsInner({ period, onChartClick }: MarketingDashbo
   if (error) {
     return (
       <div className={styles["mk-charts-grid"]}>
-        <Card title="Lỗi">Không thể tải dữ liệu biểu đồ</Card>
+        <Card title={t("Lỗi", lang)}>{t("Không thể tải dữ liệu biểu đồ", lang)}</Card>
       </div>
     );
   }
@@ -63,22 +66,22 @@ function MarketingDashboardChartsInner({ period, onChartClick }: MarketingDashbo
     <>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
         <Space.Compact>
-          <Tooltip title="Biểu đồ cột">
+          <Tooltip title={t("Biểu đồ cột", lang)}>
             <Button
               icon={<BarChartOutlined />}
               type={chartType === "bar" ? "primary" : "default"}
               onClick={() => setChartType("bar")}
             >
-              Cột
+              {t("Cột", lang)}
             </Button>
           </Tooltip>
-          <Tooltip title="Biểu đồ đường">
+          <Tooltip title={t("Biểu đồ đường", lang)}>
             <Button
               icon={<LineChartOutlined />}
               type={chartType === "line" ? "primary" : "default"}
               onClick={() => setChartType("line")}
             >
-              Đường
+              {t("Đường", lang)}
             </Button>
           </Tooltip>
         </Space.Compact>
@@ -92,13 +95,14 @@ function MarketingDashboardChartsInner({ period, onChartClick }: MarketingDashbo
           const sumValue = chartData.reduce((s, d) => s + Math.abs(d.value), 0);
           const maxValue = Math.max(sumValue, 1);
           const visibleData = chartData.slice(-7);
+          const chartTitle = translateChartTitle(chart, lang);
 
           return (
             <Card
               key={chart.id}
-              title={chart.title}
+              title={chartTitle}
               className={styles["mk-chart-card"]}
-              onClick={() => onChartClick?.(chart.id, chart.title)}
+              onClick={() => onChartClick?.(chart.id, chartTitle)}
               style={{ cursor: onChartClick ? "pointer" : "default" }}
             >
               {chartType === "bar" ? (

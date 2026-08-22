@@ -7,7 +7,7 @@
  * Style nền: card trắng, icon tinted theo tone màu, số lớn.
  */
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Skeleton } from "antd";
 import {
   CheckCircleOutlined,
@@ -16,6 +16,8 @@ import {
   DollarCircleOutlined,
 } from "@ant-design/icons";
 import { formatNumber } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../orders.module.css";
 
 export type ReconciliationStatsProps = {
@@ -37,6 +39,8 @@ function ReconciliationStatsInner({
   deliveredRevenue,
   loading = false,
 }: ReconciliationStatsProps) {
+  const lang = useLanguageStore((s) => s.language);
+
   if (loading) {
     return (
       <div className={styles["recon-stats-grid"]}>
@@ -49,37 +53,37 @@ function ReconciliationStatsInner({
     );
   }
 
-  const cards = [
+  const cards = useMemo(() => [
     {
       key: "delivered",
       icon: <CheckCircleOutlined />,
       tone: "green" as const,
       value: deliveredCount,
-      label: "Giao TC",
+      label: t("Giao TC", lang),
     },
     {
       key: "returned",
       icon: <RollbackOutlined />,
       tone: "orange" as const,
       value: returnedCount,
-      label: "Hoàn",
+      label: t("Hoàn", lang),
     },
     {
       key: "reconciled",
       icon: <FileDoneOutlined />,
       tone: "purple" as const,
       value: reconciledCount,
-      label: "Đã đối soát",
+      label: t("Đã đối soát", lang),
     },
     {
       key: "revenue",
       icon: <DollarCircleOutlined />,
       tone: "blue" as const,
       value: formatNumber(deliveredRevenue),
-      label: "Doanh thu (₫)",
+      label: t("Doanh thu (₫)", lang),
       isRevenue: true,
     },
-  ];
+  ], [deliveredCount, returnedCount, reconciledCount, deliveredRevenue, lang]);
 
   return (
     <div className={styles["recon-stats-grid"]}>

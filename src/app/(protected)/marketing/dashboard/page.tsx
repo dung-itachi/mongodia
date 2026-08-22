@@ -203,7 +203,7 @@ export default function MarketingDashboardPage() {
     }
   }, [exportData, lang]);
 
-  const stats = data ? buildMarketingStats(data) : null;
+  const stats = data ? buildMarketingStats(data, lang) : null;
 
   if (loading) {
     return <LoadingOverlay text={t("Đang tải marketing dashboard...", lang)} />;

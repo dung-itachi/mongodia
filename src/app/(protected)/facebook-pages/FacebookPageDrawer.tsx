@@ -11,19 +11,10 @@ import { useFacebookPage, useCreateFacebookPage, useUpdateFacebookPage, facebook
 import type { CreateFacebookPageInput, UpdateFacebookPageInput } from "@/hooks/useFacebookPages";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { TextArea } = Input;
-
-const FACEBOOK_PAGE_STATUS_OPTIONS = [
-  { value: "ACTIVE", label: "Hoạt động" },
-  { value: "INACTIVE", label: "Không hoạt động" },
-];
-
-const CURRENCY_OPTIONS = [
-  { value: "MNT", label: "MNT - Tiền Mông Cổ (₮)" },
-  { value: "VND", label: "VND - Việt Nam (₫)" },
-  { value: "USD", label: "USD - Đô la Mỹ ($)" },
-];
 
 const DEFAULT_CURRENCY = "MNT";
 const DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh";
@@ -60,9 +51,27 @@ function FacebookPageDrawerInner({
   onClose,
   onSuccess,
 }: FacebookPageDrawerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const isEdit = mode === "edit";
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
+
+  const statusOptions = useMemo(
+    () => [
+      { value: "ACTIVE", label: t("Hoạt động", lang) },
+      { value: "INACTIVE", label: t("Không hoạt động", lang) },
+    ],
+    [lang]
+  );
+
+  const currencyOptions = useMemo(
+    () => [
+      { value: "MNT", label: t("MNT - Tiền Mông Cổ (₮)", lang) },
+      { value: "VND", label: t("VND - Việt Nam (₫)", lang) },
+      { value: "USD", label: t("USD - Đô la Mỹ ($)", lang) },
+    ],
+    [lang]
+  );
 
   const { data: recordData, isLoading: isLoadingRecord } = useFacebookPage(
     isEdit && recordId ? recordId : null
@@ -145,7 +154,7 @@ function FacebookPageDrawerInner({
       });
 
       if (!result.success) {
-        toast.error(result.message || "Không thể cập nhật nhân viên phụ trách");
+        toast.error(result.message || t("Không thể cập nhật nhân viên phụ trách", lang));
         return false;
       }
 
@@ -162,7 +171,7 @@ function FacebookPageDrawerInner({
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         (err as Error).message ||
-        "Không thể cập nhật nhân viên phụ trách";
+        t("Không thể cập nhật nhân viên phụ trách", lang);
       toast.error(message);
       return false;
     }
@@ -204,12 +213,12 @@ function FacebookPageDrawerInner({
               if (!ok) return;
             }
 
-            toast.success("Cập nhật thành công");
+            toast.success(t("Cập nhật thành công", lang));
             onSuccess?.();
             onClose();
           },
           onError: (err: Error) => {
-            toast.error(err.message || "Lỗi khi cập nhật");
+            toast.error(err.message || t("Lỗi khi cập nhật", lang));
           },
         }
       );
@@ -229,12 +238,12 @@ function FacebookPageDrawerInner({
       };
       createMutation.mutate(createData, {
         onSuccess: (page) => {
-          toast.success("Tạo thành công");
+          toast.success(t("Tạo thành công", lang));
           onSuccess?.(page);
           onClose();
         },
         onError: (err: Error) => {
-          toast.error(err.message || "Lỗi khi tạo");
+          toast.error(err.message || t("Lỗi khi tạo", lang));
         },
       });
     }
@@ -242,20 +251,20 @@ function FacebookPageDrawerInner({
 
   return (
     <Drawer
-      title={isEdit ? "Sửa Facebook Page" : "Tạo Facebook Page"}
+      title={isEdit ? t("Sửa Facebook Page", lang) : t("Tạo Facebook Page", lang)}
       placement="right"
       size="large"
       open={open}
       onClose={onClose}
       footer={
         <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-          <Button onClick={onClose}>Hủy</Button>
+          <Button onClick={onClose}>{t("Hủy", lang)}</Button>
           <Button
             type="primary"
             onClick={() => form.validateFields().then(onSubmit).catch(() => {})}
             loading={isSubmitting}
           >
-            {isSubmitting ? "Đang lưu..." : isEdit ? "Cập nhật" : "Tạo mới"}
+            {isSubmitting ? t("Đang lưu...", lang) : isEdit ? t("Cập nhật", lang) : t("Tạo mới", lang)}
           </Button>
         </Space>
       }
@@ -267,86 +276,86 @@ function FacebookPageDrawerInner({
       >
         <Form.Item
           name="code"
-          label="Mã Page"
+          label={t("Mã Page", lang)}
           rules={[
-            { required: true, message: "Mã page là bắt buộc" },
-            { whitespace: true, message: "Mã page không được để trắng" },
+            { required: true, message: t("Mã page là bắt buộc", lang) },
+            { whitespace: true, message: t("Mã page không được để trắng", lang) },
           ]}
         >
           <Input
-            placeholder="Nhập mã page (VD: PAGE_001)"
+            placeholder={t("Nhập mã page (VD: PAGE_001)", lang)}
             disabled={isEdit}
           />
         </Form.Item>
 
         <Form.Item
           name="name"
-          label="Tên Page"
+          label={t("Tên Page", lang)}
           rules={[
-            { required: true, message: "Tên page là bắt buộc" },
-            { whitespace: true, message: "Tên page không được để trắng" },
+            { required: true, message: t("Tên page là bắt buộc", lang) },
+            { whitespace: true, message: t("Tên page không được để trắng", lang) },
           ]}
         >
-          <Input placeholder="Nhập tên page" />
+          <Input placeholder={t("Nhập tên page", lang)} />
         </Form.Item>
 
-        <Form.Item name="pageUrl" label="URL Page">
+        <Form.Item name="pageUrl" label={t("URL Page", lang)}>
           <Input placeholder="https://www.facebook.com/..." />
         </Form.Item>
 
         <Form.Item
           name="avatarUrl"
-          label="Avatar URL"
-          tooltip="Mở ảnh đại diện trên Facebook (đã đăng nhập) → Chuột phải → Mở hình ảnh trong tab mới → Copy URL và dán vào đây"
+          label={t("Avatar URL", lang)}
+          tooltip={t("Mở ảnh đại diện trên Facebook (đã đăng nhập) → Chuột phải → Mở hình ảnh trong tab mới → Copy URL và dán vào đây", lang)}
         >
-          <Input placeholder="Dán URL avatar từ Facebook" />
+          <Input placeholder={t("Dán URL avatar từ Facebook", lang)} />
         </Form.Item>
 
-        <Form.Item name="facebookPageId" label="Facebook Page ID">
+        <Form.Item name="facebookPageId" label={t("Facebook Page ID", lang)}>
           <Input placeholder="Facebook Page ID" />
         </Form.Item>
 
-        <Form.Item name="businessManager" label="Business Manager ID">
+        <Form.Item name="businessManager" label={t("Business Manager ID", lang)}>
           <Input placeholder="Business Manager ID" />
         </Form.Item>
 
         <Space style={{ width: "100%" }} size={16}>
           <Form.Item
             name="currency"
-            label="Đơn vị tiền tệ"
+            label={t("Đơn vị tiền tệ", lang)}
             style={{ width: 200 }}
           >
             <Select
-              options={CURRENCY_OPTIONS}
+              options={currencyOptions}
               style={{ width: "100%" }}
             />
           </Form.Item>
 
           <Form.Item
             name="timezone"
-            label="Múi giờ"
+            label={t("Múi giờ", lang)}
             style={{ flex: 1 }}
           >
             <Input placeholder="Asia/Ho_Chi_Minh" />
           </Form.Item>
         </Space>
 
-        <Form.Item name="status" label="Trạng thái">
-          <Select options={FACEBOOK_PAGE_STATUS_OPTIONS} style={{ width: "100%" }} />
+        <Form.Item name="status" label={t("Trạng thái", lang)}>
+          <Select options={statusOptions} style={{ width: "100%" }} />
         </Form.Item>
 
         {isEdit && (
           <>
             <Form.Item
               name="marketingEmployeeId"
-              label="Nhân viên MKT phụ trách"
-              tooltip="Chọn nhân viên MKT mới sẽ tự động đóng phân công hiện tại và bàn giao cho nhân viên mới từ ngày bắt đầu."
+              label={t("Nhân viên MKT phụ trách", lang)}
+              tooltip={t("Chọn nhân viên MKT mới sẽ tự động đóng phân công hiện tại và bàn giao cho nhân viên mới từ ngày bắt đầu.", lang)}
             >
               <Select
                 options={mktOptions}
                 loading={isLoadingMkt}
                 showSearch
-                placeholder={isLoadingMkt ? "Đang tải..." : "Chọn nhân viên MKT"}
+                placeholder={isLoadingMkt ? t("Đang tải...", lang) : t("Chọn nhân viên MKT", lang)}
                 optionFilterProp="label"
                 allowClear
               />
@@ -354,34 +363,34 @@ function FacebookPageDrawerInner({
 
             <Form.Item
               name="marketingStartDate"
-              label="Ngày bắt đầu phụ trách"
-              tooltip="Áp dụng khi chọn nhân viên MKT mới. Phân công hiện tại sẽ tự đóng vào ngày trước đó, phân công mới bắt đầu từ ngày này."
+              label={t("Ngày bắt đầu phụ trách", lang)}
+              tooltip={t("Áp dụng khi chọn nhân viên MKT mới. Phân công hiện tại sẽ tự đóng vào ngày trước đó, phân công mới bắt đầu từ ngày này.", lang)}
             >
               <DatePicker
                 style={{ width: "100%" }}
                 format="DD/MM/YYYY"
-                placeholder="Chọn ngày bắt đầu"
+                placeholder={t("Chọn ngày bắt đầu", lang)}
               />
             </Form.Item>
           </>
         )}
 
-        <Form.Item name="description" label="Mô tả">
-          <TextArea rows={3} placeholder="Mô tả page..." />
+        <Form.Item name="description" label={t("Mô tả", lang)}>
+          <TextArea rows={3} placeholder={t("Mô tả page...", lang)} />
         </Form.Item>
 
-        <Form.Item name="note" label="Ghi chú">
-          <TextArea rows={2} placeholder="Ghi chú..." />
+        <Form.Item name="note" label={t("Ghi chú", lang)}>
+          <TextArea rows={2} placeholder={t("Ghi chú...", lang)} />
         </Form.Item>
 
         {isEdit && (
-          <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
+          <Form.Item name="isActive" label={t("Kích hoạt", lang)} valuePropName="checked">
             <Switch />
           </Form.Item>
         )}
 
         {isEdit && isLoadingRecord && (
-          <div style={{ color: "#999" }}>Đang tải dữ liệu page...</div>
+          <div style={{ color: "#999" }}>{t("Đang tải dữ liệu page...", lang)}</div>
         )}
       </Form>
     </Drawer>

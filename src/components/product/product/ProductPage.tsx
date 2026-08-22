@@ -41,6 +41,8 @@ import { useDebounce } from "@/hooks/useDebounce";
 import ProductManagementTable from "./ProductManagementTable";
 import ProductForm from "./ProductForm";
 import type { CategoryListItem } from "@/hooks/useCategories";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./products.module.css";
 
 type ProductFilters = {
@@ -58,6 +60,7 @@ const DEFAULT_FILTERS: ProductFilters = {
 };
 
 export default function ProductPage() {
+  const lang = useLanguageStore((s) => s.language);
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProductManagementItem | null>(null);
@@ -110,16 +113,16 @@ export default function ProductPage() {
       {
         type: "input",
         key: "keyword",
-        label: "Tên sản phẩm",
-        placeholder: "Tìm kiếm theo tên sản phẩm",
+        label: t("Tên sản phẩm", lang),
+        placeholder: t("Tìm kiếm theo tên sản phẩm", lang),
       },
       {
         type: "select",
         key: "categoryCode",
-        label: "Danh mục",
-        placeholder: "Tất cả danh mục",
+        label: t("Danh mục", lang),
+        placeholder: t("Tất cả danh mục", lang),
         options: [
-          { value: "", label: "Tất cả danh mục" },
+          { value: "", label: t("Tất cả danh mục", lang) },
           ...categories.map((c) => ({
             value: c.code,
             label: c.name,
@@ -129,10 +132,10 @@ export default function ProductPage() {
       {
         type: "select",
         key: "warehouseId",
-        label: "Kho",
-        placeholder: "Tất cả kho",
+        label: t("Kho", lang),
+        placeholder: t("Tất cả kho", lang),
         options: [
-          { value: "", label: "Tất cả kho" },
+          { value: "", label: t("Tất cả kho", lang) },
           ...warehouses.map((w) => ({
             value: w._id,
             label: `${w.code} - ${w.name}`,
@@ -142,10 +145,10 @@ export default function ProductPage() {
       {
         type: "dateRange",
         key: "dateRange",
-        label: "Ngày nhập",
+        label: t("Ngày nhập", lang),
       },
     ],
-    [categories, warehouses]
+    [categories, warehouses, lang]
   );
 
   const filterValues = useMemo(
@@ -282,11 +285,11 @@ export default function ProductPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Sản phẩm"
-        subtitle="Quản lý và theo dõi sản phẩm trong hệ thống"
+        title={t("Sản phẩm", lang)}
+        subtitle={t("Quản lý và theo dõi sản phẩm trong hệ thống", lang)}
         actions={
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
-            Thêm sản phẩm
+            {t("Thêm sản phẩm", lang)}
           </Button>
         }
       />
@@ -295,28 +298,28 @@ export default function ProductPage() {
       <CardSection style={{ padding: "16px 24px" }}>
         <StatGrid columns={4} gap={16} minItemWidth={160}>
           <StatCard
-            title="Tổng sản phẩm"
+            title={t("Tổng sản phẩm", lang)}
             value={stats.totalProducts}
             icon={<AppstoreOutlined />}
             color="blue"
             loading={isLoading}
           />
           <StatCard
-            title="Đang hoạt động"
+            title={t("Đang hoạt động", lang)}
             value={stats.activeProducts}
             icon={<ThunderboltOutlined />}
             color="green"
             loading={isLoading}
           />
           <StatCard
-            title="Đã vô hiệu"
+            title={t("Đã vô hiệu", lang)}
             value={stats.inactiveProducts}
             icon={<InboxOutlined />}
             color="orange"
             loading={isLoading}
           />
           <StatCard
-            title="Danh mục"
+            title={t("Danh mục", lang)}
             value={stats.totalCategories}
             icon={<GiftOutlined />}
             color="purple"
@@ -338,7 +341,7 @@ export default function ProductPage() {
           </div>
           <div className={styles.actions}>
             {hasActiveFilters && (
-              <Button onClick={handleResetFilters}>Đặt lại</Button>
+              <Button onClick={handleResetFilters}>{t("Đặt lại", lang)}</Button>
             )}
           </div>
         </div>

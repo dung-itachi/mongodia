@@ -19,6 +19,8 @@ import { MARKETING_LEAD_ACTION_LABELS } from "@/constants/marketing";
 import type { MarketingLead } from "@/types/marketing-lead";
 import { LEAD_STATUS_BADGE_MAPPING } from "@/components/common/display/StatusBadge";
 import { convertMNTtoVND, formatMNT, formatVND } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./marketing-input.module.css";
 
 export type MarketingLeadTableProps = {
@@ -69,6 +71,7 @@ function MarketingLeadTableInner({
   currency: controlledCurrency,
   onCurrencyToggle,
 }: MarketingLeadTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [internalCurrency, setInternalCurrency] = useState<"MNT" | "VND">("MNT");
   const isControlled = controlledCurrency !== undefined;
   const currency = isControlled ? controlledCurrency : internalCurrency;
@@ -127,7 +130,7 @@ function MarketingLeadTableInner({
       // Khi bật phân trang, có thể cần truyền currentPage/pageSize để số chạy liên tục giữa các trang.
       {
         key: "stt",
-        title: "STT",
+        title: t("STT", lang),
         width: 60,
         align: "center",
         fixed: "left",
@@ -135,17 +138,17 @@ function MarketingLeadTableInner({
           <span className={styles["mi-muted-text"]}>{(index ?? 0) + 1}</span>
         ),
       },
-      { key: "leadCode", title: "Mã", dataIndex: "leadCode", width: 120 },
+      { key: "leadCode", title: t("Mã", lang), dataIndex: "leadCode", width: 120 },
       {
         key: "createdAt",
-        title: "Thời gian",
+        title: t("Thời gian", lang),
         dataIndex: "createdAt",
         width: 150,
         render: (value: unknown) => (value ? new Date(String(value)).toLocaleString("vi-VN") : "-"),
       },
       {
         key: "orderDate",
-        title: "TG đơn hàng",
+        title: t("TG đơn hàng", lang),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLead;
@@ -157,7 +160,7 @@ function MarketingLeadTableInner({
       },
       {
         key: "receivedDate",
-        title: "TG nhận đơn",
+        title: t("TG nhận đơn", lang),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLead;
@@ -169,27 +172,27 @@ function MarketingLeadTableInner({
       },
       {
         key: "customerName",
-        title: "Tên",
+        title: t("Tên", lang),
         dataIndex: "customerName",
         width: 150,
         render: (value: unknown) => <span className={styles["mi-primary-text"]}>{String(value)}</span>,
       },
       {
         key: "phone",
-        title: "SĐT",
+        title: t("SĐT", lang),
         dataIndex: "phone",
         width: 110,
       },
       {
         key: "address",
-        title: "Địa chỉ",
+        title: t("Địa chỉ", lang),
         dataIndex: "address",
         width: 130,
         render: (value: unknown) => value ? String(value) : <span className={styles["mi-muted-text"]}>-</span>,
       },
       {
         key: "product",
-        title: "Sản phẩm",
+        title: t("Sản phẩm", lang),
         width: 200,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const product = (record as unknown as MarketingLead).product;
@@ -202,7 +205,7 @@ function MarketingLeadTableInner({
       },
       {
         key: "combo",
-        title: "Combo SP",
+        title: t("Combo SP", lang),
         width: 200,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const combo = (record as unknown as MarketingLead).combo;
@@ -215,7 +218,7 @@ function MarketingLeadTableInner({
       },
       {
         key: "comboPrice",
-        title: "Giá combo",
+        title: t("Giá combo", lang),
         width: 130,
         align: "right",
         render: (_value: unknown, record: Record<string, unknown>) => {
@@ -225,8 +228,8 @@ function MarketingLeadTableInner({
           }
           const tip =
             currency === "VND"
-              ? `Click để đổi sang MNT (1 MNT = ${exchangeRate} VND)`
-              : "Click để đổi sang VND";
+              ? `${t("Click để đổi sang MNT", lang)} (1 MNT = ${exchangeRate} VND)`
+              : t("Click để đổi sang VND", lang);
           return renderMoneyTip(sellingPrice, tip, () =>
             setCurrency((c) => (c === "MNT" ? "VND" : "MNT")),
           );
@@ -234,7 +237,7 @@ function MarketingLeadTableInner({
       },
       {
         key: "revenue",
-        title: "Doanh thu",
+        title: t("Doanh thu", lang),
         width: 130,
         align: "right",
         render: (_value: unknown, record: Record<string, unknown>) => {
@@ -245,8 +248,8 @@ function MarketingLeadTableInner({
           const revenue = Math.max(sellingPrice - (shippingFee ?? 0), 0);
           const tip =
             currency === "VND"
-              ? `Click để đổi sang MNT (1 MNT = ${exchangeRate} VND)`
-              : "Click để đổi sang VND";
+              ? `${t("Click để đổi sang MNT", lang)} (1 MNT = ${exchangeRate} VND)`
+              : t("Click để đổi sang VND", lang);
           return renderMoneyTip(revenue, tip, () =>
             setCurrency((c) => (c === "MNT" ? "VND" : "MNT")),
           );
@@ -254,7 +257,7 @@ function MarketingLeadTableInner({
       },
       {
         key: "facebookPage",
-        title: "Trang FB",
+        title: t("Trang FB", lang),
         width: 140,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const page = (record as unknown as MarketingLead).facebookPage;
@@ -267,14 +270,14 @@ function MarketingLeadTableInner({
       },
       {
         key: "source",
-        title: "Nguồn",
+        title: t("Nguồn", lang),
         dataIndex: "source",
         width: 100,
         render: (value: unknown) => LEAD_SOURCE_LABELS[value as LeadSource] ?? String(value),
       },
       {
         key: "status",
-        title: "Trạng thái",
+        title: t("Trạng thái", lang),
         dataIndex: "status",
         width: 130,
         render: (value: unknown) => (
@@ -287,7 +290,7 @@ function MarketingLeadTableInner({
       },
       {
         key: "note",
-        title: "Ghi chú",
+        title: t("Ghi chú", lang),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLead;
@@ -307,7 +310,7 @@ function MarketingLeadTableInner({
       ...(showEmployeeColumns ? [
         {
           key: "marketingEmployee",
-          title: "MKT phụ trách",
+          title: t("MKT phụ trách", lang),
           width: 150,
           render: (_value: unknown, record: Record<string, unknown>) => {
             const lead = record as unknown as MarketingLead;
@@ -320,7 +323,7 @@ function MarketingLeadTableInner({
         },
         {
           key: "saleEmployee",
-          title: "Sale phụ trách",
+          title: t("Sale phụ trách", lang),
           width: 150,
           render: (_value: unknown, record: Record<string, unknown>) => {
             const lead = record as unknown as MarketingLead;
@@ -334,7 +337,7 @@ function MarketingLeadTableInner({
       ] : []),
       {
         key: "actions",
-        title: "Thao tác",
+        title: t("Thao tác", lang),
         width: 200,
         align: "center",
         render: (_value: unknown, record: Record<string, unknown>) => {
@@ -353,7 +356,7 @@ function MarketingLeadTableInner({
         },
       },
     ],
-    [onDelete, onEdit, onView, showEmployeeColumns, shippingFee, currency, exchangeRate]
+    [onDelete, onEdit, onView, showEmployeeColumns, shippingFee, currency, exchangeRate, lang]
   );
 
   const rowSelection: TableProps<Record<string, unknown>>["rowSelection"] = onSelectionChange
@@ -387,3 +390,4 @@ function MarketingLeadTableInner({
 
 const MarketingLeadTable = memo(MarketingLeadTableInner);
 export default MarketingLeadTable;
+export { MarketingLeadTable as LeadTable };

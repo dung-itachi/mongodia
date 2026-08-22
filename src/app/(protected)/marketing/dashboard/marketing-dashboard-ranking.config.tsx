@@ -5,6 +5,8 @@
  * Add/remove rankings by modifying this array.
  */
 
+import { t } from "@/lib/i18n";
+import type { Language } from "@/store/language.store";
 import type { Column } from "@/components/common/table/DataTable";
 import type {
   RankingData,
@@ -23,10 +25,10 @@ export type RankingType = "facebookPages" | "marketingEmployees" | "campaigns";
 
 interface RankingDefinition<T> {
   id: string;
-  title: string;
+  titleKey: string;
   type: RankingType;
   selector: (data: RankingData) => T[];
-  columns: Column[];
+  buildColumns: (lang: Language) => Column[];
   permission: RankingPermission;
   drillDown?: boolean;
   exportable?: boolean;
@@ -41,150 +43,156 @@ function formatRoas(value: number): string {
 }
 
 // Facebook Pages Ranking
-export const facebookPagesColumns: Column[] = [
-  {
-    key: "pageName",
-    title: "Page",
-    dataIndex: "pageName",
-    render: (value: unknown) => <span style={{ fontWeight: 500 }}>{value as string}</span>,
-  },
-  {
-    key: "totalLeads",
-    title: "Khách hàng",
-    dataIndex: "totalLeads",
-    width: 80,
-    align: "right",
-    render: (value: unknown) => formatNumber(Number(value)),
-  },
-  {
-    key: "totalRevenue",
-    title: "Revenue",
-    dataIndex: "totalRevenue",
-    width: 120,
-    align: "right",
-    render: (value: unknown) => formatCurrency(Number(value)),
-  },
-  {
-    key: "roas",
-    title: "ROAS",
-    dataIndex: "roas",
-    width: 80,
-    align: "right",
-    render: (value: unknown) => formatRoas(Number(value)),
-  },
-];
+export function buildFacebookPagesColumns(lang: Language): Column[] {
+  return [
+    {
+      key: "pageName",
+      title: t("Page", lang),
+      dataIndex: "pageName",
+      render: (value: unknown) => <span style={{ fontWeight: 500 }}>{value as string}</span>,
+    },
+    {
+      key: "totalLeads",
+      title: t("Khách hàng", lang),
+      dataIndex: "totalLeads",
+      width: 80,
+      align: "right",
+      render: (value: unknown) => formatNumber(Number(value)),
+    },
+    {
+      key: "totalRevenue",
+      title: t("Revenue", lang),
+      dataIndex: "totalRevenue",
+      width: 120,
+      align: "right",
+      render: (value: unknown) => formatCurrency(Number(value)),
+    },
+    {
+      key: "roas",
+      title: "ROAS",
+      dataIndex: "roas",
+      width: 80,
+      align: "right",
+      render: (value: unknown) => formatRoas(Number(value)),
+    },
+  ];
+}
 
 // Marketing Employees Ranking
-export const marketingEmployeesColumns: Column[] = [
-  {
-    key: "employeeName",
-    title: "Employee",
-    dataIndex: "employeeName",
-    render: (value: unknown) => <span style={{ fontWeight: 500 }}>{value as string}</span>,
-  },
-  {
-    key: "totalLeads",
-    title: "Khách hàng",
-    dataIndex: "totalLeads",
-    width: 70,
-    align: "right",
-    render: (value: unknown) => formatNumber(Number(value)),
-  },
-  {
-    key: "qualifiedLeads",
-    title: "Qualified",
-    dataIndex: "qualifiedLeads",
-    width: 90,
-    align: "right",
-    render: (value: unknown) => formatNumber(Number(value)),
-  },
-  {
-    key: "closedLeads",
-    title: "Closed",
-    dataIndex: "closedLeads",
-    width: 80,
-    align: "right",
-    render: (value: unknown) => formatNumber(Number(value)),
-  },
-  {
-    key: "revenue",
-    title: "Revenue",
-    dataIndex: "revenue",
-    width: 120,
-    align: "right",
-    render: (value: unknown) => formatCurrency(Number(value)),
-  },
-];
+export function buildMarketingEmployeesColumns(lang: Language): Column[] {
+  return [
+    {
+      key: "employeeName",
+      title: t("Employee", lang),
+      dataIndex: "employeeName",
+      render: (value: unknown) => <span style={{ fontWeight: 500 }}>{value as string}</span>,
+    },
+    {
+      key: "totalLeads",
+      title: t("Khách hàng", lang),
+      dataIndex: "totalLeads",
+      width: 70,
+      align: "right",
+      render: (value: unknown) => formatNumber(Number(value)),
+    },
+    {
+      key: "qualifiedLeads",
+      title: t("Qualified", lang),
+      dataIndex: "qualifiedLeads",
+      width: 90,
+      align: "right",
+      render: (value: unknown) => formatNumber(Number(value)),
+    },
+    {
+      key: "closedLeads",
+      title: t("Closed", lang),
+      dataIndex: "closedLeads",
+      width: 80,
+      align: "right",
+      render: (value: unknown) => formatNumber(Number(value)),
+    },
+    {
+      key: "revenue",
+      title: t("Revenue", lang),
+      dataIndex: "revenue",
+      width: 120,
+      align: "right",
+      render: (value: unknown) => formatCurrency(Number(value)),
+    },
+  ];
+}
 
 // Campaigns Ranking
-export const campaignsColumns: Column[] = [
-  {
-    key: "campaignName",
-    title: "Chiến dịch",
-    dataIndex: "campaignName",
-    render: (value: unknown) => <span style={{ fontWeight: 500 }}>{value as string}</span>,
-  },
-  {
-    key: "totalSpent",
-    title: "Chi phí",
-    dataIndex: "totalSpent",
-    width: 110,
-    align: "right",
-    render: (value: unknown) => formatCurrency(Number(value)),
-  },
-  {
-    key: "totalRevenue",
-    title: "Doanh thu",
-    dataIndex: "totalRevenue",
-    width: 120,
-    align: "right",
-    render: (value: unknown) => formatCurrency(Number(value)),
-  },
-  {
-    key: "roas",
-    title: "ROAS",
-    dataIndex: "roas",
-    width: 80,
-    align: "right",
-    render: (value: unknown) => formatRoas(Number(value)),
-  },
-  {
-    key: "totalLeads",
-    title: "Khách hàng",
-    dataIndex: "totalLeads",
-    width: 70,
-    align: "right",
-    render: (value: unknown) => formatNumber(Number(value)),
-  },
-];
+export function buildCampaignsColumns(lang: Language): Column[] {
+  return [
+    {
+      key: "campaignName",
+      title: t("Chiến dịch", lang),
+      dataIndex: "campaignName",
+      render: (value: unknown) => <span style={{ fontWeight: 500 }}>{value as string}</span>,
+    },
+    {
+      key: "totalSpent",
+      title: t("Chi phí", lang),
+      dataIndex: "totalSpent",
+      width: 110,
+      align: "right",
+      render: (value: unknown) => formatCurrency(Number(value)),
+    },
+    {
+      key: "totalRevenue",
+      title: t("Doanh thu", lang),
+      dataIndex: "totalRevenue",
+      width: 120,
+      align: "right",
+      render: (value: unknown) => formatCurrency(Number(value)),
+    },
+    {
+      key: "roas",
+      title: "ROAS",
+      dataIndex: "roas",
+      width: 80,
+      align: "right",
+      render: (value: unknown) => formatRoas(Number(value)),
+    },
+    {
+      key: "totalLeads",
+      title: t("Khách hàng", lang),
+      dataIndex: "totalLeads",
+      width: 70,
+      align: "right",
+      render: (value: unknown) => formatNumber(Number(value)),
+    },
+  ];
+}
 
 export const MARKETING_DASHBOARD_RANKINGS: RankingDefinition<unknown>[] = [
   {
     id: "topFacebookPages",
-    title: "Top Facebook Pages",
+    titleKey: "Top Facebook Pages",
     type: "facebookPages",
     selector: (data) => data.topFacebookPages,
-    columns: facebookPagesColumns,
+    buildColumns: buildFacebookPagesColumns,
     permission: "marketing.dashboard.ranking",
     drillDown: true,
     exportable: true,
   },
   {
     id: "topMarketingEmployees",
-    title: "Top Marketing Employees",
+    titleKey: "Top Marketing Employees",
     type: "marketingEmployees",
     selector: (data) => data.topMarketingEmployees,
-    columns: marketingEmployeesColumns,
+    buildColumns: buildMarketingEmployeesColumns,
     permission: "marketing.dashboard.ranking",
     drillDown: true,
     exportable: true,
   },
   {
     id: "topCampaigns",
-    title: "Top Chiến dịch",
+    titleKey: "Top Chiến dịch",
     type: "campaigns",
     selector: (data) => data.topCampaigns,
-    columns: campaignsColumns,
+    buildColumns: buildCampaignsColumns,
     permission: "marketing.dashboard.expense",
     drillDown: true,
     exportable: true,

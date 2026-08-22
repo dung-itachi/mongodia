@@ -35,6 +35,8 @@ import type {
   MarketingTrend,
 } from "@/types/marketing-dashboard";
 import { formatNumber } from "@/lib/format";
+import { t } from "@/lib/i18n";
+import type { Language } from "@/store/language.store";
 
 export type MarketingStatItem = {
   key: string;
@@ -55,7 +57,7 @@ type CardTrendSelector = (data: MarketingDashboardData) => MarketingTrend;
 
 interface CardDefinition {
   key: string;
-  title: string;
+  titleKey: string;
   icon: StatCardProps["icon"];
   color: StatCardProps["color"];
   selector: CardDataSelector;
@@ -93,7 +95,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   // Primary metrics — moved to top (Sprint 8.0)
   {
     key: "totalPushed",
-    title: "Tổng Đã đẩy",
+    titleKey: "Tổng Đã đẩy",
     icon: <ShoppingCartOutlined />,
     color: "blue",
     selector: (data) => data.order.totalPushed,
@@ -105,7 +107,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "called",
-    title: "Đã gọi",
+    titleKey: "Đã gọi",
     icon: <PhoneOutlined />,
     color: "green",
     selector: (data) => data.order.called,
@@ -117,7 +119,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "notCalled",
-    title: "Chưa gọi",
+    titleKey: "Chưa gọi",
     icon: <PhoneFilled />,
     color: "orange",
     selector: (data) => data.order.notCalled,
@@ -129,7 +131,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "closingRate",
-    title: "Tỉ lệ chốt",
+    titleKey: "Tỉ lệ chốt",
     icon: <PieChartOutlined />,
     color: "purple",
     selector: (data) => data.order.closingRate,
@@ -141,7 +143,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "orderRevenue",
-    title: "Doanh thu",
+    titleKey: "Doanh thu",
     icon: <FundOutlined />,
     color: "green",
     selector: (data) => data.order.totalRevenue,
@@ -153,7 +155,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "deliveredOk",
-    title: "Giao TC",
+    titleKey: "Giao TC",
     icon: <TruckOutlined />,
     color: "green",
     selector: (data) => data.order.deliveredOk,
@@ -166,7 +168,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   // Lead cards
   {
     key: "todayLead",
-    title: "Khách hàng hôm nay",
+    titleKey: "Khách hàng hôm nay",
     icon: <ThunderboltOutlined />,
     color: "orange",
     selector: (data) => data.summary.todayLead,
@@ -178,7 +180,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "monthLead",
-    title: "Khách hàng tháng",
+    titleKey: "Khách hàng tháng",
     icon: <CalendarOutlined />,
     color: "blue",
     selector: (data) => data.summary.monthLead,
@@ -190,7 +192,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "assignedLead",
-    title: "Đã giao Sale",
+    titleKey: "Đã giao Sale",
     icon: <UserSwitchOutlined />,
     color: "purple",
     selector: (data) => data.summary.assignedLead,
@@ -202,7 +204,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "closedLead",
-    title: "Đã chốt",
+    titleKey: "Đã chốt",
     icon: <CheckCircleOutlined />,
     color: "green",
     selector: (data) => data.summary.closedLead,
@@ -215,7 +217,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   // Expense cards
   {
     key: "totalSpent",
-    title: "Chi phí quảng cáo",
+    titleKey: "Chi phí quảng cáo",
     icon: <DollarOutlined />,
     color: "red",
     selector: (data) => data.expense.totalSpent,
@@ -227,7 +229,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   },
   {
     key: "roas",
-    title: "ROAS",
+    titleKey: "ROAS",
     icon: <RiseOutlined />,
     color: "green",
     selector: (data) => data.expense.roas,
@@ -240,7 +242,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   // Revenue cards
   {
     key: "monthRevenue",
-    title: "Doanh thu",
+    titleKey: "Doanh thu tháng",
     icon: <FundOutlined />,
     color: "green",
     selector: (data) => data.revenue.monthRevenue,
@@ -253,7 +255,7 @@ export const MARKETING_DASHBOARD_CARDS: CardDefinition[] = [
   // Conversion cards
   {
     key: "conversionRate",
-    title: "Conversion Rate",
+    titleKey: "Conversion Rate",
     icon: <PercentageOutlined />,
     color: "blue",
     selector: (data) => data.expense.averageConversionRate,
@@ -293,10 +295,13 @@ function formatCardValue(value: number, formatter: CardFormatter): string {
  * Build stat items from dashboard data.
  * Permission check done outside (useCan hook in page).
  */
-export function buildMarketingStats(data: MarketingDashboardData): MarketingStatItem[] {
+export function buildMarketingStats(
+  data: MarketingDashboardData,
+  lang: Language
+): MarketingStatItem[] {
   return MARKETING_DASHBOARD_CARDS.map((card) => ({
     key: card.key,
-    title: card.title,
+    title: t(card.titleKey, lang),
     value: formatCardValue(card.selector(data), card.formatter),
     icon: card.icon,
     color: card.color,

@@ -320,7 +320,7 @@ function OrdersPageInner() {
       // Cột STT chỉ dành cho UI, không liên kết với dữ liệu đơn hàng.
       // Số chạy liên tục qua các trang: (currentPage - 1) * pageSize + index + 1.
       key: "stt",
-      title: "STT",
+      title: t("STT", lang),
       width: 60,
       align: "center" as const,
       fixed: "left" as const,

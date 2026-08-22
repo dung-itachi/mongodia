@@ -12,6 +12,8 @@
 import { memo } from "react";
 import { Card, Skeleton } from "antd";
 import { DollarOutlined } from "@ant-design/icons";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import { formatNumber } from "@/lib/format";
 import styles from "./marketing.module.css";
 
@@ -32,6 +34,7 @@ function MktAdsCostCardInner({
   totalRevenue,
   loading = false,
 }: MktAdsCostCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const roas = totalSpent > 0 ? Number((totalRevenue / totalSpent).toFixed(1)) : 0;
 
   return (
@@ -40,12 +43,12 @@ function MktAdsCostCardInner({
       title={
         <span>
           <DollarOutlined style={{ marginRight: 6 }} />
-          💰 Chi phí Ads
+          {t("💰 Chi phí Ads", lang)}
         </span>
       }
       extra={
         <small style={{ color: "#8c8c8c" }}>
-          Tổng: {formatNumber(totalSpent)}
+          {t("Tổng:", lang)} {formatNumber(totalSpent)}
         </small>
       }
       className={styles["mk-ads-cost-card"]}
@@ -56,19 +59,19 @@ function MktAdsCostCardInner({
       ) : (
         <div className={styles["mk-ads-cost-body"]}>
           <div className={styles["mk-ads-cost-item"]}>
-            <span className={styles["mk-ads-cost-label"]}>Xin sáng:</span>{" "}
+            <span className={styles["mk-ads-cost-label"]}>{t("Xin sáng:", lang)}</span>{" "}
             <b className={styles["mk-ads-cost-value-morning"]}>
               {formatNumber(totalMorning)}
             </b>
           </div>
           <div className={styles["mk-ads-cost-item"]}>
-            <span className={styles["mk-ads-cost-label"]}>Xin chiều:</span>{" "}
+            <span className={styles["mk-ads-cost-label"]}>{t("Xin chiều:", lang)}</span>{" "}
             <b className={styles["mk-ads-cost-value-afternoon"]}>
               {formatNumber(totalAfternoon)}
             </b>
           </div>
           <div className={styles["mk-ads-cost-item"]}>
-            <span className={styles["mk-ads-cost-label"]}>Xin gấp:</span>{" "}
+            <span className={styles["mk-ads-cost-label"]}>{t("Xin gấp:", lang)}</span>{" "}
             <b className={styles["mk-ads-cost-value-urgent"]}>
               {formatNumber(totalUrgent)}
             </b>

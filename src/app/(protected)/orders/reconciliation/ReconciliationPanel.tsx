@@ -27,6 +27,8 @@ import { useReconciliationLists } from "@/hooks/useReconciliationLists";
 import { useChangeOrderStatus } from "@/hooks/useOrders";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import type { OrderListItem } from "@/types/order";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import ReconciliationStats from "./ReconciliationStats";
 import ReconciliationCard from "./ReconciliationCard";
 import styles from "../orders.module.css";
@@ -36,6 +38,7 @@ function totalAmount(orders: OrderListItem[]): number {
 }
 
 function ReconciliationPanelInner() {
+  const lang = useLanguageStore((s) => s.language);
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const {
@@ -88,7 +91,7 @@ function ReconciliationPanelInner() {
           id,
           data: { status: "RECONCILED" },
         });
-        message.success("Đã đối soát đơn hàng");
+        message.success(t("Đã đối soát đơn hàng", lang));
         // Add to local reconciled set (will be removed after refetch)
         setReconciledOrderIds((prev) => new Set([...prev, id]));
         invalidateReconciliation();
@@ -96,11 +99,11 @@ function ReconciliationPanelInner() {
         message.error(
           error instanceof Error
             ? error.message
-            : "Không thể đối soát đơn hàng"
+            : t("Không thể đối soát đơn hàng", lang)
         );
       }
     },
-    [changeStatus, message, invalidateReconciliation]
+    [changeStatus, message, invalidateReconciliation, lang]
   );
 
   const handleReconcileAll = useCallback(
@@ -135,13 +138,13 @@ function ReconciliationPanelInner() {
 
       if (succeeded > 0) {
         message.success(
-          `Đã đối soát ${succeeded}/${results.length} đơn${
-            failed > 0 ? ` (${failed} lỗi)` : ""
+          `${t("Đã đối soát", lang)} ${succeeded}/${results.length} ${t("đơn", lang)}${
+            failed > 0 ? ` (${failed} ${t("lỗi", lang)})` : ""
           }`
         );
       }
       if (failed > 0 && succeeded === 0) {
-        message.error("Đối soát thất bại");
+        message.error(t("Đối soát thất bại", lang));
       }
 
       invalidateReconciliation();
@@ -152,6 +155,7 @@ function ReconciliationPanelInner() {
       changeStatus,
       message,
       invalidateReconciliation,
+      lang,
     ]
   );
 
@@ -166,7 +170,7 @@ function ReconciliationPanelInner() {
       />
 
       <ReconciliationCard
-        title={<>✅ Đơn giao thành công</>}
+        title={<>{`✅ ${t("Đơn giao thành công", lang)}`}</>}
         accentColor="green"
         orders={sortedDeliveredOrders}
         loading={loading}
@@ -178,7 +182,7 @@ function ReconciliationPanelInner() {
       />
 
       <ReconciliationCard
-        title={<>↩ Đơn đã đối soát</>}
+        title={<>{`↩ ${t("Đơn đã đối soát", lang)}`}</>}
         accentColor="orange"
         orders={sortedReturnedOrders}
         loading={loading}

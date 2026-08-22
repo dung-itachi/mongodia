@@ -88,8 +88,8 @@ export default function FacebookPagesListPage() {
 
   const errorMsg = useMemo(() => {
     if (!error) return null;
-    return error.message || "Đã xảy ra lỗi";
-  }, [error]);
+    return error.message || t("Đã xảy ra lỗi", lang);
+  }, [error, lang]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleToggleActive = useCallback(
@@ -98,16 +98,16 @@ export default function FacebookPagesListPage() {
         { id: page._id, data: { status: checked ? "ACTIVE" : "INACTIVE" } },
         {
           onSuccess: () => {
-            toast.success(checked ? "Đã bật trạng thái hoạt động" : "Đã tắt trạng thái hoạt động");
+            toast.success(checked ? t("Đã bật trạng thái hoạt động", lang) : t("Đã tắt trạng thái hoạt động", lang));
             void refetch();
           },
           onError: (err: Error) => {
-            toast.error(err.message || "Lỗi khi cập nhật trạng thái");
+            toast.error(err.message || t("Lỗi khi cập nhật trạng thái", lang));
           },
         }
       );
     },
-    [updateMutation, refetch]
+    [updateMutation, refetch, lang]
   );
 
   const handleToolbarFiltersChange = useCallback(
@@ -180,25 +180,25 @@ export default function FacebookPagesListPage() {
           <SkeletonTable columns={6} rows={10} />
         ) : errorMsg ? (
           <EmptyState
-            title="Không thể tải dữ liệu"
+            title={t("Không thể tải dữ liệu", lang)}
             description={errorMsg}
             action={
               <Button onClick={() => { void refetch(); }}>
-                Thử lại
+                {t("Thử lại", lang)}
               </Button>
             }
           />
         ) : items.length === 0 ? (
           <EmptyState
-            title="Chưa có Facebook Page"
-            description="Tạo Facebook Page đầu tiên để bắt đầu"
+            title={t("Chưa có Facebook Page", lang)}
+            description={t("Tạo Facebook Page đầu tiên để bắt đầu", lang)}
             action={
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleCreate}
               >
-                Tạo Facebook Page
+                {t("Tạo Facebook Page", lang)}
               </Button>
             }
           />

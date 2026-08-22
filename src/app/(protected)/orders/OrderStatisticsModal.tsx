@@ -19,7 +19,7 @@
  * thông qua `useOrderStatistics()` hook.
  */
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Modal, Skeleton, Tooltip } from "antd";
 import {
   BarChartOutlined,
@@ -33,6 +33,8 @@ import {
   ShoppingOutlined,
 } from "@ant-design/icons";
 import type { OrderStatisticsResponse } from "@/types/order";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./orders.module.css";
 
 export type OrderStatisticsModalProps = {
@@ -59,90 +61,92 @@ function OrderStatisticsModalInner({
   loading,
   onClose,
 }: OrderStatisticsModalProps) {
+  const lang = useLanguageStore((s) => s.language);
+
   // Các ô funnel — render theo thứ tự workflow
-  const funnelRows = [
+  const funnelRows = useMemo(() => [
     {
       key: "confirmed",
-      label: "Đã xác nhận",
+      label: t("Đã xác nhận", lang),
       icon: <CheckCircleOutlined />,
       value: data?.funnel.confirmed ?? 0,
       tone: "blue" as const,
     },
     {
       key: "packing",
-      label: "Đang đóng gói",
+      label: t("Đang đóng gói", lang),
       icon: <InboxOutlined />,
       value: data?.funnel.packing ?? 0,
       tone: "cyan" as const,
     },
     {
       key: "shipping",
-      label: "Đang giao",
+      label: t("Đang giao", lang),
       icon: <TruckOutlined />,
       value: data?.funnel.shipping ?? 0,
       tone: "geekblue" as const,
     },
     {
       key: "delivered",
-      label: "Đã giao",
+      label: t("Đã giao", lang),
       icon: <ShoppingOutlined />,
       value: data?.funnel.delivered ?? 0,
       tone: "green" as const,
     },
     {
       key: "reconciled",
-      label: "Đã đối soát",
+      label: t("Đã đối soát", lang),
       icon: <FileDoneOutlined />,
       value: data?.funnel.reconciled ?? 0,
       tone: "purple" as const,
     },
-  ];
+  ], [data, lang]);
 
   // 3 ô tỷ lệ với tooltip giải thích công thức
-  const rateCards = [
+  const rateCards = useMemo(() => [
     {
       key: "success",
-      label: "Tỷ lệ thành công",
+      label: t("Tỷ lệ thành công", lang),
       value: data?.successRate ?? 0,
       icon: <CheckCircleOutlined />,
       tone: "green" as const,
       tooltip: (
         <span>
-          <b>Công thức:</b> (Đã giao + Đã đối soát) ÷ Tổng số đơn.
+          <b>{t("Công thức:", lang)}</b> {t("(Đã giao + Đã đối soát) ÷ Tổng số đơn.", lang)}
           <br />
-          Phản ánh tỷ lệ đơn hàng thực sự hoàn tất trong bộ lọc hiện tại.
+          {t("Phản ánh tỷ lệ đơn hàng thực sự hoàn tất trong bộ lọc hiện tại.", lang)}
         </span>
       ),
     },
     {
       key: "return",
-      label: "Tỷ lệ hoàn",
+      label: t("Tỷ lệ hoàn", lang),
       value: data?.returnRate ?? 0,
       icon: <RollbackOutlined />,
       tone: "orange" as const,
       tooltip: (
         <span>
-          <b>Công thức:</b> Số đơn RETURNED ÷ Tổng số đơn.
+          <b>{t("Công thức:", lang)}</b> {t("Số đơn RETURNED ÷ Tổng số đơn.", lang)}
           <br />
-          Đơn hoàn là đơn khách không nhận hoặc trả lại sau khi giao.
+          {t("Đơn hoàn là đơn khách không nhận hoặc trả lại sau khi giao.", lang)}
         </span>
       ),
     },
     {
       key: "cancel",
-      label: "Tỷ lệ hủy",
+      label: t("Tỷ lệ hủy", lang),
       value: data?.cancelledRate ?? 0,
       icon: <CloseCircleOutlined />,
       tone: "red" as const,
       tooltip: (
         <span>
-          <b>Công thức:</b> Số đơn CANCELLED ÷ Tổng số đơn.
+          <b>{t("Công thức:", lang)}</b> {t("Số đơn CANCELLED ÷ Tổng số đơn.", lang)}
           <br />
-          Đơn bị hủy do khách đổi ý, không liên lạc được, hoặc lý do khác.
+          {t("Đơn bị hủy do khách đổi ý, không liên lạc được, hoặc lý do khác.", lang)}
         </span>
       ),
     },
-  ];
+  ], [data, lang]);
 
   return (
     <Modal
@@ -153,7 +157,7 @@ function OrderStatisticsModalInner({
       title={
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           <BarChartOutlined style={{ color: "#1677ff" }} />
-          Thống kê đơn hàng
+          {t("Thống kê đơn hàng", lang)}
         </span>
       }
       destroyOnHidden
@@ -178,8 +182,8 @@ function OrderStatisticsModalInner({
           >
             <InfoCircleOutlined style={{ color: "#1677ff" }} />
             <span>
-              Tổng số đơn theo bộ lọc hiện tại:{" "}
-              <b>{formatNumber(data.total)}</b> đơn
+              {t("Tổng số đơn theo bộ lọc hiện tại:", lang)}{" "}
+              <b>{formatNumber(data.total)}</b> {t("đơn", lang)}
             </span>
           </div>
 
@@ -193,15 +197,15 @@ function OrderStatisticsModalInner({
                 color: "#262626",
               }}
             >
-              Phễu trạng thái
+              {t("Phễu trạng thái", lang)}
               <Tooltip
                 title={
                   <span>
-                    Số đơn ở từng giai đoạn trong quy trình:
+                    {t("Số đơn ở từng giai đoạn trong quy trình:", lang)}
                     <br />
-                    Đã xác nhận → Đóng gói → Đang giao → Đã giao → Đã đối soát.
+                    {t("Đã xác nhận → Đóng gói → Đang giao → Đã giao → Đã đối soát.", lang)}
                     <br />
-                    Giúp theo dõi đơn hàng đang đứng ở đâu trong pipeline.
+                    {t("Giúp theo dõi đơn hàng đang đứng ở đâu trong pipeline.", lang)}
                   </span>
                 }
               >
@@ -242,7 +246,7 @@ function OrderStatisticsModalInner({
                 color: "#262626",
               }}
             >
-              Tỷ lệ kết thúc đơn
+              {t("Tỷ lệ kết thúc đơn", lang)}
             </h3>
             <div className={styles["recon-stats-grid"]}>
               {rateCards.map((card) => (

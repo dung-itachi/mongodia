@@ -13,6 +13,8 @@
 import { memo } from "react";
 import { Card, Skeleton } from "antd";
 import { TrophyOutlined } from "@ant-design/icons";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./marketing.module.css";
 
 export type BestSellingProduct = {
@@ -32,6 +34,7 @@ function BestSellingProductsCardInner({
   loading = false,
   limit = 8,
 }: BestSellingProductsCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const items = bestProducts.slice(0, limit);
 
   return (
@@ -40,7 +43,7 @@ function BestSellingProductsCardInner({
       title={
         <span>
           <TrophyOutlined style={{ marginRight: 6 }} />
-          🏆 Top sản phẩm bán chạy
+          {t("🏆 Top sản phẩm bán chạy", lang)}
         </span>
       }
       extra={
@@ -60,7 +63,7 @@ function BestSellingProductsCardInner({
             margin: 0,
           }}
         >
-          Chưa có dữ liệu
+          {t("Chưa có dữ liệu", lang)}
         </p>
       ) : (
         <ul className={styles["mk-best-product-list"]}>

@@ -28,6 +28,8 @@ import type { ColumnsType } from "antd/es/table";
 import { CheckSquareOutlined, EyeOutlined } from "@ant-design/icons";
 import { formatNumber } from "@/lib/format";
 import type { OrderListItem, OrderItem } from "@/types/order";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../orders.module.css";
 
 export type ReconciliationCardProps = {
@@ -82,12 +84,13 @@ function getProductComboDetails(order: OrderListItem): OrderItem[] {
 
 function ProductComboPopover({ order }: { order: OrderListItem }) {
   const router = useRouter();
+  const lang = useLanguageStore((s) => s.language);
   const items = getProductComboDetails(order);
 
   const content = (
     <div style={{ minWidth: 200 }}>
       <div style={{ marginBottom: 8, fontWeight: 600, borderBottom: "1px solid #f0f0f0", paddingBottom: 4 }}>
-        Sản phẩm / Combo
+        {t("Sản phẩm / Combo", lang)}
       </div>
       <Table
         size="small"
@@ -95,7 +98,7 @@ function ProductComboPopover({ order }: { order: OrderListItem }) {
         pagination={false}
         columns={[
           {
-            title: "Tên",
+            title: t("Tên", lang),
             key: "name",
             render: (_, record) => record.comboName || record.productName || "-",
           },
@@ -125,7 +128,7 @@ function ProductComboPopover({ order }: { order: OrderListItem }) {
         icon={<EyeOutlined />}
         onClick={() => router.push(`/orders/${order._id}`)}
       >
-        Chi tiết
+        {t("Chi tiết", lang)}
       </Button>
     </Popover>
   );
@@ -136,13 +139,16 @@ function ReconciliationCardInner({
   accentColor,
   orders,
   loading = false,
-  emptyText = "Chưa có đơn cần đối soát",
+  emptyText,
   onReconcileOne,
   onReconcileAll,
   bulkSubmitting = false,
   showRevenue = false,
   exchangeRate = 1,
 }: ReconciliationCardProps) {
+  const lang = useLanguageStore((s) => s.language);
+  const resolvedEmptyText = emptyText ?? t("Chưa có đơn cần đối soát", lang);
+
   const columns: ColumnsType<OrderListItem> = [
     {
       key: "index",
@@ -157,7 +163,7 @@ function ReconciliationCardInner({
     },
     {
       key: "customerName",
-      title: "Tên khách",
+      title: t("Tên khách", lang),
       width: 150,
       dataIndex: "customerName",
       render: (value: unknown) => (
@@ -166,7 +172,7 @@ function ReconciliationCardInner({
     },
     {
       key: "product",
-      title: "Sản phẩm",
+      title: t("Sản phẩm", lang),
       width: 180,
       render: (_: unknown, record: OrderListItem) => {
         const items = record.orderItems ?? [];
@@ -177,7 +183,7 @@ function ReconciliationCardInner({
     },
     {
       key: "combo",
-      title: "Combo",
+      title: t("Combo", lang),
       width: 150,
       render: (_: unknown, record: OrderListItem) => {
         const items = record.orderItems ?? [];
@@ -190,7 +196,7 @@ function ReconciliationCardInner({
       ? [
           {
             key: "comboPrice",
-            title: "Đơn giá (MNT)",
+            title: t("Đơn giá (MNT)", lang),
             align: "right" as const,
             width: 120,
             render: (_: unknown, record: OrderListItem) => {
@@ -206,7 +212,7 @@ function ReconciliationCardInner({
           },
           {
             key: "comboPriceVnd",
-            title: "Đơn giá (VND)",
+            title: t("Đơn giá (VND)", lang),
             align: "right" as const,
             width: 120,
             render: (_: unknown, record: OrderListItem) => {
@@ -233,7 +239,7 @@ function ReconciliationCardInner({
           },
           {
             key: "totalAmount",
-            title: "Thành tiền (MNT)",
+            title: t("Thành tiền (MNT)", lang),
             dataIndex: "totalAmount",
             align: "right" as const,
             width: 130,
@@ -247,20 +253,20 @@ function ReconciliationCardInner({
       : []),
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 200,
       align: "center" as const,
       render: (_: unknown, record: OrderListItem) => (
         <Space>
           <ProductComboPopover order={record} />
-          <Tooltip title="Đối soát đơn hàng này">
+          <Tooltip title={t("Đối soát đơn hàng này", lang)}>
             <Button
               type="primary"
               size="small"
               icon={<CheckSquareOutlined />}
               onClick={() => onReconcileOne(record._id)}
             >
-              Đối soát
+              {t("Đối soát", lang)}
             </Button>
           </Tooltip>
         </Space>
@@ -283,21 +289,21 @@ function ReconciliationCardInner({
           <span className={styles["recon-card-count"]}>{orders.length}</span>
           {orders.length > 0 && (
             <Popconfirm
-              title={`Đối soát tất cả ${orders.length} đơn?`}
-              description="Hành động này sẽ chuyển tất cả các đơn sang trạng thái Đã đối soát."
-              okText="Đối soát"
-              cancelText="Hủy"
+              title={`${t("Đối soát tất cả", lang)} ${orders.length} ${t("đơn", lang)}?`}
+              description={t("Hành động này sẽ chuyển tất cả các đơn sang trạng thái Đã đối soát.", lang)}
+              okText={t("Đối soát", lang)}
+              cancelText={t("Hủy", lang)}
               okButtonProps={{ danger: false }}
               onConfirm={handleConfirmAll}
             >
-              <Tooltip title="Đối soát tất cả đơn hàng trong danh sách">
+              <Tooltip title={t("Đối soát tất cả đơn hàng trong danh sách", lang)}>
                 <Button
                   type="primary"
                   size="small"
                   loading={bulkSubmitting}
                   icon={<CheckSquareOutlined />}
                 >
-                  ☑ Đối soát tất cả
+                  ☑ {t("Đối soát tất cả", lang)}
                 </Button>
               </Tooltip>
             </Popconfirm>
@@ -309,7 +315,7 @@ function ReconciliationCardInner({
         {loading ? (
           <Skeleton active paragraph={{ rows: 4 }} />
         ) : orders.length === 0 ? (
-          <Empty description={emptyText} />
+          <Empty description={resolvedEmptyText} />
         ) : (
           <Table
             size="small"

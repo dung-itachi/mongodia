@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * MarketingDashboardAdvancedFilters Component (Sprint 7.3 — Drill-down & Export)
  *
@@ -28,6 +30,8 @@ import type { LeadStatus } from "@/constants/leadStatus";
 import type { LeadSource } from "@/constants/leadSource";
 import { LEAD_SOURCE_OPTIONS } from "@/constants/leadSource";
 import { LEAD_STATUS_LABELS } from "@/constants/leadStatus";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./marketing.module.css";
 
 const { RangePicker } = DatePicker;
@@ -49,6 +53,8 @@ function MarketingDashboardAdvancedFiltersInner({
   campaignOptions,
   loading,
 }: MarketingDashboardAdvancedFiltersProps) {
+  const lang = useLanguageStore((s) => s.language);
+
   const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
     if (!dates || !dates[0] || !dates[1]) {
       onFilterChange({ ...filter, dateRange: undefined });
@@ -103,7 +109,7 @@ function MarketingDashboardAdvancedFiltersInner({
     <div className={styles["mk-adv-filters"]}>
       <div className={styles["mk-adv-filters-header"]}>
         <FilterOutlined />
-        <span>Bộ lọc nâng cao</span>
+        <span>{t("Bộ lọc nâng cao", lang)}</span>
       </div>
 
       <div className={styles["mk-adv-filters-body"]}>
@@ -119,7 +125,7 @@ function MarketingDashboardAdvancedFiltersInner({
               }
               onChange={handleDateRangeChange}
               format="DD/MM/YYYY"
-              placeholder={["Từ ngày", "Đến ngày"]}
+              placeholder={[t("Từ ngày", lang), t("Đến ngày", lang)]}
               allowClear
               size="small"
               style={{ width: 240 }}
@@ -133,7 +139,7 @@ function MarketingDashboardAdvancedFiltersInner({
               value={filter.facebookPageId}
               onChange={handleFacebookPageChange}
               options={facebookPageOptions}
-              placeholder="Facebook Page"
+              placeholder={t("Facebook Page", lang)}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -152,7 +158,7 @@ function MarketingDashboardAdvancedFiltersInner({
               value={filter.marketingEmployeeId}
               onChange={handleEmployeeChange}
               options={employeeOptions}
-              placeholder="Nhân viên Marketing"
+              placeholder={t("Nhân viên Marketing", lang)}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -171,7 +177,7 @@ function MarketingDashboardAdvancedFiltersInner({
               value={filter.campaignId}
               onChange={handleCampaignChange}
               options={campaignOptions}
-              placeholder="Campaign"
+              placeholder={t("Campaign", lang)}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -190,7 +196,7 @@ function MarketingDashboardAdvancedFiltersInner({
               value={filter.source}
               onChange={handleSourceChange}
               options={LEAD_SOURCE_OPTIONS}
-              placeholder="Nguồn Lead"
+              placeholder={t("Nguồn Lead", lang)}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -209,7 +215,7 @@ function MarketingDashboardAdvancedFiltersInner({
               value={filter.status}
               onChange={handleStatusChange}
               options={statusOptions}
-              placeholder="Trạng thái"
+              placeholder={t("Trạng thái", lang)}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -231,7 +237,7 @@ function MarketingDashboardAdvancedFiltersInner({
               onClick={handleClearFilters}
               disabled={loading}
             >
-              Xóa lọc
+              {t("Xóa lọc", lang)}
             </Button>
           </>
         )}

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Daily Revenue Report Component
  *
@@ -23,6 +25,8 @@ import { UserOutlined } from "@ant-design/icons";
 import { useMarketingDailyReport } from "@/hooks/useMarketingDailyReport";
 import { useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
 import { useAuthStore } from "@/store/auth.store";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { ChartPeriod } from "@/types/marketing-dashboard";
 import { formatNumber } from "@/lib/format";
 import styles from "./marketing.module.css";
@@ -76,6 +80,7 @@ function getPageSize(period: ChartPeriod): number {
 function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
   const user = useAuthStore((state) => state.user);
   const isGlobal = isGlobalUser(user);
+  const lang = useLanguageStore((s) => s.language);
 
   const [selectedMarketingEmployeeId, setSelectedMarketingEmployeeId] = useState<
     string | undefined
@@ -159,7 +164,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
   if (loading) {
     return (
       <Card
-        title="📈 Doanh số theo ngày"
+        title={t("📈 Doanh số theo ngày", lang)}
         className={styles["mk-daily-report-card"]}
       >
         <Skeleton active paragraph={{ rows: 8 }} />
@@ -170,11 +175,11 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
   if (error) {
     return (
       <Card
-        title="📈 Doanh số theo ngày"
+        title={t("📈 Doanh số theo ngày", lang)}
         className={styles["mk-daily-report-card"]}
       >
         <div className={styles["mk-drawer-error"]}>
-          Không thể tải dữ liệu doanh số theo ngày
+          {t("Không thể tải dữ liệu doanh số theo ngày", lang)}
         </div>
       </Card>
     );
@@ -182,7 +187,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
 
   const columns: ColumnsType<DailyRevenueRow> = [
     {
-      title: "Ngày",
+      title: t("Ngày", lang),
       dataIndex: "dateDisplay",
       key: "dateDisplay",
       width: 110,
@@ -195,7 +200,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       ),
     },
     {
-      title: "Số đẩy",
+      title: t("Số đẩy", lang),
       dataIndex: "pushed",
       key: "pushed",
       width: 90,
@@ -205,14 +210,14 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       ),
     },
     {
-      title: "Đã gọi",
+      title: t("Đã gọi", lang),
       dataIndex: "called",
       key: "called",
       width: 90,
       align: "center",
     },
     {
-      title: "Chốt",
+      title: t("Chốt", lang),
       dataIndex: "closed",
       key: "closed",
       width: 80,
@@ -222,14 +227,14 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       ),
     },
     {
-      title: "Giao",
+      title: t("Giao", lang),
       dataIndex: "shipped",
       key: "shipped",
       width: 80,
       align: "center",
     },
     {
-      title: "TC",
+      title: t("TC", lang),
       dataIndex: "deliveredOk",
       key: "deliveredOk",
       width: 80,
@@ -239,7 +244,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       ),
     },
     {
-      title: "DS ₮",
+      title: t("DS ₮", lang),
       dataIndex: "revenue",
       key: "revenueMnt",
       width: 130,
@@ -254,7 +259,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
         ),
     },
     {
-      title: "DS ₫",
+      title: t("DS ₫", lang),
       dataIndex: "revenue",
       key: "revenueVnd",
       width: 140,
@@ -269,7 +274,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
         ),
     },
     {
-      title: "Biểu đồ",
+      title: t("Biểu đồ", lang),
       key: "chart",
       width: 140,
       render: (_, record) => {
@@ -287,7 +292,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
                   : `${styles["mk-daily-bar-fill"]} ${styles["mk-daily-bar-fill--no-rev"]}`
               }
               style={{ width: `${pct}%` }}
-              aria-label={`Doanh thu ${formatNumber(record.revenue)}`}
+              aria-label={t(`Doanh thu ${formatNumber(record.revenue)}`, lang)}
             />
           </div>
         );
@@ -300,16 +305,16 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       ? marketingEmployeeOptions.find(
           (e) => e.value === selectedMarketingEmployeeId
         )?.label
-      : "Tất cả MKT"
-    : user?.fullName ?? "MKT của bạn";
+      : t("Tất cả MKT", lang)
+    : user?.fullName ?? t("MKT của bạn", lang);
 
   return (
     <Card
       title={
         <span>
-          📈 Doanh số theo ngày
+          {t("📈 Doanh số theo ngày", lang)}
           <small style={{ marginLeft: 8, color: "#8c8c8c", fontWeight: 400 }}>
-            {tableData.length} ngày · {summary.totalPushed} số · {summary.totalClosed} chốt · {summary.totalDeliveredOk} TC
+            {t(`${tableData.length} ngày`, lang)} · {t(`${summary.totalPushed} số`, lang)} · {t(`${summary.totalClosed} chốt`, lang)} · {t(`${summary.totalDeliveredOk} TC`, lang)}
           </small>
         </span>
       }
@@ -320,11 +325,11 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
             <UserOutlined style={{ color: "#8c8c8c" }} />
             <Select
               allowClear
-              placeholder="Chọn MKT cụ thể"
+              placeholder={t("Chọn MKT cụ thể", lang)}
               value={selectedMarketingEmployeeId}
               onChange={(v) => setSelectedMarketingEmployeeId(v)}
               options={[
-                { value: "__all__", label: "Tất cả MKT" },
+                { value: "__all__", label: t("Tất cả MKT", lang) },
                 ...marketingEmployeeOptions,
               ]}
               showSearch
@@ -349,10 +354,10 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
           color: "#595959",
         }}
       >
-        Đang xem: <strong>{showingMktName}</strong>
+        {t("Đang xem:", lang)} <strong>{showingMktName}</strong>
         {scope === "SELF" && (
           <span style={{ marginLeft: 8, color: "#8c8c8c" }}>
-            (chỉ đơn hàng của bạn)
+            {t("(chỉ đơn hàng của bạn)", lang)}
           </span>
         )}
       </div>
@@ -361,7 +366,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
       <Row gutter={16} className={styles["mk-daily-report-summary"]}>
         <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="Tổng DS"
+            title={t("Tổng DS", lang)}
             value={summary.totalRevenue}
             formatter={(value) => formatNumber(Number(value))}
             styles={{ content: { color: "#fa8c16", fontSize: "20px" } }}
@@ -369,35 +374,35 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="Số đẩy"
+            title={t("Số đẩy", lang)}
             value={summary.totalPushed}
             styles={{ content: { color: "#1890ff", fontSize: "20px" } }}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="Đã gọi"
+            title={t("Đã gọi", lang)}
             value={summary.totalCalled}
             styles={{ content: { fontSize: "20px" } }}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="Chốt"
+            title={t("Chốt", lang)}
             value={summary.totalClosed}
             styles={{ content: { color: "#52c41a", fontSize: "20px" } }}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="Giao"
+            title={t("Giao", lang)}
             value={summary.totalShipped}
             styles={{ content: { fontSize: "20px" } }}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
-            title="TC"
+            title={t("TC", lang)}
             value={summary.totalDeliveredOk}
             styles={{ content: { color: "#13c2c2", fontSize: "20px" } }}
           />
@@ -406,7 +411,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
 
       {/* Daily Table */}
       {tableData.length === 0 ? (
-        <Empty description="Chưa có dữ liệu doanh số" />
+        <Empty description={t("Chưa có dữ liệu doanh số", lang)} />
       ) : (
         <Table
           columns={columns}
@@ -420,7 +425,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
                   onChange: (page) => setCurrentPage(page),
                   showSizeChanger: false,
                   showTotal: (total, range) =>
-                    `${range[0]}-${range[1]} / ${total} ngày`,
+                    `${range[0]}-${range[1]} / ${total} ${t("ngày", lang)}`,
                 }
               : false
           }
@@ -435,7 +440,7 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
                 style={{ background: "#f8fafd", fontWeight: 700, fontSize: 12 }}
               >
                 <Table.Summary.Cell index={0} align="left">
-                  Tổng
+                  {t("Tổng", lang)}
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={1} align="center">
                   <span style={{ color: "#1890ff" }}>{summary.totalPushed}</span>

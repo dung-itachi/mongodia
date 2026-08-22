@@ -13,6 +13,8 @@
  */
 
 import { memo } from "react";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import { formatNumber } from "@/lib/format";
 import styles from "./marketing.module.css";
 
@@ -36,6 +38,7 @@ function MKTOverviewBannerInner({
   cpa,
   loading = false,
 }: MKTOverviewBannerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const surplus = totalXin - totalSpent;
   const pctAds =
     totalRevenue > 0 ? Number(((totalXin / totalRevenue) * 100).toFixed(1)) : 0;
@@ -45,7 +48,7 @@ function MKTOverviewBannerInner({
       <div
         className={styles["mk-overview-banner-skeleton"]}
         aria-busy="true"
-        aria-label="Đang tải tổng quan"
+        aria-label={t("Đang tải tổng quan", lang)}
       />
     );
   }
@@ -54,20 +57,20 @@ function MKTOverviewBannerInner({
     <div
       className={styles["mk-overview-banner"]}
       role="status"
-      aria-label="Tổng quan MKT"
+      aria-label={t("Tổng quan MKT", lang)}
     >
       <span className={styles["mk-overview-banner-item"]}>
-        DS: <b className={styles["mk-overview-banner-value"]}>{formatNumber(totalRevenue)}</b>
+        {t("DS:", lang)} <b className={styles["mk-overview-banner-value"]}>{formatNumber(totalRevenue)}</b>
       </span>
       <span className={styles["mk-overview-banner-sep"]}>|</span>
 
       <span className={styles["mk-overview-banner-item"]}>
-        Ads xin: <b className={styles["mk-overview-banner-value"]}>{formatNumber(totalXin)}</b>
+        {t("Ads xin:", lang)} <b className={styles["mk-overview-banner-value"]}>{formatNumber(totalXin)}</b>
       </span>
       <span className={styles["mk-overview-banner-sep"]}>|</span>
 
       <span className={styles["mk-overview-banner-item"]}>
-        Đã tiêu: <b className={styles["mk-overview-banner-value"]}>{formatNumber(totalSpent)}</b>
+        {t("Đã tiêu:", lang)} <b className={styles["mk-overview-banner-value"]}>{formatNumber(totalSpent)}</b>
       </span>
       <span className={styles["mk-overview-banner-sep"]}>|</span>
 
@@ -75,12 +78,12 @@ function MKTOverviewBannerInner({
         className={styles["mk-overview-banner-item"]}
         style={{ color: surplus >= 0 ? "var(--green, #52c41a)" : "var(--red, #ff4d4f)" }}
       >
-        Dư: <b className={styles["mk-overview-banner-value"]}>{formatNumber(surplus)}</b>
+        {t("Dư:", lang)} <b className={styles["mk-overview-banner-value"]}>{formatNumber(surplus)}</b>
       </span>
       <span className={styles["mk-overview-banner-sep"]}>|</span>
 
       <span className={styles["mk-overview-banner-item"]}>
-        %Ads(xin/DS):{" "}
+        {t("%Ads(xin/DS):", lang)}{" "}
         <b className={styles["mk-overview-banner-pct"]}>{pctAds}%</b>
       </span>
       <span className={styles["mk-overview-banner-sep"]}>|</span>

@@ -11,6 +11,9 @@ import type { ColumnsType } from "antd/es/table";
 import type { DrillDownData } from "@/types/marketing-dashboard";
 import type { DrillDownContext } from "@/types/marketing-dashboard-filter";
 import { useMarketingDashboardDrillDown } from "@/hooks/useMarketingDashboardDrillDown";
+import { useLanguageStore } from "@/store/language.store";
+import type { Language } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import { formatNumber } from "@/lib/format";
 import styles from "./marketing.module.css";
 
@@ -39,6 +42,7 @@ function MarketingDashboardDrillDownDrawerInner({
   context,
   onClose,
 }: MarketingDashboardDrillDownDrawerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [activeTab, setActiveTab] = useState("leads");
   const { data, loading, error } = useMarketingDashboardDrillDown(
     context ? context.filter : null,
@@ -54,8 +58,8 @@ function MarketingDashboardDrillDownDrawerInner({
   };
 
   const title = context
-    ? `Chi tiết: ${context.label}`
-    : "Chi tiết Dashboard";
+    ? `${t("Chi tiết:", lang)} ${context.label}`
+    : t("Chi tiết Dashboard", lang);
 
   return (
     <Drawer
@@ -69,13 +73,13 @@ function MarketingDashboardDrillDownDrawerInner({
       {loading && (
         <div className={styles["mk-drawer-loading"]}>
           <Spin size="large" />
-          <p>Đang tải dữ liệu...</p>
+          <p>{t("Đang tải dữ liệu...", lang)}</p>
         </div>
       )}
 
       {error && (
         <div className={styles["mk-drawer-error"]}>
-          <p>Không thể tải dữ liệu: {error}</p>
+          <p>{t("Không thể tải dữ liệu:", lang)} {error}</p>
         </div>
       )}
 
@@ -86,14 +90,14 @@ function MarketingDashboardDrillDownDrawerInner({
             <Row gutter={16}>
               <Col span={6}>
                 <Statistic
-                  title="Tổng Khách hàng"
+                  title={t("Tổng Khách hàng", lang)}
                   value={data.summary.totalLeads}
                   formatter={(val) => formatNumber(Number(val))}
                 />
               </Col>
               <Col span={6}>
                 <Statistic
-                  title="Chi phí"
+                  title={t("Chi phí", lang)}
                   value={data.summary.totalExpense}
                   formatter={(val) => formatNumber(Number(val))}
                   suffix="₫"
@@ -101,7 +105,7 @@ function MarketingDashboardDrillDownDrawerInner({
               </Col>
               <Col span={6}>
                 <Statistic
-                  title="Doanh thu"
+                  title={t("Doanh thu", lang)}
                   value={data.summary.totalRevenue}
                   formatter={(val) => formatNumber(Number(val))}
                   suffix="₫"
@@ -135,17 +139,17 @@ function MarketingDashboardDrillDownDrawerInner({
                 key: tabKey,
                 label:
                   tabKey === "leads"
-                    ? `Khách hàng (${data.leads.length})`
+                    ? `${t("Khách hàng", lang)} (${data.leads.length})`
                     : tabKey === "expenses"
-                      ? `Chi phí (${data.expenses.length})`
-                      : `Doanh thu (${data.revenues.length})`,
+                      ? `${t("Chi phí", lang)} (${data.expenses.length})`
+                      : `${t("Doanh thu", lang)} (${data.revenues.length})`,
                 children:
                   tabKey === "leads" ? (
-                    <LeadTable leads={data.leads} loading={loading} />
+                    <LeadTable leads={data.leads} loading={loading} lang={lang} />
                   ) : tabKey === "expenses" ? (
-                    <ExpenseTable expenses={data.expenses} loading={loading} />
+                    <ExpenseTable expenses={data.expenses} loading={loading} lang={lang} />
                   ) : (
-                    <RevenueTable revenues={data.revenues} loading={loading} />
+                    <RevenueTable revenues={data.revenues} loading={loading} lang={lang} />
                   ),
               })) as Parameters<typeof Tabs>[0]["items"]
             }
@@ -163,54 +167,55 @@ function MarketingDashboardDrillDownDrawerInner({
 interface LeadTableProps {
   leads: DrillDownData["leads"];
   loading: boolean;
+  lang: Language;
 }
 
-function LeadTable({ leads, loading }: LeadTableProps) {
+function LeadTable({ leads, loading, lang }: LeadTableProps) {
   const columns: ColumnsType<DrillDownData["leads"][number]> = [
     {
-      title: "Mã Khách hàng",
+      title: t("Mã Khách hàng", lang),
       dataIndex: "leadCode",
       key: "leadCode",
       width: 120,
     },
     {
-      title: "Khách hàng",
+      title: t("Khách hàng", lang),
       dataIndex: "customerName",
       key: "customerName",
       width: 150,
     },
     {
-      title: "SĐT",
+      title: t("SĐT", lang),
       dataIndex: "phone",
       key: "phone",
       width: 120,
     },
     {
-      title: "Nguồn",
+      title: t("Nguồn", lang),
       dataIndex: "sourceType",
       key: "sourceType",
       width: 130,
     },
     {
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "status",
       key: "status",
       width: 120,
     },
     {
-      title: "NV Marketing",
+      title: t("NV Marketing", lang),
       dataIndex: "marketingEmployeeName",
       key: "marketingEmployeeName",
       width: 140,
     },
     {
-      title: "Page",
+      title: t("Page", lang),
       dataIndex: "facebookPageName",
       key: "facebookPageName",
       width: 120,
     },
     {
-      title: "Ngày tạo",
+      title: t("Ngày tạo", lang),
       dataIndex: "createdAt",
       key: "createdAt",
       width: 150,
@@ -233,30 +238,31 @@ function LeadTable({ leads, loading }: LeadTableProps) {
 interface ExpenseTableProps {
   expenses: DrillDownData["expenses"];
   loading: boolean;
+  lang: Language;
 }
 
-function ExpenseTable({ expenses, loading }: ExpenseTableProps) {
+function ExpenseTable({ expenses, loading, lang }: ExpenseTableProps) {
   const columns: ColumnsType<DrillDownData["expenses"][number]> = [
     {
-      title: "Ngày",
+      title: t("Ngày", lang),
       dataIndex: "reportDate",
       key: "reportDate",
       width: 100,
     },
     {
-      title: "NV Marketing",
+      title: t("NV Marketing", lang),
       dataIndex: "marketingEmployeeName",
       key: "marketingEmployeeName",
       width: 140,
     },
     {
-      title: "Page",
+      title: t("Page", lang),
       dataIndex: "facebookPageName",
       key: "facebookPageName",
       width: 120,
     },
     {
-      title: "Chi phí",
+      title: t("Chi phí", lang),
       dataIndex: "totalSpent",
       key: "totalSpent",
       width: 120,
@@ -264,7 +270,7 @@ function ExpenseTable({ expenses, loading }: ExpenseTableProps) {
       render: (val: number) => formatNumber(val),
     },
     {
-      title: "Doanh thu",
+      title: t("Doanh thu", lang),
       dataIndex: "totalRevenue",
       key: "totalRevenue",
       width: 120,
@@ -272,7 +278,7 @@ function ExpenseTable({ expenses, loading }: ExpenseTableProps) {
       render: (val: number) => formatNumber(val),
     },
     {
-      title: "Khách hàng",
+      title: t("Khách hàng", lang),
       dataIndex: "totalLeads",
       key: "totalLeads",
       width: 80,
@@ -305,24 +311,25 @@ function ExpenseTable({ expenses, loading }: ExpenseTableProps) {
 interface RevenueTableProps {
   revenues: DrillDownData["revenues"];
   loading: boolean;
+  lang: Language;
 }
 
-function RevenueTable({ revenues, loading }: RevenueTableProps) {
+function RevenueTable({ revenues, loading, lang }: RevenueTableProps) {
   const columns: ColumnsType<DrillDownData["revenues"][number]> = [
     {
-      title: "Mã đơn",
+      title: t("Mã đơn", lang),
       dataIndex: "orderCode",
       key: "orderCode",
       width: 120,
     },
     {
-      title: "Khách hàng",
+      title: t("Khách hàng", lang),
       dataIndex: "customerName",
       key: "customerName",
       width: 150,
     },
     {
-      title: "Tổng tiền",
+      title: t("Tổng tiền", lang),
       dataIndex: "totalAmount",
       key: "totalAmount",
       width: 120,
@@ -330,13 +337,13 @@ function RevenueTable({ revenues, loading }: RevenueTableProps) {
       render: (val: number) => formatNumber(val),
     },
     {
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "status",
       key: "status",
       width: 120,
     },
     {
-      title: "Ngày tạo",
+      title: t("Ngày tạo", lang),
       dataIndex: "createdAt",
       key: "createdAt",
       width: 150,
