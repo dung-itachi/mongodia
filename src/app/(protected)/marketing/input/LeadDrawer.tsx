@@ -9,7 +9,8 @@ import { memo, useEffect, useMemo } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DrawerForm, FormSection, FormField } from "@/components/common";
-import { Select, Input } from "antd";
+import { Select, Input, DatePicker } from "antd";
+import dayjs from "dayjs";
 import { LEAD_SOURCE_OPTIONS, LEAD_STATUS_OPTIONS } from "@/constants/marketing";
 import type { SelectProps } from "antd";
 import { defaultLeadForm, marketingLeadFormSchema, type MarketingLeadForm } from "@/validators/marketing-lead.validator";
@@ -105,6 +106,8 @@ function LeadDrawerInner({
             comboId: lead.combo?._id ?? "",
             productId: lead.product?._id ?? "",
             address: lead.address ?? "",
+            orderDate: lead.orderDate ?? "",
+            receivedDate: lead.receivedDate ?? "",
           }
         : defaultLeadForm
     );
@@ -216,6 +219,7 @@ function LeadDrawerInner({
                 options={LEAD_STATUS_OPTIONS as SelectProps["options"]}
                 placeholder="Chọn trạng thái"
                 status={errors.status ? "error" : undefined}
+                disabled={isEdit}
               />
             )}
           />
@@ -257,6 +261,48 @@ function LeadDrawerInner({
                 optionFilterProp="label"
                 notFoundContent={combosLoading ? null : "Chưa có combo nào"}
               />
+            )}
+          />
+        </FormField>
+      </FormSection>
+
+      <FormSection title="Thời gian đơn hàng (Sprint 8.x)">
+        <FormField label="Thời gian đơn hàng" error={errors.orderDate?.message}>
+          <Controller
+            name="orderDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                style={{ width: "100%" }}
+                showTime
+                classNames={{ popup: { root: "picker-with-time" } }}
+                value={field.value ? dayjs(field.value) : null}
+                onChange={(date) => field.onChange(date?.toISOString() ?? "")}
+                placeholder="Chọn ngày giờ đặt hàng"
+                format="DD/MM/YYYY HH:mm"
+                getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
+              />
+            )}
+          />
+        </FormField>
+
+        <FormField label="Thời gian nhận đơn" error={errors.receivedDate?.message}>
+          <Controller
+            name="receivedDate"
+            control={control}
+            render={({ field }) => (
+              <div style={{ position: "relative" }}>
+                <DatePicker
+                  style={{ width: "100%" }}
+                  showTime
+                  classNames={{ popup: { root: "picker-with-time" } }}
+                  value={field.value ? dayjs(field.value) : null}
+                  onChange={(date) => field.onChange(date?.toISOString() ?? "")}
+                  placeholder="Chọn thời gian Marketing nhận đơn"
+                  format="DD/MM/YYYY HH:mm"
+                  getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
+                />
+              </div>
             )}
           />
         </FormField>

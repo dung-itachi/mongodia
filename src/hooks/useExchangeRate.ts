@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import type {
   ExchangeRateSettingValue,
-} from "@/lib/system-settings";
+} from "@/types/system-settings";
 
 const QUERY_KEY = ["settings", "exchange-rate"] as const;
 

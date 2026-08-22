@@ -101,6 +101,21 @@
   color: #1890ff;
 }
 
+.recon-stat-card--cyan .recon-stat-card-icon {
+  background: #e6fffb;
+  color: #13c2c2;
+}
+
+.recon-stat-card--geekblue .recon-stat-card-icon {
+  background: #f0f5ff;
+  color: #2f54eb;
+}
+
+.recon-stat-card--red .recon-stat-card-icon {
+  background: #fff1f0;
+  color: #f5222d;
+}
+
 /* ============================================================
    Reconciliation card (table + bulk button)
    ============================================================ */

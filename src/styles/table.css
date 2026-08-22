@@ -1,18 +1,19 @@
 /* table.css — table container + base table
-   Classes: .tw, table, thead th, tbody td, tbody tr:hover td.
+   Scope: chỉ áp dụng cho table nằm trong `.tw` (table-wrapper) để tránh
+   đè nhầm lên table nội bộ của Ant Design (DatePicker, Table, ...).
 */
 
 .tw {
   overflow-x: auto;
 }
 
-table {
+.tw table {
   width: 100%;
   border-collapse: collapse;
   min-width: 580px;
 }
 
-thead th {
+.tw thead th {
   background: #f8fafd;
   text-align: left;
   font-size: 8px;
@@ -28,13 +29,13 @@ thead th {
   z-index: 1;
 }
 
-tbody td {
+.tw tbody td {
   padding: 5px 7px;
   font-size: 10px;
   border-bottom: 1px solid var(--line2);
   vertical-align: middle;
 }
 
-tbody tr:hover td {
+.tw tbody tr:hover td {
   background: #f7fafd;
 }

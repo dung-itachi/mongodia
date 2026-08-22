@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Button, Space, Typography } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
+import { useState, useCallback, useMemo } from "react";
+import { Button, Space, Typography, Row, Col, Statistic, Card, Alert } from "antd";
+import { ReloadOutlined, InboxOutlined, GiftOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import TableToolbar from "@/components/common/table/TableToolbar";
@@ -12,9 +12,26 @@ import { useWarehouseInventorySelectors } from "@/hooks/useWarehouseInventory";
 import WarehouseInventoryFiltersComponent from "@/components/warehouse/inventory/WarehouseInventoryFilters";
 import WarehouseInventoryTable from "@/components/warehouse/inventory/WarehouseInventoryTable";
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
+import type { NormalizedInventoryItem } from "@/hooks/useWarehouseInventory";
 
 const { Text } = Typography;
 const DEFAULT_PAGE_SIZE = 20;
+
+interface SummaryStats {
+  totalItems: number;
+  totalQuantity: number;
+  outOfStock: number;
+  lowStock: number;
+  gifts: number;
+}
+
+function computeStats(items: NormalizedInventoryItem[]): SummaryStats {
+  const outOfStock = items.filter((i) => (i.quantity ?? 0) === 0).length;
+  const lowStock = items.filter((i) => (i.quantity ?? 0) > 0 && (i.quantity ?? 0) < 10).length;
+  const totalQuantity = items.reduce((sum, i) => sum + (i.quantity ?? 0), 0);
+  const gifts = items.filter((i) => i.itemType === "GIFT").length;
+  return { totalItems: items.length, totalQuantity, outOfStock, lowStock, gifts };
+}
 
 export default function WarehouseInventoryPage() {
   const [filters, setFilters] = useState<WarehouseInventoryFilters>({
@@ -24,6 +41,8 @@ export default function WarehouseInventoryPage() {
 
   const selectors = useWarehouseInventorySelectors();
   const { items, loading, fetching, total, refetch, response } = useWarehouseInventory({ filters });
+
+  const stats = useMemo(() => computeStats(items), [items]);
 
   const handleFilterChange = useCallback((newFilters: WarehouseInventoryFilters) => {
     setFilters(newFilters);
@@ -41,15 +60,17 @@ export default function WarehouseInventoryPage() {
     void refetch();
   }, [refetch]);
 
-  const pageActions = (
-    <Space orientation="vertical" size={0} style={{ textAlign: "right" }}>
-      <Text strong>Tổng: {(total ?? 0).toLocaleString("vi-VN")} dòng</Text>
-      {filters.search && (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          Kết quả tìm kiếm: {items.length.toLocaleString("vi-VN")}
-        </Text>
-      )}
-    </Space>
+  const handleResetFilters = useCallback(() => {
+    setFilters({ page: 1, limit: DEFAULT_PAGE_SIZE });
+  }, []);
+
+  const hasActiveFilters = Boolean(
+    filters.search ||
+    filters.warehouseId ||
+    filters.itemType ||
+    filters.productId ||
+    filters.variantId ||
+    filters.giftId
   );
 
   return (
@@ -61,11 +82,97 @@ export default function WarehouseInventoryPage() {
           { label: "Kho", href: "/warehouses" },
           { label: "Tồn kho" },
         ]}
-        actions={pageActions}
       />
 
       <PermissionGate permission="inventory.view">
-        <div className="card">
+        {/* Summary Cards */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small" style={{ borderRadius: 10 }}>
+              <Statistic
+                title={<Text type="secondary" style={{ fontSize: 13 }}>Tổng mặt hàng</Text>}
+                value={stats.totalItems}
+                styles={{ content: { color: "#1890ff", fontSize: 22, fontWeight: 600 } }}
+                suffix={<Text type="secondary" style={{ fontSize: 12 }}>dòng</Text>}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small" style={{ borderRadius: 10 }}>
+              <Statistic
+                title={<Text type="secondary" style={{ fontSize: 13 }}>Tổng tồn kho</Text>}
+                value={stats.totalQuantity}
+                styles={{ content: { color: "#52c41a", fontSize: 22, fontWeight: 600 } }}
+                formatter={(value) => Number(value).toLocaleString("vi-VN")}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small" style={{ borderRadius: 10 }}>
+              <Statistic
+                title={<Text type="secondary" style={{ fontSize: 13 }}>Hết hàng</Text>}
+                value={stats.outOfStock}
+                styles={{ content: {
+                  color: stats.outOfStock > 0 ? "#ff4d4f" : "#52c41a",
+                  fontSize: 22,
+                  fontWeight: 600,
+                }}}
+                prefix={stats.outOfStock > 0 ? <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} /> : null}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card size="small" style={{ borderRadius: 10 }}>
+              <Statistic
+                title={<Text type="secondary" style={{ fontSize: 13 }}>Sắp hết</Text>}
+                value={stats.lowStock}
+                styles={{ content: {
+                  color: stats.lowStock > 0 ? "#faad14" : "#52c41a",
+                  fontSize: 22,
+                  fontWeight: 600,
+                }}}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Low stock / out of stock alerts */}
+        {stats.outOfStock > 0 && (
+          <Alert
+            title={
+              <Space>
+                <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+                <Text>
+                  Có <strong>{stats.outOfStock}</strong> mặt hàng <strong>hết hàng</strong> cần được bổ sung
+                </Text>
+              </Space>
+            }
+            type="error"
+            showIcon
+            style={{ marginBottom: 12, borderRadius: 8 }}
+          />
+        )}
+        {stats.lowStock > 0 && stats.outOfStock === 0 && (
+          <Alert
+            title={
+              <Space>
+                <ExclamationCircleOutlined style={{ color: "#faad14" }} />
+                <Text>
+                  Có <strong>{stats.lowStock}</strong> mặt hàng <strong>sắp hết hàng</strong> (dưới 10 cái)
+                </Text>
+              </Space>
+            }
+            type="warning"
+            showIcon
+            style={{ marginBottom: 12, borderRadius: 8 }}
+          />
+        )}
+
+        <Card
+          size="small"
+          style={{ borderRadius: 12 }}
+          styles={{ body: { padding: "16px 16px 8px" } }}
+        >
           <TableToolbar
             searchValue={filters.search}
             onSearchChange={(value) => handleFilterChange({ ...filters, search: value || undefined })}
@@ -73,19 +180,26 @@ export default function WarehouseInventoryPage() {
             onRefresh={handleRefresh}
             loading={fetching}
             actions={
-              <Button icon={<ReloadOutlined spin={fetching} />} onClick={handleRefresh}>
-                Làm mới
-              </Button>
+              <Space>
+                {hasActiveFilters && (
+                  <Button onClick={handleResetFilters}>Xóa lọc</Button>
+                )}
+                <Button icon={<ReloadOutlined spin={fetching} />} onClick={handleRefresh}>
+                  Làm mới
+                </Button>
+              </Space>
             }
           />
 
-          <WarehouseQuickPick
-            value={filters.warehouseId}
-            onChange={(warehouseId) =>
-              handleFilterChange({ ...filters, warehouseId, page: 1 })
-            }
-            warehouses={selectors.warehouses}
-          />
+          <div style={{ marginBottom: 12 }}>
+            <WarehouseQuickPick
+              value={filters.warehouseId}
+              onChange={(warehouseId) =>
+                handleFilterChange({ ...filters, warehouseId, page: 1 })
+              }
+              warehouses={selectors.warehouses}
+            />
+          </div>
 
           <WarehouseInventoryFiltersComponent
             filters={filters}
@@ -96,19 +210,42 @@ export default function WarehouseInventoryPage() {
             variants={selectors.variants}
             loading={selectors.loading}
           />
+        </Card>
 
-          <WarehouseInventoryTable
-            data={items}
-            loading={loading}
-            onAdjusted={handleRefresh}
-            pagination={{
-              current: filters.page ?? 1,
-              pageSize: filters.limit ?? DEFAULT_PAGE_SIZE,
-              total: response?.total ?? total,
-              onChange: handlePageChange,
-            }}
-          />
-        </div>
+        {/* Item type summary */}
+        {!loading && items.length > 0 && (
+          <div style={{ marginBottom: 8, display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <Space size={4}>
+              <InboxOutlined style={{ color: "#1890ff" }} />
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                <strong>{items.filter((i) => i.itemType === "PRODUCT").length}</strong> sản phẩm
+              </Text>
+            </Space>
+            <Space size={4}>
+              <GiftOutlined style={{ color: "#722ed1" }} />
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                <strong>{stats.gifts}</strong> quà tặng
+              </Text>
+            </Space>
+            {hasActiveFilters && (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                · Lọc: <strong>{items.length.toLocaleString("vi-VN")}</strong> / {total?.toLocaleString("vi-VN") ?? 0} kết quả
+              </Text>
+            )}
+          </div>
+        )}
+
+        <WarehouseInventoryTable
+          data={items}
+          loading={loading}
+          onAdjusted={handleRefresh}
+          pagination={{
+            current: filters.page ?? 1,
+            pageSize: filters.limit ?? DEFAULT_PAGE_SIZE,
+            total: response?.total ?? total,
+            onChange: handlePageChange,
+          }}
+        />
       </PermissionGate>
     </PageContainer>
   );

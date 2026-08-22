@@ -157,6 +157,12 @@ export interface OrderListItem {
   /** Sale đã gọi điện xác nhận với khách chưa. Default `false`. */
   isCalledForConfirmation?: boolean;
 
+  // Sprint 8.x: Thời gian đơn hàng
+  /** Thời gian khách đặt hàng (từ Landing page hoặc dữ liệu dán) */
+  orderDate?: string;
+  /** Thời gian Marketing nhận được đơn (khi push sang Sale) */
+  receivedDate?: string;
+
   // Classification
   orderType: OrderType;
   orderTypeLabel: string;
@@ -401,4 +407,44 @@ export interface OrderHistoryItem {
   newValue?: string;
   note?: string;
   createdAt: string;
+}
+
+// ============================================================================
+// Order Statistics (Sprint — Stats popup trên /orders)
+// ============================================================================
+
+/**
+ * Phễu trạng thái của Order (5 bước chính trong workflow).
+ */
+export interface OrderStatusFunnel {
+  confirmed: number;
+  packing: number;
+  shipping: number;
+  delivered: number;
+  reconciled: number;
+}
+
+/**
+ * Số đơn theo từng trạng thái (full breakdown).
+ * Key là OrderStatus enum string, value là số đơn.
+ */
+export type OrderStatusBreakdown = Record<string, number>;
+
+/**
+ * Response trả về từ GET /api/orders/statistics.
+ *
+ * - total: tổng số đơn theo filter hiện tại (không bao gồm filter status khi đếm funnel).
+ * - funnel: số đơn theo 5 trạng thái chính (CONFIRMED → RECONCILED).
+ * - successRate: (DELIVERED + RECONCILED) / total (%).
+ * - returnRate: RETURNED / total (%).
+ * - cancelledRate: CANCELLED / total (%).
+ * - statusBreakdown: số đơn theo từng trạng thái đầy đủ.
+ */
+export interface OrderStatisticsResponse {
+  total: number;
+  funnel: OrderStatusFunnel;
+  successRate: number;
+  returnRate: number;
+  cancelledRate: number;
+  statusBreakdown: OrderStatusBreakdown;
 }

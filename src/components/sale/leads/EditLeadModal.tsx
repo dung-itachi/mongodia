@@ -40,6 +40,8 @@ import {
 } from "@ant-design/icons";
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import { useUpdateLead } from "@/hooks/useSaleLeads";
+import { LeadStatus, LEAD_STATUS_LABELS } from "@/constants/leadStatus";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { useComboList, type ComboListItem } from "@/hooks/useCombos";
 import { useProductWithVariants } from "@/hooks/useProductVariants";
 import { useProducts } from "@/hooks/useProducts";
@@ -67,7 +69,7 @@ interface LeadFormValues {
   comboId?: string;
   comboQuantity?: number;
   sellingPrice?: number;
-  exchangeRate?: number;
+  status?: LeadStatus;
 }
 
 function productId(combo: ComboListItem): string | null {
@@ -77,6 +79,7 @@ function productId(combo: ComboListItem): string | null {
 function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalProps) {
   const [form] = Form.useForm<LeadFormValues>();
   const updateLeadMutation = useUpdateLead();
+  const { data: exchangeRateData } = useExchangeRate();
   const [selectedProductId, setSelectedProductId] = useState<string>();
   const [selectedComboId, setSelectedComboId] = useState<string>();
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -114,7 +117,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
         note: lead.note,
         comboQuantity: 1,
         sellingPrice: lead.unitPriceMNT,
-        exchangeRate: lead.exchangeRate,
+        status: lead.status,
       });
     }
   }, [lead, open, form]);
@@ -210,10 +213,11 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
           comboId: selectedComboId,
           comboQuantity: item.comboQuantity,
           unitPriceMNT: item.sellingPrice,
-          exchangeRate: values.exchangeRate,
+          exchangeRate: exchangeRateData?.rate,
           variantDetails: item.details,
           giftMode: item.giftMode,
           giftSelections: item.giftSelections,
+          status: values.status,
         },
       });
 
@@ -283,7 +287,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             address: lead.address,
             comboQuantity: 1,
             sellingPrice: lead.unitPriceMNT,
-            exchangeRate: lead.exchangeRate,
+            status: lead.status,
           }}
         >
           <Divider titlePlacement="left" styles={{ content: { marginInlineStart: 0 } }} plain style={{ marginTop: 0 }}>
@@ -321,6 +325,31 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             <TextArea
               rows={2}
               placeholder="Nhập ghi chú đơn hàng (tùy chọn)"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="status"
+            label={
+              <Space>
+                <span>Trạng thái đơn hàng</span>
+                {lead.isConverted && (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    (Lead đã chốt - không thể thay đổi)
+                  </Text>
+                )}
+              </Space>
+            }
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+          >
+            <Select
+              placeholder="-- Chọn trạng thái --"
+              size="large"
+              disabled={lead.isConverted}
+              options={(Object.values(LeadStatus) as LeadStatus[]).map((status) => ({
+                value: status,
+                label: LEAD_STATUS_LABELS[status],
+              }))}
             />
           </Form.Item>
 
@@ -447,12 +476,13 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
               />
             </Form.Item>
 
-            <Form.Item name="exchangeRate" label="Tỷ giá (1 ₮ = ? VND)" style={{ flex: 1 }}>
+            <Form.Item label="Tỷ giá (1 ₮ = ? VND)" style={{ flex: 1 }}>
               <InputNumber<number>
+                value={exchangeRateData?.rate ?? lead.exchangeRate}
                 min={0}
                 step={1}
                 style={{ width: "100%" }}
-                placeholder="Ví dụ: 650"
+                disabled
                 formatter={(value) =>
                   value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""
                 }

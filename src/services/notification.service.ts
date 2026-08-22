@@ -70,14 +70,22 @@ function encodeCursor(date: Date, id: Types.ObjectId): string {
   return `${date.toISOString()}|${id.toString()}`;
 }
 
-function recipientMatch(employeeId: Types.ObjectId) {
-  return {
-    isActive: true,
+function recipientMatch(
+  employeeId: Types.ObjectId,
+  isActiveOverride?: boolean
+) {
+  // Dùng flag recipientMode thay cho $size: 0 để có thể dùng index.
+  // Đối với broadcast notifications, recipientMode = "broadcast" (default trên schema).
+  const base: Record<string, unknown> = {
     $or: [
       { recipients: employeeId },
-      { recipients: { $size: 0 } },
+      { recipientMode: "broadcast" },
     ],
   };
+  if (isActiveOverride !== undefined) {
+    base.isActive = isActiveOverride;
+  }
+  return base;
 }
 
 function inferType(createdAt: Date): NotificationItemType {
@@ -121,7 +129,7 @@ function toItem(
 
 export async function listForUser(
   employeeId: string,
-  options: { cursor?: string | null; limit?: number; onlyUnread?: boolean } = {}
+  options: { cursor?: string | null; limit?: number; onlyUnread?: boolean; isActive?: boolean } = {}
 ): Promise<NotificationPage> {
   await connectDB();
   if (!Types.ObjectId.isValid(employeeId)) {
@@ -133,22 +141,7 @@ export async function listForUser(
     MAX_LIMIT
   );
 
-  const filter: Record<string, unknown> = recipientMatch(userObjectId);
-
-  if (options.onlyUnread) {
-    // Filter out anything already read by this user.
-    const readDocs = await NotificationRead.find({
-      employeeId: userObjectId,
-    })
-      .select("notificationId")
-      .lean();
-    const readIds = readDocs.map((r) => r.notificationId);
-    if (readIds.length === 0) {
-      // No reads yet — nothing to exclude.
-    } else {
-      filter._id = { $nin: readIds };
-    }
-  }
+  const filter: Record<string, unknown> = recipientMatch(userObjectId, options.isActive);
 
   if (options.cursor) {
     const { createdAt, id } = decodeCursor(options.cursor);
@@ -161,24 +154,32 @@ export async function listForUser(
           _id: { $lt: id },
         },
       ];
-      filter.$and = [{ isActive: true }];
+      if (options.isActive !== undefined) {
+        filter.isActive = options.isActive;
+      }
     }
   }
 
   const docs = await Notification.find(filter)
     .sort({ createdAt: -1, _id: -1 })
-    .limit(limit + 1)
+    .limit(limit + (options.onlyUnread ? 1 : 0))
     .select("_id title message category priority link senderId createdAt")
     .populate("senderId", "_id employeeCode fullName")
     .lean();
 
-  const hasMore = docs.length > limit;
-  const page = docs.slice(0, limit);
+  // Load read state song song (sau khi có page ids).
+  // Khi onlyUnread=true: ta load limit+1 row, loại bỏ read, slice limit.
+  const pageIds = docs.map((d) => d._id);
+  const readMap = await loadReadMap(userObjectId, pageIds);
 
-  const readMap = await loadReadMap(
-    userObjectId,
-    page.map((d) => d._id)
-  );
+  const filtered = options.onlyUnread
+    ? docs.filter((d) => !readMap.has(d._id.toString()))
+    : docs;
+
+  const hasMore = options.onlyUnread
+    ? filtered.length > limit
+    : docs.length > limit;
+  const page = filtered.slice(0, limit);
 
   const items = page.map((d) => toItem(d, readMap));
 
@@ -193,26 +194,45 @@ export async function listForUser(
   return { items, nextCursor };
 }
 
-export async function unreadCount(employeeId: string): Promise<number> {
+export async function unreadCount(employeeId: string, isActive?: boolean): Promise<number> {
   await connectDB();
   if (!Types.ObjectId.isValid(employeeId)) {
     throw new NotificationServiceError("employeeId không hợp lệ", 400);
   }
   const userObjectId = new Types.ObjectId(employeeId);
 
-  // Use aggregation: count of Notification matching recipient filter whose
-  // _id is NOT in the user's NotificationRead set.
-  const readDocs = await NotificationRead.find({ employeeId: userObjectId })
-    .select("notificationId")
-    .lean();
-  const readIds = readDocs.map((r) => r.notificationId);
+  // Dùng aggregation + $lookup thay cho load-all-read-IDs + $nin.
+  // Giảm từ 2 round-trips + O(N) in-memory xuống 1 pipeline + IXSCAN trên NotificationRead index.
+  const match: Record<string, unknown> = recipientMatch(userObjectId, isActive);
+  if (isActive === undefined) match.isActive = { $ne: false };
 
-  const match: Record<string, unknown> = recipientMatch(userObjectId);
-  if (readIds.length > 0) {
-    match._id = { $nin: readIds };
-  }
+  const result = await Notification.aggregate<{ count: number }>([
+    { $match: match },
+    {
+      $lookup: {
+        from: "notificationreads",
+        let: { nid: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$notificationId", "$$nid"] },
+                  { $eq: ["$employeeId", userObjectId] },
+                ],
+              },
+            },
+          },
+          { $project: { _id: 1 } },
+        ],
+        as: "read",
+      },
+    },
+    { $match: { read: { $size: 0 } } },
+    { $count: "count" },
+  ]);
 
-  return Notification.countDocuments(match);
+  return result[0]?.count ?? 0;
 }
 
 export async function markRead(

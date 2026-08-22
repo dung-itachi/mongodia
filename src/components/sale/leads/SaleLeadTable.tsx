@@ -5,8 +5,8 @@
  * Includes action buttons for updating lead status.
  */
 
-import { memo, useMemo } from "react";
-import { Button, Space, Tag, Badge } from "antd";
+import { memo, useMemo, useState } from "react";
+import { Button, Tag, Badge, Tooltip } from "antd";
 import {
   PhoneOutlined,
   SwapOutlined,
@@ -22,6 +22,7 @@ import type { SaleLead } from "@/hooks/useSaleLeads";
 import styles from "./sale-leads.module.css";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
+import { convertMNTtoVND, formatMNT, formatVND } from "@/lib/format";
 
 function getTranslated(key: string): string {
   const language = useLanguageStore.getState().language;
@@ -42,6 +43,24 @@ export interface SaleLeadTableProps {
   selectedRowKeys?: string[];
   onSelectionChange?: (keys: string[]) => void;
   selectionType?: "checkbox" | "none";
+  /**
+   * Phí ship hiện tại (MNT) lấy từ /api/settings/shipping-fee.
+   * Dùng để tính cột "Doanh thu" = giá combo - shippingFee.
+   */
+  shippingFee?: number;
+  /**
+   * Tỷ giá MNT → VND (VND per 1 MNT) lấy từ /api/settings/exchange-rate.
+   * Click vào ô tiền sẽ toggle giữa MNT và VND.
+   */
+  exchangeRate?: number;
+  /**
+   * Optional controlled currency state. Khi truyền xuống, bảng sẽ dùng
+   * giá trị này thay vì state nội bộ — cho phép đồng bộ với stats card
+   * ở trên (Sprint 8.x+).
+   */
+  currency?: "MNT" | "VND";
+  /** Toggle handler khi dùng controlled `currency`. */
+  onCurrencyToggle?: () => void;
 }
 
 function SaleLeadTableInner({
@@ -57,14 +76,117 @@ function SaleLeadTableInner({
   selectedRowKeys = [],
   onSelectionChange,
   selectionType = "none",
+  shippingFee = 0,
+  exchangeRate = 0,
+  currency: controlledCurrency,
+  onCurrencyToggle,
 }: SaleLeadTableProps) {
+  const [internalCurrency, setInternalCurrency] = useState<"MNT" | "VND">("MNT");
+  const isControlled = controlledCurrency !== undefined;
+  const currency = isControlled ? controlledCurrency : internalCurrency;
+  const setCurrency = (next: "MNT" | "VND" | ((prev: "MNT" | "VND") => "MNT" | "VND")) => {
+    const value =
+      typeof next === "function" ? next(currency) : next;
+    if (isControlled) {
+      if (value !== currency) onCurrencyToggle?.();
+      return;
+    }
+    setInternalCurrency(value);
+  };
+
+  const renderCurrencyHeader = (label: string) => {
+    const nextCurrency = currency === "MNT" ? "VND" : "MNT";
+    const tooltipTitle = `Click để đổi sang ${nextCurrency}`;
+    return (
+      <Tooltip title={tooltipTitle} mouseEnterDelay={0.2}>
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={() => setCurrency((c) => (c === "MNT" ? "VND" : "MNT"))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setCurrency((c) => (c === "MNT" ? "VND" : "MNT"));
+            }
+          }}
+          style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 4 }}
+        >
+          <span>{getTranslated(label)}</span>
+          <Tag color={currency === "MNT" ? "blue" : "purple"} style={{ margin: 0, fontSize: 10, lineHeight: "16px", padding: "0 6px" }}>
+            {currency}
+          </Tag>
+        </span>
+      </Tooltip>
+    );
+  };
+
+  const renderMoney = (mntAmount: number | undefined) => {
+    if (typeof mntAmount !== "number") {
+      return <span className={styles.mutedText}>-</span>;
+    }
+    const nextCurrency = currency === "MNT" ? "VND" : "MNT";
+    const tooltipTitle = `Click để đổi sang ${nextCurrency}`;
+    if (currency === "VND" && exchangeRate > 0) {
+      const vnd = convertMNTtoVND(mntAmount, exchangeRate);
+      return (
+        <Tooltip title={tooltipTitle} mouseEnterDelay={0.2}>
+          <span className={styles.priceText} style={{ cursor: "pointer" }}>
+            {formatVND(vnd)}
+          </span>
+        </Tooltip>
+      );
+    }
+    return (
+      <Tooltip title={tooltipTitle} mouseEnterDelay={0.2}>
+        <span className={styles.priceText} style={{ cursor: "pointer" }}>
+          {formatMNT(mntAmount)}
+        </span>
+      </Tooltip>
+    );
+  };
   const columns: Column[] = useMemo(
     () => [
+      // Cột STT chỉ dành cho UI, không liên kết với dữ liệu Lead.
+      // Khi bật phân trang, có thể cần truyền currentPage/pageSize để số chạy liên tục giữa các trang.
+      {
+        key: "stt",
+        title: getTranslated("STT"),
+        width: 60,
+        align: "center",
+        fixed: "left",
+        render: (_value: unknown, _record: Record<string, unknown>, index?: number) => (
+          <span className={styles.mutedText}>{(index ?? 0) + 1}</span>
+        ),
+      },
       {
         key: "leadCode",
         title: getTranslated("Mã"),
         dataIndex: "leadCode",
         width: 130,
+      },
+      {
+        key: "orderDate",
+        title: getTranslated("TG đơn hàng"),
+        dataIndex: "orderDate",
+        width: 150,
+        render: (value: unknown) =>
+          value ? (
+            new Date(String(value)).toLocaleString("vi-VN")
+          ) : (
+            <span className={styles.mutedText}>-</span>
+          ),
+      },
+      {
+        key: "receivedDate",
+        title: getTranslated("TG nhận đơn"),
+        dataIndex: "receivedDate",
+        width: 150,
+        render: (value: unknown) =>
+          value ? (
+            new Date(String(value)).toLocaleString("vi-VN")
+          ) : (
+            <span className={styles.mutedText}>-</span>
+          ),
       },
       {
         key: "customerName",
@@ -85,11 +207,39 @@ function SaleLeadTableInner({
         ),
       },
       {
+        key: "phone2",
+        title: getTranslated("SĐT 2"),
+        dataIndex: "phone2",
+        width: 110,
+        render: (value: unknown) =>
+          value ? <span className={styles.phoneText}>{String(value)}</span> : (
+            <span className={styles.mutedText}>-</span>
+          ),
+      },
+      {
         key: "address",
         title: getTranslated("Địa chỉ"),
         dataIndex: "address",
         width: 200,
-        render: (value: unknown) => String(value) || "-",
+        render: (value: unknown) => String(value) || (
+          <span className={styles.mutedText}>-</span>
+        ),
+      },
+      {
+        key: "marketingEmployee",
+        title: getTranslated("MKT phụ trách"),
+        width: 150,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as SaleLead;
+          if (lead.marketingEmployeeId) {
+            return (
+              <Tag color="purple">
+                {lead.marketingEmployeeId.name || lead.marketingEmployeeId.employeeCode}
+              </Tag>
+            );
+          }
+          return <span className={styles.mutedText}>-</span>;
+        },
       },
       {
         key: "saleEmployee",
@@ -147,6 +297,73 @@ function SaleLeadTableInner({
         },
       },
       {
+        key: "quantity",
+        title: getTranslated("SL"),
+        width: 60,
+        align: "center",
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as SaleLead;
+          return lead.quantity ?? <span className={styles.mutedText}>-</span>;
+        },
+      },
+      {
+        key: "comboPrice",
+        title: renderCurrencyHeader("Giá combo"),
+        width: 150,
+        align: "right",
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const sellingPrice = (record as unknown as SaleLead).combo?.sellingPrice;
+          const clickable = typeof sellingPrice === "number";
+          return (
+            <span
+              role={clickable ? "button" : undefined}
+              tabIndex={clickable ? 0 : -1}
+              onClick={() => {
+                if (clickable) setCurrency((c) => (c === "MNT" ? "VND" : "MNT"));
+              }}
+              onKeyDown={(e) => {
+                if (clickable && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  setCurrency((c) => (c === "MNT" ? "VND" : "MNT"));
+                }
+              }}
+              style={clickable ? { cursor: "pointer" } : undefined}
+            >
+              {renderMoney(sellingPrice)}
+            </span>
+          );
+        },
+      },
+      {
+        key: "revenue",
+        title: renderCurrencyHeader("Doanh thu"),
+        width: 150,
+        align: "right",
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const sellingPrice = (record as unknown as SaleLead).combo?.sellingPrice;
+          if (typeof sellingPrice !== "number") {
+            return <span className={styles.mutedText}>-</span>;
+          }
+          const revenue = Math.max(sellingPrice - (shippingFee ?? 0), 0);
+          return (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={() => setCurrency((c) => (c === "MNT" ? "VND" : "MNT"))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setCurrency((c) => (c === "MNT" ? "VND" : "MNT"));
+                }
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              {renderMoney(revenue)}
+            </span>
+          );
+        },
+      },
+      {
         key: "facebookPage",
         title: getTranslated("Trang FB"),
         width: 130,
@@ -155,22 +372,6 @@ function SaleLeadTableInner({
           return lead.facebookPage?.name || (
             <span className={styles.mutedText}>-</span>
           );
-        },
-      },
-      {
-        key: "price",
-        title: getTranslated("Giá"),
-        width: 120,
-        render: (_value: unknown, record: Record<string, unknown>) => {
-          const lead = record as unknown as SaleLead;
-          if (lead.unitPriceMNT) {
-            return (
-              <span className={styles.priceText}>
-                {lead.unitPriceMNT.toLocaleString("vi-VN")} ₮
-              </span>
-            );
-          }
-          return "-";
         },
       },
       {
@@ -304,8 +505,18 @@ function SaleLeadTableInner({
                 icon={<SwapOutlined />}
                 onClick={() => onConvert(lead)}
                 disabled={
+                  lead.isConverted ||
                   lead.status === LeadStatus.CLOSED ||
-                  (lead.status !== LeadStatus.POTENTIAL && lead.status !== LeadStatus.QUALIFIED)
+                  (lead.status !== LeadStatus.NEW &&
+                    lead.status !== LeadStatus.QUALIFIED &&
+                    lead.status !== LeadStatus.POTENTIAL)
+                }
+                title={
+                  lead.isConverted
+                    ? getTranslated("Lead đã được chốt đơn")
+                    : lead.status === LeadStatus.CLOSED
+                    ? getTranslated("Lead đã đóng")
+                    : getTranslated("Chốt đơn cho khách hàng này")
                 }
                 className={styles.convertBtn}
               >
@@ -351,7 +562,7 @@ function SaleLeadTableInner({
         },
       },
     ],
-    [onUpdateStatus, onConvert, onLogCall, onReassign, onViewDetail, onEdit, canReassign]
+    [onUpdateStatus, onConvert, onLogCall, onReassign, onViewDetail, onEdit, canReassign, shippingFee, currency, exchangeRate]
   );
 
   // Row selection config
@@ -362,16 +573,18 @@ function SaleLeadTableInner({
           onSelectionChange(keys as string[]);
         },
         columnTitle: (
-          <div
+          <span
             style={{
               fontSize: 12,
               fontWeight: 600,
-              cursor: "help",
+              display: "inline-block",
+              lineHeight: 1.2,
+              textAlign: "center",
             }}
-            title={getTranslated("Phân công - Tick chọn các đơn rồi dùng thanh công cụ phía trên để phân công cho nhân viên Sale")}
           >
-            {getTranslated("Phân công")}
-          </div>
+            <span style={{ display: "block", whiteSpace: "nowrap" }}>{getTranslated("Phân")}</span>
+            <span style={{ display: "block", whiteSpace: "nowrap" }}>{getTranslated("công")}</span>
+          </span>
         ),
         width: 90,
       }
@@ -385,7 +598,7 @@ function SaleLeadTableInner({
       pagination={false}
       rowKey="_id"
       size="small"
-      scroll={{ x: 1800 }}
+      scroll={{ x: 2600 }}
       rowSelection={rowSelection}
     />
   );

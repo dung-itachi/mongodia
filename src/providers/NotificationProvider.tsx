@@ -27,12 +27,13 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth.store";
 import { useNotificationStore } from "@/store/notification.store";
 import { useCan } from "@/hooks/useCan";
-import { SSE_TOKEN_COOKIE } from "@/lib/sseAuth";
+import { SSE_TOKEN_COOKIE } from "@/lib/sseAuthConstants";
 import {
   prependNotificationToCache,
   notificationKeys,
@@ -53,6 +54,13 @@ type SseState = {
 };
 
 let sse: SseState | null = null;
+
+function hasSseTokenCookie(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie
+    .split(";")
+    .some((c) => c.trim().startsWith(`${SSE_TOKEN_COOKIE}=`));
+}
 
 function acquireSse(token: string): SseState {
   if (sse && sse.token === token) {
@@ -93,6 +101,24 @@ export default function NotificationProvider({ children }: Props) {
   const setUnreadCount = useNotificationStore((s) => s.setUnreadCount);
   const incrementUnread = useNotificationStore((s) => s.incrementUnread);
 
+  // Track zustand persist hydration so we never open EventSource before
+  // AuthProvider has had a chance to mirror the access token into the
+  // `notification-stream-token` cookie (the route reads the cookie,
+  // not the header). Opening early produces 401 → EventSource auto-
+  // reconnect → 401 → ... → log spam in the dev console.
+  const [authHydrated, setAuthHydrated] = useState(
+    () => useAuthStore.persist?.hasHydrated?.() ?? true
+  );
+  useEffect(() => {
+    if (authHydrated) return;
+    const unsub = useAuthStore.persist?.onFinishHydration?.(() => {
+      setAuthHydrated(true);
+    });
+    return () => {
+      unsub?.();
+    };
+  }, [authHydrated]);
+
   // Pull the initial unread count exactly once when the user becomes
   // eligible. The provider itself does not poll — the SSE stream drives
   // updates from here on.
@@ -110,9 +136,12 @@ export default function NotificationProvider({ children }: Props) {
     tokenRef.current = accessToken;
   }, [accessToken]);
 
-  // Mount SSE.
+  // Mount SSE. We wait for `authHydrated` AND for the cookie to actually
+  // be present before opening EventSource — otherwise the first request
+  // always 401s and the browser retries until it eventually succeeds.
   useEffect(() => {
-    if (!canView || !user || !accessToken) return;
+    if (!canView || !user || !accessToken || !authHydrated) return;
+    if (!hasSseTokenCookie()) return;
 
     const state = acquireSse(accessToken);
 
@@ -162,9 +191,16 @@ export default function NotificationProvider({ children }: Props) {
     };
 
     const onError = () => {
-      // EventSource auto-reconnects with the server-sent `retry:` hint; we
-      // just log for debug visibility.
-      if (typeof window !== "undefined") {
+      // EventSource auto-reconnects with the server-sent `retry:` hint.
+      // We throttle the warning: in dev the reconnect cycle can fire
+      // many times per second (e.g. 401 → reconnect → 401) and the
+      // console ends up flooded with the same message. Log once per
+      // burst instead.
+      if (typeof window === "undefined") return;
+      const now = Date.now();
+      const last = (window as Window & { __sseErrLog?: number }).__sseErrLog ?? 0;
+      if (now - last > 10_000) {
+        (window as Window & { __sseErrLog?: number }).__sseErrLog = now;
         console.warn("[NotificationProvider] SSE connection error — browser will retry");
       }
     };
@@ -181,7 +217,7 @@ export default function NotificationProvider({ children }: Props) {
       state.source.removeEventListener("error", onError);
       releaseSse();
     };
-  }, [canView, user, accessToken, queryClient, incrementUnread, setUnreadCount]);
+  }, [canView, user, accessToken, authHydrated, queryClient, incrementUnread, setUnreadCount]);
 
   // On logout (token removed) reset the store so the next user starts
   // from a clean slate.

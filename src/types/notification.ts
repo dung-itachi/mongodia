@@ -52,6 +52,7 @@ export type NotificationListQuery = {
   cursor?: string | null;
   limit?: number;
   onlyUnread?: boolean;
+  isActive?: boolean;
 };
 
 /**

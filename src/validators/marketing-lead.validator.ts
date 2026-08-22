@@ -43,6 +43,16 @@ export const marketingLeadFormSchema = z.object({
     .max(500, "Địa chỉ tối đa 500 ký tự")
     .optional()
     .or(z.literal("")),
+  /** Thời gian đơn hàng (Sprint 8.x) - thời gian khách đặt. */
+  orderDate: z
+    .string()
+    .optional()
+    .or(z.literal("")),
+  /** Thời gian nhận đơn (Sprint 8.x) - thời gian Marketing nhận được. */
+  receivedDate: z
+    .string()
+    .optional()
+    .or(z.literal("")),
 });
 
 export type MarketingLeadForm = z.infer<typeof marketingLeadFormSchema>;
@@ -58,4 +68,6 @@ export const defaultLeadForm: MarketingLeadForm = {
   comboId: "",
   productId: "",
   address: "",
+  orderDate: "",
+  receivedDate: "",
 };

@@ -217,17 +217,20 @@ function MarketingExpenseDrawerInner({
                   name="reportDate"
                   control={control}
                   render={({ field }) => (
-                    <DatePicker
-                      style={{ width: "100%" }}
-                      format="DD/MM/YYYY"
-                      placeholder="Chọn ngày"
-                      status={errors.reportDate ? "error" : undefined}
-                      disabled={readOnly}
-                      onChange={(date) =>
-                        field.onChange(date?.format("YYYY-MM-DD") ?? "")
+                    <div style={{ position: "relative" }}>
+                      <DatePicker
+                        style={{ width: "100%" }}
+                        format="DD/MM/YYYY"
+                        placeholder="Chọn ngày"
+                        status={errors.reportDate ? "error" : undefined}
+                        disabled={readOnly}
+                        onChange={(date) =>
+                          field.onChange(date?.format("YYYY-MM-DD") ?? "")
                       }
-                      value={field.value ? dayjs(field.value) : undefined}
-                    />
+                        value={field.value ? dayjs(field.value) : undefined}
+                        getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
+                      />
+                    </div>
                   )}
                 />
               </FormField>

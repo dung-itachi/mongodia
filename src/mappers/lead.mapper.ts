@@ -73,6 +73,8 @@ export interface LeadResponse {
     _id: string;
     code: string;
     name: string;
+    /** Giá bán combo (MNT). Có khi populate comboId với sellingPrice. */
+    sellingPrice?: number;
   };
   quantity?: number;
   unitPriceMNT?: number;
@@ -199,7 +201,7 @@ export function mapLeadList(
             ? {
                 _id: fpa.employee._id.toString(),
                 employeeCode: fpa.employee.employeeCode,
-                name: fpa.employee.name,
+                name: fpa.employee.fullName,
               }
             : undefined,
         };
@@ -215,7 +217,7 @@ export function mapLeadList(
         mapped.marketingEmployee = {
           _id: me._id.toString(),
           employeeCode: me.employeeCode,
-          name: me.name,
+          name: me.fullName,
         };
       }
     }
@@ -226,7 +228,7 @@ export function mapLeadList(
         mapped.saleEmployee = {
           _id: se._id.toString(),
           employeeCode: se.employeeCode,
-          name: se.name,
+          name: se.fullName,
         };
       }
     }
@@ -260,6 +262,7 @@ export function mapLeadList(
           _id: combo._id.toString(),
           code: combo.code,
           name: combo.name,
+          sellingPrice: typeof combo.sellingPrice === "number" ? combo.sellingPrice : undefined,
         };
       }
     }
@@ -295,7 +298,7 @@ export function mapLeadHistoryList(
         mapped.employee = {
           _id: emp._id.toString(),
           employeeCode: emp.employeeCode,
-          name: emp.name,
+          name: emp.fullName,
         };
       }
     }

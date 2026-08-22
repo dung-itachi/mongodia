@@ -185,6 +185,9 @@ export function useCreateLead() {
     mutationFn: (data: Record<string, unknown>) => createMarketingLead(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["marketing-leads-stats"],
+      });
     },
   });
 }
@@ -200,6 +203,9 @@ export function useUpdateLead() {
       updateMarketingLead(id, data),
     onSuccess: (_result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["marketing-leads-stats"],
+      });
       void queryClient.invalidateQueries({
         queryKey: ["marketing-lead", variables.id],
       });
@@ -217,8 +223,92 @@ export function useDeleteLead() {
     mutationFn: (id: string) => deleteMarketingLead(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
+      void queryClient.invalidateQueries({ queryKey: ["marketing-leads-stats"] });
     },
   });
+}
+
+// ============================================================================
+// Orders Stats (Sprint 8.x+) — aggregated stats for /marketing/orders page
+// ============================================================================
+
+export interface StatusCountItem {
+  status: string;
+  label: string;
+  count: number;
+}
+
+export interface MarketingLeadsStats {
+  statusCounts: StatusCountItem[];
+  totalCount: number;
+  closedCount: number;
+  closedRevenueMNT: number;
+  shippingFeeMNT: number;
+}
+
+export type MarketingLeadsStatsFilters = Pick<
+  MarketingLeadFilters,
+  "keyword" | "source" | "teamId" | "areaId" | "marketingEmployeeId"
+>;
+
+async function fetchMarketingLeadsStats(
+  filters: MarketingLeadsStatsFilters,
+): Promise<MarketingLeadsStats> {
+  const params = new URLSearchParams();
+  if (filters.keyword) params.set("keyword", filters.keyword);
+  if (filters.source) params.set("source", filters.source);
+  if (filters.teamId) params.set("team", filters.teamId);
+  if (filters.areaId) params.set("areaId", filters.areaId);
+  if (filters.marketingEmployeeId)
+    params.set("marketingEmployeeId", filters.marketingEmployeeId);
+
+  const queryString = params.toString();
+  const url = `/api/marketing/leads/stats${queryString ? `?${queryString}` : ""}`;
+  const response = await api.get(url);
+  return response.data.data;
+}
+
+/**
+ * Hook to fetch aggregated stats for the /marketing/orders page:
+ * - statusCounts:     breakdown of lead counts per LeadStatus
+ * - totalCount:       grand total
+ * - closedCount:      number of leads with status = CLOSED
+ * - closedRevenueMNT: total revenue from CLOSED leads (= sum of
+ *                     combo.sellingPrice - shippingFee)
+ * - shippingFeeMNT:   shipping fee currently in effect
+ *
+ * Pass the same filters used for the leads list so the stats reflect
+ * the active scope (keyword, source, team, area, marketing employee).
+ */
+export function useMarketingLeadsStats(filters: MarketingLeadsStatsFilters = {}) {
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<MarketingLeadsStats, Error>({
+    queryKey: ["marketing-leads-stats", filters],
+    queryFn: () => fetchMarketingLeadsStats(filters),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+  });
+
+  return {
+    stats: data ?? {
+      statusCounts: [],
+      totalCount: 0,
+      closedCount: 0,
+      closedRevenueMNT: 0,
+      shippingFeeMNT: 0,
+    },
+    loading: isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }
 
 // ============================================================================

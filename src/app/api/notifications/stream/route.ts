@@ -30,7 +30,12 @@
 import { getCurrentUserFromSseRequest } from "@/lib/sseAuth";
 import { subscribe, type BusEvent } from "@/lib/notificationBus";
 
-const PING_INTERVAL_MS = 25_000;
+// Keep the heartbeat well under any proxy idle timeout (typically 60s
+// for nginx). 15s gives breathing room without flooding the wire.
+const PING_INTERVAL_MS = 15_000;
+// First ping fires sooner so a fresh connection proves liveness before
+// the server-side buffer / proxy decides to close the socket.
+const FIRST_PING_DELAY_MS = 5_000;
 const encoder = new TextEncoder();
 
 function formatEvent(eventName: string, payload: unknown): Uint8Array {
@@ -59,6 +64,7 @@ export async function GET(request: Request) {
   const employeeIdStr = String(employeeId);
 
   let pingTimer: ReturnType<typeof setInterval> | null = null;
+  let firstPingTimer: ReturnType<typeof setTimeout> | null = null;
   let cancelled = false;
 
   const stream = new ReadableStream<Uint8Array>({
@@ -72,6 +78,18 @@ export async function GET(request: Request) {
       );
 
       const sub = subscribe(employeeIdStr);
+
+      // Schedule the first ping sooner than the steady-state interval
+      // — fresh connections are the most likely to be killed by
+      // intermediate proxies that have not seen traffic yet.
+      firstPingTimer = setTimeout(() => {
+        if (cancelled) return;
+        try {
+          controller.enqueue(formatEvent("ping", { ts: Date.now() }));
+        } catch {
+          // Controller closed; cleanup happens in cancel().
+        }
+      }, FIRST_PING_DELAY_MS);
 
       pingTimer = setInterval(() => {
         if (cancelled) return;
@@ -105,6 +123,10 @@ export async function GET(request: Request) {
           clearInterval(pingTimer);
           pingTimer = null;
         }
+        if (firstPingTimer) {
+          clearTimeout(firstPingTimer);
+          firstPingTimer = null;
+        }
       }
     },
     cancel() {
@@ -112,6 +134,10 @@ export async function GET(request: Request) {
       if (pingTimer) {
         clearInterval(pingTimer);
         pingTimer = null;
+      }
+      if (firstPingTimer) {
+        clearTimeout(firstPingTimer);
+        firstPingTimer = null;
       }
     },
   });

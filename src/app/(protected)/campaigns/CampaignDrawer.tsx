@@ -274,13 +274,16 @@ function CampaignDrawerInner({
               name="startDate"
               control={control}
               render={({ field }) => (
-                <DatePicker
-                  style={{ width: "100%" }}
-                  value={field.value ? dayjs(field.value) : null}
-                  onChange={(date) => field.onChange(date?.toISOString() ?? "")}
-                  format="DD/MM/YYYY"
-                  placeholder="Chọn ngày"
-                />
+                <div style={{ position: "relative" }}>
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(date) => field.onChange(date?.toISOString() ?? "")}
+                    format="DD/MM/YYYY"
+                    placeholder="Chọn ngày"
+                    getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
+                  />
+                </div>
               )}
             />
           </Form.Item>
@@ -293,14 +296,17 @@ function CampaignDrawerInner({
               name="endDate"
               control={control}
               render={({ field }) => (
-                <DatePicker
-                  style={{ width: "100%" }}
-                  value={field.value ? dayjs(field.value) : null}
-                  onChange={(date) => field.onChange(date?.toISOString() ?? null)}
-                  format="DD/MM/YYYY"
-                  placeholder="Chọn ngày (tùy chọn)"
-                  allowClear
-                />
+                <div style={{ position: "relative" }}>
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(date) => field.onChange(date?.toISOString() ?? null)}
+                    format="DD/MM/YYYY"
+                    placeholder="Chọn ngày (tùy chọn)"
+                    allowClear
+                    getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
+                  />
+                </div>
               )}
             />
           </Form.Item>

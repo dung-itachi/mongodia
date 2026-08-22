@@ -2051,7 +2051,7 @@ export async function aggregateDrillDown(
           sourceType: 1,
           status: 1,
           marketingEmployeeName: {
-            $ifNull: [{ $arrayElemAt: ["$marketingEmployee.name", 0] }, null],
+            $ifNull: [{ $arrayElemAt: ["$marketingEmployee.fullName", 0] }, null],
           },
           facebookPageName: {
             $ifNull: [{ $arrayElemAt: ["$facebookPage.name", 0] }, null],
@@ -2091,7 +2091,7 @@ export async function aggregateDrillDown(
             $dateToString: { format: "%Y-%m-%d", date: "$reportDate" },
           },
           marketingEmployeeName: {
-            $ifNull: [{ $arrayElemAt: ["$marketingEmployee.name", 0] }, null],
+            $ifNull: [{ $arrayElemAt: ["$marketingEmployee.fullName", 0] }, null],
           },
           facebookPageName: {
             $ifNull: [{ $arrayElemAt: ["$facebookPage.name", 0] }, null],

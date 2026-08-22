@@ -48,6 +48,11 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     isConverted: leadAny.isConverted ?? false,
     orderId: leadAny.orderId,
     convertedAt: leadAny.convertedAt?.toISOString(),
+    // Sprint 8.x — leadDate từ Landing page
+    leadDate: (lead as Lead & { leadDate?: Date }).leadDate?.toISOString(),
+    // Sprint 8.x — Thời gian đơn hàng và nhận đơn
+    orderDate: (lead as Lead & { orderDate?: Date }).orderDate?.toISOString(),
+    receivedDate: (lead as Lead & { receivedDate?: Date }).receivedDate?.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
   };
@@ -111,6 +116,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const sourceTypeValue = parsed.data.sourceType as LeadSource | undefined;
     const statusValue = parsed.data.status as LeadStatus | undefined;
 
+    // Sprint 8.x: Parse orderDate and receivedDate
+    const orderDateValue =
+      typeof parsed.data.orderDate === "string"
+        ? new Date(`${parsed.data.orderDate}+07:00`)
+        : parsed.data.orderDate ?? undefined;
+
+    const receivedDateValue =
+      typeof parsed.data.receivedDate === "string"
+        ? new Date(`${parsed.data.receivedDate}+07:00`)
+        : parsed.data.receivedDate ?? undefined;
+
     const updateInput: UpdateLeadInput = {
       ...parsed.data,
       customerId: parsed.data.customerId ?? undefined,
@@ -138,6 +154,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       isDuplicate: parsed.data.isDuplicate ?? undefined,
       isActive: parsed.data.isActive ?? undefined,
       status: statusValue,
+      // Sprint 8.x: Thời gian đơn hàng và nhận đơn
+      orderDate: orderDateValue,
+      receivedDate: receivedDateValue,
     };
 
     const updated = await leadService.update(id, updateInput, actorId);

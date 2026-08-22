@@ -283,6 +283,14 @@ export const MODULES: ModuleDefinition[] = [
     group: "ACCOUNTS",
     icon: `<circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>`,
   },
+  {
+    id: "accounts-login-history",
+    title: "Lịch sử đăng nhập",
+    route: "/accounts/login-history",
+    permission: "login-history.view",
+    group: "ACCOUNTS",
+    icon: `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
+  },
 
   // Phase 9 — Role & Permission Tree (RBAC management)
   // Gated by the dedicated `role.permission.manage` code.

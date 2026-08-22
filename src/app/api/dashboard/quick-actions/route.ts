@@ -9,6 +9,11 @@
 
 import { NextResponse } from "next/server";
 
+// Static — không cần re-evaluate trên mỗi request.
+// Endpoint trả về dữ liệu tĩnh (mock) nên có thể cache vĩnh viễn ở edge.
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 export async function GET() {
   const quickActions = [
     {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
-import { PageContainer, PageHeader, CardSection } from "@/components/common";
+import { PlusOutlined, GiftOutlined, AppstoreOutlined, InboxOutlined, SwapOutlined } from "@ant-design/icons";
+import { PageContainer, PageHeader, CardSection, StatGrid, StatCard } from "@/components/common";
 import SearchInput from "@/components/common/inputs/SearchInput";
 import {
   useChangeGiftInventory,
@@ -19,6 +19,7 @@ import {
 import GiftForm from "./GiftForm";
 import GiftInventoryDrawer from "./GiftInventoryDrawer";
 import GiftTable from "./GiftTable";
+import styles from "./gifts.module.css";
 
 type InventoryDrawerMode = "IMPORT" | "ADJUSTMENT" | "HISTORY" | null;
 
@@ -38,6 +39,21 @@ export default function GiftPage() {
   const deleteMutation = useDeleteGift();
   const inventoryMutation = useChangeGiftInventory();
   const gifts = data?.items ?? [];
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalGifts = gifts.length;
+    const activeGifts = gifts.filter((g) => g.isActive !== false).length;
+    const inactiveGifts = totalGifts - activeGifts;
+    const totalInventory = gifts.reduce((sum, g) => sum + (g.inventory ?? 0), 0);
+
+    return {
+      totalGifts,
+      activeGifts,
+      inactiveGifts,
+      totalInventory,
+    };
+  }, [gifts]);
 
   const handleOpenCreate = useCallback(() => {
     setEditingItem(null);
@@ -125,13 +141,56 @@ export default function GiftPage() {
       <PageHeader
         title="Quản lý quà tặng"
         subtitle="Theo dõi tồn kho quà tặng, tách riêng khỏi Product và Order"
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+            Thêm quà tặng
+          </Button>
+        }
       />
+
+      {/* Statistics Cards */}
+      <CardSection style={{ padding: "16px 24px" }}>
+        <StatGrid columns={4} gap={16} minItemWidth={160}>
+          <StatCard
+            title="Tổng quà tặng"
+            value={stats.totalGifts}
+            icon={<GiftOutlined />}
+            color="blue"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Đang hoạt động"
+            value={stats.activeGifts}
+            icon={<AppstoreOutlined />}
+            color="green"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Đã vô hiệu"
+            value={stats.inactiveGifts}
+            icon={<InboxOutlined />}
+            color="orange"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Tổng tồn kho"
+            value={stats.totalInventory}
+            icon={<SwapOutlined />}
+            color="purple"
+            loading={isLoading}
+          />
+        </StatGrid>
+      </CardSection>
+
       <CardSection>
-        <div style={{ marginBottom: 16, display: "flex", gap: 12, justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ flex: 1, maxWidth: 320 }}>
-            <SearchInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm kiếm quà..." />
+        <div className={styles.toolbar}>
+          <div className={styles.searchArea}>
+            <SearchInput
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Tìm kiếm quà tặng..."
+            />
           </div>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>Thêm quà</Button>
         </div>
 
         <GiftTable

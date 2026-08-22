@@ -73,6 +73,9 @@ export interface CreateFromLeadData {
   saleEmployeeId?: string;
   note?: string;
   orderItem?: SaleOrderItem;
+  // Sprint 8.x: thời gian đơn hàng
+  orderDate?: Date;
+  receivedDate?: Date;
 }
 
 export interface CreateCustomerFromLeadData {
@@ -814,6 +817,9 @@ export class OrderService {
           quantity: data.orderItem.comboQuantity,
           unitPrice: data.orderItem.sellingPrice,
         }] : [],
+        // Sprint 8.x: thời gian đơn hàng từ Lead
+        orderDate: data.orderDate,
+        receivedDate: data.receivedDate,
       },
       session
     );

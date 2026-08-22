@@ -168,6 +168,10 @@ export const PERMISSION_MODULE_MAP: Record<string, string> = {
   // Language Settings
   "settings.language.view": "Setting",
   "settings.language.update": "Setting",
+
+  // Login History
+  "login-history.view": "LoginHistory",
+  "login-history.viewAll": "LoginHistory",
 };
 
 import { PERMISSIONS } from "@/constants/permissions";

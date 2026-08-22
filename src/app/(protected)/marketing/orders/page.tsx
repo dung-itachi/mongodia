@@ -23,13 +23,17 @@ import { useAntApp } from "@/providers/AntdProvider";
 import { useAuthStore } from "@/store/auth.store";
 import {
   useMarketingLeads,
+  useMarketingLeadsStats,
   useCreateLead,
   useUpdateLead,
   useDeleteLead,
   type MarketingLeadFilters,
 } from "@/hooks/useMarketingLeads";
+import { useShippingFee } from "@/hooks/useShippingFee";
+import { useExchangeRate } from "@/hooks/useExchangeRate";
 import MarketingLeadToolbar from "@/app/(protected)/marketing/input/MarketingLeadToolbar";
 import LeadTable from "@/app/(protected)/marketing/input/LeadTable";
+import OrdersStatsCard from "./OrdersStatsCard";
 import type { MarketingLead } from "@/types/marketing-lead";
 import LeadDrawer from "@/app/(protected)/marketing/input/LeadDrawer";
 import type { LeadFormData } from "@/app/(protected)/marketing/input/LeadDrawer";
@@ -61,8 +65,29 @@ export default function MarketingOrdersPage() {
   const [deletingLead, setDeletingLead] = useState<MarketingLead | null>(null);
   const [viewingLead, setViewingLead] = useState<MarketingLead | null>(null);
 
+  // Đơn vị tiền chung cho cả stats card và bảng (click icon để toggle)
+  const [currency, setCurrency] = useState<"MNT" | "VND">("MNT");
+
   const { leads, total, page, loading, error, refetch } =
     useMarketingLeads(filters);
+
+  // Thống kê đơn hàng (đếm & doanh thu từ đơn đã chốt)
+  // Truyền cùng filter với bảng để số liệu phản ánh scope đang xem.
+  const { stats: ordersStats, loading: statsLoading } = useMarketingLeadsStats({
+    keyword: filters.keyword,
+    source: filters.source,
+    teamId: filters.teamId,
+    areaId: filters.areaId,
+    marketingEmployeeId: filters.marketingEmployeeId,
+  });
+
+  // Phí ship hiện tại (MNT) — dùng để tính cột Doanh thu = giá combo - phí ship
+  const { data: shippingFeeData } = useShippingFee();
+  const shippingFee = shippingFeeData?.fee ?? 0;
+
+  // Tỷ giá MNT → VND — click vào ô tiền sẽ toggle MNT ↔ VND
+  const { data: exchangeRateData } = useExchangeRate();
+  const exchangeRate = exchangeRateData?.rate ?? 0;
 
   const createMutation = useCreateLead();
   const updateMutation = useUpdateLead();
@@ -210,6 +235,16 @@ export default function MarketingOrdersPage() {
           showAreaFilter={canFilterByArea}
         />
 
+        <OrdersStatsCard
+          stats={ordersStats}
+          loading={statsLoading}
+          currency={currency}
+          onToggleCurrency={() =>
+            setCurrency((c) => (c === "MNT" ? "VND" : "MNT"))
+          }
+          exchangeRate={exchangeRate}
+        />
+
         {loading && leads.length === 0 ? (
           <SkeletonTable rows={5} columns={10} />
         ) : error ? (
@@ -239,6 +274,12 @@ export default function MarketingOrdersPage() {
               onSelectionChange={() => {}}
               loading={loading}
               showEmployeeColumns={canViewAllOrders}
+              shippingFee={shippingFee}
+              exchangeRate={exchangeRate}
+              currency={currency}
+              onCurrencyToggle={() =>
+                setCurrency((c) => (c === "MNT" ? "VND" : "MNT"))
+              }
             />
 
             {total > 0 && (
@@ -267,7 +308,7 @@ export default function MarketingOrdersPage() {
       <ConfirmDialog
         open={deleteConfirmOpen}
         title="Xác nhận xóa"
-        content={`Bạn có chắc muốn xóa lead "${deletingLead?.customerName}" không?`}
+        content={`Bạn có chắc muốn xóa đơn hàng "${deletingLead?.customerName}" không?`}
         type="delete"
         confirmText="Xóa"
         cancelText="Hủy"
@@ -284,7 +325,7 @@ export default function MarketingOrdersPage() {
         title={
           <span>
             <EyeOutlined style={{ marginRight: 8 }} />
-            Chi tiết Lead
+            Chi tiết đơn hàng
           </span>
         }
         open={!!viewingLead}

@@ -5,6 +5,10 @@
 
 "use client";
 
+// Đăng ký dayjs locale `vi` sớm để Antd DatePicker nhận weekStart = 1 (Thứ 2)
+// và hiển thị header tuần theo T2..CN thay vì CN..T7.
+import "dayjs/locale/vi";
+
 // Suppress "useForm instance not connected" warning from Turbopack
 const originalWarning = console.error;
 console.error = (...args: unknown[]) => {

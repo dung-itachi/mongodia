@@ -22,7 +22,12 @@ import { connectDB } from "@/lib/mongodb";
 import Employee from "@/models/Employee";
 import Role from "@/models/Role";
 import RolePermission from "@/models/RolePermission";
+import Permission from "@/models/Permission";
 import { SSE_TOKEN_COOKIE } from "./sseAuthConstants";
+import {
+  getCachedSession,
+  setCachedSession,
+} from "@/lib/sessionCache";
 
 export { SSE_TOKEN_COOKIE };
 
@@ -50,6 +55,17 @@ export async function getCurrentUserFromSseRequest(request: Request) {
   if (!token) {
     throw new Error("UNAUTHORIZED");
   }
+
+  // Cache hit — bỏ qua 4 round-trips MongoDB.
+  const cached = getCachedSession(token);
+  if (cached) {
+    return {
+      employee: cached.employee,
+      role: cached.role,
+      permissions: cached.permissions,
+    };
+  }
+
   let payload;
   try {
     payload = verifyToken(token);
@@ -58,30 +74,35 @@ export async function getCurrentUserFromSseRequest(request: Request) {
   }
 
   await connectDB();
-  const employee = await Employee.findOne({
-    _id: payload.employeeId,
-    isActive: true,
-  }).lean();
-  if (!employee) throw new Error("UNAUTHORIZED");
 
-  const role = await Role.findOne({ _id: employee.roleId, isActive: true }).lean();
+  // Employee + Role chạy song song vì roleId đã có trong JWT.
+  const [employee, role] = await Promise.all([
+    Employee.findOne({ _id: payload.employeeId, isActive: true }).lean(),
+    Role.findOne({ _id: payload.roleId, isActive: true }).lean(),
+  ]);
+
+  if (!employee) throw new Error("UNAUTHORIZED");
   if (!role) throw new Error("UNAUTHORIZED");
 
   const rolePermissions = await RolePermission.find({ roleId: role._id })
-    .populate<{ permissionId: { code: string } | null }>({
-      path: "permissionId",
-      match: { isActive: true },
-      select: "code",
-    })
-    .lean() as Array<{ permissionId: { code: string } | null }>;
+    .select("permissionId")
+    .lean();
+  const permIds = rolePermissions
+    .map((rp) => rp.permissionId)
+    .filter((id): id is NonNullable<typeof id> => id != null);
+  const perms = permIds.length
+    ? await Permission.find({ _id: { $in: permIds }, isActive: true })
+        .select("code")
+        .lean()
+    : [];
 
-  const permissions = rolePermissions
-    .filter((rp) => rp.permissionId != null)
-    .map((rp) => (rp.permissionId as { code: string }).code);
-
-  return {
+  const session = {
     employee,
     role,
-    permissions,
+    permissions: perms.map((p) => p.code),
   };
+
+  setCachedSession(token, session);
+
+  return session;
 }

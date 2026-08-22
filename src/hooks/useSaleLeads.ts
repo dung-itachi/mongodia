@@ -21,6 +21,9 @@ export interface SaleLead {
   leadCode: string;
   customerName: string;
   phone?: string;
+  phone2?: string;
+  email?: string;
+  facebookLink?: string;
   address?: string;
   sourceType: string;
   status: LeadStatus;
@@ -33,6 +36,8 @@ export interface SaleLead {
     _id: string;
     code: string;
     name: string;
+    /** Giá bán combo (MNT). Có khi API populate comboId với sellingPrice. */
+    sellingPrice?: number;
   };
   quantity?: number;
   unitPriceMNT?: number;
@@ -57,8 +62,20 @@ export interface SaleLead {
   note?: string;
   assignedAt: string;
   isConverted: boolean;
+  /** Lead có bị trùng lặp không. */
+  isDuplicate?: boolean;
   /** Sprint X: Số lần chuyển sang trạng thái "Không nghe máy" (NO_ANSWER). */
   noAnswerCount?: number;
+  /** Sprint 8.x: Ngày giờ từ Landing page (ngày giờ thực tế khách đăng ký). */
+  leadDate?: string;
+  /** Sprint 8.x: Thời gian đơn hàng (khách đặt). */
+  orderDate?: string;
+  /** Sprint 8.x: Thời gian nhận đơn (Marketing nhận được). */
+  receivedDate?: string;
+  /** Order ID nếu đã convert. */
+  convertedOrderId?: string;
+  /** Thời điểm convert thành Order. */
+  convertedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -160,6 +177,7 @@ async function updateLead(
       giftProductName?: string;
       quantity: number;
     }>;
+    status?: LeadStatus;
   }
 ): Promise<SaleLead> {
   const response = await api.patch(`/api/sale/leads/${leadId}`, payload);
@@ -268,6 +286,7 @@ export function useUpdateLeadStatus() {
       // Invalidate sale leads to refetch
       void queryClient.invalidateQueries({ queryKey: ["sale-leads"] });
       void queryClient.invalidateQueries({ queryKey: ["sale-lead-counts"] });
+      void queryClient.invalidateQueries({ queryKey: ["sale-lead-stats"] });
       // Invalidate marketing tracking (they see the same leads)
       void queryClient.invalidateQueries({ queryKey: ["marketing-lead-tracking"] });
     },
@@ -306,14 +325,90 @@ export function useUpdateLead() {
           giftProductName?: string;
           quantity: number;
         }>;
+        status?: LeadStatus;
       };
     }) => updateLead(leadId, payload),
     onSuccess: () => {
       // Invalidate sale leads to refetch
       void queryClient.invalidateQueries({ queryKey: ["sale-leads"] });
       void queryClient.invalidateQueries({ queryKey: ["sale-lead-counts"] });
+      void queryClient.invalidateQueries({ queryKey: ["sale-lead-stats"] });
       // Invalidate marketing tracking
       void queryClient.invalidateQueries({ queryKey: ["marketing-lead-tracking"] });
     },
   });
+}
+
+// ============================================================================
+// Sale Lead Stats (Sprint 8.x+) — aggregated stats for /leads page
+// ============================================================================
+
+export interface SaleLeadStatusCountItem {
+  status: string;
+  label: string;
+  count: number;
+}
+
+export interface SaleLeadStats {
+  statusCounts: SaleLeadStatusCountItem[];
+  totalCount: number;
+  closedCount: number;
+  closedRevenueMNT: number;
+  shippingFeeMNT: number;
+}
+
+async function fetchSaleLeadStats(
+  viewAll: boolean = false
+): Promise<SaleLeadStats> {
+  const url = viewAll
+    ? "/api/sale/leads/stats?viewAll=true"
+    : "/api/sale/leads/stats";
+  const response = await api.get(url);
+  return response.data.data;
+}
+
+/**
+ * Hook to fetch aggregated stats for the /leads page:
+ * - statusCounts:     breakdown of lead counts per LeadStatus
+ * - totalCount:       grand total
+ * - closedCount:      number of leads with status = CLOSED
+ * - closedRevenueMNT: total revenue from CLOSED leads (= sum of
+ *                     combo.sellingPrice - shippingFee)
+ * - shippingFeeMNT:   shipping fee currently in effect
+ *
+ * Admin/Manager see stats for all leads; Sale users see their own scope.
+ */
+export function useSaleLeadStats() {
+  const user = useAuthStore((state) => state.user);
+  const isAdminOrManager = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const viewAll = isAdminOrManager;
+
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<SaleLeadStats, Error>({
+    queryKey: ["sale-lead-stats", viewAll],
+    queryFn: () => fetchSaleLeadStats(viewAll),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+  });
+
+  return {
+    stats: data ?? {
+      statusCounts: [],
+      totalCount: 0,
+      closedCount: 0,
+      closedRevenueMNT: 0,
+      shippingFeeMNT: 0,
+    },
+    loading: isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
 }

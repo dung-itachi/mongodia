@@ -15,6 +15,7 @@ import type {
   OrderFilter,
   CreateOrderInput,
   UpdateOrderInput,
+  OrderStatisticsResponse,
 } from "@/types/order";
 
 // ============================================================================
@@ -283,5 +284,79 @@ export function useToggleOrderConfirmCall() {
         queryKey: ["order", variables.id],
       });
     },
+  });
+}
+
+// ============================================================================
+// Order Statistics (Sprint — popup "Thống kê đơn hàng")
+// ============================================================================
+
+/**
+ * Filter input cho GET /api/orders/statistics.
+ * Tất cả field đều optional — caller có thể gửi filter rỗng
+ * để lấy thống kê toàn bộ đơn.
+ */
+export type OrderStatisticsFilter = Partial<
+  Pick<
+    OrderFilter,
+    | "keyword"
+    | "status"
+    | "orderType"
+    | "orderSource"
+    | "warehouseId"
+    | "saleEmployeeId"
+    | "marketingEmployeeId"
+    | "dateFrom"
+    | "dateTo"
+  >
+>;
+
+/**
+ * Gọi API thống kê đơn hàng. Khác với useOrders ở chỗ:
+ * - KHÔNG auto-fetch (chỉ fetch khi user click nút "Thống kê").
+ * - Trả về số liệu aggregate, không trả danh sách.
+ *
+ * @example
+ *   const stats = useOrderStatistics();
+ *   const handleOpenStats = async () => {
+ *     const data = await stats.mutateAsync({
+ *       keyword, status, dateFrom, dateTo,
+ *     });
+ *     setStatsData(data);
+ *     setOpenStatsModal(true);
+ *   };
+ */
+async function fetchOrderStatistics(
+  filter: OrderStatisticsFilter = {}
+): Promise<OrderStatisticsResponse> {
+  const params = new URLSearchParams();
+
+  if (filter.keyword) params.set("keyword", filter.keyword);
+  if (filter.status) params.set("status", filter.status);
+  if (filter.orderType) params.set("orderType", filter.orderType);
+  if (filter.orderSource) params.set("orderSource", filter.orderSource);
+  if (filter.warehouseId) params.set("warehouseId", filter.warehouseId);
+  if (filter.saleEmployeeId) params.set("saleEmployeeId", filter.saleEmployeeId);
+  if (filter.marketingEmployeeId)
+    params.set("marketingEmployeeId", filter.marketingEmployeeId);
+  if (filter.dateFrom) params.set("createdFrom", filter.dateFrom);
+  if (filter.dateTo) params.set("createdTo", filter.dateTo);
+
+  const queryString = params.toString();
+  const url = `/api/orders/statistics${queryString ? `?${queryString}` : ""}`;
+
+  const response = await api.get(url);
+  return response.data.data as OrderStatisticsResponse;
+}
+
+/**
+ * Hook dạng mutation để fetch thống kê đơn hàng theo filter hiện tại.
+ *
+ * Lưu ý quan trọng: vì dùng useMutation nên KHÔNG tự gọi API khi mount.
+ * Phù hợp với UX "click nút mới gọi API".
+ */
+export function useOrderStatistics() {
+  return useMutation<OrderStatisticsResponse, Error, OrderStatisticsFilter>({
+    mutationFn: (filter) => fetchOrderStatistics(filter),
   });
 }

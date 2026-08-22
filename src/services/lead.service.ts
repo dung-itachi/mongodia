@@ -360,13 +360,14 @@ export class LeadService {
       return { success: false, error: "Lead đã được convert trước đó" };
     }
 
-    // 5. Check lead status is QUALIFIED hoặc POTENTIAL (Sprint 8.4)
-    // Chỉ những lead có nhu cầu mới được convert
-    const convertibleStatuses = [LeadStatus.QUALIFIED, LeadStatus.POTENTIAL];
+    // 5. Check lead status is NEW, QUALIFIED hoặc POTENTIAL (Sprint 8.4)
+    // NEW: Lead mới được đẩy từ Marketing sang Sale
+    // QUALIFIED/POTENTIAL: Lead đã được Sale xác nhận có nhu cầu
+    const convertibleStatuses = [LeadStatus.NEW, LeadStatus.QUALIFIED, LeadStatus.POTENTIAL];
     if (!convertibleStatuses.includes(existingLead.status as LeadStatus)) {
       return {
         success: false,
-        error: "Lead phải ở trạng thái Tiềm năng hoặc Đủ điều kiện để chốt đơn"
+        error: "Lead phải ở trạng thái Mới, Tiềm năng hoặc Đủ điều kiện để chốt đơn"
       };
     }
 
@@ -435,6 +436,9 @@ export class LeadService {
           marketingEmployeeId: existingLead.marketingEmployeeId?.toString(),
           saleEmployeeId: existingLead.saleEmployeeId?.toString(),
           note: existingLead.note,
+          // Sprint 8.x: thời gian đơn hàng từ Lead
+          orderDate: existingLead.orderDate,
+          receivedDate: existingLead.receivedDate,
         },
         session
       );

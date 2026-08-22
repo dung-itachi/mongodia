@@ -108,34 +108,44 @@ export default function WarehouseInventoryFilters({
     }
   };
 
+  const filterStyle: React.CSSProperties = {
+    minWidth: 160,
+    flex: 1,
+  };
+
+  const filterItemStyle: React.CSSProperties = {
+    flexShrink: 0,
+  };
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 8,
+        padding: "12px 0 4px",
+        borderTop: "1px solid #f0f0f0",
+      }}
+    >
       <Search
-        placeholder="Tìm kiếm sản phẩm, SKU, quà..."
+        placeholder="Tìm kiếm..."
         allowClear
-        style={{ width: 260 }}
+        style={{ width: 220, marginRight: 4 }}
         value={filters.search ?? ""}
         onSearch={handleSearch}
         onChange={handleSearchChange}
+        enterButton
+        size="middle"
       />
 
       <Select
-        placeholder="Kho"
+        placeholder="Loại hàng"
         allowClear
-        style={{ width: 180 }}
-        value={filters.warehouseId}
-        onChange={(value) => handleChange("warehouseId", value ?? "")}
-        options={warehouseOptions}
-        loading={loading}
-      />
-
-      <Select
-        placeholder="Loại"
-        allowClear
-        style={{ width: 140 }}
+        style={{ width: 140, ...filterItemStyle }}
         value={filters.itemType}
         onChange={(value) => handleChange("itemType", value ?? "")}
         options={itemTypeOptions}
+        size="middle"
       />
 
       {showProductFilter && filters.itemType !== "GIFT" && (
@@ -146,11 +156,12 @@ export default function WarehouseInventoryFilters({
           filterOption={(input, option) =>
             Boolean((option?.label ?? "").toLowerCase().includes(input.toLowerCase()))
           }
-          style={{ width: 200 }}
+          style={{ width: 200, ...filterItemStyle }}
           value={filters.productId}
           onChange={(value) => handleChange("productId", value ?? "")}
           options={productOptions}
           loading={loading}
+          size="middle"
         />
       )}
 
@@ -162,11 +173,12 @@ export default function WarehouseInventoryFilters({
           filterOption={(input, option) =>
             Boolean((option?.label ?? "").toLowerCase().includes(input.toLowerCase()))
           }
-          style={{ width: 160 }}
+          style={{ width: 180, ...filterItemStyle }}
           value={filters.variantId}
           onChange={(value) => handleChange("variantId", value ?? "")}
           options={variantOptions}
           loading={loading}
+          size="middle"
         />
       )}
 
@@ -178,11 +190,12 @@ export default function WarehouseInventoryFilters({
           filterOption={(input, option) =>
             Boolean((option?.label ?? "").toLowerCase().includes(input.toLowerCase()))
           }
-          style={{ width: 200 }}
+          style={{ width: 200, ...filterItemStyle }}
           value={filters.giftId}
           onChange={(value) => handleChange("giftId", value ?? "")}
           options={giftOptions}
           loading={loading}
+          size="middle"
         />
       )}
     </div>

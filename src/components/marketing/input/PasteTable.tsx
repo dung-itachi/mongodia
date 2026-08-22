@@ -46,10 +46,25 @@ export default function PasteTable({
   const [rowCount, setRowCount] = useState(3);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  // Mirror của `cells` để truy cập giá trị mới nhất trong cùng tick
+  // (setCells với updater callback chưa trả về giá trị mới ngay).
+  const cellsRef = useRef<CellData[]>([]);
+  // Theo dõi giá trị cuối cùng mà component đã đẩy lên parent qua `onChange`.
+  // Dùng để tránh echo: useEffect value→cells chỉ sync khi value thay đổi từ BÊN NGOÀI,
+  // không phải do chính component tạo ra.
+  const lastPropagatedValueRef = useRef<string>(value);
 
-  // Sync cells from value string
-  const syncFromValue = useCallback(() => {
+  // ----- value → cells (chỉ khi value đổi từ bên ngoài) -----
+  useEffect(() => {
+    // Echo từ chính `onChange` của component → bỏ qua.
+    if (value === lastPropagatedValueRef.current) return;
+    lastPropagatedValueRef.current = value;
+
+    // Textarea mode không dùng `cells` → bỏ qua để tránh re-parse mỗi keystroke.
+    if (!useTableMode) return;
+
     if (!value.trim()) {
+      cellsRef.current = [];
       setCells([]);
       setRowCount(3);
       return;
@@ -65,43 +80,49 @@ export default function PasteTable({
       });
     });
 
+    cellsRef.current = newCells;
     setCells(newCells);
     setRowCount(Math.max(3, lines.length + 2));
-  }, [value]);
+  }, [value, useTableMode]);
 
-  useEffect(() => {
-    syncFromValue();
-  }, [syncFromValue]);
+  // ----- cells → value (gọi trực tiếp từ event handlers, KHÔNG qua useEffect) -----
+  // Nếu dùng useEffect với deps=[cells] sẽ gây feedback loop vô tận với effect trên.
+  const buildValueFromCells = useCallback(
+    (cellsList: CellData[]): string => {
+      if (cellsList.length === 0) return "";
+      const maxRow = Math.max(...cellsList.map((c) => c.row)) + 1;
+      const maxCol = layout.length;
+      const lines: string[] = [];
 
-  // Convert cells back to value string
-  const syncToValue = useCallback(() => {
-    if (cells.length === 0) {
-      onChange("");
-      return;
-    }
-
-    const maxRow = Math.max(...cells.map((c) => c.row)) + 1;
-    const maxCol = layout.length;
-    const lines: string[] = [];
-
-    for (let r = 0; r < maxRow; r++) {
-      const rowCells: string[] = [];
-      for (let c = 0; c < maxCol; c++) {
-        const cell = cells.find((cell) => cell.row === r && cell.col === c);
-        rowCells.push(cell?.value ?? "");
+      for (let r = 0; r < maxRow; r++) {
+        const rowCells: string[] = [];
+        for (let c = 0; c < maxCol; c++) {
+          const cell = cellsList.find(
+            (cell) => cell.row === r && cell.col === c
+          );
+          rowCells.push(cell?.value ?? "");
+        }
+        // Only add row if at least one cell has value
+        if (rowCells.some((v) => v.trim())) {
+          lines.push(rowCells.join("\t"));
+        }
       }
-      // Only add row if at least one cell has value
-      if (rowCells.some((v) => v.trim())) {
-        lines.push(rowCells.join("\t"));
-      }
-    }
 
-    onChange(lines.join("\n"));
-  }, [cells, layout, onChange]);
+      return lines.join("\n");
+    },
+    [layout]
+  );
 
-  useEffect(() => {
-    syncToValue();
-  }, [syncToValue]);
+  const propagateCells = useCallback(
+    (nextCells: CellData[]) => {
+      const nextValue = buildValueFromCells(nextCells);
+      // Cập nhật ref TRƯỚC khi gọi onChange để useEffect value→cells ở trên
+      // nhận diện đây là echo và không trigger lại setCells.
+      lastPropagatedValueRef.current = nextValue;
+      onChange(nextValue);
+    },
+    [buildValueFromCells, onChange]
+  );
 
   // Handle paste event on the table
   const handleTablePaste = useCallback(
@@ -120,24 +141,34 @@ export default function PasteTable({
         });
       });
 
+      cellsRef.current = newCells;
       setCells(newCells);
       setRowCount(Math.max(3, lines.length + 3));
+      propagateCells(newCells);
     },
-    []
+    [propagateCells]
   );
 
   // Update a single cell
-  const updateCell = useCallback((row: number, col: number, newValue: string) => {
-    setCells((prev) => {
-      const existing = prev.findIndex((c) => c.row === row && c.col === col);
-      if (existing >= 0) {
-        const updated = [...prev];
-        updated[existing] = { ...updated[existing], value: newValue };
-        return updated;
-      }
-      return [...prev, { row, col, value: newValue }];
-    });
-  }, []);
+  const updateCell = useCallback(
+    (row: number, col: number, newValue: string) => {
+      const prev = cellsRef.current;
+      const existing = prev.findIndex(
+        (c) => c.row === row && c.col === col
+      );
+      const next =
+        existing >= 0
+          ? prev.map((c, i) =>
+              i === existing ? { ...c, value: newValue } : c
+            )
+          : [...prev, { row, col, value: newValue }];
+
+      cellsRef.current = next;
+      setCells(next);
+      propagateCells(next);
+    },
+    [propagateCells]
+  );
 
   // Add more rows
   const addRows = useCallback(

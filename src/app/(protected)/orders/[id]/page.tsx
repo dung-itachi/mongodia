@@ -627,6 +627,19 @@ export default function OrderDetailPage({ params }: PageProps) {
                   <div style={{ color: "#8c8c8c", fontSize: 12 }}>Đơn giá</div>
                   <div>{formatCurrency(order.unitPrice, order.currency)}</div>
                 </Col>
+                {/* Sprint 8.x: Thời gian đơn hàng */}
+                {order.orderDate && (
+                  <Col xs={24} sm={8}>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>TG đặt hàng</div>
+                    <div>{formatDate(order.orderDate)}</div>
+                  </Col>
+                )}
+                {order.receivedDate && (
+                  <Col xs={24} sm={8}>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>TG nhận đơn</div>
+                    <div>{formatDate(order.receivedDate)}</div>
+                  </Col>
+                )}
                 {typeof order.exchangeRate === "number" && (
                   <Col xs={24} sm={8}>
                     <div style={{ color: "#8c8c8c", fontSize: 12 }}>

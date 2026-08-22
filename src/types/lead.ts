@@ -47,6 +47,8 @@ export interface Lead {
     _id: string;
     code: string;
     name: string;
+    /** Giá bán combo (MNT) — Sprint 8.x+. Có khi populate comboId với sellingPrice. */
+    sellingPrice?: number;
   };
   product?: {
     _id: string;
@@ -74,6 +76,10 @@ export interface Lead {
   convertedAt?: Date;
   /** Ngày giờ từ Landing page (Sprint 8.x) */
   leadDate?: Date;
+  /** Thời gian đơn hàng (Sprint 8.x) - thời gian khách đặt. */
+  orderDate?: Date;
+  /** Thời gian nhận đơn (Sprint 8.x) - thời gian Marketing nhận được. */
+  receivedDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -163,6 +169,10 @@ export interface CreateLeadInput {
   isDuplicate?: boolean;
   /** Ngày giờ từ Landing page (Sprint 8.x) */
   leadDate?: Date;
+  /** Thời gian đơn hàng (Sprint 8.x) */
+  orderDate?: Date;
+  /** Thời gian nhận đơn (Sprint 8.x) */
+  receivedDate?: Date;
 }
 
 /**
@@ -207,6 +217,10 @@ export interface UpdateLeadInput {
   note?: string;
   isDuplicate?: boolean;
   isActive?: boolean;
+  /** Thời gian đơn hàng (Sprint 8.x) */
+  orderDate?: Date;
+  /** Thời gian nhận đơn (Sprint 8.x) */
+  receivedDate?: Date;
 }
 
 /**

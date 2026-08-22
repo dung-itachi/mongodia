@@ -17,7 +17,7 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     customerId?: string;
     marketingEmployee?: { _id: string; employeeCode: string; name: string };
     saleEmployee?: { _id: string; employeeCode: string; name: string };
-    combo?: { _id: string; code: string; name: string };
+    combo?: { _id: string; code: string; name: string; sellingPrice?: number };
     product?: { _id: string; code: string; name: string };
     facebookPage?: { _id: string; code: string; name: string };
     isConverted?: boolean;
@@ -51,6 +51,9 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     convertedAt: leadAny.convertedAt?.toISOString(),
     // Sprint 8.x — leadDate từ Landing page
     leadDate: (lead as Lead & { leadDate?: Date }).leadDate?.toISOString(),
+    // Sprint 8.x — Thời gian đơn hàng và nhận đơn
+    orderDate: (lead as Lead & { orderDate?: Date }).orderDate?.toISOString(),
+    receivedDate: (lead as Lead & { receivedDate?: Date }).receivedDate?.toISOString(),
     createdAt: lead.createdAt.toISOString(),
     updatedAt: lead.updatedAt.toISOString(),
   };
@@ -192,9 +195,51 @@ export async function POST(request: Request) {
       leadDate: parsed.data.leadDate
         ? new Date(`${parsed.data.leadDate}+07:00`)
         : undefined,
+      // Sprint 8.x: Thời gian đơn hàng
+      orderDate: parsed.data.orderDate
+        ? new Date(`${parsed.data.orderDate}+07:00`)
+        : undefined,
+      // Sprint 8.x: Thời gian nhận đơn
+      receivedDate: parsed.data.receivedDate
+        ? new Date(`${parsed.data.receivedDate}+07:00`)
+        : undefined,
     };
 
     const created = await leadService.create(createInput, actorId);
+
+    // Sprint 8.x: Auto-assign Sale nếu setting = AUTO.
+    // Lưu ý: KHÔNG fail cả request nếu auto-assign lỗi — Lead vẫn được tạo,
+    // chỉ là chưa được phân công. Sale sẽ tự assign thủ công.
+    try {
+      const { getLeadAssignmentMode } = await import("@/lib/system-settings");
+      const { pickNextSaleForLead } = await import("@/services/lead-assignment.helper");
+
+      const modeSetting = await getLeadAssignmentMode();
+      if (modeSetting.mode === "AUTO") {
+        const pickedSaleId = await pickNextSaleForLead();
+        if (pickedSaleId) {
+          const assignResult = await leadService.assign(
+            created._id,
+            { saleEmployeeId: pickedSaleId, assignmentType: "AUTO" },
+            actorId
+          );
+          if (assignResult.success) {
+            return success(
+              mapMarketingLead(assignResult.lead),
+              "Tạo lead thành công và đã tự động phân công Sale"
+            );
+          }
+          // Nếu assign thất bại → vẫn trả về lead mới tạo
+          console.warn("Auto-assign Sale failed:", assignResult.error);
+        } else {
+          console.warn("Auto-assign: không tìm thấy Sale active nào");
+        }
+      }
+    } catch (autoAssignError) {
+      // Không để lỗi auto-assign làm hỏng response tạo lead
+      console.error("Auto-assign Sale error (non-fatal):", autoAssignError);
+    }
+
     return success(mapMarketingLead(created), "Tạo lead thành công");
   } catch (error) {
     console.error("Marketing Lead Create Error:", error);

@@ -17,6 +17,8 @@ import { LeadAction } from "@/constants/leadAction";
 import { LeadHistory } from "@/models/LeadHistory";
 import { leadRepository } from "@/repositories/lead.repository";
 import { leadService } from "@/services/lead.service";
+import { LEAD_STATUS_LABELS, LEAD_STATUS_ORDER } from "@/constants/leadStatus";
+import { getCurrentShippingFee } from "@/lib/system-settings";
 
 /**
  * Input cho việc push lead sang Sale
@@ -137,9 +139,12 @@ export class MarketingDispatchService {
           lead.saleEmployeeId = new mongoose.Types.ObjectId(targetSaleId);
           lead.assignedAt = new Date();
           lead.assignmentType = saleEmployeeId ? "MANUAL" : "AUTO";
-          // Sprint 8.X: Set to POTENTIAL để có thể tự động convert thành đơn hàng
-          // (convertLead yêu cầu status QUALIFIED hoặc POTENTIAL)
-          lead.status = LeadStatus.POTENTIAL;
+          // Sprint 8.X: Set to NEW khi đẩy sang Sale để Sale tiếp nhận và liên hệ khách hàng
+          lead.status = LeadStatus.NEW;
+          // Sprint 8.x: Set receivedDate = now when pushing to Sale (time Marketing receives the order)
+          if (!lead.receivedDate) {
+            lead.receivedDate = new Date();
+          }
 
           await lead.save({ session });
 
@@ -529,10 +534,10 @@ export class MarketingDispatchService {
 
     const [items, total] = await Promise.all([
       Lead.find(filter)
-        .populate("marketingEmployeeId", "_id employeeCode name")
-        .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("marketingEmployeeId", "_id employeeCode fullName")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
         .populate("productId", "_id code name")
-        .populate("comboId", "_id code name")
+        .populate("comboId", "_id code name sellingPrice")
         .populate("facebookPageId", "_id code name")
         .sort({ assignedAt: -1 })
         .skip(skip)
@@ -547,6 +552,9 @@ export class MarketingDispatchService {
         leadCode: doc.leadCode,
         customerName: doc.customerName,
         phone: doc.phone,
+        phone2: doc.phone2,
+        email: doc.email,
+        facebookLink: doc.facebookLink,
         address: doc.address,
         sourceType: doc.sourceType,
         status: doc.status,
@@ -562,15 +570,32 @@ export class MarketingDispatchService {
               _id: (doc.comboId as { _id: { toString(): string } })._id.toString(),
               code: (doc.comboId as { code: string }).code,
               name: (doc.comboId as { name: string }).name,
+              sellingPrice:
+                typeof (doc.comboId as { sellingPrice?: unknown }).sellingPrice === "number"
+                  ? (doc.comboId as { sellingPrice: number }).sellingPrice
+                  : undefined,
             }
           : undefined,
         quantity: doc.quantity,
         unitPriceMNT: doc.unitPriceMNT,
         exchangeRate: doc.exchangeRate,
-        marketingEmployeeId: doc.marketingEmployeeId,
-        saleEmployeeId: doc.saleEmployeeId,
+        marketingEmployeeId: doc.marketingEmployeeId
+          ? {
+              _id: (doc.marketingEmployeeId as { _id: { toString(): string } })._id.toString(),
+              employeeCode: (doc.marketingEmployeeId as { employeeCode: string }).employeeCode,
+              name: (doc.marketingEmployeeId as { fullName: string }).fullName,
+            }
+          : undefined,
+        saleEmployeeId: doc.saleEmployeeId
+          ? {
+              _id: (doc.saleEmployeeId as { _id: { toString(): string } })._id.toString(),
+              employeeCode: (doc.saleEmployeeId as { employeeCode: string }).employeeCode,
+              name: (doc.saleEmployeeId as { fullName: string }).fullName,
+            }
+          : undefined,
         assignedAt: doc.assignedAt,
         isConverted: doc.isConverted,
+        isDuplicate: doc.isDuplicate,
         noAnswerCount: noAnswerMap.get(doc._id.toString()) || 0,
         facebookPage: doc.facebookPageId && typeof doc.facebookPageId === "object" && "name" in doc.facebookPageId
           ? {
@@ -579,6 +604,14 @@ export class MarketingDispatchService {
               name: (doc.facebookPageId as { name: string }).name,
             }
           : undefined,
+        note: doc.note,
+        // Sprint 8.x — additional dates
+        leadDate: doc.leadDate ?? undefined,
+        orderDate: doc.orderDate ?? undefined,
+        receivedDate: doc.receivedDate ?? undefined,
+        // Convert info
+        convertedOrderId: doc.convertedOrderId?.toString() ?? undefined,
+        convertedAt: doc.convertedAt ?? undefined,
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
       })),
@@ -628,7 +661,7 @@ export class MarketingDispatchService {
 
     const [items, total] = await Promise.all([
       Lead.find(filter)
-        .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
         .populate("productId", "_id code name")
         .populate("comboId", "_id code name")
         .populate("facebookPageId", "_id code name")
@@ -722,6 +755,82 @@ export class MarketingDispatchService {
       noAnswer: noAnswerCount,
       potential: potentialCount,
       closed: closedCount,
+    };
+  }
+
+  /**
+   * Aggregated stats for /leads page (Sprint 8.x+)
+   *
+   * Returns:
+   * - statusCounts: breakdown of lead counts per LeadStatus
+   * - totalCount: grand total
+   * - closedCount: number of leads with status = CLOSED
+   * - closedRevenueMNT: total revenue from CLOSED leads
+   *   (= sum of (combo.sellingPrice - shippingFee) per CLOSED lead)
+   * - shippingFeeMNT: shipping fee currently in effect
+   */
+  async getSaleLeadStats(saleEmployeeId: string | null) {
+    const baseFilter: Record<string, unknown> = {
+      isActive: true,
+    };
+
+    if (saleEmployeeId) {
+      baseFilter.saleEmployeeId = new mongoose.Types.ObjectId(saleEmployeeId);
+    }
+
+    // Status counts via aggregation
+    const aggregationResult = await Lead.aggregate<{ _id: string; count: number }>([
+      { $match: baseFilter },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+
+    const countMap = new Map<string, number>();
+    for (const row of aggregationResult) {
+      countMap.set(String(row._id), row.count);
+    }
+
+    const statusCounts = LEAD_STATUS_ORDER.map((s) => ({
+      status: s,
+      label: LEAD_STATUS_LABELS[s],
+      count: countMap.get(s) ?? 0,
+    }));
+
+    const totalCount = statusCounts.reduce((sum, s) => sum + s.count, 0);
+    const closedCount = countMap.get(LeadStatus.CLOSED) ?? 0;
+
+    // Shipping fee for revenue calculation
+    const shippingSetting = await getCurrentShippingFee();
+    const shippingFee = shippingSetting?.fee ?? 0;
+
+    let closedRevenueMNT = 0;
+    if (closedCount > 0) {
+      const closedLeads = await Lead.find({
+        ...baseFilter,
+        status: LeadStatus.CLOSED,
+        comboId: { $exists: true, $ne: null },
+      })
+        .populate("comboId", "sellingPrice")
+        .select({ comboId: 1 })
+        .lean();
+
+      for (const lead of closedLeads) {
+        const combo = lead.comboId as unknown as
+          | { sellingPrice?: number }
+          | null
+          | undefined;
+        const sellingPrice =
+          combo && typeof combo.sellingPrice === "number" ? combo.sellingPrice : null;
+        if (sellingPrice === null) continue;
+        closedRevenueMNT += Math.max(sellingPrice - shippingFee, 0);
+      }
+    }
+
+    return {
+      statusCounts,
+      totalCount,
+      closedCount,
+      closedRevenueMNT,
+      shippingFeeMNT: shippingFee,
     };
   }
 

@@ -22,7 +22,9 @@ import {
   InputNumber,
   Popover,
   Image,
+  DatePicker,
 } from "antd";
+import dayjs from "dayjs";
 import {
   SendOutlined,
   ClearOutlined,
@@ -66,6 +68,17 @@ const COLUMN_FIELD_LABELS: Record<string, string> = Object.fromEntries(
   COLUMN_FIELDS.map((f) => [f.key, f.label])
 );
 
+function formatDateTime(dateStr: string | undefined): string {
+  if (!dateStr) return "-";
+  return new Date(dateStr).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export interface StagedLead {
   id: string;
   customerName: string;
@@ -88,6 +101,8 @@ export interface StagedLead {
   leadDate?: string;
   /** Ghi chú cho đơn hàng (Sprint 8.x). */
   note?: string;
+  /** Thời gian đơn hàng - khi khách đặt (Sprint 8.x). */
+  orderDate?: string;
   error?: string;
 }
 
@@ -300,6 +315,18 @@ export default function MarketingInputSection({
     return ordered;
   }, [stagedLeads]);
 
+  /** Sprint 8.x: Memoized product options for Select */
+  const productSelectOptions = useMemo(
+    () =>
+      categories.flatMap((c) =>
+        (c.products || []).map((p) => ({
+          value: p._id,
+          label: `${p.name}${p.code ? ` (${p.code})` : ""}`,
+        }))
+      ),
+    [categories]
+  );
+
   // ============================================================
   // HANDLERS
   // ============================================================
@@ -350,7 +377,7 @@ export default function MarketingInputSection({
   // Handle manual order add
   const handleManualOrderAdd = useCallback(() => {
     manualOrderForm.validateFields().then((values) => {
-      const { facebookPageId, customerName, phone, address, productId, comboId } = values;
+      const { facebookPageId, customerName, phone, address, note, productId, comboId, orderDate: formOrderDate } = values;
 
       if (!facebookPageId) {
         toast.warning("Vui lòng chọn trang Facebook");
@@ -362,6 +389,11 @@ export default function MarketingInputSection({
       const product = categories
         .flatMap(c => c.products || [])
         .find(p => p._id === productId);
+
+      // Sprint 8.x: Parse orderDate from form (dayjs) or use current time
+      const finalOrderDate = formOrderDate
+        ? formOrderDate.toDate().toISOString()
+        : new Date().toISOString();
 
       const newLead: StagedLead = {
         id: `staged-${Date.now()}`,
@@ -377,6 +409,9 @@ export default function MarketingInputSection({
         facebookPageId,
         facebookPageName: facebookPages.find(p => p._id === facebookPageId)?.name,
         facebookPageAvatarUrl: facebookPages.find(p => p._id === facebookPageId)?.avatarUrl,
+        // Sprint 8.x: ghi chú đơn hàng
+        note: note || undefined,
+        orderDate: finalOrderDate,
       };
 
       setStagedLeads(prev => [...prev, newLead]);
@@ -441,7 +476,7 @@ export default function MarketingInputSection({
     // Lấy layout cột theo mode hiện tại (do MKT tự cấu hình)
     const currentLayout = columnMapping.getLayout(inputType);
 
-    // Helper: build object {name, phone, address, combo, product, date, facebookPage}
+    // Helper: build object {name, phone, address, combo, product, date, facebookPage, orderDate}
     // từ mảng parts theo layout. Field nào không có trong layout → "".
     function parseRowByLayout(
       parts: string[]
@@ -454,10 +489,15 @@ export default function MarketingInputSection({
         product: "",
         date: "",
         facebookPage: "",
+        orderDate: "",
       };
       currentLayout.forEach((key, idx) => {
         out[key] = (parts[idx] || "").trim();
       });
+      // Nếu layout có date, copy sang orderDate
+      if (out.date && !out.orderDate) {
+        out.orderDate = out.date;
+      }
       return out;
     }
 
@@ -529,6 +569,8 @@ export default function MarketingInputSection({
         const timeStr = dateTimeMatch[2]; // HH:mm hoặc HH:mm:ss
         const [hours, minutes, seconds] = timeStr.split(":");
         out.date = `${dateStr}T${hours}:${minutes}:${seconds || "00"}`;
+        // Sprint 8.x: copy date to orderDate for use in StagedLead
+        out.orderDate = out.date;
         // Remove date+time portion (including the space/tab delimiter)
         line = line.substring(dateTimeMatch[0].length).trim();
       }
@@ -997,6 +1039,8 @@ export default function MarketingInputSection({
               facebookPages.find((p) => p._id === selectedFacebookPageId)?.avatarUrl ??
               undefined,
             error: comboError,
+            // Sprint 8.x: thời gian đơn hàng
+            orderDate: new Date().toISOString(),
           });
         }
       } else {
@@ -1010,7 +1054,13 @@ export default function MarketingInputSection({
           combo: comboInfo,
           product: productInfo,
           date: leadDate,
+          orderDate: parsedOrderDate,
         } = parsed;
+
+        // Sprint 8.x: Use orderDate from parsed data, fallback to leadDate or current time
+        // Nếu không có giá trị → orderDate = receivedDate (thời gian push/hiện tại)
+        const currentTime = new Date().toISOString();
+        const finalOrderDate = parsedOrderDate || leadDate || currentTime;
 
         if (!phone) {
           skippedCount++;
@@ -1064,6 +1114,8 @@ export default function MarketingInputSection({
             // Sprint 8.x: leadDate từ Landing page
             leadDate: leadDate || undefined,
             error: comboError,
+            // Sprint 8.x: thời gian đơn hàng
+            orderDate: finalOrderDate || new Date().toISOString(),
           });
         } else {
           newLeads.push({
@@ -1087,6 +1139,8 @@ export default function MarketingInputSection({
             // Sprint 8.x: leadDate từ Landing page
             leadDate: leadDate || undefined,
             error: comboError || "Không tìm thấy combo",
+            // Sprint 8.x: thời gian đơn hàng
+            orderDate: finalOrderDate || new Date().toISOString(),
           });
         }
       }
@@ -1158,8 +1212,12 @@ export default function MarketingInputSection({
       customerName: lead.customerName,
       phone: lead.phone,
       address: lead.address || "",
+      note: lead.note || "",
       productId: lead.productId || undefined,
       comboId: lead.comboId || undefined,
+      orderDate: lead.orderDate
+        ? dayjs(lead.orderDate)
+        : undefined,
     });
     setEditLeadModalOpen(true);
   }, [editLeadForm]);
@@ -1168,12 +1226,16 @@ export default function MarketingInputSection({
   const handleSaveEditLead = useCallback(() => {
     editLeadForm.validateFields().then((values) => {
       if (!editingLead) return;
-      const { customerName, phone, address, note, productId, comboId } = values;
+      const { customerName, phone, address, note, productId, comboId, orderDate: formOrderDate } = values;
       // Resolve productName và comboName
       const allProducts = categories.flatMap((c) => c.products);
       const product = allProducts.find((p) => p._id === productId);
       const combo = productId && comboId ? comboMap[comboId] : undefined;
       const comboPrice = combo?.sellingPrice ?? 0;
+      // Sprint 8.x: Nếu không nhập orderDate → dùng current time (= receivedDate khi push)
+      const finalOrderDate = formOrderDate
+        ? formOrderDate.toDate().toISOString()
+        : new Date().toISOString();
       setStagedLeads((prev) =>
         prev.map((l) =>
           l.id === editingLead.id
@@ -1188,6 +1250,7 @@ export default function MarketingInputSection({
                 comboId: comboId || "",
                 comboName: combo?.name || "",
                 price: comboPrice,
+                orderDate: finalOrderDate,
                 error: undefined,
               }
             : l
@@ -1244,6 +1307,8 @@ export default function MarketingInputSection({
           leadDate: lead.leadDate,
           // Sprint 8.x: ghi chú đơn hàng
           note: lead.note,
+          // Sprint 8.x: thời gian đơn hàng
+          orderDate: lead.orderDate,
         } as never);
         leadIds.push(result._id);
       } catch (err) {
@@ -1833,6 +1898,21 @@ export default function MarketingInputSection({
           </Form.Item>
 
           <Form.Item
+            name="orderDate"
+            label="Thời gian đặt hàng"
+            tooltip="Ngày giờ khách đặt hàng. Nếu để trống sẽ lấy thời gian hiện tại."
+          >
+            <DatePicker
+              showTime
+              needConfirm
+              classNames={{ popup: { root: "picker-with-time" } }}
+              format="DD/MM/YYYY HH:mm"
+              style={{ width: "100%" }}
+              placeholder="Chọn ngày giờ"
+            />
+          </Form.Item>
+
+          <Form.Item
             name="productId"
             label="Sản phẩm"
             rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
@@ -1843,12 +1923,7 @@ export default function MarketingInputSection({
               filterOption={(input, option) =>
                 (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
               }
-              options={categories.flatMap(c =>
-                (c.products || []).map(p => ({
-                  value: p._id,
-                  label: `${p.name}${p.code ? ` (${p.code})` : ""}`,
-                }))
-              )}
+              options={productSelectOptions}
             />
           </Form.Item>
 
@@ -1893,6 +1968,16 @@ export default function MarketingInputSection({
               );
             }}
           </Form.Item>
+
+          <Form.Item
+            name="note"
+            label="Ghi chú"
+          >
+            <Input.TextArea
+              placeholder="Nhập ghi chú (tùy chọn)"
+              autoSize={{ minRows: 2, maxRows: 10 }}
+            />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -1935,6 +2020,21 @@ export default function MarketingInputSection({
           </Form.Item>
 
           <Form.Item
+            name="orderDate"
+            label="Thời gian đặt hàng"
+            tooltip="Ngày giờ khách đặt hàng."
+          >
+            <DatePicker
+              showTime
+              needConfirm
+              classNames={{ popup: { root: "picker-with-time" } }}
+              format="DD/MM/YYYY HH:mm"
+              style={{ width: "100%" }}
+              placeholder="Chọn ngày giờ"
+            />
+          </Form.Item>
+
+          <Form.Item
             name="productId"
             label="Sản phẩm"
             rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
@@ -1943,10 +2043,7 @@ export default function MarketingInputSection({
               placeholder="Chọn sản phẩm"
               showSearch
               optionFilterProp="label"
-              options={categories.flatMap((c) => c.products).map((p) => ({
-                value: p._id,
-                label: `${p.name} (${p.code})`,
-              }))}
+              options={productSelectOptions}
               onChange={() => {
                 editLeadForm.setFieldValue("comboId", undefined);
               }}
@@ -1975,8 +2072,14 @@ export default function MarketingInputSection({
             }}
           </Form.Item>
 
-          <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea placeholder="Nhập ghi chú (tùy chọn)" rows={2} />
+          <Form.Item
+            name="note"
+            label="Ghi chú"
+          >
+            <Input.TextArea
+              placeholder="Nhập ghi chú (tùy chọn)"
+              autoSize={{ minRows: 2, maxRows: 10 }}
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -2077,6 +2180,7 @@ export default function MarketingInputSection({
                   <th>Địa chỉ</th>
                   <th>Combo</th>
                   <th>Giá</th>
+                  <th>TG Đặt</th>
                 </tr>
               </thead>
               <tbody>
@@ -2158,6 +2262,11 @@ export default function MarketingInputSection({
                     <td>{lead.comboName || "-"}</td>
                     <td className={styles.price}>
                       {lead.price > 0 ? `${lead.price.toLocaleString()}₮` : "-"}
+                    </td>
+                    <td>
+                      {lead.orderDate
+                        ? formatDateTime(lead.orderDate)
+                        : <span className={styles.addressEmpty}>—</span>}
                     </td>
                   </tr>
                 ))}

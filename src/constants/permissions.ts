@@ -570,4 +570,14 @@ export const PERMISSIONS = [
     code: "settings.language.update",
     name: "Update Language Settings",
   },
+
+  // Login History
+  {
+    code: "login-history.view",
+    name: "View Login History",
+  },
+  {
+    code: "login-history.viewAll",
+    name: "View All Login History",
+  },
 ];

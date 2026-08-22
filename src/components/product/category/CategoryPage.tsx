@@ -1,18 +1,20 @@
 /**
- * Category Page (Sprint 8.4.1)
+ * Category Page (Sprint 8.x - UI Polish)
  *
  * Page for managing Categories.
  */
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, AppstoreOutlined, CheckCircleOutlined, StopOutlined } from "@ant-design/icons";
 import {
   PageContainer,
   PageHeader,
   CardSection,
+  StatGrid,
+  StatCard,
 } from "@/components/common";
 import {
   useCategoryList,
@@ -27,6 +29,7 @@ import CategoryTable from "./CategoryTable";
 import CategoryForm from "./CategoryForm";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
+import styles from "./categories.module.css";
 
 function getTranslated(key: string): string {
   const language = useLanguageStore.getState().language;
@@ -43,6 +46,19 @@ export default function CategoryPage() {
   const deleteMutation = useDeleteCategory();
 
   const categories = data?.items ?? [];
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalCategories = categories.length;
+    const activeCategories = categories.filter((c) => c.isActive !== false).length;
+    const inactiveCategories = totalCategories - activeCategories;
+
+    return {
+      totalCategories,
+      activeCategories,
+      inactiveCategories,
+    };
+  }, [categories]);
 
   const handleOpenCreate = useCallback(() => {
     setEditingItem(null);
@@ -122,19 +138,41 @@ export default function CategoryPage() {
       <PageHeader
         title={getTranslated("Danh mục sản phẩm")}
         subtitle={getTranslated("Quản lý danh mục sản phẩm")}
-      />
-
-      <CardSection>
-        <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleOpenCreate}
-          >
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
             {getTranslated("Thêm danh mục")}
           </Button>
-        </div>
+        }
+      />
 
+      {/* Statistics Cards */}
+      <CardSection style={{ padding: "16px 24px" }}>
+        <StatGrid columns={3} gap={16} minItemWidth={160}>
+          <StatCard
+            title="Tổng danh mục"
+            value={stats.totalCategories}
+            icon={<AppstoreOutlined />}
+            color="blue"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Đang hoạt động"
+            value={stats.activeCategories}
+            icon={<CheckCircleOutlined />}
+            color="green"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Đã vô hiệu"
+            value={stats.inactiveCategories}
+            icon={<StopOutlined />}
+            color="orange"
+            loading={isLoading}
+          />
+        </StatGrid>
+      </CardSection>
+
+      <CardSection>
         <CategoryTable
           data={categories}
           loading={isLoading}

@@ -186,6 +186,12 @@ export interface OrderResponse {
   orderSource: OrderSource;
   orderSourceLabel: string;
 
+  // ---- Sprint 8.x: Thời gian đơn hàng ----------------------
+  /** Thời gian khách đặt hàng (từ Landing page hoặc dữ liệu dán) */
+  orderDate?: string;
+  /** Thời gian Marketing nhận được đơn (khi push sang Sale) */
+  receivedDate?: string;
+
   // ---- Order Items (Sprint 6.1) ------------------------------------
   orderItems: OrderItemResponse[];
   summary: OrderSummaryResponse;
@@ -440,6 +446,9 @@ export function mapOrder(order: IOrder): OrderResponse {
     orderTypeLabel: ORDER_TYPE_LABELS[order.orderType as OrderType],
     orderSource: order.orderSource as OrderSource,
     orderSourceLabel: ORDER_SOURCE_LABELS[order.orderSource as OrderSource],
+    // Sprint 8.x: Thời gian đơn hàng
+    orderDate: order.orderDate?.toISOString(),
+    receivedDate: order.receivedDate?.toISOString(),
     // Sprint 6.1: Order items and summary
     orderItems: (order.orderItems ?? []).map(mapOrderItem),
     summary: mapOrderSummary(order.summary),

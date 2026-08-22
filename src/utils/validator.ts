@@ -876,6 +876,26 @@ export const createLeadSchema = z.object({
     )
     .optional()
     .nullable(),
+
+  /** Thời gian đơn hàng (Sprint 8.x) - thời gian khách đặt. */
+  orderDate: z
+    .string()
+    .regex(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2})?$/,
+      "Định dạng ngày giờ không hợp lệ"
+    )
+    .optional()
+    .nullable(),
+
+  /** Thời gian nhận đơn (Sprint 8.x) - thời gian Marketing nhận được. */
+  receivedDate: z
+    .string()
+    .regex(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2})?$/,
+      "Định dạng ngày giờ không hợp lệ"
+    )
+    .optional()
+    .nullable(),
 });
 
 export const updateLeadSchema = z.object({
@@ -1011,6 +1031,26 @@ export const updateLeadSchema = z.object({
   isDuplicate: z.boolean().optional(),
 
   isActive: z.boolean().optional(),
+
+  /** Thời gian đơn hàng (Sprint 8.x) - thời gian khách đặt. */
+  orderDate: z
+    .string()
+    .regex(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2})?$/,
+      "Định dạng ngày giờ không hợp lệ"
+    )
+    .optional()
+    .nullable(),
+
+  /** Thời gian nhận đơn (Sprint 8.x) - thời gian Marketing nhận được. */
+  receivedDate: z
+    .string()
+    .regex(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2})?$/,
+      "Định dạng ngày giờ không hợp lệ"
+    )
+    .optional()
+    .nullable(),
 });
 
 export type CreateLeadForm = z.infer<typeof createLeadSchema>;

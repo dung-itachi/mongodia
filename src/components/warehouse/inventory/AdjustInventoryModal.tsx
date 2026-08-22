@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { Form, Input, InputNumber, Modal } from "antd";
+import { Form, Input, InputNumber, Modal, Divider, Tag, Space, Typography, Alert } from "antd";
+import { InboxOutlined, GiftOutlined, HomeOutlined, HistoryOutlined, ClockCircleOutlined, CarOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useCreateAdjustment } from "@/hooks/useWarehouseAdjustments";
 import type { NormalizedInventoryItem } from "@/hooks/useWarehouseInventory";
 import { useMessage } from "@/contexts/MessageContext";
@@ -30,17 +31,47 @@ function formatNumber(value: number | undefined | null): string {
   return Number(value ?? 0).toLocaleString("vi-VN");
 }
 
-const readonlyLabelStyle: React.CSSProperties = {
-  padding: "6px 11px",
-  background: "#fafafa",
-  border: "1px solid #d9d9d9",
-  borderRadius: 6,
-  fontVariantNumeric: "tabular-nums",
-  minHeight: 32,
-  display: "flex",
-  alignItems: "center",
-  color: "#595959",
-};
+function InfoRow({ icon, label, value, valueStyle }: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  valueStyle?: React.CSSProperties;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px dashed #f0f0f0" }}>
+      <Space size={8}>
+        {icon}
+        <span style={{ color: "#8c8c8c", fontSize: 13 }}>{label}</span>
+      </Space>
+      <span style={{ fontWeight: 600, fontSize: 14, ...valueStyle }}>{value}</span>
+    </div>
+  );
+}
+
+function ReadonlyBadge({ value, label, color, icon }: {
+  value: number;
+  label: string;
+  color: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div style={{
+      padding: "10px 14px",
+      borderRadius: 8,
+      background: `${color}18`,
+      border: `1px solid ${color}40`,
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+    }}>
+      <div style={{ color, fontSize: 18 }}>{icon}</div>
+      <div>
+        <div style={{ fontSize: 11, color: "#8c8c8c", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+        <div style={{ color, fontWeight: 700, fontSize: 18 }}>{formatNumber(value)}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function AdjustInventoryModal({
   open,
@@ -113,98 +144,166 @@ export default function AdjustInventoryModal({
 
   const warehouseLabel = item ? (item.warehouseName || "-") : "-";
 
-  // The 4 read-only columns are derived from the inventory row.
   const availableQty = Number(item?.availableQuantity ?? 0);
   const reservedQty = Number(item?.reservedQuantity ?? 0);
   const inTransitQty = Number(item?.inTransitQuantity ?? 0);
   const shippedQty = Number(item?.shippedQuantity ?? 0);
+  const currentQty = Number(item?.quantity ?? 0);
+  const newQty = form.getFieldValue("newQuantity");
+  const qtyDiff = newQty - currentQty;
 
   return (
     <Modal
-      title={getTranslated("Sửa số lượng tồn kho")}
+      title={
+        <Space>
+          <InboxOutlined style={{ color: "#1890ff" }} />
+          <span>Điều chỉnh tồn kho</span>
+        </Space>
+      }
       open={open}
       onCancel={handleCancel}
       onOk={handleOk}
       confirmLoading={createAdjustment.isPending}
       okText={getTranslated("Lưu điều chỉnh")}
       cancelText={getTranslated("Hủy")}
-      width={640}
+      width={680}
       destroyOnHidden
     >
       {item && (
-        <div
-          style={{
-            padding: "8px 12px",
+        <div style={{ marginBottom: 16 }}>
+          {/* Item header */}
+          <div style={{
+            padding: "12px 16px",
+            background: item.itemType === "GIFT" ? "#f9f0ff" : "#f0f5ff",
+            borderRadius: 10,
             marginBottom: 16,
-            background: "#f5f5f5",
-            borderRadius: 6,
-            fontSize: 13,
-          }}
-        >
-          <div>
-            <strong>Mặt hàng:</strong> {itemLabel}
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <Tag
+                color={item.itemType === "GIFT" ? "purple" : "blue"}
+                style={{ borderRadius: 6, margin: 0 }}
+              >
+                <Space size={4}>
+                  {item.itemType === "GIFT" ? <GiftOutlined /> : <InboxOutlined />}
+                  {item.itemType === "GIFT" ? "Quà tặng" : "Sản phẩm"}
+                </Space>
+              </Tag>
+              <Space size={4}>
+                <HomeOutlined style={{ color: "#8c8c8c" }} />
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>{warehouseLabel}</Typography.Text>
+              </Space>
+            </div>
+            <Typography.Title level={5} style={{ margin: 0 }}>{itemLabel}</Typography.Title>
           </div>
-          <div>
-            <strong>Loại:</strong> {item.itemType === "GIFT" ? "Quà tặng" : "Sản phẩm"}
+
+          {/* Summary badges */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
+            <ReadonlyBadge
+              value={currentQty}
+              label="Tồn kho hiện tại"
+              color="#1890ff"
+              icon={<InboxOutlined />}
+            />
+            <ReadonlyBadge
+              value={availableQty}
+              label="Khả dụng"
+              color="#52c41a"
+              icon={<CheckCircleOutlined />}
+            />
+            <ReadonlyBadge
+              value={shippedQty}
+              label="Đã xuất"
+              color="#8c8c8c"
+              icon={<HistoryOutlined />}
+            />
           </div>
+
+          {/* Reserved & in transit */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+            <ReadonlyBadge
+              value={reservedQty}
+              label="Đã giữ"
+              color="#faad14"
+              icon={<ClockCircleOutlined />}
+            />
+            <ReadonlyBadge
+              value={inTransitQty}
+              label="Đang chuyển"
+              color="#1890ff"
+              icon={<CarOutlined />}
+            />
+          </div>
+
+          {/* Change preview */}
+          {newQty !== undefined && qtyDiff !== 0 && (
+            <Alert
+              message={
+                <Space>
+                  <span>
+                    Thay đổi: <strong>{qtyDiff > 0 ? `+${formatNumber(qtyDiff)}` : formatNumber(qtyDiff)}</strong>
+                    {qtyDiff > 0 ? " (tăng)" : " (giảm)"}
+                  </span>
+                </Space>
+              }
+              type={qtyDiff > 0 ? "success" : "warning"}
+              showIcon
+              style={{ marginBottom: 16, borderRadius: 8 }}
+            />
+          )}
         </div>
       )}
 
+      <Divider style={{ margin: "0 0 16px" }} />
+
       <Form form={form} layout="vertical" requiredMark="optional">
-        <Form.Item label="Kho hiện tại">
-          <div style={readonlyLabelStyle}>
-            <strong>{warehouseLabel}</strong>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+          <Form.Item
+            label="Số lượng mới"
+            name="newQuantity"
+            required
+            help={`Hiện tại: ${formatNumber(currentQty)}`}
+            rules={[
+              { required: true, message: "Vui lòng nhập số lượng mới" },
+              { type: "number", min: 0, message: "Số lượng phải ≥ 0" },
+            ]}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              min={0}
+              placeholder="Nhập số lượng mới"
+              size="large"
+              formatter={(value) =>
+                value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""
+              }
+              parser={(value) => {
+                const parsed = value?.replace(/,/g, "");
+                return parsed ? Number(parsed) : 0;
+              }}
+              onChange={() => {
+                // Trigger re-render for change preview
+                form.setFieldsValue({ newQuantity: form.getFieldValue("newQuantity") });
+              }}
+            />
+          </Form.Item>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ height: 22 }} />
+            {qtyDiff !== 0 && newQty !== undefined && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 12px",
+                borderRadius: 8,
+                background: qtyDiff > 0 ? "#f6ffed" : "#fff2f0",
+                border: `1px solid ${qtyDiff > 0 ? "#b7eb8f" : "#ffccc7"}`,
+              }}>
+                <span style={{ fontSize: 13, color: qtyDiff > 0 ? "#52c41a" : "#ff4d4f" }}>
+                  → Tồn kho mới: <strong>{formatNumber(newQty)}</strong>
+                </span>
+              </div>
+            )}
           </div>
-        </Form.Item>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px" }}>
-          <Form.Item label="Tồn kho" required style={{ marginBottom: 12 }}>
-            <Form.Item
-              name="newQuantity"
-              noStyle
-              rules={[
-                { required: true, message: "Vui lòng nhập số lượng mới" },
-                { type: "number", min: 0, message: "Số lượng phải ≥ 0" },
-              ]}
-            >
-              <InputNumber
-                style={{ width: "100%" }}
-                min={0}
-                placeholder="Nhập số lượng mới"
-              />
-            </Form.Item>
-            <div style={{ marginTop: 4, fontSize: 12, color: "#8c8c8c" }}>
-              Hiện tại: {formatNumber(item?.quantity)}
-            </div>
-          </Form.Item>
-
-          <Form.Item label="Khả dụng" style={{ marginBottom: 12 }}>
-            <div style={readonlyLabelStyle}>{formatNumber(availableQty)}</div>
-            <div style={{ marginTop: 4, fontSize: 12, color: "#8c8c8c" }}>
-              = Tồn kho − Đã giữ − Đang chuyển
-            </div>
-          </Form.Item>
-
-          <Form.Item label="Đã giữ" style={{ marginBottom: 12 }}>
-            <div style={readonlyLabelStyle}>{formatNumber(reservedQty)}</div>
-            <div style={{ marginTop: 4, fontSize: 12, color: "#8c8c8c" }}>
-              Tự động từ đơn hàng
-            </div>
-          </Form.Item>
-
-          <Form.Item label="Đang chuyển" style={{ marginBottom: 12 }}>
-            <div style={readonlyLabelStyle}>{formatNumber(inTransitQty)}</div>
-            <div style={{ marginTop: 4, fontSize: 12, color: "#8c8c8c" }}>
-              Tự động từ phiếu chuyển kho
-            </div>
-          </Form.Item>
-
-          <Form.Item label="Đã xuất" style={{ marginBottom: 12 }}>
-            <div style={readonlyLabelStyle}>{formatNumber(shippedQty)}</div>
-            <div style={{ marginTop: 4, fontSize: 12, color: "#8c8c8c" }}>
-              Theo dõi lịch sử
-            </div>
-          </Form.Item>
         </div>
 
         <Form.Item
@@ -219,12 +318,13 @@ export default function AdjustInventoryModal({
           <Input.TextArea
             rows={2}
             maxLength={500}
+            showCount
             placeholder="Ví dụ: Kiểm kê thực tế, hàng hỏng, đếm nhầm..."
           />
         </Form.Item>
 
         <Form.Item label="Ghi chú (tùy chọn)" name="note">
-          <Input.TextArea rows={2} maxLength={500} placeholder="Ghi chú thêm" />
+          <Input.TextArea rows={2} maxLength={500} showCount placeholder="Ghi chú thêm" />
         </Form.Item>
       </Form>
     </Modal>

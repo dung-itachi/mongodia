@@ -1,5 +1,5 @@
 /**
- * Variant Page (Sprint 8.4.1)
+ * Variant Page (Sprint 8.x - UI Polish)
  *
  * Page for managing Variants with two main sections:
  * 1. Biến thể theo sản phẩm: Danh sách sản phẩm và biến thể của từng sản phẩm
@@ -10,11 +10,13 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { Button, Tabs, Space, message } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, AppstoreOutlined, ControlOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import {
   PageContainer,
   PageHeader,
   CardSection,
+  StatGrid,
+  StatCard,
 } from "@/components/common";
 import {
   useVariantOptionList,
@@ -46,6 +48,7 @@ import VariantValueTable from "./VariantValueTable";
 import VariantValueForm from "./VariantValueForm";
 import ProductVariantsList from "./ProductVariantsList";
 import ProductVariantForm from "./ProductVariantForm";
+import styles from "./variants.module.css";
 
 export default function VariantPage() {
   // State for active tab
@@ -91,6 +94,21 @@ export default function VariantPage() {
   const variants = variantsData?.items ?? [];
   const products = productsData?.items ?? [];
   const productVariantOptions = productVariantOptionsData?.variantOptions ?? [];
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalProducts = products.length;
+    const totalVariants = variants.length;
+    const totalOptions = options.length;
+    const totalValues = values.length;
+
+    return {
+      totalProducts,
+      totalVariants,
+      totalOptions,
+      totalValues,
+    };
+  }, [products, variants, options, values]);
 
   // Handlers - Options
   const handleOpenOptionCreate = useCallback(() => {
@@ -355,8 +373,8 @@ export default function VariantPage() {
       key: "options",
       label: "Quản lý thuộc tính",
       children: (
-        <div>
-          <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
+        <div className={styles.tabContent}>
+          <div className={styles.tabToolbar}>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenOptionCreate}>
               Thêm thuộc tính
             </Button>
@@ -374,8 +392,8 @@ export default function VariantPage() {
       key: "values",
       label: "Quản lý giá trị",
       children: (
-        <div>
-          <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
+        <div className={styles.tabContent}>
+          <div className={styles.tabToolbar}>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenValueCreate}>
               Thêm giá trị
             </Button>
@@ -403,6 +421,40 @@ export default function VariantPage() {
         title="Biến thể"
         subtitle="Quản lý biến thể sản phẩm, thuộc tính và giá trị"
       />
+
+      {/* Statistics Cards */}
+      <CardSection style={{ padding: "16px 24px" }}>
+        <StatGrid columns={4} gap={16} minItemWidth={160}>
+          <StatCard
+            title="Tổng sản phẩm"
+            value={stats.totalProducts}
+            icon={<AppstoreOutlined />}
+            color="blue"
+            loading={productsLoading}
+          />
+          <StatCard
+            title="Biến thể"
+            value={stats.totalVariants}
+            icon={<UnorderedListOutlined />}
+            color="green"
+            loading={variantsLoading}
+          />
+          <StatCard
+            title="Thuộc tính"
+            value={stats.totalOptions}
+            icon={<ControlOutlined />}
+            color="purple"
+            loading={optionsLoading}
+          />
+          <StatCard
+            title="Giá trị"
+            value={stats.totalValues}
+            icon={<ControlOutlined />}
+            color="orange"
+            loading={valuesLoading}
+          />
+        </StatGrid>
+      </CardSection>
 
       <CardSection>
         <Tabs

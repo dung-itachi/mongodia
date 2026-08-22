@@ -43,6 +43,8 @@ const NotificationReadSchema = new Schema(
 
 NotificationReadSchema.index({ notificationId: 1, employeeId: 1 }, { unique: true });
 NotificationReadSchema.index({ employeeId: 1, notificationId: 1 });
+// Hỗ trợ query `find({ employeeId }).select("notificationId")` (unread-count) đi qua IXSCAN.
+NotificationReadSchema.index({ employeeId: 1, _id: -1 });
 
 export type NotificationRead = InferSchemaType<typeof NotificationReadSchema> & {
   _id: Types.ObjectId;

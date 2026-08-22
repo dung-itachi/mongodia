@@ -39,6 +39,8 @@ export interface MarketingLead {
     _id: string;
     code: string;
     name: string;
+    /** Giá bán combo (MNT). Có khi API populate comboId với sellingPrice. */
+    sellingPrice?: number;
   };
   /** Sản phẩm (Product) đính kèm Lead. */
   product?: {
@@ -62,6 +64,10 @@ export interface MarketingLead {
   convertedAt?: string;
   /** Ngày giờ từ Landing page (Sprint 8.x). */
   leadDate?: string;
+  /** Thời gian đơn hàng (Sprint 8.x) - thời gian khách đặt. */
+  orderDate?: string;
+  /** Thời gian nhận đơn (Sprint 8.x) - thời gian Marketing nhận được. */
+  receivedDate?: string;
   createdAt: string;
   updatedAt: string;
 }

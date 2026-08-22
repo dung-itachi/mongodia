@@ -68,14 +68,22 @@ export async function GET(request: Request) {
     const cursor = searchParams.get("cursor");
     const limitRaw = searchParams.get("limit");
     const onlyUnreadRaw = searchParams.get("onlyUnread");
+    const isActiveParam = searchParams.get("isActive");
 
     const limit = limitRaw ? parseInt(limitRaw, 10) : 20;
     const onlyUnread = onlyUnreadRaw === "true";
+    const isActive =
+      isActiveParam === "true"
+        ? true
+        : isActiveParam === "false"
+          ? false
+          : undefined;
 
     const page = await listForUser(currentUser.employee._id.toString(), {
       cursor: cursor || null,
       limit: Number.isFinite(limit) ? limit : 20,
       onlyUnread,
+      isActive,
     });
 
     return success(page);

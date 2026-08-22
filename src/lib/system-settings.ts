@@ -207,3 +207,89 @@ export async function setShippingFee(input: {
 
   return value;
 }
+
+// ============================================================================
+// Lead Assignment Mode (Sprint 8.x — Phân công Sale cho Lead)
+// ============================================================================
+
+/** Storage key for the global lead-assignment mode. */
+export const LEAD_ASSIGNMENT_MODE_SETTING_KEY = "lead_assignment_mode";
+
+/** Two modes supported today. */
+export type LeadAssignmentMode = "AUTO" | "MANUAL";
+
+/**
+ * Shape persisted in `Setting.value` for the `lead_assignment_mode` key.
+ */
+export interface LeadAssignmentModeSettingValue {
+  /** AUTO: mỗi Lead mới sẽ tự động được gán cho 1 Sale.
+   *  MANUAL: Marketing tự gán Sale thủ công (flow cũ). */
+  mode: LeadAssignmentMode;
+  updatedAt?: string;
+  /** employeeId string */
+  updatedBy?: string | null;
+}
+
+/** Default = MANUAL để giữ tương thích với flow hiện tại. */
+export const DEFAULT_LEAD_ASSIGNMENT_MODE: LeadAssignmentMode = "MANUAL";
+
+export function isLeadAssignmentModeSettingValue(
+  value: unknown,
+): value is LeadAssignmentModeSettingValue {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return v.mode === "AUTO" || v.mode === "MANUAL";
+}
+
+/**
+ * Read the current lead-assignment mode. Falls back to MANUAL if missing.
+ */
+export async function getLeadAssignmentMode(): Promise<LeadAssignmentModeSettingValue> {
+  const row = await Setting.findOne({
+    key: LEAD_ASSIGNMENT_MODE_SETTING_KEY,
+  }).lean();
+
+  if (row && isLeadAssignmentModeSettingValue(row.value)) {
+    return row.value;
+  }
+
+  return {
+    mode: DEFAULT_LEAD_ASSIGNMENT_MODE,
+    updatedAt: new Date().toISOString(),
+    updatedBy: null,
+  };
+}
+
+/**
+ * Persist a new lead-assignment mode.
+ */
+export async function setLeadAssignmentMode(input: {
+  mode: LeadAssignmentMode;
+  updatedBy?: string | null;
+}): Promise<LeadAssignmentModeSettingValue> {
+  if (input.mode !== "AUTO" && input.mode !== "MANUAL") {
+    throw new Error("Chế độ phân công phải là 'AUTO' hoặc 'MANUAL'");
+  }
+
+  const value: LeadAssignmentModeSettingValue = {
+    mode: input.mode,
+    updatedAt: new Date().toISOString(),
+    updatedBy: input.updatedBy ?? null,
+  };
+
+  await Setting.findOneAndUpdate(
+    { key: LEAD_ASSIGNMENT_MODE_SETTING_KEY },
+    {
+      $set: {
+        key: LEAD_ASSIGNMENT_MODE_SETTING_KEY,
+        value,
+        description:
+          "Chế độ phân công Lead cho Sale. AUTO: tự động gán. MANUAL: gán thủ công.",
+        isPublic: false,
+      },
+    },
+    { upsert: true, new: true },
+  );
+
+  return value;
+}

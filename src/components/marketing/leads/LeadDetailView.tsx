@@ -17,7 +17,6 @@ import {
   EditOutlined,
   UserSwitchOutlined,
   CheckCircleFilled,
-  SwapOutlined,
   DeleteOutlined,
   MoreOutlined,
   InfoCircleOutlined,
@@ -33,8 +32,7 @@ import { useLeadTimeline, useConvertLead, useUpdateLead, useDeleteLead } from "@
 import { useLeadCallHistory } from "@/hooks/useLeadCallLog";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LeadStatus } from "@/constants/leadStatus";
-import { MARKETING_LEAD_STATUS_OPTIONS } from "@/types/marketing-lead";
-import type { MarketingLead, MarketingLeadStatus } from "@/types/marketing-lead";
+import type { MarketingLead } from "@/types/marketing-lead";
 import { useAuthStore } from "@/store/auth.store";
 import { hasPermission } from "@/lib/permission";
 import styles from "@/app/(protected)/marketing/input/[id]/lead-detail.module.css";
@@ -525,8 +523,6 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
   const deleteMutation = useDeleteLead();
   const convertMutation = useConvertLead();
 
-  const [statusChangeOpen, setStatusChangeOpen] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<MarketingLeadStatus | null>(null);
   const [assignDrawerOpen, setAssignDrawerOpen] = useState(false);
   const [convertModalOpen, setConvertModalOpen] = useState(false);
 
@@ -583,29 +579,6 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
     });
   };
 
-  const handleChangeStatus = (status: MarketingLeadStatus) => {
-    setPendingStatus(status);
-    setStatusChangeOpen(true);
-  };
-
-  const handleStatusConfirm = () => {
-    if (!pendingStatus) return;
-
-    updateMutation.mutate(
-      { id: lead._id, data: { status: pendingStatus } as Record<string, unknown> },
-      {
-        onSuccess: () => {
-          void message.success("Đổi trạng thái thành công");
-          setStatusChangeOpen(false);
-          setPendingStatus(null);
-        },
-        onError: (err) => {
-          void message.error(`Lỗi: ${err.message}`);
-        },
-      }
-    );
-  };
-
   const tabItems = [
     {
       key: "info",
@@ -658,20 +631,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
     },
   ];
 
-  const statusMenuItems: MenuProps["items"] = MARKETING_LEAD_STATUS_OPTIONS.map((opt) => ({
-    key: opt.value,
-    label: opt.label,
-    disabled: opt.value === lead.status,
-    onClick: () => handleChangeStatus(opt.value),
-  }));
-
   const moreMenuItems: MenuProps["items"] = [
-    {
-      key: "status",
-      label: "Đổi trạng thái",
-      icon: <SwapOutlined />,
-      children: statusMenuItems,
-    },
     { type: "divider" as const },
     {
       key: "delete",
@@ -692,7 +652,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
       {/* Action Bar */}
       <CardSection>
         <div className={styles["action-bar"]}>
-          {hasPermission(permissions, "lead.update") && (
+          {hasPermission(permissions, "lead.update") && lead.status === LeadStatus.NEW && (
             <Button icon={<EditOutlined />} onClick={onEdit}>
               Sửa
             </Button>
@@ -728,19 +688,6 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
         <Tabs defaultActiveKey="info" items={tabItems} />
       </CardSection>
 
-      {/* Status Change Modal */}
-      <StatusChangeConfirmModal
-        lead={lead}
-        newStatus={pendingStatus}
-        open={statusChangeOpen}
-        loading={updateMutation.isPending}
-        onConfirm={handleStatusConfirm}
-        onCancel={() => {
-          setStatusChangeOpen(false);
-          setPendingStatus(null);
-        }}
-      />
-
       {/* Assign Sale Drawer */}
       <AssignSaleDrawer
         open={assignDrawerOpen}
@@ -764,62 +711,6 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
 // =============================================================================
 // Sub-components
 // =============================================================================
-
-function StatusChangeConfirmModal({
-  lead,
-  newStatus,
-  open,
-  loading,
-  onConfirm,
-  onCancel,
-}: {
-  lead: MarketingLead;
-  newStatus: MarketingLeadStatus | null;
-  open: boolean;
-  loading: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  const newLabel = newStatus
-    ? MARKETING_LEAD_STATUS_OPTIONS.find((o) => o.value === newStatus)?.label
-    : "";
-  const newConfig = newStatus ? STATUS_COLOR_MAP[newStatus] : null;
-
-  return (
-    <Modal
-      title="Xác nhận đổi trạng thái"
-      open={open}
-      okText="Xác nhận"
-      cancelText="Hủy"
-      onCancel={onCancel}
-      onOk={onConfirm}
-      okButtonProps={{ loading }}
-    >
-      <p>
-        Chuyển trạng thái khách hàng <strong>{lead.leadCode}</strong> từ{" "}
-        <StatusBadge
-          status={lead.status}
-          mapping={{
-            [lead.status]: {
-              ...(STATUS_COLOR_MAP[lead.status] ?? {}),
-              label: lead.statusLabel,
-            },
-          }}
-        />{" "}
-        sang{" "}
-        {newConfig && newLabel ? (
-          <StatusBadge
-            status={newStatus!}
-            mapping={{ [newStatus!]: { ...newConfig, label: newLabel } }}
-          />
-        ) : (
-          <strong>{newLabel}</strong>
-        )}
-        ?
-      </p>
-    </Modal>
-  );
-}
 
 function ConvertConfirmModal({
   lead,

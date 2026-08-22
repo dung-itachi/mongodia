@@ -59,6 +59,10 @@ export interface ILead extends Document {
   convertedAt?: Date;
   /** Ngày giờ từ Landing page (Sprint 8.x) - để track thời gian thực tế khách đăng ký. */
   leadDate?: Date;
+  /** Thời gian đơn hàng (Sprint 8.x) - thời gian khách đặt hàng/thời gian từ form. */
+  orderDate?: Date;
+  /** Thời gian nhận đơn (Sprint 8.x) - thời gian Marketing nhận được đơn. */
+  receivedDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -114,6 +118,10 @@ quantity: { type: Number, min: 1 },
     convertedAt: { type: Date },
     // Sprint 8.x — leadDate từ Landing page (ngày giờ thực tế khách đăng ký)
     leadDate: { type: Date },
+    // Sprint 8.x — orderDate: thời gian đơn hàng (khách đặt)
+    orderDate: { type: Date },
+    // Sprint 8.x — receivedDate: thời gian nhận đơn (Marketing nhận được)
+    receivedDate: { type: Date },
   },
   {
     timestamps: true,
@@ -133,7 +141,24 @@ LeadSchema.index({ isActive: 1 });
 LeadSchema.index({ isConverted: 1 });
 LeadSchema.index({ convertedOrderId: 1 });
 LeadSchema.index({ createdAt: -1 });
+LeadSchema.index({ orderDate: -1 });
+LeadSchema.index({ receivedDate: -1 });
 LeadSchema.index({ categoryId: 1, productId: 1, comboId: 1 });
+
+// ==================================================
+// Compound indexes — phục vụ dashboard aggregations
+// ==================================================
+
+// Global "group by status" aggregation cần index scan theo (isActive, status).
+LeadSchema.index({ isActive: 1, status: 1 });
+
+// Window-based aggregations (summary theo period) cần (isActive, createdAt).
+LeadSchema.index({ isActive: 1, createdAt: -1 });
+
+// Scope-based filters (MKT/SALE) cần prefix marketingEmployeeId/saleEmployeeId
+// đi kèm isActive + createdAt để tránh COLLSCAN khi filter theo time range.
+LeadSchema.index({ marketingEmployeeId: 1, isActive: 1, createdAt: -1 });
+LeadSchema.index({ saleEmployeeId: 1, isActive: 1, createdAt: -1 });
 
 export const Lead =
   mongoose.models.Lead || mongoose.model<ILead>("Lead", LeadSchema);

@@ -185,6 +185,10 @@ export const ROLES = [
       "notification.read",
       "notification.readAll",
       "notification.manage",
+
+      // ---- Login History -----------------------------------------------
+      "login-history.view",
+      "login-history.viewAll",
     ],
     visibleGroups: [
       "DASHBOARD",
@@ -259,6 +263,9 @@ export const ROLES = [
       "notification.view",
       "notification.read",
       "notification.readAll",
+
+      // ---- Login History -----------------------------------------------
+      "login-history.view",
     ],
     visibleGroups: [
       "DASHBOARD",
@@ -316,6 +323,9 @@ export const ROLES = [
       "notification.view",
       "notification.read",
       "notification.readAll",
+
+      // ---- Login History -----------------------------------------------
+      "login-history.view",
     ],
     visibleGroups: [
       "DASHBOARD",
@@ -408,6 +418,9 @@ export const ROLES = [
       "notification.view",
       "notification.read",
       "notification.readAll",
+
+      // ---- Login History -----------------------------------------------
+      "login-history.view",
     ],
     // LEADER có visibleGroups phụ thuộc vào team.code (MKT/SALE/WAREHOUSE);
     // sidebar sẽ resolve động bằng cách tra Employee.teamId.code.
@@ -448,6 +461,9 @@ export const ROLES = [
       "notification.view",
       "notification.read",
       "notification.readAll",
+
+      // ---- Login History -----------------------------------------------
+      "login-history.view",
     ],
     visibleGroups: [
       "DASHBOARD",
@@ -547,6 +563,9 @@ export const ROLES = [
       "notification.view",
       "notification.read",
       "notification.readAll",
+
+      // ---- Login History -----------------------------------------------
+      "login-history.view",
     ],
     visibleGroups: [
       "DASHBOARD",

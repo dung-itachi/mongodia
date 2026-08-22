@@ -42,16 +42,30 @@ import { LeadAction } from "@/constants/leadAction";
 /**
  * Atomic counter increment (giống pattern các service khác).
  * Returns padded code: LE000001, LE000002, ...
+ * Fix: ensure unique by skipping existing codes.
  */
 async function nextLeadCode(): Promise<string> {
   const COUNTER_KEY = "LEAD";
-  const updated = await Counter.findOneAndUpdate(
-    { key: COUNTER_KEY },
-    { $inc: { value: 1 } },
-    { returnDocument: "after", upsert: true, setDefaultsOnInsert: true }
-  ).exec();
-  const value = updated?.seq ?? 1;
-  return `LE${String(value).padStart(6, "0")}`;
+  const MAX_ATTEMPTS = 100;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const updated = await Counter.findOneAndUpdate(
+      { key: COUNTER_KEY },
+      { $inc: { seq: 1 } },
+      { returnDocument: "after", upsert: true, setDefaultsOnInsert: true }
+    ).exec();
+    const value = updated?.seq ?? 1;
+    const code = `LE${String(value).padStart(6, "0")}`;
+
+    // Check if code already exists, skip if so
+    const exists = await Lead.findOne({ leadCode: code }).select("_id").lean();
+    if (!exists) {
+      return code;
+    }
+    // Code exists, loop will try again with incremented counter
+  }
+
+  throw new Error("Failed to generate unique lead code after 100 attempts");
 }
 
 /** Tạo Customer mới (1 lần, upsert theo phone). Trả về _id. */
@@ -206,6 +220,10 @@ export async function seedLeads() {
     isDuplicate?: boolean;
     assignmentType?: "AUTO" | "MANUAL";
     assignedAt?: Date;
+    /** Thời gian đơn hàng (Sprint 8.x) - thời gian khách đặt. */
+    orderDate?: Date;
+    /** Thời gian nhận đơn (Sprint 8.x) - thời gian Marketing nhận được. */
+    receivedDate?: Date;
   };
 
   const specs: LeadSpec[] = [
@@ -218,6 +236,7 @@ export async function seedLeads() {
       marketingEmployeeId: idOf(mktA),
       status: LeadStatus.NEW,
       latestRemark: "Vừa nhận lead từ inbox",
+      orderDate: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 giờ trước
     },
 
     // 2. ASSIGNED - đã có Sale, chưa có Customer
@@ -235,6 +254,8 @@ export async function seedLeads() {
       latestRemark: "Đã phân cho Sale A xử lý",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 1.5 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 1.2 * 24 * 3600 * 1000),
     },
 
     // 3. PROCESSING - đã có Sale, đã có Customer
@@ -254,6 +275,8 @@ export async function seedLeads() {
       note: "Khách quan tâm combo 2 hộp",
       assignmentType: "MANUAL",
       assignedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 3 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 2.5 * 24 * 3600 * 1000),
     },
 
     // 4. NO_ANSWER - gọi 3 lần không nghe
@@ -272,6 +295,8 @@ export async function seedLeads() {
       note: "Hẹn gọi lại sau 18h",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 5 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 6 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 5.5 * 24 * 3600 * 1000),
     },
 
     // 5. POTENTIAL - có Customer, sale tiềm năng
@@ -291,6 +316,8 @@ export async function seedLeads() {
       note: "Lead chất lượng",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 4 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 3.5 * 24 * 3600 * 1000),
     },
 
     // 6. ORDER_CREATED - đã lên đơn
@@ -310,6 +337,8 @@ export async function seedLeads() {
       note: "Đã chốt",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 4 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 5 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 4.5 * 24 * 3600 * 1000),
     },
 
     // 7. REJECTED - khách từ chối
@@ -328,6 +357,8 @@ export async function seedLeads() {
       note: "Từ chối vì giá cao",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 6 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 7 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 6.5 * 24 * 3600 * 1000),
     },
 
     // 8. CANCELLED - đơn bị hủy
@@ -346,6 +377,8 @@ export async function seedLeads() {
       note: "Hủy vì thay đổi ý định",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 7 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 8 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 7.5 * 24 * 3600 * 1000),
     },
 
     // 9. NEW - trùng SĐT với Lead #3 (Customer Đường - nhắn lại)
@@ -358,6 +391,7 @@ export async function seedLeads() {
       status: LeadStatus.NEW,
       latestRemark: "Khách quay lại - trùng SĐT KH000001",
       isDuplicate: true,
+      orderDate: new Date(Date.now() - 1 * 24 * 3600 * 1000),
     },
 
     // 10. ASSIGNED - trùng Facebook với Lead #3
@@ -377,6 +411,8 @@ export async function seedLeads() {
       isDuplicate: true,
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 1.5 * 24 * 3600 * 1000),
     },
 
     // 11. PROCESSING - chưa có Customer, chưa có Sale (lạ - đang chờ Sale)
@@ -393,6 +429,8 @@ export async function seedLeads() {
       latestRemark: "Đang chờ Sale nhận",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 1.5 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 1.2 * 24 * 3600 * 1000),
     },
 
     // 12. POTENTIAL - đã có Customer + Sale
@@ -412,6 +450,8 @@ export async function seedLeads() {
       note: "Cần follow-up 2 ngày",
       assignmentType: "MANUAL",
       assignedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 3 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 2.5 * 24 * 3600 * 1000),
     },
 
     // 13. NO_ANSWER - trùng SĐT với Lead #12
@@ -427,6 +467,8 @@ export async function seedLeads() {
       isDuplicate: true,
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 1.2 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 1.1 * 24 * 3600 * 1000),
     },
 
     // 14. ORDER_CREATED - chưa có Customer
@@ -444,6 +486,8 @@ export async function seedLeads() {
       latestRemark: "Đã tạo đơn #ORD000002",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 4 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 3.5 * 24 * 3600 * 1000),
     },
 
     // 15. NEW - đã có Customer, chưa Sale
@@ -455,6 +499,7 @@ export async function seedLeads() {
       customerId: customerHuyId,
       status: LeadStatus.NEW,
       latestRemark: "Khách cũ quay lại",
+      orderDate: new Date(Date.now() - 0.5 * 24 * 3600 * 1000),
     },
 
     // 16. CANCELLED - đã có Customer + Sale
@@ -472,6 +517,8 @@ export async function seedLeads() {
       latestRemark: "Không liên lạc được sau 5 ngày",
       assignmentType: "AUTO",
       assignedAt: new Date(Date.now() - 8 * 24 * 3600 * 1000),
+      orderDate: new Date(Date.now() - 9 * 24 * 3600 * 1000),
+      receivedDate: new Date(Date.now() - 8.5 * 24 * 3600 * 1000),
     },
   ];
 
@@ -482,7 +529,7 @@ export async function seedLeads() {
   if (existingLeadCount === 0) {
     await Counter.updateOne(
       { key: "LEAD" },
-      { $set: { value: 0 } },
+      { $set: { seq: 0 } },
       { upsert: true }
     ).exec();
   }
@@ -522,6 +569,9 @@ export async function seedLeads() {
         note: spec.note,
         isDuplicate: spec.isDuplicate ?? false,
         isActive: true,
+        // Sprint 8.x: Thời gian đơn hàng và nhận đơn
+        orderDate: spec.orderDate,
+        receivedDate: spec.receivedDate,
       });
       createdCount += 1;
     }

@@ -131,6 +131,12 @@ NotificationSchema.index({ recipients: 1, isActive: 1, createdAt: -1 });
 NotificationSchema.index({ readBy: 1 });
 NotificationSchema.index({ createdAt: -1 });
 
+// Compound indexes phục vụ dashboard/activities + notifications list.
+// `{ isActive, createdAt }` hỗ trợ query "recent active notifications" không qua $or.
+NotificationSchema.index({ isActive: 1, createdAt: -1 });
+// Tách riêng khỏi multikey để tránh penalty cho query sort theo createdAt.
+NotificationSchema.index({ recipients: 1, createdAt: -1 });
+
 export type Notification = InferSchemaType<typeof NotificationSchema>;
 
 export default models.Notification ||

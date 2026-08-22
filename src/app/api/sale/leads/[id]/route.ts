@@ -15,6 +15,9 @@ import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 import { success, error as errorResponse } from "@/utils/response";
 import { Lead } from "@/models";
+import { LeadStatus } from "@/constants/leadStatus";
+import { LeadHistory } from "@/models/LeadHistory";
+import { LeadAction } from "@/constants/leadAction";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -46,6 +49,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       variantDetails,
       giftMode,
       giftSelections,
+      status,
     } = body;
 
     // Build update object
@@ -64,6 +68,27 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (giftMode !== undefined) updateData.giftMode = giftMode;
     if (giftSelections !== undefined) updateData.giftSelections = giftSelections;
 
+    // Validate and capture status change so we can write a LeadHistory entry
+    let statusChangedFrom: string | undefined;
+    let statusChangedTo: string | undefined;
+    if (status !== undefined) {
+      if (!Object.values(LeadStatus).includes(status as LeadStatus)) {
+        return errorResponse(`Trạng thái không hợp lệ: ${status}`, 400);
+      }
+      const currentLead = await Lead.findById(id).select("status isConverted").lean();
+      if (!currentLead) {
+        return errorResponse("Không tìm thấy lead", 404);
+      }
+      if (currentLead.isConverted) {
+        return errorResponse("Lead đã được chốt đơn, không thể cập nhật trạng thái", 400);
+      }
+      if (currentLead.status !== status) {
+        statusChangedFrom = currentLead.status;
+        statusChangedTo = status as string;
+        updateData.status = status;
+      }
+    }
+
     const updatedLead = await Lead.findByIdAndUpdate(
       id,
       { $set: updateData },
@@ -71,13 +96,29 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
       .populate("productId", "_id code name")
       .populate("comboId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode name")
-      .populate("saleEmployeeId", "_id employeeCode name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
       .populate("facebookPageId", "_id code name")
       .lean();
 
     if (!updatedLead) {
       return errorResponse("Không tìm thấy lead", 404);
+    }
+
+    // Write timeline entry when status was changed through this endpoint
+    if (statusChangedFrom && statusChangedTo) {
+      try {
+        await LeadHistory.create({
+          leadId: updatedLead._id.toString(),
+          employeeId: (currentUser.employee as { _id?: { toString(): string } } | null)?._id?.toString(),
+          action: LeadAction.STATUS_CHANGED,
+          oldValue: statusChangedFrom,
+          newValue: statusChangedTo,
+          note: `Sửa lead: cập nhật trạng thái ${statusChangedFrom} → ${statusChangedTo}`,
+        });
+      } catch (historyError) {
+        console.error("Failed to write LeadHistory for status update:", historyError);
+      }
     }
 
     // Transform response to match frontend types

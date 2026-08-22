@@ -1,0 +1,48 @@
+/* Combo page styles (Sprint 8.x - UI Polish) */
+
+.comboPage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.filterSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filterLeft {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filterRight {
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .filterSection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterRight {
+    text-align: right;
+  }
+}
+
+@media (max-width: 768px) {
+  .filterLeft {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

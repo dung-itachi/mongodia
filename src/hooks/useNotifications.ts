@@ -41,6 +41,7 @@ async function fetchNotificationsPage(
   if (filters.cursor) params.set("cursor", filters.cursor);
   if (filters.limit) params.set("limit", String(filters.limit));
   if (filters.onlyUnread) params.set("onlyUnread", "true");
+  if (filters.isActive !== undefined) params.set("isActive", String(filters.isActive));
 
   const url = params.toString()
     ? `/api/notifications?${params.toString()}`
@@ -55,10 +56,12 @@ async function fetchNotificationsPage(
 export function useInfiniteNotifications(options: {
   onlyUnread?: boolean;
   limit?: number;
+  isActive?: boolean;
 } = {}) {
   const filters: NotificationListQuery = {
     onlyUnread: options.onlyUnread ?? false,
     limit: options.limit ?? 20,
+    isActive: options.isActive,
   };
   return useInfiniteQuery<
     NotificationPage,

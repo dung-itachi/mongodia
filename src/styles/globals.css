@@ -101,3 +101,105 @@ select {
 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
+
+/* ---------- Ant Design Overrides ---------- */
+
+/* DatePicker popup:
+   Antd/rc-trigger set inline `min-width` bằng width của trigger input. Khi
+   trigger hẹp (vd `flex: 1` bị squeeze), popup header SU MO TU WE TH FR SA
+   bị ép theo content text → chỉ hiển thị vài cột đầu, T6 T7 CN bị cắt.
+   Ép `min-width` cho cả dropdown lẫn panel-container để popup luôn đủ rộng
+   cho 7 cột ngày + header T2..CN. KHÔNG ép `width: 100%` (sẽ khiến panel
+   expand fullscreen vì popup render ở body với `position: absolute`). */
+.ant-picker-dropdown {
+  min-width: 280px !important;
+}
+
+.ant-picker-panel-container {
+  min-width: 280px !important;
+}
+
+.ant-picker-date-panel {
+  min-width: 280px !important;
+}
+
+/* TimePicker popup:
+   Mặc định TimePicker popup không có wrapper riêng nên cũng bị stretch theo
+   trigger. 3 cột (HH/mm/ss) × ~56px + padding ≈ 180px, đặt min-width 200px
+   để mỗi cột không bị squeeze. */
+.ant-picker-dropdown:has(.ant-picker-time-panel) {
+  min-width: 200px !important;
+}
+
+.ant-picker-dropdown .ant-picker-time-panel {
+  min-width: 180px !important;
+}
+
+/* Fix AM/PM vs 24h display */
+.ant-picker-time-panel-column > li.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
+  background: #1890ff;
+  color: #fff;
+}
+
+/* Layout-ép cho DatePicker có showTime (date + time panel cùng popup):
+   Cần xếp 2 panel nằm ngang, không bị overlap. CHỈ áp dụng khi popup có
+   class `picker-with-time`. Không áp dụng cho DatePicker thuần vì ép
+   display:flex sẽ phá layout 7 cột của header T2..CN → lệch trái. */
+.picker-with-time .ant-picker-panel-container {
+  display: inline-block !important;
+  width: auto !important;
+  min-width: 320px !important;
+  max-width: none !important;
+}
+
+.picker-with-time .ant-picker-panel {
+  display: flex !important;
+  flex-direction: row !important;
+  width: auto !important;
+}
+
+.picker-with-time .ant-picker-date-panel {
+  width: 280px !important;
+  min-width: 280px !important;
+  flex: 0 0 280px !important;
+}
+
+.picker-with-time .ant-picker-time-panel {
+  width: auto !important;
+  min-width: 90px !important;
+  flex: 0 0 auto !important;
+  border-left: 1px solid #f0f0f0;
+}
+
+/* LƯU Ý: KHÔNG ép display:flex lên `.ant-picker-content` — đây là element
+   <table> chứa 7 cột ngày trong date panel. Ép flex sẽ làm các <tr> xếp ngang
+   → ngày bị lệch so với header T2..CN. Date panel đã tự có layout 7-cột đúng. */
+
+/* ---------- Ant Design Table column header wrap ----------
+   Mặc định AntD ép `.ant-table-column-title` thành `white-space: nowrap;
+   overflow: hidden; text-overflow: ellipsis`, khiến tiêu đề cột dài (vd
+   "Phân công", "Khách hàng", "MKT phụ trách"...) bị cắt thành "Ph..." khi
+   user zoom trình duyệt ≥ 125% hoặc viewport hẹp. Cho phép wrap + hiện đầy đủ
+   text bằng cách bỏ overflow:hidden trên <th> cell. Header sẽ tự cao hơn khi
+   text xuống 2 dòng. */
+.ant-table-thead > tr > th {
+  white-space: normal !important;
+  height: auto !important;
+  min-height: 40px !important;
+}
+
+.ant-table-thead > tr > th .ant-table-column-title {
+  white-space: normal !important;
+  word-break: break-word !important;
+  line-height: 1.25 !important;
+  overflow: visible !important;
+}
+
+/* Cho phép row header cao hơn khi text wrap thành 2 dòng */
+.ant-table-thead {
+  height: auto !important;
+}
+
+.ant-table-thead > tr {
+  height: auto !important;
+}

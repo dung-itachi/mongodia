@@ -16,6 +16,7 @@ import "@/components/notifications/notification.css";
 
 type ReadFilter = "all" | "unread";
 type DateFilter = "1" | "3" | "7" | "all";
+type ActiveFilter = "all" | "active" | "inactive";
 
 const READ_TABS: { key: ReadFilter; label: string }[] = [
   { key: "all", label: "Tất cả" },
@@ -29,11 +30,18 @@ const DATE_FILTERS: { key: DateFilter; label: string }[] = [
   { key: "all", label: "Tất cả" },
 ];
 
+const ACTIVE_FILTERS: { key: ActiveFilter; label: string }[] = [
+  { key: "all", label: "Tất cả" },
+  { key: "active", label: "Hoạt động" },
+  { key: "inactive", label: "Không hoạt động" },
+];
+
 export default function NotificationsPage() {
   const canView = useCan("notification.view");
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const [readFilter, setReadFilter] = useState<ReadFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("active");
 
   const {
     data,
@@ -47,6 +55,12 @@ export default function NotificationsPage() {
   } = useInfiniteNotifications({
     onlyUnread: readFilter === "unread",
     limit: 20,
+    isActive:
+      activeFilter === "active"
+        ? true
+        : activeFilter === "inactive"
+          ? false
+          : undefined,
   });
 
   const markRead = useMarkRead();
@@ -123,6 +137,20 @@ export default function NotificationsPage() {
                 onClick={() => setDateFilter(d.key)}
               >
                 {d.label}
+              </button>
+            ))}
+          </div>
+          <div className="np-tabs" role="tablist" aria-label="Lọc theo trạng thái hoạt động">
+            {ACTIVE_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                role="tab"
+                aria-selected={activeFilter === f.key}
+                className={`np-tab${activeFilter === f.key ? " is-active" : ""}`}
+                onClick={() => setActiveFilter(f.key)}
+              >
+                {f.label}
               </button>
             ))}
           </div>

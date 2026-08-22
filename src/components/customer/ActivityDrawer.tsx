@@ -182,6 +182,7 @@ export default function ActivityDrawer({
         <Form.Item name="nextFollowUpAt" label="Lịch theo dõi tiếp">
           <DatePicker
             showTime
+            classNames={{ popup: { root: "picker-with-time" } }}
             format="YYYY-MM-DD HH:mm"
             style={{ width: "100%" }}
             placeholder="Chọn ngày giờ"

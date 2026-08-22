@@ -17,9 +17,9 @@ import {
   PageContainer,
   PageHeader,
   CardSection,
+  StatGrid,
+  StatCard,
 } from "@/components/common";
-import StatGrid from "@/components/common/cards/StatGrid";
-import StatCard from "@/components/common/cards/StatCard";
 import {
   useComboList,
   useCreateCombo,
@@ -32,6 +32,7 @@ import {
 import { useProductList, type ProductListItem } from "@/hooks/useProductCrud";
 import ProductComboList from "./ProductComboList";
 import ComboForm, { type ComboFormProductOption } from "./ComboForm";
+import styles from "./combos.module.css";
 
 const { Text } = Typography;
 
@@ -320,9 +321,9 @@ export default function ComboPage() {
       </CardSection>
 
       {/* Filter Section */}
-      <CardSection style={{ padding: "16px 24px" }}>
-        <div style={{ display: "flex", gap: 12, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          <Space size={12}>
+      <CardSection>
+        <div className={styles.filterSection}>
+          <Space size={12} className={styles.filterLeft}>
             <Select
               placeholder="Lọc theo danh mục"
               allowClear
@@ -342,7 +343,7 @@ export default function ComboPage() {
               allowClear
             />
           </Space>
-          <Text type="secondary" style={{ fontSize: 13 }}>
+          <Text type="secondary" className={styles.filterRight}>
             Hiển thị {stats.totalCombos} combo
           </Text>
         </div>

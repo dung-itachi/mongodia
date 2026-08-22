@@ -190,6 +190,10 @@ InventoryHistorySchema.index({ referenceCode: 1, warehouseId: 1 });
 // Truy vết theo loại tham chiếu + thời gian (vd: tất cả transaction từ PURCHASE trong 30 ngày).
 InventoryHistorySchema.index({ referenceType: 1, createdAt: -1 });
 
+// Global "last N inventory events" cho dashboard activities — trước đây phải COLLSCAN
+// + in-memory sort vì không có index nào đứng đầu bởi createdAt.
+InventoryHistorySchema.index({ createdAt: -1 });
+
 export const InventoryHistory =
   (mongoose.models.InventoryHistory as mongoose.Model<IInventoryHistory>) ||
   mongoose.model<IInventoryHistory>("InventoryHistory", InventoryHistorySchema);

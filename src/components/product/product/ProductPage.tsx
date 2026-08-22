@@ -15,13 +15,15 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Button, Tooltip } from "antd";
-import { PlusOutlined, GiftOutlined } from "@ant-design/icons";
+import { Button, App } from "antd";
+import { PlusOutlined, GiftOutlined, AppstoreOutlined, InboxOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import {
   PageContainer,
   PageHeader,
   CardSection,
+  StatGrid,
+  StatCard,
 } from "@/components/common";
 import FilterBar from "@/components/common/filters/FilterBar";
 import type { FilterItem } from "@/components/common/types";
@@ -39,6 +41,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import ProductManagementTable from "./ProductManagementTable";
 import ProductForm from "./ProductForm";
 import type { CategoryListItem } from "@/hooks/useCategories";
+import styles from "./products.module.css";
 
 type ProductFilters = {
   keyword: string;
@@ -85,6 +88,21 @@ export default function ProductPage() {
 
   const products = useMemo(() => data?.items ?? [], [data?.items]);
   const warehouses = useMemo(() => data?.warehouses ?? [], [data?.warehouses]);
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalProducts = products.length;
+    const activeProducts = products.filter((p) => p.isActive !== false).length;
+    const inactiveProducts = totalProducts - activeProducts;
+    const totalCategories = categories.length;
+
+    return {
+      totalProducts,
+      activeProducts,
+      inactiveProducts,
+      totalCategories,
+    };
+  }, [products, categories]);
 
   // Build filter items for the FilterBar
   const filterItems = useMemo<FilterItem[]>(
@@ -263,20 +281,54 @@ export default function ProductPage() {
 
   return (
     <PageContainer>
-      <PageHeader title="Sản phẩm" subtitle="Quản lý sản phẩm" />
+      <PageHeader
+        title="Sản phẩm"
+        subtitle="Quản lý và theo dõi sản phẩm trong hệ thống"
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+            Thêm sản phẩm
+          </Button>
+        }
+      />
 
+      {/* Statistics Cards */}
+      <CardSection style={{ padding: "16px 24px" }}>
+        <StatGrid columns={4} gap={16} minItemWidth={160}>
+          <StatCard
+            title="Tổng sản phẩm"
+            value={stats.totalProducts}
+            icon={<AppstoreOutlined />}
+            color="blue"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Đang hoạt động"
+            value={stats.activeProducts}
+            icon={<ThunderboltOutlined />}
+            color="green"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Đã vô hiệu"
+            value={stats.inactiveProducts}
+            icon={<InboxOutlined />}
+            color="orange"
+            loading={isLoading}
+          />
+          <StatCard
+            title="Danh mục"
+            value={stats.totalCategories}
+            icon={<GiftOutlined />}
+            color="purple"
+            loading={isLoading}
+          />
+        </StatGrid>
+      </CardSection>
+
+      {/* Filter Section */}
       <CardSection>
-        <div
-          style={{
-            marginBottom: 16,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 16,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div className={styles.toolbar}>
+          <div className={styles.filterArea}>
             <FilterBar
               items={filterItems}
               values={filterValues}
@@ -284,13 +336,10 @@ export default function ProductPage() {
               loading={isLoading}
             />
           </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <div className={styles.actions}>
             {hasActiveFilters && (
               <Button onClick={handleResetFilters}>Đặt lại</Button>
             )}
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
-              Thêm sản phẩm
-            </Button>
           </div>
         </div>
 
@@ -317,10 +366,3 @@ export default function ProductPage() {
     </PageContainer>
   );
 }
-
-// Re-export dùng cho table tương thích
-export type { ProductManagementItem };
-
-// Suppress unused warning for tooltip import (dùng trong table cell)
-void Tooltip;
-void GiftOutlined;

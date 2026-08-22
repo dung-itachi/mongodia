@@ -1,7 +1,7 @@
 ///Khi website mở - Đọc token từ localStorage và set vào store
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { installFetchAuthInterceptor } from "@/lib/fetchInterceptor";
 import { SSE_TOKEN_COOKIE } from "@/lib/sseAuthConstants";
@@ -34,16 +34,31 @@ type Props = {
 
 export default function AuthProvider({ children }: Props) {
   const setAccessToken = useAuthStore((state) => state.setAccessToken);
+  // Wait for zustand `persist` to finish hydrating from localStorage
+  // before we sync the SSE cookie. Without this, NotificationProvider
+  // can mount while `useAuthStore.getState().accessToken` is still null
+  // (pre-hydration) and we'd write an empty cookie, causing the SSE
+  // route to 401-loop for ~3s until the next reconnect picks up the
+  // real token.
+  const [hydrated, setHydrated] = useState(
+    () => useAuthStore.persist?.hasHydrated?.() ?? true
+  );
 
   useEffect(() => {
     // Re-install on mount to be safe under React 18 StrictMode (which
     // double-invokes effects in dev). The function is idempotent.
     installFetchAuthInterceptor();
 
-    // Reflect the persisted access token into the SSE cookie on every
-    // mount — covers the "refresh page while logged in" case where the
-    // zustand persist middleware has already restored the token.
-    syncSseTokenCookie(useAuthStore.getState().accessToken);
+    // If the store has already hydrated, sync immediately; otherwise
+    // wait for `onFinishHydration` so we never write an empty cookie.
+    if (hydrated) {
+      syncSseTokenCookie(useAuthStore.getState().accessToken);
+    }
+
+    const unsubHydrate = useAuthStore.persist?.onFinishHydration?.(() => {
+      syncSseTokenCookie(useAuthStore.getState().accessToken);
+      setHydrated(true);
+    });
 
     // Subscribe so login/logout transitions also update the cookie.
     const unsub = useAuthStore.subscribe((state, prev) => {
@@ -56,8 +71,9 @@ export default function AuthProvider({ children }: Props) {
     // No manual restoration needed
     return () => {
       unsub();
+      unsubHydrate?.();
     };
-  }, []);
+  }, [hydrated]);
 
   return <>{children}</>;
 }

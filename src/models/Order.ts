@@ -534,6 +534,10 @@ const OrderSchema = new Schema<IOrder>(
     revenueCalculatedAt: { type: Date },
 
     note: { type: String, default: "" },
+    // Sprint 8.x — orderDate: thời gian khách đặt hàng (từ Landing page hoặc dữ liệu dán)
+    orderDate: { type: Date },
+    // Sprint 8.x — receivedDate: thời gian Marketing nhận được đơn (khi push sang Sale)
+    receivedDate: { type: Date },
     isActive: { type: Boolean, default: true, index: true },
   },
   {
@@ -557,6 +561,25 @@ OrderSchema.index({ orderType: 1, status: 1, createdAt: -1 });
 OrderSchema.index({ orderSource: 1, createdAt: -1 });
 // A lead can be converted to exactly one order, including concurrent requests.
 OrderSchema.index({ leadId: 1 }, { unique: true, sparse: true });
+// Sprint 8.x: indexes for orderDate and receivedDate
+OrderSchema.index({ orderDate: -1 });
+OrderSchema.index({ receivedDate: -1 });
+
+// ==================================================
+// Compound indexes — phục vụ dashboard aggregations
+// ==================================================
+
+// Global "group by status" aggregation.
+OrderSchema.index({ isActive: 1, status: 1 });
+
+// Revenue trend + windowed aggregations cần (isActive, createdAt, status).
+OrderSchema.index({ isActive: 1, createdAt: -1, status: 1 });
+
+// Scope-based topSale/topMarketing cần prefix theo employeeId kèm status + createdAt.
+// Trước đây chỉ có single-field { saleEmployeeId } / { marketingEmployeeId } —
+// aggregation "all-time top sale" phải quét toàn bộ collection.
+OrderSchema.index({ saleEmployeeId: 1, status: 1, createdAt: -1 });
+OrderSchema.index({ marketingEmployeeId: 1, status: 1, createdAt: -1 });
 
 export const Order =
   mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema);

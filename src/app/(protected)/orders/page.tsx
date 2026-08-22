@@ -22,6 +22,8 @@ import {
   InboxOutlined,
   StopOutlined,
   PhoneOutlined,
+  ReloadOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -34,13 +36,14 @@ import EmptyState from "@/components/common/display/EmptyState";
 import SkeletonTable from "@/components/common/overlay/SkeletonTable";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
 
-import { useOrders, useDeleteOrder, useChangeOrderStatus, useToggleOrderConfirmCall } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder, useChangeOrderStatus, useToggleOrderConfirmCall, useOrderStatistics } from "@/hooks/useOrders";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ORDER_STATUS_LABELS } from "@/constants/orderStatus";
 import type { OrderStatus } from "@/constants/orderStatus";
 import { STATUS_ACTIONS } from "@/configs/order-status.config";
-import type { OrderListItem } from "@/types/order";
+import type { OrderListItem, OrderStatisticsResponse } from "@/types/order";
 import ReconciliationPanel from "./reconciliation/ReconciliationPanel";
+import OrderStatisticsModal from "./OrderStatisticsModal";
 
 /**
  * Khi URL `?status=RECONCILED` thì hiển thị giao diện Đối soát
@@ -94,6 +97,11 @@ function OrdersPageInner() {
   } | null>(null);
   const [quickActionLoading, setQuickActionLoading] = useState(false);
 
+  // Popup thống kê — chỉ gọi API khi user click nút.
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [statsData, setStatsData] = useState<OrderStatisticsResponse | null>(null);
+  const statsMutation = useOrderStatistics();
+
   // Build filter params
   const filterParams = useMemo(() => ({
     keyword: debouncedKeyword,
@@ -127,6 +135,51 @@ function OrdersPageInner() {
       setDateRange(values.dateRange as [string, string] | undefined);
     }
     setPage(1);
+  }, []);
+
+  /**
+   * Làm mới đơn hàng: gọi refetch() rồi hiện thông báo nhỏ khi hoàn tất.
+   * Dùng chung cho cả nút Refresh ở header và ở TableToolbar.
+   * Không reset filter/page → trải nghiệm tốt hơn F5.
+   */
+  const handleRefresh = useCallback(async () => {
+    try {
+      await refetch();
+      message.success("Đã làm mới đơn hàng");
+    } catch (err) {
+      message.error(
+        err instanceof Error ? err.message : "Làm mới đơn hàng thất bại"
+      );
+    }
+  }, [refetch]);
+
+  /**
+   * Mở popup thống kê đơn hàng.
+   * - Chỉ fetch khi click (không auto).
+   * - Gửi kèm filter hiện tại (status từ URL, keyword đã debounce, date range).
+   * - Đặt filter.status vào mutation để popup phản ánh đúng view đang xem.
+   */
+  const handleOpenStatistics = useCallback(async () => {
+    setStatsOpen(true);
+    setStatsData(null); // reset skeleton trong modal
+    try {
+      const data = await statsMutation.mutateAsync({
+        keyword: debouncedKeyword,
+        status, // urlStatus filter để funnel phản ánh view hiện tại
+        dateFrom: dateRange?.[0],
+        dateTo: dateRange?.[1],
+      });
+      setStatsData(data);
+    } catch (err) {
+      message.error(
+        err instanceof Error ? err.message : "Lấy thống kê thất bại"
+      );
+      setStatsOpen(false);
+    }
+  }, [statsMutation, debouncedKeyword, status, dateRange]);
+
+  const handleCloseStatistics = useCallback(() => {
+    setStatsOpen(false);
   }, []);
 
   const getOrderItemTotals = useCallback((order: OrderListItem) => {
@@ -201,6 +254,18 @@ function OrdersPageInner() {
 
   // Table columns - for CONFIRMED status, each customer has 1 combo, no need for combo quantity column
   const tableColumns = useMemo(() => [
+    {
+      // Cột STT chỉ dành cho UI, không liên kết với dữ liệu đơn hàng.
+      // Số chạy liên tục qua các trang: (currentPage - 1) * pageSize + index + 1.
+      key: "stt",
+      title: "STT",
+      width: 60,
+      align: "center" as const,
+      fixed: "left" as const,
+      render: (_: unknown, _record: Record<string, unknown>, index?: number) => (
+        <span style={{ color: "#8c8c8c" }}>{(page - 1) * pageSize + (index ?? 0) + 1}</span>
+      ),
+    },
     {
       key: "orderCode",
       title: "Mã đơn",
@@ -532,7 +597,7 @@ function OrdersPageInner() {
         );
       },
     },
-  ], [router, getOrderItemTotals, showQuickActions, handleQuickAction, toggleConfirmCallMutation]);
+  ], [router, getOrderItemTotals, showQuickActions, handleQuickAction, toggleConfirmCallMutation, page, pageSize]);
 
   const columns = tableColumns;
 
@@ -597,8 +662,34 @@ function OrdersPageInner() {
             { label: "Đơn hàng" },
             { label: "Đối soát" },
           ]}
+          actions={
+            <Space>
+              <Button
+                type="default"
+                icon={<BarChartOutlined />}
+                onClick={() => void handleOpenStatistics()}
+              >
+                Thống kê đơn hàng
+              </Button>
+              <Button
+                type="primary"
+                icon={<ReloadOutlined spin={loading} />}
+                onClick={() => void handleRefresh()}
+                loading={loading}
+              >
+                Làm mới đơn hàng
+              </Button>
+            </Space>
+          }
         />
         <ReconciliationPanel />
+
+        <OrderStatisticsModal
+          open={statsOpen}
+          data={statsData}
+          loading={statsMutation.isPending}
+          onClose={handleCloseStatistics}
+        />
       </PageContainer>
     );
   }
@@ -612,6 +703,25 @@ function OrdersPageInner() {
           { label: "Trang chủ", href: "/" },
           { label: "Đơn hàng" },
         ]}
+        actions={
+          <Space>
+            <Button
+              type="default"
+              icon={<BarChartOutlined />}
+              onClick={() => void handleOpenStatistics()}
+            >
+              Thống kê đơn hàng
+            </Button>
+            <Button
+              type="primary"
+              icon={<ReloadOutlined spin={loading} />}
+              onClick={() => void handleRefresh()}
+              loading={loading}
+            >
+              Làm mới đơn hàng
+            </Button>
+          </Space>
+        }
       />
 
       <div className="card">
@@ -619,7 +729,7 @@ function OrdersPageInner() {
           searchValue={keyword}
           onSearchChange={setKeyword}
           searchPlaceholder="Tìm mã đơn, tên khách hàng..."
-          onRefresh={() => void refetch()}
+          onRefresh={() => void handleRefresh()}
           loading={loading}
         />
 
@@ -633,7 +743,7 @@ function OrdersPageInner() {
         </div>
 
         {loading ? (
-          <SkeletonTable rows={10} columns={13} />
+          <SkeletonTable rows={10} columns={14} />
         ) : orders.length === 0 ? (
           <EmptyState
             title="Chưa có đơn hàng"
@@ -650,7 +760,7 @@ function OrdersPageInner() {
             loading={loading}
             pagination={pagination}
             rowKey="_id"
-            scroll={{ x: 2240 }}
+            scroll={{ x: 2300 }}
           />
         )}
       </div>
@@ -683,6 +793,13 @@ function OrdersPageInner() {
         loading={quickActionLoading}
         onConfirm={handleConfirmQuickAction}
         onCancel={() => setQuickActionTarget(null)}
+      />
+
+      <OrderStatisticsModal
+        open={statsOpen}
+        data={statsData}
+        loading={statsMutation.isPending}
+        onClose={handleCloseStatistics}
       />
     </PageContainer>
   );

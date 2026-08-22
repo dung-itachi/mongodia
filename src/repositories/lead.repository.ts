@@ -28,9 +28,9 @@ import { LeadSource, LEAD_SOURCE_LABELS } from "@/constants/leadSource";
  */
 function mapToLead(doc: ILead) {
   const rawDoc = doc as ILead & {
-    marketingEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
-    saleEmployeeId?: { _id: { toString(): string }; employeeCode: string; name: string };
-    comboId?: { _id: { toString(): string }; code: string; name: string };
+    marketingEmployeeId?: { _id: { toString(): string }; employeeCode: string; fullName: string };
+    saleEmployeeId?: { _id: { toString(): string }; employeeCode: string; fullName: string };
+    comboId?: { _id: { toString(): string }; code: string; name: string; sellingPrice?: number };
     productId?: { _id: { toString(): string }; code: string; name: string };
     facebookPageId?: { _id: { toString(): string }; code: string; name: string };
   };
@@ -56,7 +56,7 @@ function mapToLead(doc: ILead) {
       ? {
           _id: rawDoc.marketingEmployeeId._id.toString(),
           employeeCode: rawDoc.marketingEmployeeId.employeeCode,
-          name: rawDoc.marketingEmployeeId.name,
+          name: rawDoc.marketingEmployeeId.fullName,
         }
       : undefined,
     saleEmployeeId: rawDoc.saleEmployeeId && typeof rawDoc.saleEmployeeId === "object" && "employeeCode" in rawDoc.saleEmployeeId
@@ -66,7 +66,7 @@ function mapToLead(doc: ILead) {
       ? {
           _id: rawDoc.saleEmployeeId._id.toString(),
           employeeCode: rawDoc.saleEmployeeId.employeeCode,
-          name: rawDoc.saleEmployeeId.name,
+          name: rawDoc.saleEmployeeId.fullName,
         }
       : undefined,
     combo: rawDoc.comboId && typeof rawDoc.comboId === "object" && "code" in rawDoc.comboId
@@ -74,6 +74,7 @@ function mapToLead(doc: ILead) {
           _id: rawDoc.comboId._id.toString(),
           code: rawDoc.comboId.code,
           name: rawDoc.comboId.name,
+          sellingPrice: typeof rawDoc.comboId.sellingPrice === "number" ? rawDoc.comboId.sellingPrice : undefined,
         }
       : undefined,
     product: rawDoc.productId && typeof rawDoc.productId === "object" && "code" in rawDoc.productId
@@ -108,6 +109,9 @@ function mapToLead(doc: ILead) {
     isConverted: doc.isConverted,
     convertedOrderId: doc.convertedOrderId?.toString(),
     convertedAt: doc.convertedAt,
+    // Sprint 8.x — Thời gian đơn hàng và nhận đơn
+    orderDate: (doc as ILead & { orderDate?: Date }).orderDate,
+    receivedDate: (doc as ILead & { receivedDate?: Date }).receivedDate,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -211,7 +215,14 @@ export class LeadRepository {
    */
   async create(data: CreateLeadInputWithDefaults) {
     const doc = await Lead.create(data);
-    return mapToLead(doc);
+    const populated = await Lead.findById(doc._id)
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
+      .populate("comboId", "_id code name sellingPrice")
+      .populate("productId", "_id code name")
+      .populate("facebookPageId", "_id code name")
+      .lean();
+    return mapToLead(populated as unknown as ILead);
   }
 
   /**
@@ -271,7 +282,7 @@ export class LeadRepository {
     updateData.updatedAt = new Date();
 
     const doc = await Lead.findByIdAndUpdate(id, updateData, { new: true })
-      .populate("comboId", "_id code name")
+      .populate("comboId", "_id code name sellingPrice")
       .populate("productId", "_id code name")
       .populate("facebookPageId", "_id code name")
       .lean();
@@ -304,8 +315,8 @@ export class LeadRepository {
       },
       { new: true }
     )
-      .populate("marketingEmployeeId", "_id employeeCode name")
-      .populate("saleEmployeeId", "_id employeeCode name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
       .lean();
     if (!doc) return null;
     return mapToLead(doc as ILead);
@@ -316,9 +327,9 @@ export class LeadRepository {
    */
   async findById(id: string) {
     const doc = await Lead.findById(id)
-      .populate("marketingEmployeeId", "_id employeeCode name")
-      .populate("saleEmployeeId", "_id employeeCode name")
-      .populate("comboId", "_id code name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
+      .populate("comboId", "_id code name sellingPrice")
       .populate("productId", "_id code name")
       .populate("facebookPageId", "_id code name")
       .lean();
@@ -333,11 +344,11 @@ export class LeadRepository {
     return Lead.findById(id)
       .populate("customerId", "_id code name phone")
       .populate("facebookPageId", "_id code name")
-      .populate("marketingEmployeeId", "_id employeeCode name")
-      .populate("saleEmployeeId", "_id employeeCode name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
       .populate("categoryId", "_id code name")
       .populate("productId", "_id code name")
-      .populate("comboId", "_id code name")
+      .populate("comboId", "_id code name sellingPrice")
       .lean();
   }
 
@@ -363,9 +374,9 @@ export class LeadRepository {
 
     const [items, total] = await Promise.all([
       Lead.find(filter)
-        .populate("marketingEmployeeId", "_id employeeCode name")
-        .populate("saleEmployeeId", "_id employeeCode name")
-        .populate("comboId", "_id code name")
+        .populate("marketingEmployeeId", "_id employeeCode fullName")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
+        .populate("comboId", "_id code name sellingPrice")
         .populate("productId", "_id code name")
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
@@ -411,9 +422,9 @@ export class LeadRepository {
 
     const [items, total] = await Promise.all([
       Lead.find(filter)
-        .populate("marketingEmployeeId", "_id employeeCode name")
-        .populate("saleEmployeeId", "_id employeeCode name")
-        .populate("comboId", "_id code name")
+        .populate("marketingEmployeeId", "_id employeeCode fullName")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
+        .populate("comboId", "_id code name sellingPrice")
         .populate("productId", "_id code name")
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
@@ -453,9 +464,9 @@ export class LeadRepository {
 
     const [items, total] = await Promise.all([
       Lead.find(filter)
-        .populate("marketingEmployeeId", "_id employeeCode name")
-        .populate("saleEmployeeId", "_id employeeCode name")
-        .populate("comboId", "_id code name")
+        .populate("marketingEmployeeId", "_id employeeCode fullName")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
+        .populate("comboId", "_id code name sellingPrice")
         .populate("productId", "_id code name")
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
@@ -737,9 +748,9 @@ export class LeadRepository {
       },
       { new: true }
     )
-      .populate("marketingEmployeeId", "_id employeeCode name")
-      .populate("saleEmployeeId", "_id employeeCode name")
-      .populate("comboId", "_id code name")
+      .populate("marketingEmployeeId", "_id employeeCode fullName")
+      .populate("saleEmployeeId", "_id employeeCode fullName")
+      .populate("comboId", "_id code name sellingPrice")
       .populate("productId", "_id code name")
       .populate("facebookPageId", "_id code name")
       .lean();
@@ -761,9 +772,9 @@ export class LeadRepository {
 
     const [items, total] = await Promise.all([
       Lead.find(filter)
-        .populate("marketingEmployeeId", "_id employeeCode name")
-        .populate("saleEmployeeId", "_id employeeCode name")
-        .populate("comboId", "_id code name")
+        .populate("marketingEmployeeId", "_id employeeCode fullName")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
+        .populate("comboId", "_id code name sellingPrice")
         .populate("productId", "_id code name")
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
@@ -796,10 +807,10 @@ export class LeadRepository {
 
     const [items, total] = await Promise.all([
       Lead.find(filter)
-        .populate("marketingEmployeeId", "_id employeeCode name")
-        .populate("saleEmployeeId", "_id employeeCode name")
+        .populate("marketingEmployeeId", "_id employeeCode fullName")
+        .populate("saleEmployeeId", "_id employeeCode fullName")
         .populate("convertedOrderId", "_id orderCode totalAmount status")
-        .populate("comboId", "_id code name")
+        .populate("comboId", "_id code name sellingPrice")
         .populate("productId", "_id code name")
         .populate("facebookPageId", "_id code name")
         .sort(buildSort(params))
