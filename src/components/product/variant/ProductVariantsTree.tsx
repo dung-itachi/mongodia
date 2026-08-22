@@ -35,6 +35,8 @@ import type {
   VariantValueItem,
   ProductTreeNode,
 } from "@/hooks/useVariants";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./variants.module.css";
 
 export interface ProductVariantsTreeProps {
@@ -68,6 +70,7 @@ export default function ProductVariantsTree({
   onToggleValueActive,
   onAssignOption,
 }: ProductVariantsTreeProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState("");
 
@@ -167,28 +170,28 @@ export default function ProductVariantsTree({
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm sản phẩm, thuộc tính hoặc giá trị..."
+          placeholder={t("Tìm sản phẩm, thuộc tính hoặc giá trị...", lang)}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ width: 360 }}
         />
         <Space>
           <Button size="small" onClick={expandAll}>
-            Mở rộng tất cả
+            {t("Mở rộng tất cả", lang)}
           </Button>
           <Button size="small" onClick={collapseAll}>
-            Thu gọn tất cả
+            {t("Thu gọn tất cả", lang)}
           </Button>
         </Space>
       </div>
 
       {loading ? (
-        <div className={styles.treeEmpty}>Đang tải...</div>
+        <div className={styles.treeEmpty}>{t("Đang tải...", lang)}</div>
       ) : filteredProducts.length === 0 ? (
         <div className={styles.treeEmpty}>
           {search.trim()
-            ? "Không tìm thấy kết quả phù hợp"
-            : "Chưa có sản phẩm nào được gán thuộc tính biến thể"}
+            ? t("Không tìm thấy kết quả phù hợp", lang)
+            : t("Chưa có sản phẩm nào được gán thuộc tính biến thể", lang)}
         </div>
       ) : (
         <div className={styles.treeList}>
@@ -202,7 +205,7 @@ export default function ProductVariantsTree({
                     className={styles.treeToggle}
                     onClick={() => toggleExpand(product._id)}
                     role="button"
-                    aria-label={isProductExpanded ? "Thu gọn" : "Mở rộng"}
+                    aria-label={isProductExpanded ? t("Thu gọn", lang) : t("Mở rộng", lang)}
                   >
                     {isProductExpanded ? (
                       <CaretDownOutlined />
@@ -215,14 +218,14 @@ export default function ProductVariantsTree({
                   </span>
                   <span className={styles.treeNodeTitle}>
                     <Tag color="blue" className={styles.treeLevelTag}>
-                      Sản phẩm
+                      {t("Sản phẩm", lang)}
                     </Tag>
                     <strong>{highlight(product.name)}</strong>
                     <span className={styles.treeNodeCode}>
                       ({highlight(product.code)})
                     </span>
                     <span className={styles.treeNodeCount}>
-                      {product.variantOptions.length} thuộc tính
+                      {product.variantOptions.length} {t("thuộc tính", lang)}
                     </span>
                   </span>
                   <span className={styles.treeNodeActions}>
@@ -233,7 +236,7 @@ export default function ProductVariantsTree({
                         icon={<LinkOutlined />}
                         onClick={() => onAssignOption(product._id)}
                       >
-                        Gán thuộc tính
+                        {t("Gán thuộc tính", lang)}
                       </Button>
                     )}
                     <Button
@@ -247,7 +250,7 @@ export default function ProductVariantsTree({
                         )
                       }
                     >
-                      Xem SP
+                      {t("Xem SP", lang)}
                     </Button>
                   </span>
                 </div>
@@ -257,7 +260,7 @@ export default function ProductVariantsTree({
                   <div className={styles.treeChildren}>
                     {product.variantOptions.length === 0 ? (
                       <div className={styles.treeEmptyValue}>
-                        Sản phẩm chưa có thuộc tính nào
+                        {t("Sản phẩm chưa có thuộc tính nào", lang)}
                       </div>
                     ) : (
                       product.variantOptions.map((opt) => {
@@ -271,7 +274,7 @@ export default function ProductVariantsTree({
                                 onClick={() => toggleExpand(opt._id)}
                                 role="button"
                                 aria-label={
-                                  isOptExpanded ? "Thu gọn" : "Mở rộng"
+                                  isOptExpanded ? t("Thu gọn", lang) : t("Mở rộng", lang)
                                 }
                               >
                                 {isOptExpanded ? (
@@ -287,14 +290,14 @@ export default function ProductVariantsTree({
                               </span>
                               <span className={styles.treeNodeTitle}>
                                 <Tag color="purple" className={styles.treeLevelTag}>
-                                  Thuộc tính
+                                  {t("Thuộc tính", lang)}
                                 </Tag>
                                 <strong>{highlight(opt.name)}</strong>
                                 <span className={styles.treeNodeCode}>
                                   ({highlight(opt.code)})
                                 </span>
                                 <span className={styles.treeNodeCount}>
-                                  {opt.values.length} giá trị
+                                  {opt.values.length} {t("giá trị", lang)}
                                 </span>
                               </span>
                               <span className={styles.treeNodeActions}>
@@ -328,7 +331,7 @@ export default function ProductVariantsTree({
                                       })
                                     }
                                   >
-                                    Thêm giá trị
+                                    {t("Thêm giá trị", lang)}
                                   </Button>
                                 )}
                                 {onEditOption && (
@@ -349,17 +352,19 @@ export default function ProductVariantsTree({
                                 )}
                                 {onDeleteOption && (
                                   <Popconfirm
-                                    title="Xóa thuộc tính?"
+                                    title={t("Xóa thuộc tính?", lang)}
                                     description={
                                       <>
-                                        Thuộc tính sẽ bị xóa.{" "}
+                                        {t("Thuộc tính sẽ bị xóa.", lang)}{" "}
                                         {opt.values.length > 0
-                                          ? `Tất cả ${opt.values.length} giá trị cũng sẽ bị xóa.`
+                                          ? t("Tất cả", lang) +
+                                            ` ${opt.values.length} ` +
+                                            t("giá trị cũng sẽ bị xóa.", lang)
                                           : ""}
                                       </>
                                     }
-                                    okText="Xóa"
-                                    cancelText="Hủy"
+                                    okText={t("Xóa", lang)}
+                                    cancelText={t("Hủy", lang)}
                                     okButtonProps={{ danger: true }}
                                     onConfirm={() =>
                                       onDeleteOption({
@@ -387,7 +392,7 @@ export default function ProductVariantsTree({
                               <div className={styles.treeChildrenLv3}>
                                 {opt.values.length === 0 ? (
                                   <div className={styles.treeEmptyValue}>
-                                    Chưa có giá trị nào
+                                    {t("Chưa có giá trị nào", lang)}
                                   </div>
                                 ) : (
                                   opt.values.map((v) => (
@@ -409,7 +414,7 @@ export default function ProductVariantsTree({
                                       </span>
                                       <span className={styles.treeNodeTitle}>
                                         <Tag color="orange" className={styles.treeLevelTag}>
-                                          Giá trị
+                                          {t("Giá trị", lang)}
                                         </Tag>
                                         {highlight(v.name)}
                                         <span className={styles.treeNodeCode}>
@@ -452,10 +457,10 @@ export default function ProductVariantsTree({
                                         )}
                                         {onDeleteValue && (
                                           <Popconfirm
-                                            title="Xóa giá trị?"
-                                            description="Giá trị biến thể sẽ bị xóa."
-                                            okText="Xóa"
-                                            cancelText="Hủy"
+                                            title={t("Xóa giá trị?", lang)}
+                                            description={t("Giá trị biến thể sẽ bị xóa.", lang)}
+                                            okText={t("Xóa", lang)}
+                                            cancelText={t("Hủy", lang)}
                                             okButtonProps={{ danger: true }}
                                             onConfirm={() =>
                                               onDeleteValue({
@@ -496,7 +501,7 @@ export default function ProductVariantsTree({
                                         })
                                       }
                                     >
-                                      Thêm giá trị
+                                      {t("Thêm giá trị", lang)}
                                     </Button>
                                   </div>
                                 )}

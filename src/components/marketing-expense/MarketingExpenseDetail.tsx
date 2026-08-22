@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ==================================================
  * MARKETING EXPENSE DETAIL COMPONENT
@@ -41,6 +43,8 @@ import {
   MARKETING_EXPENSE_DETAIL_TABS,
   type DetailTabConfig,
 } from "@/configs/marketing-expense-detail-tabs.config";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import styles from "./marketing-expense-detail.module.css";
 
@@ -55,6 +59,7 @@ export default function MarketingExpenseDetail({
   onBack,
   onSuccess,
 }: MarketingExpenseDetailProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { data: expense, loading, error } = useMarketingExpense(id);
   const { data: timelineHistory } = useMarketingExpenseTimeline(id);
 
@@ -70,11 +75,11 @@ export default function MarketingExpenseDetail({
     return (
       <div className={styles.container}>
         <EmptyState
-          title="Không tìm thấy báo cáo"
-          description={error ?? "Báo cáo không tồn tại hoặc đã bị xóa."}
+          title={t("Không tìm thấy báo cáo", lang)}
+          description={error ?? t("Báo cáo không tồn tại hoặc đã bị xóa.", lang)}
           action={
             onBack ? (
-              <a onClick={onBack}>Quay lại danh sách</a>
+              <a onClick={onBack}>{t("Quay lại danh sách", lang)}</a>
             ) : undefined
           }
         />
@@ -95,7 +100,7 @@ export default function MarketingExpenseDetail({
         <div className={styles.headerRow}>
           <div className={styles.headerTitle}>
             <FileTextOutlined />
-            <span>Báo cáo chi phí marketing</span>
+            <span>{t("Báo cáo chi phí marketing", lang)}</span>
             <StatusBadge
               status={expense.status}
               mapping={marketingExpenseStatusConfig as unknown as Record<string, { color: string; backgroundColor: string; label: string }>}
@@ -103,7 +108,7 @@ export default function MarketingExpenseDetail({
           </div>
           {onBack && (
             <a onClick={onBack} className={styles.backLink}>
-              ← Quay lại
+              ← {t("Quay lại", lang)}
             </a>
           )}
         </div>

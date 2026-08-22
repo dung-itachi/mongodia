@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ==================================================
  * MARKETING EXPENSE WORKFLOW BAR COMPONENT
@@ -30,6 +32,9 @@ import {
   useReopenMarketingExpense,
 } from "@/hooks/useMarketingExpenses";
 
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 import styles from "./marketing-expense-workflow.module.css";
 
 interface MarketingExpenseWorkflowBarProps {
@@ -45,6 +50,7 @@ function MarketingExpenseWorkflowBarInner({
   permissions = [],
   onSuccess,
 }: MarketingExpenseWorkflowBarProps) {
+  const lang = useLanguageStore((s) => s.language);
   const lockMutation = useLockMarketingExpense();
   const reopenMutation = useReopenMarketingExpense();
 
@@ -80,9 +86,9 @@ function MarketingExpenseWorkflowBarInner({
   const getActionConfirmTitle = (action: ActionConfig) => {
     switch (action.id) {
       case "lock":
-        return "Khóa báo cáo?";
+        return t("Khóa báo cáo?", lang);
       case "reopen":
-        return "Mở lại báo cáo?";
+        return t("Mở lại báo cáo?", lang);
       default:
         return undefined;
     }
@@ -91,9 +97,9 @@ function MarketingExpenseWorkflowBarInner({
   const getActionConfirmDescription = (action: ActionConfig) => {
     switch (action.id) {
       case "lock":
-        return "Báo cáo sẽ bị khóa và không thể chỉnh sửa.";
+        return t("Báo cáo sẽ bị khóa và không thể chỉnh sửa.", lang);
       case "reopen":
-        return "Báo cáo sẽ được mở lại để chỉnh sửa.";
+        return t("Báo cáo sẽ được mở lại để chỉnh sửa.", lang);
       default:
         return undefined;
     }
@@ -123,8 +129,8 @@ function MarketingExpenseWorkflowBarInner({
           title={confirmTitle}
           description={confirmDescription}
           onConfirm={onClick as () => void}
-          okText="Xác nhận"
-          cancelText="Hủy"
+          okText={t("Xác nhận", lang)}
+          cancelText={t("Hủy", lang)}
         >
           {button}
         </Popconfirm>

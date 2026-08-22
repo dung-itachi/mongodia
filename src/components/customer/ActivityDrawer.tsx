@@ -10,11 +10,13 @@
  * Drawer for creating and editing customer activities.
  */
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Drawer, Form, Input, Select, DatePicker, Button } from "antd";
 import { useCreateCustomerActivity, useUpdateCustomerActivity } from "@/hooks/useCustomerActivities";
 import { ActivityType, ActivityResult } from "@/types/customer-activity";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { TextArea } = Input;
 
@@ -33,23 +35,6 @@ interface ActivityDrawerProps {
   onSuccess: () => void;
 }
 
-const ACTIVITY_TYPES = [
-  { value: ActivityType.CALL, label: "Gọi điện" },
-  { value: ActivityType.MEETING, label: "Gặp trực tiếp" },
-  { value: ActivityType.NOTE, label: "Ghi chú" },
-  { value: ActivityType.FOLLOW_UP, label: "Theo dõi" },
-  { value: ActivityType.EMAIL, label: "Email" },
-  { value: ActivityType.SMS, label: "SMS" },
-  { value: ActivityType.OTHER, label: "Khác" },
-];
-
-const ACTIVITY_RESULTS = [
-  { value: ActivityResult.SUCCESS, label: "Thành công" },
-  { value: ActivityResult.FAILED, label: "Thất bại" },
-  { value: ActivityResult.NO_ANSWER, label: "Không nghe máy" },
-  { value: ActivityResult.PENDING, label: "Chờ xử lý" },
-];
-
 export default function ActivityDrawer({
   open,
   customerId,
@@ -58,6 +43,7 @@ export default function ActivityDrawer({
   onClose,
   onSuccess,
 }: ActivityDrawerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm();
   const isEditing = !!activityId;
   const message = useMessage();
@@ -66,6 +52,29 @@ export default function ActivityDrawer({
   const updateMutation = useUpdateCustomerActivity();
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
+
+  const ACTIVITY_TYPES = useMemo(
+    () => [
+      { value: ActivityType.CALL, label: t("Gọi điện", lang) },
+      { value: ActivityType.MEETING, label: t("Gặp trực tiếp", lang) },
+      { value: ActivityType.NOTE, label: t("Ghi chú", lang) },
+      { value: ActivityType.FOLLOW_UP, label: t("Theo dõi", lang) },
+      { value: ActivityType.EMAIL, label: t("Email", lang) },
+      { value: ActivityType.SMS, label: t("SMS", lang) },
+      { value: ActivityType.OTHER, label: t("Khác", lang) },
+    ],
+    [lang]
+  );
+
+  const ACTIVITY_RESULTS = useMemo(
+    () => [
+      { value: ActivityResult.SUCCESS, label: t("Thành công", lang) },
+      { value: ActivityResult.FAILED, label: t("Thất bại", lang) },
+      { value: ActivityResult.NO_ANSWER, label: t("Không nghe máy", lang) },
+      { value: ActivityResult.PENDING, label: t("Chờ xử lý", lang) },
+    ],
+    [lang]
+  );
 
   useEffect(() => {
     if (open) {
@@ -109,7 +118,7 @@ export default function ActivityDrawer({
             result: payload.result,
           },
         });
-        message.success("Cập nhật hoạt động thành công");
+        message.success(t("Cập nhật hoạt động thành công", lang));
       } else {
         await createMutation.mutateAsync({
           customerId,
@@ -118,7 +127,7 @@ export default function ActivityDrawer({
             employeeId: "", // Will be set by API
           },
         });
-        message.success("Tạo hoạt động thành công");
+        message.success(t("Tạo hoạt động thành công", lang));
       }
 
       onSuccess();
@@ -126,23 +135,23 @@ export default function ActivityDrawer({
       form.resetFields();
     } catch (error) {
       if (error instanceof Error) {
-        message.error(error.message || "Đã xảy ra lỗi");
+        message.error(error.message || t("Đã xảy ra lỗi", lang));
       }
     }
   };
 
   return (
     <Drawer
-      title={isEditing ? "Chỉnh sửa hoạt động" : "Tạo hoạt động mới"}
+      title={isEditing ? t("Chỉnh sửa hoạt động", lang) : t("Tạo hoạt động mới", lang)}
       placement="right"
       width={480}
       onClose={onClose}
       open={open}
       footer={
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button onClick={onClose}>Hủy</Button>
+          <Button onClick={onClose}>{t("Hủy", lang)}</Button>
           <Button type="primary" onClick={handleSubmit} loading={isLoading}>
-            {isEditing ? "Cập nhật" : "Tạo mới"}
+            {isEditing ? t("Cập nhật", lang) : t("Tạo mới", lang)}
           </Button>
         </div>
       }
@@ -156,43 +165,43 @@ export default function ActivityDrawer({
       >
         <Form.Item
           name="activityType"
-          label="Loại hoạt động"
-          rules={[{ required: true, message: "Vui lòng chọn loại hoạt động" }]}
+          label={t("Loại hoạt động", lang)}
+          rules={[{ required: true, message: t("Vui lòng chọn loại hoạt động", lang) }]}
         >
-          <Select options={ACTIVITY_TYPES} placeholder="Chọn loại hoạt động" />
+          <Select options={ACTIVITY_TYPES} placeholder={t("Chọn loại hoạt động", lang)} />
         </Form.Item>
 
         <Form.Item
           name="title"
-          label="Tiêu đề"
-          rules={[{ required: true, message: "Vui lòng nhập tiêu đề" }]}
+          label={t("Tiêu đề", lang)}
+          rules={[{ required: true, message: t("Vui lòng nhập tiêu đề", lang) }]}
         >
-          <Input placeholder="Nhập tiêu đề hoạt động" maxLength={500} />
+          <Input placeholder={t("Nhập tiêu đề hoạt động", lang)} maxLength={500} />
         </Form.Item>
 
-        <Form.Item name="content" label="Nội dung">
+        <Form.Item name="content" label={t("Nội dung", lang)}>
           <TextArea
-            placeholder="Nhập nội dung chi tiết..."
+            placeholder={t("Nhập nội dung chi tiết...", lang)}
             rows={4}
             maxLength={5000}
             showCount
           />
         </Form.Item>
 
-        <Form.Item name="nextFollowUpAt" label="Lịch theo dõi tiếp">
+        <Form.Item name="nextFollowUpAt" label={t("Lịch theo dõi tiếp", lang)}>
           <DatePicker
             showTime
             classNames={{ popup: { root: "picker-with-time" } }}
             format="YYYY-MM-DD HH:mm"
             style={{ width: "100%" }}
-            placeholder="Chọn ngày giờ"
+            placeholder={t("Chọn ngày giờ", lang)}
           />
         </Form.Item>
 
-        <Form.Item name="result" label="Kết quả">
+        <Form.Item name="result" label={t("Kết quả", lang)}>
           <Select
             options={ACTIVITY_RESULTS}
-            placeholder="Chọn kết quả"
+            placeholder={t("Chọn kết quả", lang)}
             allowClear
           />
         </Form.Item>

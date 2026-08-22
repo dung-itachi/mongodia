@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Form, Input, Radio, Select, Switch, Tag } from "antd";
 import { PushpinOutlined, UserOutlined, TeamOutlined, CheckCircleFilled } from "@ant-design/icons";
 import DrawerForm from "@/components/common/forms/DrawerForm";
@@ -24,6 +24,8 @@ import {
   NOTIFICATION_TYPE_LABELS,
   NOTIFICATION_TYPE_VALUES,
 } from "@/constants/notification";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface NotificationFormDrawerProps {
   open: boolean;
@@ -33,27 +35,6 @@ interface NotificationFormDrawerProps {
   onSubmit: (values: CreateNotificationInput | UpdateNotificationInput) => void;
 }
 
-const TYPE_OPTIONS = NOTIFICATION_TYPE_VALUES.map((t) => ({
-  label: (
-    <span>
-      <Tag color={t === "error" ? "red" : t === "warning" ? "orange" : t === "success" ? "green" : "blue"}>
-        {NOTIFICATION_TYPE_LABELS[t]}
-      </Tag>
-    </span>
-  ),
-  value: t,
-}));
-
-const CATEGORY_OPTIONS = NOTIFICATION_CATEGORY_VALUES.map((c) => ({
-  label: NOTIFICATION_CATEGORY_LABELS[c],
-  value: c,
-}));
-
-const PRIORITY_OPTIONS = NOTIFICATION_PRIORITY_VALUES.map((p) => ({
-  label: NOTIFICATION_PRIORITY_LABELS[p],
-  value: p,
-}));
-
 export default function NotificationFormDrawer({
   open,
   initial,
@@ -61,9 +42,43 @@ export default function NotificationFormDrawer({
   onClose,
   onSubmit,
 }: NotificationFormDrawerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm();
   const isEditing = !!initial;
   const [recipientValue, setRecipientValue] = useState<RecipientValue | undefined>();
+
+  const TYPE_OPTIONS = useMemo(
+    () =>
+      NOTIFICATION_TYPE_VALUES.map((type) => ({
+        label: (
+          <span>
+            <Tag color={type === "error" ? "red" : type === "warning" ? "orange" : type === "success" ? "green" : "blue"}>
+              {t(NOTIFICATION_TYPE_LABELS[type], lang)}
+            </Tag>
+          </span>
+        ),
+        value: type,
+      })),
+    [lang]
+  );
+
+  const CATEGORY_OPTIONS = useMemo(
+    () =>
+      NOTIFICATION_CATEGORY_VALUES.map((c) => ({
+        label: t(NOTIFICATION_CATEGORY_LABELS[c], lang),
+        value: c,
+      })),
+    [lang]
+  );
+
+  const PRIORITY_OPTIONS = useMemo(
+    () =>
+      NOTIFICATION_PRIORITY_VALUES.map((p) => ({
+        label: t(NOTIFICATION_PRIORITY_LABELS[p], lang),
+        value: p,
+      })),
+    [lang]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -159,69 +174,69 @@ export default function NotificationFormDrawer({
   return (
     <DrawerForm
       open={open}
-      title={isEditing ? "Sửa thông báo" : "Tạo thông báo"}
+      title={isEditing ? t("Sửa thông báo", lang) : t("Tạo thông báo", lang)}
       loading={submitting}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={isEditing ? "Cập nhật" : "Tạo"}
+      submitText={isEditing ? t("Cập nhật", lang) : t("Tạo", lang)}
       width={520}
     >
       <Form form={form} layout="vertical">
         <Form.Item
           name="title"
-          label="Tiêu đề"
+          label={t("Tiêu đề", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập tiêu đề" },
-            { max: 200, message: "Tiêu đề tối đa 200 ký tự" },
+            { required: true, message: t("Vui lòng nhập tiêu đề", lang) },
+            { max: 200, message: t("Tiêu đề tối đa 200 ký tự", lang) },
           ]}
         >
-          <Input placeholder="VD: Bảo trì hệ thống 22:00" maxLength={200} showCount />
+          <Input placeholder={t("VD: Bảo trì hệ thống 22:00", lang)} maxLength={200} showCount />
         </Form.Item>
 
         <Form.Item
           name="message"
-          label="Nội dung"
+          label={t("Nội dung", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập nội dung" },
-            { max: 1000, message: "Nội dung tối đa 1000 ký tự" },
+            { required: true, message: t("Vui lòng nhập nội dung", lang) },
+            { max: 1000, message: t("Nội dung tối đa 1000 ký tự", lang) },
           ]}
         >
           <Input.TextArea
             rows={4}
-            placeholder="Mô tả chi tiết..."
+            placeholder={t("Mô tả chi tiết...", lang)}
             maxLength={1000}
             showCount
           />
         </Form.Item>
 
-        <Form.Item name="type" label="Loại">
+        <Form.Item name="type" label={t("Loại", lang)}>
           <Select options={TYPE_OPTIONS} />
         </Form.Item>
 
-        <Form.Item name="category" label="Danh mục">
+        <Form.Item name="category" label={t("Danh mục", lang)}>
           <Select options={CATEGORY_OPTIONS} />
         </Form.Item>
 
-        <Form.Item name="priority" label="Mức độ ưu tiên">
+        <Form.Item name="priority" label={t("Mức độ ưu tiên", lang)}>
           <Select options={PRIORITY_OPTIONS} />
         </Form.Item>
 
-        <Form.Item name="link" label="Link liên quan (tùy chọn)">
-          <Input placeholder="VD: /orders hoặc /products" />
+        <Form.Item name="link" label={t("Link liên quan (tùy chọn)", lang)}>
+          <Input placeholder={t("VD: /orders hoặc /products", lang)} />
         </Form.Item>
 
-        <Form.Item name="isPinned" label="Ghim lên đầu" valuePropName="checked" tooltip="Thông báo được ghim sẽ hiển thị trước các thông báo khác">
+        <Form.Item name="isPinned" label={t("Ghim lên đầu", lang)} valuePropName="checked" tooltip={t("Thông báo được ghim sẽ hiển thị trước các thông báo khác", lang)}>
           <Switch checkedChildren={<PushpinOutlined />} unCheckedChildren={null} />
         </Form.Item>
 
         {/* Recipient Selection */}
-        <Form.Item name="recipientMode" label="Người nhận" valuePropName="value">
+        <Form.Item name="recipientMode" label={t("Người nhận", lang)} valuePropName="value">
           <Radio.Group onChange={(e) => handleRecipientModeChange(e.target.value)}>
             <Radio.Button value="broadcast">
-              <UserOutlined /> Tất cả
+              <UserOutlined /> {t("Tất cả", lang)}
             </Radio.Button>
             <Radio.Button value="specific">
-              <TeamOutlined /> Cụ thể
+              <TeamOutlined /> {t("Cụ thể", lang)}
             </Radio.Button>
           </Radio.Group>
         </Form.Item>
@@ -232,7 +247,7 @@ export default function NotificationFormDrawer({
         >
           {({ getFieldValue }) =>
             getFieldValue("recipientMode") === "specific" ? (
-              <Form.Item label="Chọn người nhận">
+              <Form.Item label={t("Chọn người nhận", lang)}>
                 <RecipientSelector
                   value={recipientValue}
                   onChange={setRecipientValue}
@@ -241,7 +256,7 @@ export default function NotificationFormDrawer({
               </Form.Item>
             ) : (
               <div style={{ padding: "8px 0", color: "#52c41a" }}>
-                <CheckCircleFilled /> Thông báo sẽ được gửi đến TẤT CẢ nhân viên
+                <CheckCircleFilled /> {t("Thông báo sẽ được gửi đến TẤT CẢ nhân viên", lang)}
               </div>
             )
           }
@@ -250,10 +265,10 @@ export default function NotificationFormDrawer({
         {isEditing && (
           <Form.Item
             name="isActive"
-            label="Đang hoạt động"
+            label={t("Đang hoạt động", lang)}
             valuePropName="checked"
             initialValue={true}
-            tooltip="Tắt để ẩn thông báo khỏi danh sách"
+            tooltip={t("Tắt để ẩn thông báo khỏi danh sách", lang)}
           >
             <Switch />
           </Form.Item>

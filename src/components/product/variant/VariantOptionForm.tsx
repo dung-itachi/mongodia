@@ -10,6 +10,8 @@
 import { useEffect, useState } from "react";
 import { Form, Input, InputNumber, Switch, message } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type {
   VariantOptionItem,
   VariantValueItem,
@@ -58,6 +60,7 @@ export default function VariantOptionForm({
   onSubmit,
 }: VariantOptionFormProps) {
   const [form] = Form.useForm();
+  const lang = useLanguageStore((s) => s.language);
   const isEditing = !!editingItem;
   const [quickValuesText, setQuickValuesText] = useState("");
 
@@ -124,11 +127,11 @@ export default function VariantOptionForm({
   return (
     <DrawerForm
       open={open}
-      title={isEditing ? "Sửa thuộc tính" : "Thêm thuộc tính"}
+      title={isEditing ? t("Sửa thuộc tính", lang) : t("Thêm thuộc tính", lang)}
       loading={loading}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={isEditing ? "Cập nhật" : "Tạo mới"}
+      submitText={isEditing ? t("Cập nhật", lang) : t("Tạo mới", lang)}
       width={520}
     >
       {selectedProductName && (
@@ -141,7 +144,7 @@ export default function VariantOptionForm({
             color: "#1890ff",
           }}
         >
-          Thuộc tính cho sản phẩm: <strong>{selectedProductName}</strong>
+          {t("Thuộc tính cho sản phẩm:", lang)} <strong>{selectedProductName}</strong>
         </div>
       )}
       <Form
@@ -163,36 +166,36 @@ export default function VariantOptionForm({
       >
         <Form.Item
           name="name"
-          label="Tên thuộc tính"
+          label={t("Tên thuộc tính", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập tên thuộc tính" },
-            { min: 2, message: "Tên tối thiểu 2 ký tự" },
-            { max: 100, message: "Tên tối đa 100 ký tự" },
+            { required: true, message: t("Vui lòng nhập tên thuộc tính", lang) },
+            { min: 2, message: t("Tên tối thiểu 2 ký tự", lang) },
+            { max: 100, message: t("Tên tối đa 100 ký tự", lang) },
           ]}
         >
           <Input
-            placeholder="VD: Kích thước, Màu sắc, Hộp"
+            placeholder={t("VD: Kích thước, Màu sắc, Hộp", lang)}
             onChange={handleNameChange}
           />
         </Form.Item>
 
         <Form.Item
           name="code"
-          label="Mã thuộc tính (tự động tạo)"
-          tooltip="Sẽ tự động tạo từ tên nếu để trống"
+          label={t("Mã thuộc tính (tự động tạo)", lang)}
+          tooltip={t("Sẽ tự động tạo từ tên nếu để trống", lang)}
         >
           <Input
-            placeholder="VD: KICHTHUOC01 - Sẽ tự sinh nếu để trống"
+            placeholder={t("VD: KICHTHUOC01 - Sẽ tự sinh nếu để trống", lang)}
             disabled={isEditing}
           />
         </Form.Item>
 
         {!isEditing && (
-          <Form.Item label="Thêm nhanh giá trị (tùy chọn)">
+          <Form.Item label={t("Thêm nhanh giá trị (tùy chọn)", lang)}>
             <Input.TextArea
               value={quickValuesText}
               onChange={(e) => setQuickValuesText(e.target.value)}
-              placeholder="Mỗi dòng là một giá trị. VD:&#10;S&#10;M&#10;L"
+              placeholder={t("Mỗi dòng là một giá trị. VD:\nS\nM\nL", lang)}
               rows={4}
               maxLength={2000}
               showCount
@@ -204,20 +207,22 @@ export default function VariantOptionForm({
                 marginTop: 4,
               }}
             >
-              Mỗi dòng sẽ được tạo thành một giá trị của thuộc tính này. Mã giá
-              trị sẽ tự sinh từ tên.
+              {t(
+                "Mỗi dòng sẽ được tạo thành một giá trị của thuộc tính này. Mã giá trị sẽ tự sinh từ tên.",
+                lang
+              )}
             </div>
           </Form.Item>
         )}
 
-        <Form.Item name="sortOrder" label="Thứ tự hiển thị">
+        <Form.Item name="sortOrder" label={t("Thứ tự hiển thị", lang)}>
           <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>
 
         {isEditing && (
           <Form.Item
             name="isActive"
-            label="Kích hoạt"
+            label={t("Kích hoạt", lang)}
             valuePropName="checked"
           >
             <Switch />

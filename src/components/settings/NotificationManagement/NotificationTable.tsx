@@ -34,6 +34,9 @@ import {
   type NotificationPriority,
   type NotificationType,
 } from "@/constants/notification";
+import { useLanguageStore } from "@/store/language.store";
+import type { Language } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./notificationManagement.module.css";
 
 interface NotificationTableProps {
@@ -58,16 +61,6 @@ interface NotificationTableProps {
   onTogglePin: (item: NotificationAdminItem) => void;
   onRefresh: () => Promise<unknown>;
 }
-
-const CATEGORY_OPTIONS = NOTIFICATION_CATEGORY_VALUES.map((c) => ({
-  label: NOTIFICATION_CATEGORY_LABELS[c],
-  value: c,
-}));
-
-const TYPE_OPTIONS = NOTIFICATION_TYPE_VALUES.map((t) => ({
-  label: NOTIFICATION_TYPE_LABELS[t],
-  value: t,
-}));
 
 const TYPE_ICON_MAP: Record<NotificationType, React.ReactNode> = {
   info: <InfoCircleOutlined />,
@@ -107,17 +100,17 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function getRelativeTime(dateStr: string): string {
+function getRelativeTime(dateStr: string, lang: Language): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays > 0) return `${diffDays} ngày trước`;
-  if (diffHours > 0) return `${diffHours} giờ trước`;
-  if (diffMins > 0) return `${diffMins} phút trước`;
-  return "Vừa xong";
+  if (diffDays > 0) return `${diffDays} ${t("ngày trước", lang)}`;
+  if (diffHours > 0) return `${diffHours} ${t("giờ trước", lang)}`;
+  if (diffMins > 0) return `${diffMins} ${t("phút trước", lang)}`;
+  return t("Vừa xong", lang);
 }
 
 function getFullDate(dateStr: string): string {
@@ -164,14 +157,104 @@ export default function NotificationTable({
   onTogglePin,
   onRefresh,
 }: NotificationTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { message } = App.useApp();
   const filteredItems = useMemo(() => items, [items]);
+
+  const CATEGORY_OPTIONS = useMemo(
+    () =>
+      NOTIFICATION_CATEGORY_VALUES.map((c) => ({
+        label: t(NOTIFICATION_CATEGORY_LABELS[c], lang),
+        value: c,
+      })),
+    [lang]
+  );
+
+  const TYPE_OPTIONS = useMemo(
+    () =>
+      NOTIFICATION_TYPE_VALUES.map((typeVal) => ({
+        label: t(NOTIFICATION_TYPE_LABELS[typeVal], lang),
+        value: typeVal,
+      })),
+    [lang]
+  );
+
+  const renderFilters = () => (
+    <div className={styles.filtersSection}>
+      <div className={styles.filtersRow}>
+        <Input.Search
+          placeholder={t("Tìm tiêu đề / nội dung...", lang)}
+          allowClear
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          onSearch={(v) => onSearchChange(v)}
+          className={styles.filterSearch}
+          enterButton={t("Tìm", lang)}
+        />
+        <Select
+          placeholder={t("Danh mục", lang)}
+          allowClear
+          options={CATEGORY_OPTIONS}
+          value={category}
+          onChange={(v) => onCategoryChange(v)}
+          className={styles.filterSelect}
+        />
+        <Select
+          placeholder={t("Loại", lang)}
+          allowClear
+          options={TYPE_OPTIONS}
+          value={type}
+          onChange={(v) => onTypeChange(v)}
+          className={styles.filterSelect}
+          style={{ minWidth: 120 }}
+        />
+        <Select
+          placeholder={t("Trạng thái ghim", lang)}
+          allowClear
+          options={[
+            { label: t("Đã ghim", lang), value: true },
+            { label: t("Chưa ghim", lang), value: false },
+          ]}
+          value={pinnedOnly}
+          onChange={(v) => onPinnedOnlyChange(v)}
+          className={styles.filterSelect}
+        />
+        <Select
+          placeholder={t("Trạng thái", lang)}
+          allowClear
+          options={[
+            { label: t("Tất cả", lang), value: "all" },
+            { label: t("Hoạt động", lang), value: "active" },
+            { label: t("Đã tắt", lang), value: "inactive" },
+          ]}
+          value={statusFilter}
+          onChange={(v) => onStatusFilterChange(v)}
+          className={styles.filterSelect}
+        />
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={async () => {
+            try {
+              await onRefresh();
+              void message.success(t("Đã làm mới thông báo thành công", lang));
+            } catch {
+              void message.error(t("Không thể làm mới thông báo", lang));
+            }
+          }}
+          loading={isLoading}
+          className={styles.filterButton}
+        >
+          {t("Tải lại", lang)}
+        </Button>
+      </div>
+    </div>
+  );
 
   if (isLoading) {
     return (
       <div className={styles.tableSection}>
         <div className={styles.emptyState}>
-          <div style={{ fontSize: 14, color: "#8c8c8c" }}>Đang tải dữ liệu...</div>
+          <div style={{ fontSize: 14, color: "#8c8c8c" }}>{t("Đang tải dữ liệu...", lang)}</div>
         </div>
       </div>
     );
@@ -180,80 +263,13 @@ export default function NotificationTable({
   if (filteredItems.length === 0) {
     return (
       <div>
-        <div className={styles.filtersSection}>
-          <div className={styles.filtersRow}>
-            <Input.Search
-              placeholder="Tìm tiêu đề / nội dung..."
-              allowClear
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onSearch={(v) => onSearchChange(v)}
-              className={styles.filterSearch}
-              enterButton="Tìm"
-            />
-            <Select
-              placeholder="Danh mục"
-              allowClear
-              options={CATEGORY_OPTIONS}
-              value={category}
-              onChange={(v) => onCategoryChange(v)}
-              className={styles.filterSelect}
-            />
-            <Select
-              placeholder="Loại"
-              allowClear
-              options={TYPE_OPTIONS}
-              value={type}
-              onChange={(v) => onTypeChange(v)}
-              className={styles.filterSelect}
-              style={{ minWidth: 120 }}
-            />
-            <Select
-              placeholder="Trạng thái ghim"
-              allowClear
-              options={[
-                { label: "Đã ghim", value: true },
-                { label: "Chưa ghim", value: false },
-              ]}
-              value={pinnedOnly}
-              onChange={(v) => onPinnedOnlyChange(v)}
-              className={styles.filterSelect}
-            />
-            <Select
-              placeholder="Trạng thái"
-              allowClear
-              options={[
-                { label: "Tất cả", value: "all" },
-                { label: "Hoạt động", value: "active" },
-                { label: "Đã tắt", value: "inactive" },
-              ]}
-              value={statusFilter}
-              onChange={(v) => onStatusFilterChange(v)}
-              className={styles.filterSelect}
-            />
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={async () => {
-                try {
-                  await onRefresh();
-                  void message.success("Đã làm mới thông báo thành công");
-                } catch {
-                  void message.error("Không thể làm mới thông báo");
-                }
-              }}
-              loading={isLoading}
-              className={styles.filterButton}
-            >
-              Tải lại
-            </Button>
-          </div>
-        </div>
+        {renderFilters()}
         <div className={styles.tableSection}>
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>🔔</div>
-            <div className={styles.emptyTitle}>Chưa có thông báo nào</div>
+            <div className={styles.emptyTitle}>{t("Chưa có thông báo nào", lang)}</div>
             <div className={styles.emptyMessage}>
-              Nhấn "Tạo thông báo" để gửi thông báo đầu tiên
+              {t("Nhấn", lang)} "{t("Tạo thông báo", lang)}" {t("để gửi thông báo đầu tiên", lang)}
             </div>
           </div>
         </div>
@@ -263,74 +279,7 @@ export default function NotificationTable({
 
   return (
     <div>
-      <div className={styles.filtersSection}>
-        <div className={styles.filtersRow}>
-          <Input.Search
-            placeholder="Tìm tiêu đề / nội dung..."
-            allowClear
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onSearch={(v) => onSearchChange(v)}
-            className={styles.filterSearch}
-            enterButton="Tìm"
-          />
-          <Select
-            placeholder="Danh mục"
-            allowClear
-            options={CATEGORY_OPTIONS}
-            value={category}
-            onChange={(v) => onCategoryChange(v)}
-            className={styles.filterSelect}
-          />
-          <Select
-            placeholder="Loại"
-            allowClear
-            options={TYPE_OPTIONS}
-            value={type}
-            onChange={(v) => onTypeChange(v)}
-            className={styles.filterSelect}
-            style={{ minWidth: 120 }}
-          />
-          <Select
-            placeholder="Trạng thái ghim"
-            allowClear
-            options={[
-              { label: "Đã ghim", value: true },
-              { label: "Chưa ghim", value: false },
-            ]}
-            value={pinnedOnly}
-            onChange={(v) => onPinnedOnlyChange(v)}
-            className={styles.filterSelect}
-          />
-          <Select
-            placeholder="Trạng thái"
-            allowClear
-            options={[
-              { label: "Tất cả", value: "all" },
-              { label: "Hoạt động", value: "active" },
-              { label: "Đã tắt", value: "inactive" },
-            ]}
-            value={statusFilter}
-            onChange={(v) => onStatusFilterChange(v)}
-            className={styles.filterSelect}
-          />
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={async () => {
-              try {
-                await onRefresh();
-                void message.success("Đã làm mới thông báo thành công");
-              } catch {
-                void message.error("Không thể làm mới thông báo");
-              }
-            }}
-            loading={isLoading}
-            className={styles.filterButton}
-          >
-            Tải lại
-          </Button>
-        </div>
-      </div>
+      {renderFilters()}
 
       <div className={styles.tableSection}>
         {filteredItems.map((item) => {
@@ -357,7 +306,7 @@ export default function NotificationTable({
                 <div className={styles.notificationTitle}>
                   <span>{item.title}</span>
                   {item.isPinned && (
-                    <Tooltip title="Đã ghim">
+                    <Tooltip title={t("Đã ghim", lang)}>
                       <PushpinFilled style={{ color: "#fa8c16", fontSize: 14 }} />
                     </Tooltip>
                   )}
@@ -368,22 +317,22 @@ export default function NotificationTable({
                     className={`${styles.badge} ${TYPE_STYLE_MAP[notificationType] ?? styles.badgeBlue}`}
                     style={{ fontSize: 10 }}
                   >
-                    {NOTIFICATION_TYPE_LABELS[notificationType] ?? item.type}
+                    {t(NOTIFICATION_TYPE_LABELS[notificationType] ?? item.type, lang)}
                   </span>
                   <span className={`${styles.badge} ${styles.badgePurple}`} style={{ fontSize: 10 }}>
-                    {NOTIFICATION_CATEGORY_LABELS[notificationCategory] ?? item.category}
+                    {t(NOTIFICATION_CATEGORY_LABELS[notificationCategory] ?? item.category, lang)}
                   </span>
                   <span
                     className={`${styles.badge} ${getPriorityBadgeClass(item.priority)}`}
                     style={{ fontSize: 10 }}
                   >
-                    {NOTIFICATION_PRIORITY_LABELS[notificationPriority] ?? item.priority}
+                    {t(NOTIFICATION_PRIORITY_LABELS[notificationPriority] ?? item.priority, lang)}
                   </span>
                   <span
                     className={`${styles.badge} ${item.isActive ? styles.badgeGreen : styles.badgeGray}`}
                     style={{ fontSize: 10 }}
                   >
-                    {item.isActive ? "Hoạt động" : "Đã tắt"}
+                    {item.isActive ? t("Hoạt động", lang) : t("Đã tắt", lang)}
                   </span>
                 </div>
               </div>
@@ -393,9 +342,9 @@ export default function NotificationTable({
                 <Tooltip
                   title={
                     <span>
-                      <strong>Đã gửi:</strong> {getFullDate(item.createdAt)}
+                      <strong>{t("Đã gửi", lang)}:</strong> {getFullDate(item.createdAt)}
                       <br />
-                      <strong>Thời gian:</strong> {getRelativeTime(item.createdAt)}
+                      <strong>{t("Thời gian", lang)}:</strong> {getRelativeTime(item.createdAt, lang)}
                     </span>
                   }
                 >
@@ -403,19 +352,19 @@ export default function NotificationTable({
                     <ClockCircleOutlined style={{ marginRight: 4 }} />
                     {formatDate(item.createdAt)}
                     <span style={{ fontSize: 10, color: "#8c8c8c", marginLeft: 4 }}>
-                      ({getRelativeTime(item.createdAt)})
+                      ({getRelativeTime(item.createdAt, lang)})
                     </span>
                   </div>
                 </Tooltip>
 
                 <div className={styles.notificationStats}>
-                  <Tooltip title="Người nhận">
+                  <Tooltip title={t("Người nhận", lang)}>
                     <span className={styles.statItem}>
                       <BellOutlined />
-                      {item.recipientsCount === 0 ? "Tất cả" : item.recipientsCount}
+                      {item.recipientsCount === 0 ? t("Tất cả", lang) : item.recipientsCount}
                     </span>
                   </Tooltip>
-                  <Tooltip title="Đã đọc">
+                  <Tooltip title={t("Đã đọc", lang)}>
                     <span className={styles.statItem}>
                       <CheckCircleOutlined />
                       {item.readCount}
@@ -424,7 +373,7 @@ export default function NotificationTable({
                 </div>
 
                 <div className={styles.notificationActions}>
-                  <Tooltip title={item.isPinned ? "Bỏ ghim" : "Ghim"}>
+                  <Tooltip title={item.isPinned ? t("Bỏ ghim", lang) : t("Ghim", lang)}>
                     <Button
                       type="text"
                       size="small"
@@ -433,7 +382,7 @@ export default function NotificationTable({
                       style={{ color: item.isPinned ? "#fa8c16" : "#8c8c8c" }}
                     />
                   </Tooltip>
-                  <Tooltip title="Sửa">
+                  <Tooltip title={t("Sửa", lang)}>
                     <Button
                       type="text"
                       size="small"
@@ -442,14 +391,14 @@ export default function NotificationTable({
                     />
                   </Tooltip>
                   <Popconfirm
-                    title="Xóa thông báo?"
-                    description="Thông báo sẽ bị vô hiệu hóa (soft delete)."
+                    title={t("Xóa thông báo?", lang)}
+                    description={t("Thông báo sẽ bị vô hiệu hóa (soft delete).", lang)}
                     onConfirm={() => onDelete(item)}
-                    okText="Xóa"
-                    cancelText="Hủy"
+                    okText={t("Xóa", lang)}
+                    cancelText={t("Hủy", lang)}
                     okButtonProps={{ danger: true }}
                   >
-                    <Tooltip title="Xóa">
+                    <Tooltip title={t("Xóa", lang)}>
                       <Button type="text" size="small" danger icon={<DeleteOutlined />} />
                     </Tooltip>
                   </Popconfirm>
@@ -462,7 +411,7 @@ export default function NotificationTable({
         {/* Pagination */}
         <div className={styles.paginationRow}>
           <div className={styles.paginationInfo}>
-            Hiển thị {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} của {total} thông báo
+            {t("Hiển thị", lang)} {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} {t("của", lang)} {total} {t("thông báo", lang)}
           </div>
           <Space>
             <Button
@@ -470,17 +419,17 @@ export default function NotificationTable({
               disabled={page === 1}
               onClick={() => onPageChange(page - 1)}
             >
-              Trước
+              {t("Trước", lang)}
             </Button>
             <span style={{ fontSize: 12, color: "#666" }}>
-              Trang {page} / {Math.ceil(total / pageSize) || 1}
+              {t("Trang", lang)} {page} / {Math.ceil(total / pageSize) || 1}
             </span>
             <Button
               size="small"
               disabled={page * pageSize >= total}
               onClick={() => onPageChange(page + 1)}
             >
-              Sau
+              {t("Sau", lang)}
             </Button>
           </Space>
         </div>

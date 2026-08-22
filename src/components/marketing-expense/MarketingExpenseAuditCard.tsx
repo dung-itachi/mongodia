@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ==================================================
  * MARKETING EXPENSE AUDIT CARD
@@ -12,6 +14,8 @@
 import type { MarketingExpenseResponse } from "@/mappers/marketing-expense.mapper";
 import { AuditCard } from "@/components/common";
 import type { AuditItem } from "@/components/common";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 function formatDateTime(dateStr: string | null | undefined): string {
   if (!dateStr) return "";
@@ -38,28 +42,29 @@ function getEmployeeName(
 export default function MarketingExpenseAuditCard({
   data,
 }: MarketingExpenseAuditCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const auditItems: AuditItem[] = [
     {
-      label: "Người tạo",
+      label: t("Người tạo", lang),
       value: getEmployeeName(data.createdByEmployee),
     },
     {
-      label: "Thời gian tạo",
+      label: t("Thời gian tạo", lang),
       value: formatDateTime(data.createdAt),
     },
     {
-      label: "Thời gian sửa",
+      label: t("Thời gian sửa", lang),
       value: formatDateTime(data.updatedAt),
     },
     // Locked — chỉ hiện khi có dữ liệu
     ...(data.lockedBy
       ? [
           {
-            label: "Người khóa",
+            label: t("Người khóa", lang),
             value: getEmployeeName(data.lockedByEmployee),
           } as AuditItem,
           {
-            label: "Thời gian khóa",
+            label: t("Thời gian khóa", lang),
             value: formatDateTime(data.lockedAt),
           } as AuditItem,
         ]
@@ -68,11 +73,11 @@ export default function MarketingExpenseAuditCard({
     ...(data.reopenedBy
       ? [
           {
-            label: "Người mở lại",
+            label: t("Người mở lại", lang),
             value: getEmployeeName(data.reopenedByEmployee),
           } as AuditItem,
           {
-            label: "Thời gian mở lại",
+            label: t("Thời gian mở lại", lang),
             value: formatDateTime(data.reopenedAt),
           } as AuditItem,
         ]

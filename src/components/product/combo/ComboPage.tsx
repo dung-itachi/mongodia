@@ -32,6 +32,8 @@ import {
 import { useProductList, type ProductListItem } from "@/hooks/useProductCrud";
 import ProductComboList from "./ProductComboList";
 import ComboForm, { type ComboFormProductOption } from "./ComboForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./combos.module.css";
 
 const { Text } = Typography;
@@ -43,6 +45,7 @@ interface CategoryOption {
 }
 
 export default function ComboPage() {
+  const lang = useLanguageStore((s) => s.language);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComboListItem | null>(null);
   const [pendingProductId, setPendingProductId] = useState<string | null>(null);
@@ -184,26 +187,29 @@ export default function ComboPage() {
   const handleDelete = useCallback(
     (item: ComboListItem) => {
       modal.confirm({
-        title: "Xóa combo?",
+        title: t("Xóa combo?", lang),
         icon: <ExclamationCircleOutlined />,
         content: (
           <div>
             <p>
-              Combo <strong>"{item.name}"</strong> sẽ bị <strong>vô hiệu hóa</strong> (xóa mềm).
+              {t("Combo", lang)} <strong>"{item.name}"</strong>{" "}
+              {t("sẽ bị", lang)} <strong>{t("vô hiệu hóa", lang)}</strong>{" "}
+              {t("(xóa mềm).", lang)}
             </p>
             <p style={{ marginBottom: 4 }}>
-              • Combo sẽ không còn hiển thị trong dropdown tạo đơn / thêm lead mới.
+              • {t("Combo sẽ không còn hiển thị trong dropdown tạo đơn / thêm lead mới.", lang)}
             </p>
             <p style={{ marginBottom: 4 }}>
-              • Các đơn hàng <strong>đã tạo trước đó</strong> với combo này vẫn giữ nguyên tên combo và không bị ảnh hưởng.
+              • {t("Các đơn hàng", lang)} <strong>{t("đã tạo trước đó", lang)}</strong>{" "}
+              {t("với combo này vẫn giữ nguyên tên combo và không bị ảnh hưởng.", lang)}
             </p>
             <p style={{ marginBottom: 0, color: "#8c8c8c", fontSize: 12 }}>
-              Số đơn đang tham chiếu combo này sẽ được thống kê sau khi xóa.
+              {t("Số đơn đang tham chiếu combo này sẽ được thống kê sau khi xóa.", lang)}
             </p>
           </div>
         ),
-        okText: "Xóa combo",
-        cancelText: "Hủy",
+        okText: t("Xóa combo", lang),
+        cancelText: t("Hủy", lang),
         okButtonProps: { danger: true },
         onOk: () =>
           new Promise<void>((resolve, reject) => {
@@ -219,7 +225,7 @@ export default function ComboPage() {
           }),
       });
     },
-    [deleteMutation, refetch, modal]
+    [deleteMutation, refetch, modal, lang]
   );
 
   const handleToggleActive = useCallback(
@@ -266,15 +272,15 @@ export default function ComboPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Combo"
-        subtitle="Quản lý combo theo sản phẩm"
+        title={t("Combo", lang)}
+        subtitle={t("Quản lý combo theo sản phẩm", lang)}
         actions={
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleQuickAdd}
           >
-            Thêm combo nhanh
+            {t("Thêm combo nhanh", lang)}
           </Button>
         }
       />
@@ -283,35 +289,35 @@ export default function ComboPage() {
       <CardSection style={{ padding: "16px 24px" }}>
         <StatGrid columns={5} gap={16} minItemWidth={160}>
           <StatCard
-            title="Tổng số combo"
+            title={t("Tổng số combo", lang)}
             value={stats.totalCombos}
             icon={<GiftOutlined />}
             color="blue"
             loading={isLoading}
           />
           <StatCard
-            title="Combo đang hoạt động"
+            title={t("Combo đang hoạt động", lang)}
             value={stats.activeCombos}
             icon={<ThunderboltOutlined />}
             color="green"
             loading={isLoading}
           />
           <StatCard
-            title="Combo bị vô hiệu"
+            title={t("Combo bị vô hiệu", lang)}
             value={stats.inactiveCombos}
             icon={<GiftOutlined />}
             color="orange"
             loading={isLoading}
           />
           <StatCard
-            title="Tổng quà tặng"
+            title={t("Tổng quà tặng", lang)}
             value={stats.totalGiftQuantity}
             icon={<DollarOutlined />}
             color="purple"
             loading={isLoading}
           />
           <StatCard
-            title="Sản phẩm có combo"
+            title={t("Sản phẩm có combo", lang)}
             value={`${stats.productsWithCombos}/${products.length}`}
             icon={<AppstoreOutlined />}
             color="default"
@@ -325,7 +331,7 @@ export default function ComboPage() {
         <div className={styles.filterSection}>
           <Space size={12} className={styles.filterLeft}>
             <Select
-              placeholder="Lọc theo danh mục"
+              placeholder={t("Lọc theo danh mục", lang)}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -335,7 +341,7 @@ export default function ComboPage() {
               options={categorySelectOptions}
             />
             <Input.Search
-              placeholder="Tìm kiếm sản phẩm..."
+              placeholder={t("Tìm kiếm sản phẩm...", lang)}
               style={{ width: 280 }}
               value={filterKeyword}
               onChange={(e) => setFilterKeyword(e.target.value || undefined)}
@@ -344,7 +350,7 @@ export default function ComboPage() {
             />
           </Space>
           <Text type="secondary" className={styles.filterRight}>
-            Hiển thị {stats.totalCombos} combo
+            {t("Hiển thị", lang)} {stats.totalCombos} {t("combo", lang)}
           </Text>
         </div>
       </CardSection>

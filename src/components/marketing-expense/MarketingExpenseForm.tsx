@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ==================================================
  * MARKETING EXPENSE FORM COMPONENT
@@ -37,6 +39,9 @@ import {
 
 import { useFacebookPages, useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
 
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 import BudgetAllocationTable from "./BudgetAllocationTable";
 import MarketingExpenseSummaryCard from "./MarketingExpenseSummaryCard";
 
@@ -66,6 +71,7 @@ function MarketingExpenseFormInner({
   onSubmit,
   readOnly = false,
 }: MarketingExpenseFormProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { pages, loading: pagesLoading } = useFacebookPages();
   const { employees, loading: employeesLoading } = useMarketingEmployees();
 
@@ -115,10 +121,10 @@ function MarketingExpenseFormInner({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <CardSection title="Thông tin báo cáo">
+      <CardSection title={t("Thông tin báo cáo", lang)}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <FormField
-            label="Ngày báo cáo"
+            label={t("Ngày báo cáo", lang)}
             required
             error={errors.reportDate?.message}
           >
@@ -129,7 +135,7 @@ function MarketingExpenseFormInner({
                 <DatePicker
                   style={{ width: "100%" }}
                   format="DD/MM/YYYY"
-                  placeholder="Chọn ngày"
+                  placeholder={t("Chọn ngày", lang)}
                   status={errors.reportDate ? "error" : undefined}
                   disabled={readOnly}
                   onChange={(date) =>
@@ -142,7 +148,7 @@ function MarketingExpenseFormInner({
           </FormField>
 
           <FormField
-            label="Nhân viên Marketing"
+            label={t("Nhân viên Marketing", lang)}
             required
             error={errors.marketingEmployeeId?.message}
           >
@@ -152,7 +158,7 @@ function MarketingExpenseFormInner({
               render={({ field }) => (
                 <AsyncSelect
                   options={employeeOptions}
-                  placeholder="Chọn nhân viên marketing"
+                  placeholder={t("Chọn nhân viên marketing", lang)}
                   loading={employeesLoading}
                   disabled={readOnly}
                   onChange={(val) => field.onChange(val ?? "")}
@@ -163,7 +169,7 @@ function MarketingExpenseFormInner({
           </FormField>
 
           <FormField
-            label="Facebook Page"
+            label={t("Facebook Page", lang)}
             error={errors.facebookPageId?.message}
           >
             <Controller
@@ -172,7 +178,7 @@ function MarketingExpenseFormInner({
               render={({ field }) => (
                 <AsyncSelect
                   options={pageOptions}
-                  placeholder="Chọn Facebook Page (để trống = toàn team)"
+                  placeholder={t("Chọn Facebook Page (để trống = toàn team)", lang)}
                   loading={pagesLoading}
                   disabled={readOnly}
                   onChange={(val) => field.onChange(val ?? null)}
@@ -185,7 +191,7 @@ function MarketingExpenseFormInner({
         </div>
       </CardSection>
 
-      <CardSection title="Phân bổ ngân sách">
+      <CardSection title={t("Phân bổ ngân sách", lang)}>
         <BudgetAllocationTable watch={watch} setValue={setValue} readOnly={readOnly} />
       </CardSection>
 
@@ -197,7 +203,7 @@ function MarketingExpenseFormInner({
         closedLeads={closedLeads}
       />
 
-      <CardSection title="Thông tin bổ sung">
+      <CardSection title={t("Thông tin bổ sung", lang)}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div
             style={{
@@ -206,7 +212,7 @@ function MarketingExpenseFormInner({
               gap: 16,
             }}
           >
-            <FormField label="Tổng doanh thu" error={errors.totalRevenue?.message}>
+            <FormField label={t("Tổng doanh thu", lang)} error={errors.totalRevenue?.message}>
               <Controller
                 name="totalRevenue"
                 control={control}
@@ -223,7 +229,7 @@ function MarketingExpenseFormInner({
               />
             </FormField>
 
-            <FormField label="Tổng leads" error={errors.totalLeads?.message}>
+            <FormField label={t("Tổng leads", lang)} error={errors.totalLeads?.message}>
               <Controller
                 name="totalLeads"
                 control={control}
@@ -240,7 +246,7 @@ function MarketingExpenseFormInner({
               />
             </FormField>
 
-            <FormField label="Leads đã chốt" error={errors.closedLeads?.message}>
+            <FormField label={t("Leads đã chốt", lang)} error={errors.closedLeads?.message}>
               <Controller
                 name="closedLeads"
                 control={control}
@@ -258,7 +264,7 @@ function MarketingExpenseFormInner({
             </FormField>
           </div>
 
-          <FormField label="Ghi chú" error={errors.note?.message}>
+          <FormField label={t("Ghi chú", lang)} error={errors.note?.message}>
             <Controller
               name="note"
               control={control}
@@ -266,7 +272,7 @@ function MarketingExpenseFormInner({
                 <TextArea
                   {...field}
                   value={field.value ?? ""}
-                  placeholder="Nhập ghi chú (không bắt buộc)"
+                  placeholder={t("Nhập ghi chú (không bắt buộc)", lang)}
                   rows={3}
                   disabled={readOnly}
                 />

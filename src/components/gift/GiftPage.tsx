@@ -19,11 +19,14 @@ import {
 import GiftForm from "./GiftForm";
 import GiftInventoryDrawer from "./GiftInventoryDrawer";
 import GiftTable from "./GiftTable";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./gifts.module.css";
 
 type InventoryDrawerMode = "IMPORT" | "ADJUSTMENT" | "HISTORY" | null;
 
 export default function GiftPage() {
+  const lang = useLanguageStore((s) => s.language);
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GiftListItem | null>(null);
@@ -139,11 +142,11 @@ export default function GiftPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Quản lý quà tặng"
-        subtitle="Theo dõi tồn kho quà tặng, tách riêng khỏi Product và Order"
+        title={t("Quản lý quà tặng", lang)}
+        subtitle={t("Theo dõi tồn kho quà tặng, tách riêng khỏi Product và Order", lang)}
         actions={
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
-            Thêm quà tặng
+            {t("Thêm quà tặng", lang)}
           </Button>
         }
       />
@@ -152,28 +155,28 @@ export default function GiftPage() {
       <CardSection style={{ padding: "16px 24px" }}>
         <StatGrid columns={4} gap={16} minItemWidth={160}>
           <StatCard
-            title="Tổng quà tặng"
+            title={t("Tổng quà tặng", lang)}
             value={stats.totalGifts}
             icon={<GiftOutlined />}
             color="blue"
             loading={isLoading}
           />
           <StatCard
-            title="Đang hoạt động"
+            title={t("Đang hoạt động", lang)}
             value={stats.activeGifts}
             icon={<AppstoreOutlined />}
             color="green"
             loading={isLoading}
           />
           <StatCard
-            title="Đã vô hiệu"
+            title={t("Đã vô hiệu", lang)}
             value={stats.inactiveGifts}
             icon={<InboxOutlined />}
             color="orange"
             loading={isLoading}
           />
           <StatCard
-            title="Tổng tồn kho"
+            title={t("Tổng tồn kho", lang)}
             value={stats.totalInventory}
             icon={<SwapOutlined />}
             color="purple"
@@ -188,7 +191,7 @@ export default function GiftPage() {
             <SearchInput
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm kiếm quà tặng..."
+              placeholder={t("Tìm kiếm quà tặng...", lang)}
             />
           </div>
         </div>

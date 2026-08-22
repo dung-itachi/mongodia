@@ -25,9 +25,12 @@ import type {
 } from "@/types/notification";
 import NotificationFormDrawer from "./NotificationFormDrawer";
 import NotificationTable from "./NotificationTable";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./notificationManagement.module.css";
 
 export default function NotificationManagementPage() {
+  const lang = useLanguageStore((s) => s.language);
   const message = useMessage();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string | undefined>();
@@ -123,14 +126,14 @@ export default function NotificationManagementPage() {
     (item: NotificationAdminItem) => {
       deleteMutation.mutate(item.id, {
         onSuccess: () => {
-          void message.success("Đã xóa thông báo thành công");
+          void message.success(t("Đã xóa thông báo thành công", lang));
         },
         onError: (err: Error) => {
-          void message.error(err.message ?? "Xóa thất bại");
+          void message.error(err.message ?? t("Xóa thất bại", lang));
         },
       });
     },
-    [deleteMutation, message]
+    [deleteMutation, message, lang]
   );
 
   const handleTogglePin = useCallback(
@@ -146,9 +149,9 @@ export default function NotificationManagementPage() {
       <div className={styles.headerSection}>
         <div className={styles.headerTop}>
           <div className={styles.headerLeft}>
-            <h1 className={styles.pageTitle}>Quản lý thông báo</h1>
+            <h1 className={styles.pageTitle}>{t("Quản lý thông báo", lang)}</h1>
             <p className={styles.pageSubtitle}>
-              Tạo, chỉnh sửa, ghim và xóa thông báo hệ thống
+              {t("Tạo, chỉnh sửa, ghim và xóa thông báo hệ thống", lang)}
             </p>
           </div>
           <div className={styles.headerActions}>
@@ -158,7 +161,7 @@ export default function NotificationManagementPage() {
               onClick={handleOpenCreate}
               size="large"
             >
-              Tạo thông báo
+              {t("Tạo thông báo", lang)}
             </Button>
           </div>
         </div>
@@ -171,7 +174,7 @@ export default function NotificationManagementPage() {
             </div>
             <div className={styles.statContent}>
               <div className={styles.statValue}>{stats.total}</div>
-              <div className={styles.statLabel}>Tổng thông báo</div>
+              <div className={styles.statLabel}>{t("Tổng thông báo", lang)}</div>
             </div>
           </div>
 
@@ -181,7 +184,7 @@ export default function NotificationManagementPage() {
             </div>
             <div className={styles.statContent}>
               <div className={styles.statValue}>{stats.today}</div>
-              <div className={styles.statLabel}>Hôm nay</div>
+              <div className={styles.statLabel}>{t("Hôm nay", lang)}</div>
             </div>
           </div>
 
@@ -191,7 +194,7 @@ export default function NotificationManagementPage() {
             </div>
             <div className={styles.statContent}>
               <div className={styles.statValue}>{stats.pinned}</div>
-              <div className={styles.statLabel}>Đã ghim</div>
+              <div className={styles.statLabel}>{t("Đã ghim", lang)}</div>
             </div>
           </div>
 
@@ -201,7 +204,7 @@ export default function NotificationManagementPage() {
             </div>
             <div className={styles.statContent}>
               <div className={styles.statValue}>{stats.active}</div>
-              <div className={styles.statLabel}>Đang hoạt động</div>
+              <div className={styles.statLabel}>{t("Đang hoạt động", lang)}</div>
             </div>
           </div>
         </div>

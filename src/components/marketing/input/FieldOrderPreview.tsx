@@ -18,6 +18,9 @@
  * dưới đây ra 1 file constants/columnLayouts.ts.
  */
 
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 import styles from "./FieldOrderPreview.module.css";
 
 export type InputType = "comment" | "ladi";
@@ -62,6 +65,7 @@ export interface FieldOrderPreviewProps {
 }
 
 export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps) {
+  const lang = useLanguageStore((s) => s.language);
   const fields = inputType === "comment" ? COMMENT_FIELDS : LADI_FIELDS;
   const example = EXAMPLE_BY_MODE[inputType];
   const modeLabel = MODE_LABEL[inputType];
@@ -69,7 +73,7 @@ export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps)
   return (
     <div>
       <div className={styles.previewTitle}>
-        Thứ tự cột khi phân loại
+        {t("Thứ tự cột khi phân loại", lang)}
         <span className={styles.previewMode}>{modeLabel}</span>
       </div>
 
@@ -81,7 +85,7 @@ export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps)
               className={`${styles.fieldChip} ${
                 f.required ? styles.required : styles.optional
               }`}
-              title={f.required ? "Bắt buộc" : "Tùy chọn"}
+              title={f.required ? t("Bắt buộc", lang) : t("Tùy chọn", lang)}
             >
               {idx + 1}. {f.label}
             </span>
@@ -94,17 +98,17 @@ export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps)
       <div className={styles.legend}>
         <span className={styles.legendItem}>
           <span className={`${styles.legendDot} ${styles.required}`} />
-          Bắt buộc
+          {t("Bắt buộc", lang)}
         </span>
         <span className={styles.legendItem}>
           <span className={`${styles.legendDot} ${styles.optional}`} />
-          Tùy chọn
+          {t("Tùy chọn", lang)}
         </span>
       </div>
 
       {/* Example — hiển thị dạng TAB-separated (đúng như user paste) */}
       <div className={styles.exampleBlock}>
-        <div className={styles.exampleLabel}>Ví dụ</div>
+        <div className={styles.exampleLabel}>{t("Ví dụ", lang)}</div>
 
         {/* Raw row — copy/paste được luôn */}
         <div className={styles.exampleRaw}>{example}</div>

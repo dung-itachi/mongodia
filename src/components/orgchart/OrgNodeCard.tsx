@@ -19,6 +19,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { OrgNode } from "./types";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 type OrgNodeCardProps = {
   node: OrgNode;
@@ -123,6 +125,7 @@ function OrgNodeCardImpl({
   onAddSibling,
   onAddChild,
 }: OrgNodeCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const role = node.role.toUpperCase();
   const totalReports = node.meta.totalReports;
   const directReports = node.meta.directReports;
@@ -191,7 +194,7 @@ function OrgNodeCardImpl({
             ref={siblingBtnRef}
             type="button"
             className="org-node-add org-node-add--sibling"
-            aria-label="Thêm tài khoản cùng cấp"
+            aria-label={t("Thêm tài khoản cùng cấp", lang)}
             onMouseEnter={showSiblingTip}
             onMouseLeave={clearTip}
             onFocus={showSiblingTip}
@@ -212,7 +215,7 @@ function OrgNodeCardImpl({
             ref={childBtnRef}
             type="button"
             className="org-node-add org-node-add--child"
-            aria-label="Thêm tài khoản cấp dưới"
+            aria-label={t("Thêm tài khoản cấp dưới", lang)}
             onMouseEnter={showChildTip}
             onMouseLeave={clearTip}
             onFocus={showChildTip}
@@ -249,16 +252,16 @@ function OrgNodeCardImpl({
       {showMeta ? (
         <div className="org-node-meta">
           <span className="org-node-meta-tag">
-            {directReports} trực tiếp
+            {directReports} {t("trực tiếp", lang)}
           </span>
-          <span className="org-node-meta-tag">{totalReports} tổng</span>
+          <span className="org-node-meta-tag">{totalReports} {t("tổng", lang)}</span>
         </div>
       ) : null}
       {toggleVisible ? (
         <button
           type="button"
           className="org-node-toggle"
-          aria-label={collapsed ? "Mở rộng" : "Thu gọn"}
+          aria-label={collapsed ? t("Mở rộng", lang) : t("Thu gọn", lang)}
           onClick={(e) => {
             e.stopPropagation();
             onToggle(node.id);
@@ -276,10 +279,10 @@ function OrgNodeCardImpl({
       {tooltipArmed && hoveredSide === "sibling" ? (
         <AddTooltip
           side="sibling"
-          title="Thêm cùng cấp"
+          title={t("Thêm cùng cấp", lang)}
           description={
             <>
-              Tạo tài khoản ngang hàng với <b>{node.fullName}</b>.
+              {t("Tạo tài khoản ngang hàng với", lang)} <b>{node.fullName}</b>.
             </>
           }
           target={siblingBtnRef.current}
@@ -289,10 +292,10 @@ function OrgNodeCardImpl({
       {tooltipArmed && hoveredSide === "child" ? (
         <AddTooltip
           side="child"
-          title="Thêm cấp dưới"
+          title={t("Thêm cấp dưới", lang)}
           description={
             <>
-              Tạo tài khoản báo cáo cho <b>{node.fullName}</b>.
+              {t("Tạo tài khoản báo cáo cho", lang)} <b>{node.fullName}</b>.
             </>
           }
           target={childBtnRef.current}

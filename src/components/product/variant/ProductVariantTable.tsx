@@ -138,7 +138,7 @@ export default function ProductVariantTable({
     [onToggleActive]
   );
 
-  const columns: Column[] = [
+  const columns: Column[] = useMemo(() => [
     {
       key: "product",
       title: t("Sản phẩm", lang),
@@ -172,7 +172,7 @@ export default function ProductVariantTable({
     },
     {
       key: "sku",
-      title: "SKU",
+      title: t("SKU", lang),
       dataIndex: "sku",
       width: 130,
       render: (value: unknown) => (
@@ -183,7 +183,7 @@ export default function ProductVariantTable({
     },
     {
       key: "barcode",
-      title: "Barcode",
+      title: t("Barcode", lang),
       dataIndex: "barcode",
       width: 120,
       render: (value: unknown) => (
@@ -229,10 +229,12 @@ export default function ProductVariantTable({
         const item = record as unknown as ProductVariantListItem;
         return (
           <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <EditOutlined
-              style={{ color: "#1890ff", cursor: "pointer", fontSize: 16 }}
-              onClick={() => onEdit(item)}
-            />
+            <Tooltip title={t("Sửa", lang)}>
+              <EditOutlined
+                style={{ color: "#1890ff", cursor: "pointer", fontSize: 16 }}
+                onClick={() => onEdit(item)}
+              />
+            </Tooltip>
             <Popconfirm
               title={t("Xóa biến thể?", lang)}
               description={t("Biến thể sẽ bị xóa.", lang)}
@@ -241,15 +243,17 @@ export default function ProductVariantTable({
               cancelText={t("Hủy", lang)}
               okButtonProps={{ danger: true }}
             >
-              <DeleteOutlined
-                style={{ color: "#ff4d4f", cursor: "pointer", fontSize: 16 }}
-              />
+              <Tooltip title={t("Xóa", lang)}>
+                <DeleteOutlined
+                  style={{ color: "#ff4d4f", cursor: "pointer", fontSize: 16 }}
+                />
+              </Tooltip>
             </Popconfirm>
           </div>
         );
       },
     },
-  ];
+  ], [formatVariantDisplay, handleToggleActive, onEdit, onDelete, lang]);
 
   return (
     <DataTable

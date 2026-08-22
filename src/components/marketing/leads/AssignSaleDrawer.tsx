@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * AssignSaleDrawer Component (Sprint 5.5.2 — Lead Assignment)
  *
@@ -12,6 +14,8 @@ import AsyncSelect from "@/components/common/inputs/AsyncSelect";
 import type { SelectOption as AsyncSelectOption } from "@/components/common/inputs/AsyncSelect";
 import type { MarketingLead } from "@/types/marketing-lead";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface SaleEmployee {
   _id: string;
@@ -38,6 +42,7 @@ export default function AssignSaleDrawer({
   const [saleOptions, setSaleOptions] = useState<AsyncSelectOption[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const lang = useLanguageStore((s) => s.language);
   const message = useMessage();
 
   // Reset when drawer closes
@@ -65,7 +70,7 @@ export default function AssignSaleDrawer({
       const json = await res.json();
 
       if (!json.success) {
-        message.error(json.message ?? "Không thể tải danh sách Sale");
+        message.error(json.message ?? t("Không thể tải danh sách Sale", lang));
         return;
       }
 
@@ -77,11 +82,11 @@ export default function AssignSaleDrawer({
         }))
       );
     } catch {
-      message.error("Lỗi kết nối khi tải danh sách Sale");
+      message.error(t("Lỗi kết nối khi tải danh sách Sale", lang));
     } finally {
       setSearchLoading(false);
     }
-  }, []);
+  }, [message, lang]);
 
   // Initial load when drawer opens
   useEffect(() => {
@@ -92,7 +97,7 @@ export default function AssignSaleDrawer({
 
   const handleConfirm = async () => {
     if (!selectedSaleId) {
-      void message.error("Vui lòng chọn nhân viên Sale");
+      void message.error(t("Vui lòng chọn nhân viên Sale", lang));
       return;
     }
 
@@ -107,19 +112,19 @@ export default function AssignSaleDrawer({
   return (
     <DrawerForm
       open={open}
-      title={`Phân công Sale — ${lead?.leadCode ?? ""}`}
+      title={`${t("Phân công Sale", lang)} — ${lead?.leadCode ?? ""}`}
       width={480}
       loading={confirming}
       onClose={onClose}
       onSubmit={handleConfirm}
-      submitText="Phân công"
-      cancelText="Hủy"
+      submitText={t("Phân công", lang)}
+      cancelText={t("Hủy", lang)}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {lead && (
           <div style={{ padding: "12px 16px", background: "#fafafa", borderRadius: 8 }}>
             <div style={{ fontSize: 14, color: "#8c8c8c", marginBottom: 4 }}>
-              Khách hàng
+              {t("Khách hàng", lang)}
             </div>
             <div style={{ fontWeight: 600, fontSize: 16 }}>{lead.customerName}</div>
             <div style={{ fontSize: 13, color: "#8c8c8c" }}>{lead.phone ?? lead.email ?? "—"}</div>
@@ -135,13 +140,13 @@ export default function AssignSaleDrawer({
               fontSize: 14,
             }}
           >
-            Nhân viên Sale <span style={{ color: "#ff4d4f" }}>*</span>
+            {t("Nhân viên Sale", lang)} <span style={{ color: "#ff4d4f" }}>*</span>
           </label>
           {searchLoading && saleOptions.length === 0 ? (
             <div style={{ textAlign: "center", padding: 24 }}>
               <Spin size="small" />
               <div style={{ marginTop: 8, fontSize: 13, color: "#8c8c8c" }}>
-                Đang tải danh sách Sale...
+                {t("Đang tải danh sách Sale...", lang)}
               </div>
             </div>
           ) : (
@@ -149,7 +154,7 @@ export default function AssignSaleDrawer({
               value={selectedSaleId}
               onChange={(val) => setSelectedSaleId(val as string | undefined)}
               options={saleOptions}
-              placeholder="Tìm và chọn nhân viên Sale..."
+              placeholder={t("Tìm và chọn nhân viên Sale...", lang)}
               searchable
               loading={searchLoading}
               minSearchChars={0}

@@ -31,12 +31,8 @@ import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 import styles from "./categories.module.css";
 
-function getTranslated(key: string): string {
-  const language = useLanguageStore.getState().language;
-  return t(key, language);
-}
-
 export default function CategoryPage() {
+  const lang = useLanguageStore((s) => s.language);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CategoryListItem | null>(null);
 
@@ -136,11 +132,11 @@ export default function CategoryPage() {
   return (
     <PageContainer>
       <PageHeader
-        title={getTranslated("Danh mục sản phẩm")}
-        subtitle={getTranslated("Quản lý danh mục sản phẩm")}
+        title={t("Danh mục sản phẩm", lang)}
+        subtitle={t("Quản lý danh mục sản phẩm", lang)}
         actions={
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
-            {getTranslated("Thêm danh mục")}
+            {t("Thêm danh mục", lang)}
           </Button>
         }
       />
@@ -149,21 +145,21 @@ export default function CategoryPage() {
       <CardSection style={{ padding: "16px 24px" }}>
         <StatGrid columns={3} gap={16} minItemWidth={160}>
           <StatCard
-            title="Tổng danh mục"
+            title={t("Tổng danh mục", lang)}
             value={stats.totalCategories}
             icon={<AppstoreOutlined />}
             color="blue"
             loading={isLoading}
           />
           <StatCard
-            title="Đang hoạt động"
+            title={t("Đang hoạt động", lang)}
             value={stats.activeCategories}
             icon={<CheckCircleOutlined />}
             color="green"
             loading={isLoading}
           />
           <StatCard
-            title="Đã vô hiệu"
+            title={t("Đã vô hiệu", lang)}
             value={stats.inactiveCategories}
             icon={<StopOutlined />}
             color="orange"

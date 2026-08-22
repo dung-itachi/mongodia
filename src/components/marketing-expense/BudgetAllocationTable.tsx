@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ==================================================
  * BUDGET ALLOCATION TABLE COMPONENT
@@ -30,6 +32,8 @@ import {
   calculateRemainingBudget,
 } from "@/utils/MarketingExpenseCalculator";
 import { MARKETING_BUDGET_SLOTS, type BudgetSlotId } from "@/configs/marketing-budget-slots.config";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import styles from "@/app/(protected)/marketing/expense/marketing-expense.module.css";
 
@@ -97,6 +101,7 @@ function BudgetAllocationTableInner({
   setValue,
   readOnly = false,
 }: BudgetAllocationTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const requestedBudget = watch("requestedBudget");
   const spentBudget = watch("spentBudget");
 
@@ -140,11 +145,11 @@ function BudgetAllocationTableInner({
       <table className={styles.budgetTable}>
         <thead>
           <tr>
-            <th>Ca</th>
-            <th>Ngân sách yêu cầu</th>
-            <th>Ngân sách duyệt</th>
-            <th>Đã chi</th>
-            <th>Còn lại</th>
+            <th>{t("Ca", lang)}</th>
+            <th>{t("Ngân sách yêu cầu", lang)}</th>
+            <th>{t("Ngân sách duyệt", lang)}</th>
+            <th>{t("Đã chi", lang)}</th>
+            <th>{t("Còn lại", lang)}</th>
           </tr>
         </thead>
         <tbody>
@@ -202,7 +207,7 @@ function BudgetAllocationTableInner({
         <tfoot>
           <tr>
             <td>
-              <strong>Tổng cộng</strong>
+              <strong>{t("Tổng cộng", lang)}</strong>
             </td>
             <td>
               <strong>{formatVND(requestedTotal)}</strong>

@@ -10,9 +10,8 @@
  * Timeline display for customer activities.
  */
 
-import { useState } from "react";
-import { Timeline, Card, Tag, Button, Empty, Spin, Dropdown } from "antd";
-import type { MenuProps } from "antd";
+import { useMemo, useState } from "react";
+import { Timeline, Card, Tag, Button, Empty, Dropdown } from "antd";
 import {
   PhoneOutlined,
   UserOutlined,
@@ -32,6 +31,8 @@ import { useCustomerActivities, useDeleteCustomerActivity } from "@/hooks/useCus
 import { useQueryClient } from "@tanstack/react-query";
 import type { ActivityType, ActivityResult } from "@/types/customer-activity";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface CustomerTimelineProps {
   customerId: string;
@@ -64,24 +65,8 @@ const RESULT_COLORS: Record<ActivityResult, string> = {
   PENDING: "default",
 };
 
-const RESULT_LABELS: Record<ActivityResult, string> = {
-  SUCCESS: "Thành công",
-  FAILED: "Thất bại",
-  NO_ANSWER: "Không nghe máy",
-  PENDING: "Chờ xử lý",
-};
-
-const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
-  CALL: "Gọi điện",
-  MEETING: "Gặp trực tiếp",
-  NOTE: "Ghi chú",
-  FOLLOW_UP: "Theo dõi",
-  EMAIL: "Email",
-  SMS: "SMS",
-  OTHER: "Khác",
-};
-
 export default function CustomerTimeline({ customerId }: CustomerTimelineProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const message = useMessage();
@@ -110,6 +95,29 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
+  const RESULT_LABELS = useMemo<Record<ActivityResult, string>>(
+    () => ({
+      SUCCESS: t("Thành công", lang),
+      FAILED: t("Thất bại", lang),
+      NO_ANSWER: t("Không nghe máy", lang),
+      PENDING: t("Chờ xử lý", lang),
+    }),
+    [lang]
+  );
+
+  const ACTIVITY_TYPE_LABELS = useMemo<Record<ActivityType, string>>(
+    () => ({
+      CALL: t("Gọi điện", lang),
+      MEETING: t("Gặp trực tiếp", lang),
+      NOTE: t("Ghi chú", lang),
+      FOLLOW_UP: t("Theo dõi", lang),
+      EMAIL: t("Email", lang),
+      SMS: t("SMS", lang),
+      OTHER: t("Khác", lang),
+    }),
+    [lang]
+  );
+
   const handleEdit = (activity: {
     _id: string;
     activityType: ActivityType;
@@ -134,10 +142,10 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
   const handleDelete = async (activityId: string) => {
     try {
       await deleteMutation.mutateAsync(activityId);
-      message.success("Xóa hoạt động thành công");
+      message.success(t("Xóa hoạt động thành công", lang));
       queryClient.invalidateQueries({ queryKey: ["customer-activities", customerId] });
-    } catch (error) {
-      message.error("Không thể xóa hoạt động");
+    } catch {
+      message.error(t("Không thể xóa hoạt động", lang));
     }
   };
 
@@ -169,7 +177,7 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
     <div>
       <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ color: "#8c8c8c" }}>
-          {total} hoạt động
+          {total} {t("hoạt động", lang)}
         </span>
         <PermissionGate permission="customer-activity.create">
           <Button
@@ -177,7 +185,7 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
             icon={<PlusOutlined />}
             onClick={() => setDrawerOpen(true)}
           >
-            Thêm hoạt động
+            {t("Thêm hoạt động", lang)}
           </Button>
         </PermissionGate>
       </div>
@@ -185,11 +193,11 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
       {activities.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Chưa có hoạt động nào"
+          description={t("Chưa có hoạt động nào", lang)}
         >
           <PermissionGate permission="customer-activity.create">
             <Button type="primary" onClick={() => setDrawerOpen(true)}>
-              Thêm hoạt động đầu tiên
+              {t("Thêm hoạt động đầu tiên", lang)}
             </Button>
           </PermissionGate>
         </Empty>
@@ -231,13 +239,13 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
                             {
                               key: "edit",
                               icon: <EditOutlined />,
-                              label: "Chỉnh sửa",
+                              label: t("Chỉnh sửa", lang),
                               onClick: () => handleEdit(activity),
                             },
                             {
                               key: "delete",
                               icon: <DeleteOutlined />,
-                              label: "Xóa",
+                              label: t("Xóa", lang),
                               danger: true,
                               onClick: () => handleDelete(activity._id),
                             },
@@ -263,7 +271,7 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
                     {activity.nextFollowUpAt && (
                       <span>
                         <BellOutlined style={{ marginRight: 4 }} />
-                        Theo dõi: {formatDate(activity.nextFollowUpAt)}
+                        {t("Theo dõi", lang)}: {formatDate(activity.nextFollowUpAt)}
                       </span>
                     )}
                   </div>
@@ -275,7 +283,7 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
           {page < totalPages && (
             <div style={{ textAlign: "center", marginTop: 16 }}>
               <Button onClick={() => setPage(page + 1)} loading={isFetching}>
-                Xem thêm
+                {t("Xem thêm", lang)}
               </Button>
             </div>
           )}

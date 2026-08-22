@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Marketing Lead Tracking Table Component (Sprint 8.5)
  *
@@ -12,6 +14,8 @@ import { DataTable, StatusBadge } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import type { MarketingLeadTracking } from "@/hooks/useMarketingLeadTracking";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./marketing-tracking.module.css";
 
 export interface MarketingLeadTrackingTableProps {
@@ -25,17 +29,18 @@ function MarketingLeadTrackingTableInner({
   onView,
   loading,
 }: MarketingLeadTrackingTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const columns: Column[] = useMemo(
     () => [
       {
         key: "leadCode",
-        title: "Mã",
+        title: t("Mã", lang),
         dataIndex: "leadCode",
         width: 130,
       },
       {
         key: "customerName",
-        title: "Tên khách hàng",
+        title: t("Tên khách hàng", lang),
         dataIndex: "customerName",
         width: 180,
         render: (value: unknown) => (
@@ -44,7 +49,7 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "phone",
-        title: "SĐT",
+        title: t("SĐT", lang),
         dataIndex: "phone",
         width: 120,
         render: (value: unknown) => (
@@ -53,7 +58,7 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "saleEmployee",
-        title: "Sale phụ trách",
+        title: t("Sale phụ trách", lang),
         width: 140,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLeadTracking;
@@ -62,7 +67,7 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "sourceType",
-        title: "Nguồn",
+        title: t("Nguồn", lang),
         width: 130,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLeadTracking;
@@ -71,7 +76,7 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "product",
-        title: "Sản phẩm",
+        title: t("Sản phẩm", lang),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLeadTracking;
@@ -80,7 +85,7 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "price",
-        title: "Giá",
+        title: t("Giá", lang),
         width: 120,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLeadTracking;
@@ -96,7 +101,7 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "status",
-        title: "Trạng thái",
+        title: t("Trạng thái", lang),
         dataIndex: "status",
         width: 140,
         render: (value: unknown) => (
@@ -105,14 +110,14 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "isConverted",
-        title: "Đơn",
+        title: t("Đơn", lang),
         width: 100,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLeadTracking;
           if (lead.isConverted) {
             return (
               <span className={styles.convertedBadge}>
-                ✓ Đã tạo
+                ✓ {t("Đã tạo", lang)}
               </span>
             );
           }
@@ -121,7 +126,7 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "createdAt",
-        title: "Ngày tạo",
+        title: t("Ngày tạo", lang),
         dataIndex: "createdAt",
         width: 110,
         render: (value: unknown) =>
@@ -129,7 +134,7 @@ function MarketingLeadTrackingTableInner({
       },
       {
         key: "actions",
-        title: "Thao tác",
+        title: t("Thao tác", lang),
         width: 100,
         align: "center" as const,
         render: (_value: unknown, record: Record<string, unknown>) => {
@@ -141,13 +146,13 @@ function MarketingLeadTrackingTableInner({
               onClick={() => onView?.(lead)}
               disabled={!onView}
             >
-              Chi tiết
+              {t("Chi tiết", lang)}
             </Button>
           );
         },
       },
     ],
-    [onView]
+    [onView, lang]
   );
 
   return (

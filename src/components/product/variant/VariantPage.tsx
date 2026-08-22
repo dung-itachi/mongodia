@@ -26,6 +26,8 @@ import {
   StatGrid,
   StatCard,
 } from "@/components/common";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import {
   useProductsVariantTree,
   useProductVariantList,
@@ -61,6 +63,7 @@ function VariantPageInner() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const productIdFromQuery = searchParams.get("productId");
+  const lang = useLanguageStore((s) => s.language);
 
   // Helper: derive an ASCII code from a Vietnamese value name with a random suffix.
   const makeValueCodeFromName = (name: string): string => {
@@ -275,14 +278,14 @@ function VariantPageInner() {
 
         if (valueCreatedCount > 0) {
           void message.success(
-            `Đã tạo thuộc tính "${created.name}" với ${valueCreatedCount} giá trị`
+            `${t("Đã tạo thuộc tính", lang)} "${created.name}" ${t("với", lang)} ${valueCreatedCount} ${t("giá trị", lang)}`
           );
         } else {
-          void message.success("Đã tạo thuộc tính thành công");
+          void message.success(t("Đã tạo thuộc tính thành công", lang));
         }
       } catch (error) {
         const err = error as Error;
-        void message.error(err.message || "Không thể lưu thuộc tính");
+        void message.error(err.message || t("Không thể lưu thuộc tính", lang));
       }
     },
     [
@@ -294,6 +297,7 @@ function VariantPageInner() {
       selectedProductIdForOptions,
       assignVariantOptionsMutation,
       queryClient,
+      lang,
     ]
   );
 
@@ -301,14 +305,14 @@ function VariantPageInner() {
     (item: VariantOptionItem) => {
       deleteOptionMutation.mutate(item._id, {
         onSuccess: () => {
-          void message.success("Xóa thuộc tính thành công");
+          void message.success(t("Xóa thuộc tính thành công", lang));
         },
         onError: (error: Error) => {
-          void message.error(error.message || "Không thể xóa thuộc tính");
+          void message.error(error.message || t("Không thể xóa thuộc tính", lang));
         },
       });
     },
-    [deleteOptionMutation]
+    [deleteOptionMutation, lang]
   );
 
   const handleToggleOptionActive = useCallback(
@@ -325,12 +329,12 @@ function VariantPageInner() {
         },
         {
           onError: (error: Error) => {
-            void message.error(error.message || "Không thể cập nhật thuộc tính");
+            void message.error(error.message || t("Không thể cập nhật thuộc tính", lang));
           },
         }
       );
     },
-    [updateOptionMutation]
+    [updateOptionMutation, lang]
   );
 
   // When user clicks "Gán thuộc tính" on a product in the tree,
@@ -375,7 +379,7 @@ function VariantPageInner() {
         }
       } catch (error) {
         const err = error as Error;
-        void message.error(err.message || "Không thể lưu giá trị");
+        void message.error(err.message || t("Không thể lưu giá trị", lang));
       }
     },
     [
@@ -383,6 +387,7 @@ function VariantPageInner() {
       createValueMutation,
       updateValueMutation,
       handleCloseValue,
+      lang,
     ]
   );
 
@@ -390,14 +395,14 @@ function VariantPageInner() {
     (item: VariantValueItem) => {
       deleteValueMutation.mutate(item._id, {
         onSuccess: () => {
-          void message.success("Xóa giá trị thành công");
+          void message.success(t("Xóa giá trị thành công", lang));
         },
         onError: (error: Error) => {
-          void message.error(error.message || "Không thể xóa giá trị");
+          void message.error(error.message || t("Không thể xóa giá trị", lang));
         },
       });
     },
-    [deleteValueMutation]
+    [deleteValueMutation, lang]
   );
 
   const handleToggleValueActive = useCallback(
@@ -422,12 +427,12 @@ function VariantPageInner() {
         },
         {
           onError: (error: Error) => {
-            void message.error(error.message || "Không thể cập nhật giá trị");
+            void message.error(error.message || t("Không thể cập nhật giá trị", lang));
           },
         }
       );
     },
-    [updateValueMutation]
+    [updateValueMutation, lang]
   );
 
   // ====== Variant handlers ======
@@ -471,16 +476,16 @@ function VariantPageInner() {
           });
           void refetchVariants();
           handleCloseVariant();
-          void message.success("Cập nhật biến thể thành công");
+          void message.success(t("Cập nhật biến thể thành công", lang));
         } else {
           await createVariantMutation.mutateAsync(input as CreateProductVariantInput);
           void refetchVariants();
           handleCloseVariant();
-          void message.success("Tạo biến thể thành công");
+          void message.success(t("Tạo biến thể thành công", lang));
         }
       } catch (error) {
         const err = error as Error;
-        void message.error(err.message || "Không thể lưu biến thể");
+        void message.error(err.message || t("Không thể lưu biến thể", lang));
       }
     },
     [
@@ -489,6 +494,7 @@ function VariantPageInner() {
       updateVariantMutation,
       handleCloseVariant,
       refetchVariants,
+      lang,
     ]
   );
 
@@ -497,14 +503,14 @@ function VariantPageInner() {
       deleteVariantMutation.mutate(item._id, {
         onSuccess: () => {
           void refetchVariants();
-          void message.success("Xóa biến thể thành công");
+          void message.success(t("Xóa biến thể thành công", lang));
         },
         onError: (error: Error) => {
-          void message.error(error.message || "Không thể xóa biến thể");
+          void message.error(error.message || t("Không thể xóa biến thể", lang));
         },
       });
     },
-    [deleteVariantMutation, refetchVariants]
+    [deleteVariantMutation, refetchVariants, lang]
   );
 
   const handleToggleVariantActive = useCallback(
@@ -597,7 +603,7 @@ function VariantPageInner() {
         return result;
       } catch (error) {
         const err = error as Error;
-        throw new Error(err.message || "Không thể thêm thuộc tính");
+        throw new Error(err.message || t("Không thể thêm thuộc tính", lang));
       }
     },
     [
@@ -605,6 +611,7 @@ function VariantPageInner() {
       selectedProductIdForVariant,
       assignVariantOptionsMutation,
       refetchProductVariantOptions,
+      lang,
     ]
   );
 
@@ -633,17 +640,17 @@ function VariantPageInner() {
         return result;
       } catch (error) {
         const err = error as Error;
-        throw new Error(err.message || "Không thể thêm giá trị");
+        throw new Error(err.message || t("Không thể thêm giá trị", lang));
       }
     },
-    [createValueMutation, refetchProductVariantOptions]
+    [createValueMutation, refetchProductVariantOptions, lang]
   );
 
   const tabItems = useMemo(
     () => [
       {
         key: "attributes",
-        label: "Thuộc tính & Giá trị",
+        label: t("Thuộc tính & Giá trị", lang),
         children: (
           <ProductVariantsTree
             products={treeProducts}
@@ -661,7 +668,7 @@ function VariantPageInner() {
       },
       {
         key: "variants",
-        label: "Biến thể",
+        label: t("Biến thể", lang),
         children: (
           <ProductVariantsList
             products={products}
@@ -701,41 +708,42 @@ function VariantPageInner() {
       handleAddVariant,
       handleRefresh,
       handleProductSelect,
+      lang,
     ]
   );
 
   return (
     <PageContainer>
       <PageHeader
-        title="Biến thể"
-        subtitle="Quản lý thuộc tính, giá trị và biến thể sản phẩm"
+        title={t("Biến thể", lang)}
+        subtitle={t("Quản lý thuộc tính, giá trị và biến thể sản phẩm", lang)}
       />
 
       <div style={{ padding: "16px 24px" }}>
         <StatGrid columns={4} gap={16} minItemWidth={160}>
           <StatCard
-            title="Tổng sản phẩm"
+            title={t("Tổng sản phẩm", lang)}
             value={stats.totalProducts}
             icon={<AppstoreOutlined />}
             color="blue"
             loading={productsLoading}
           />
           <StatCard
-            title="Biến thể"
+            title={t("Biến thể", lang)}
             value={stats.totalVariants}
             icon={<UnorderedListOutlined />}
             color="green"
             loading={variantsLoading}
           />
           <StatCard
-            title="Thuộc tính"
+            title={t("Thuộc tính", lang)}
             value={stats.totalOptions}
             icon={<ControlOutlined />}
             color="purple"
             loading={treeLoading}
           />
           <StatCard
-            title="Giá trị"
+            title={t("Giá trị", lang)}
             value={stats.totalValues}
             icon={<ControlOutlined />}
             color="orange"

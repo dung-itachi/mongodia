@@ -64,6 +64,8 @@ import { useAuthStore } from "@/store/auth.store";
 import type { OrgNode, OrgFlatEntry } from "./types";
 import "./chart.css";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 110;
@@ -91,6 +93,7 @@ export default function OrganizationChart({
   // Auth (Phase 9.5): only ADMINs (or wildcard-permission users) get the
   // "+ sibling" / "↓ child" buttons on each card.
   // ---------------------------------------------------------------------------
+  const lang = useLanguageStore((s) => s.language);
   const user = useAuthStore((state) => state.user);
   const message = useMessage();
   const canCreate =
@@ -197,8 +200,8 @@ export default function OrganizationChart({
 
   const onCreateSuccess = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["employees", "org-chart"] });
-    void message.success("Đã thêm tài khoản, đang tải lại sơ đồ…");
-  }, [queryClient]);
+    void message.success(t("Đã thêm tài khoản, đang tải lại sơ đồ…", lang));
+  }, [queryClient, lang]);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -272,9 +275,9 @@ export default function OrganizationChart({
     const q = search.trim().toLowerCase();
     if (!q) return;
     if (searchResult.matches.length === 0) {
-      message.warning("Không tìm thấy nhân viên phù hợp");
+      message.warning(t("Không tìm thấy nhân viên phù hợp", lang));
     }
-  }, [search, searchResult.matches]);
+  }, [search, searchResult.matches, lang, message]);
 
   // ---------------------------------------------------------------------------
   // Highlight sets (for outline + connector color). Pure derived data.
@@ -558,7 +561,7 @@ export default function OrganizationChart({
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm theo tên hoặc mã NV"
+          placeholder={t("Tìm theo tên hoặc mã NV", lang)}
           className="org-chart-search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
@@ -569,40 +572,40 @@ export default function OrganizationChart({
           onClick={() => setSearch(searchInput.trim())}
           loading={loading}
         >
-          Tìm
+          {t("Tìm", lang)}
         </Button>
 
         <div className="org-chart-spacer" />
 
         <Space>
-          <Tooltip title="Phóng to">
+          <Tooltip title={t("Phóng to", lang)}>
             <Button
               icon={<ZoomInOutlined />}
               onClick={() => zoomBy(ZOOM_STEP)}
             />
           </Tooltip>
-          <Tooltip title="Thu nhỏ">
+          <Tooltip title={t("Thu nhỏ", lang)}>
             <Button
               icon={<ZoomOutOutlined />}
               onClick={() => zoomBy(1 / ZOOM_STEP)}
             />
           </Tooltip>
-          <Tooltip title="Vừa màn hình">
+          <Tooltip title={t("Vừa màn hình", lang)}>
             <Button icon={<FullscreenOutlined />} onClick={fit}>
               Fit
             </Button>
           </Tooltip>
-          <Tooltip title="Về gốc">
+          <Tooltip title={t("Về gốc", lang)}>
             <Button icon={<CompressOutlined />} onClick={centerOnRoot}>
               Center
             </Button>
           </Tooltip>
-          <Tooltip title="Mở tất cả">
+          <Tooltip title={t("Mở tất cả", lang)}>
             <Button icon={<ExpandOutlined />} onClick={expandAll}>
               Expand All
             </Button>
           </Tooltip>
-          <Tooltip title="Thu tất cả">
+          <Tooltip title={t("Thu tất cả", lang)}>
             <Button icon={<ReloadOutlined />} onClick={collapseAll}>
               Collapse All
             </Button>
@@ -674,7 +677,7 @@ export default function OrganizationChart({
               fontSize: 13,
             }}
           >
-            Không có dữ liệu để hiển thị.
+            {t("Không có dữ liệu để hiển thị.", lang)}
           </div>
         ) : null}
       </div>
@@ -691,10 +694,10 @@ export default function OrganizationChart({
         }}
       >
         <span>
-          {flat.length} nhân viên · {laid.length} đang hiển thị
+          {flat.length} {t("nhân viên", lang)} · {laid.length} {t("đang hiển thị", lang)}
         </span>
         <span>
-          {Math.round(scale * 100)}% · Ctrl + cuộn để zoom · Kéo để xem
+          {Math.round(scale * 100)}% · {t("Ctrl + cuộn để zoom", lang)} · {t("Kéo để xem", lang)}
         </span>
       </div>
 

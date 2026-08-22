@@ -9,6 +9,8 @@
 import { useEffect } from "react";
 import { Form, Input, InputNumber, Select, Switch } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type {
   VariantValueItem,
   VariantOptionItem,
@@ -55,6 +57,7 @@ export default function VariantValueForm({
   onSubmit,
 }: VariantValueFormProps) {
   const [form] = Form.useForm();
+  const lang = useLanguageStore((s) => s.language);
   const isEditing = !!editingItem;
 
   const getOptionId = (variantOptionId: VariantValueItem["variantOptionId"]) => {
@@ -109,11 +112,11 @@ export default function VariantValueForm({
   return (
     <DrawerForm
       open={open}
-      title={isEditing ? "Sửa giá trị" : "Thêm giá trị"}
+      title={isEditing ? t("Sửa giá trị", lang) : t("Thêm giá trị", lang)}
       loading={loading}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={isEditing ? "Cập nhật" : "Tạo mới"}
+      submitText={isEditing ? t("Cập nhật", lang) : t("Tạo mới", lang)}
       width={500}
     >
       <Form
@@ -136,23 +139,23 @@ export default function VariantValueForm({
       >
         <Form.Item
           name="code"
-          label="Mã giá trị"
+          label={t("Mã giá trị", lang)}
           tooltip={
             isEditing
               ? undefined
-              : "Để trống sẽ tự động sinh từ tên (chỉ gồm chữ cái và số, viết hoa)"
+              : t("Để trống sẽ tự động sinh từ tên (chỉ gồm chữ cái và số, viết hoa)", lang)
           }
           rules={[
-            { required: true, message: "Vui lòng nhập mã giá trị" },
-            { min: 2, message: "Mã tối thiểu 2 ký tự" },
-            { max: 50, message: "Mã tối đa 50 ký tự" },
+            { required: true, message: t("Vui lòng nhập mã giá trị", lang) },
+            { min: 2, message: t("Mã tối thiểu 2 ký tự", lang) },
+            { max: 50, message: t("Mã tối đa 50 ký tự", lang) },
           ]}
         >
           <Input
             placeholder={
               isEditing
-                ? "VD: 500ML, 1KG, RED"
-                : "Tự sinh từ tên - có thể chỉnh"
+                ? t("VD: 500ML, 1KG, RED", lang)
+                : t("Tự sinh từ tên - có thể chỉnh", lang)
             }
             disabled={isEditing}
           />
@@ -160,26 +163,26 @@ export default function VariantValueForm({
 
         <Form.Item
           name="name"
-          label="Tên giá trị"
+          label={t("Tên giá trị", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập tên giá trị" },
-            { min: 2, message: "Tên tối thiểu 2 ký tự" },
-            { max: 100, message: "Tên tối đa 100 ký tự" },
+            { required: true, message: t("Vui lòng nhập tên giá trị", lang) },
+            { min: 2, message: t("Tên tối thiểu 2 ký tự", lang) },
+            { max: 100, message: t("Tên tối đa 100 ký tự", lang) },
           ]}
         >
           <Input
-            placeholder="VD: 500ml, 1kg, Đỏ"
+            placeholder={t("VD: 500ml, 1kg, Đỏ", lang)}
             onChange={handleNameChange}
           />
         </Form.Item>
 
         <Form.Item
           name="variantOptionId"
-          label="Thuộc tính"
-          rules={[{ required: true, message: "Vui lòng chọn thuộc tính" }]}
+          label={t("Thuộc tính", lang)}
+          rules={[{ required: true, message: t("Vui lòng chọn thuộc tính", lang) }]}
         >
           <Select
-            placeholder="Chọn thuộc tính"
+            placeholder={t("Chọn thuộc tính", lang)}
             showSearch
             optionFilterProp="label"
             options={variantOptions.map((o) => ({
@@ -189,14 +192,14 @@ export default function VariantValueForm({
           />
         </Form.Item>
 
-        <Form.Item name="sortOrder" label="Thứ tự hiển thị">
+        <Form.Item name="sortOrder" label={t("Thứ tự hiển thị", lang)}>
           <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>
 
         {isEditing && (
           <Form.Item
             name="isActive"
-            label="Kích hoạt"
+            label={t("Kích hoạt", lang)}
             valuePropName="checked"
           >
             <Switch />

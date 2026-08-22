@@ -27,6 +27,8 @@ import {
 import type { ComboListItem } from "@/hooks/useCombos";
 import type { ProductListItem } from "@/hooks/useProductCrud";
 import { formatMNT } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { Text } = Typography;
 
@@ -67,6 +69,7 @@ export default function ProductComboList({
   onDeleteCombo,
   onToggleActive,
 }: ProductComboListProps) {
+  const lang = useLanguageStore((s) => s.language);
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -125,7 +128,7 @@ export default function ProductComboList({
       if (!categoryMap.has(categoryId)) {
         categoryMap.set(categoryId, {
           categoryId,
-          categoryName: categoryName || "Không phân loại",
+          categoryName: categoryName || t("Không phân loại", lang),
           categoryCode: categoryCode || "UNCAT",
           products: [],
         });
@@ -185,7 +188,7 @@ export default function ProductComboList({
     },
     {
       key: "code",
-      title: "Mã",
+      title: t("Mã", lang),
       dataIndex: "code",
       width: 100,
       render: (code: string) => (
@@ -196,29 +199,24 @@ export default function ProductComboList({
     },
     {
       key: "name",
-      title: "Tên combo",
+      title: t("Tên combo", lang),
       dataIndex: "name",
       render: (name: string, record: ComboListItem) => (
         <Space orientation="vertical" size={0}>
           <Text strong>{name}</Text>
-          {record.description && (
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {record.description.length > 40 ? `${record.description.substring(0, 40)}...` : record.description}
-            </Text>
-          )}
         </Space>
       ),
     },
     {
       key: "packageQuantity",
-      title: "SL SP",
+      title: t("SL SP", lang),
       dataIndex: "packageQuantity",
       width: 60,
       align: "center" as const,
     },
     {
       key: "giftQuantity",
-      title: "SL quà",
+      title: t("SL quà", lang),
       dataIndex: "giftQuantity",
       width: 70,
       align: "center" as const,
@@ -231,7 +229,7 @@ export default function ProductComboList({
     },
     {
       key: "sellingPrice",
-      title: "Giá bán",
+      title: t("Giá bán", lang),
       dataIndex: "sellingPrice",
       width: 110,
       align: "right" as const,
@@ -243,14 +241,14 @@ export default function ProductComboList({
     },
     {
       key: "isActive",
-      title: "TT",
+      title: t("TT", lang),
       dataIndex: "isActive",
       width: 70,
       align: "center" as const,
       render: (_: unknown, record: ComboListItem) => {
         const active = record.isActive !== false;
         return (
-          <Tooltip title={active ? "Đang hoạt động" : "Vô hiệu"}>
+          <Tooltip title={active ? t("Đang hoạt động", lang) : t("Vô hiệu", lang)}>
             <Switch
               checked={active}
               onChange={(checked) => onToggleActive?.(record, checked)}
@@ -267,10 +265,10 @@ export default function ProductComboList({
       align: "center" as const,
       render: (_: unknown, record: ComboListItem) => (
         <Space size={2}>
-          <Tooltip title="Sửa">
+          <Tooltip title={t("Sửa", lang)}>
             <Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEditCombo(record)} />
           </Tooltip>
-          <Tooltip title="Xóa">
+          <Tooltip title={t("Xóa", lang)}>
             <Button type="text" size="small" icon={<DeleteOutlined />} onClick={() => onDeleteCombo(record)} danger />
           </Tooltip>
         </Space>
@@ -348,9 +346,9 @@ export default function ProductComboList({
                     </div>
                   </div>
                 </Space>
-                <Space size={16}>
+                  <Space size={16}>
                   <Badge count={activeComboCount} style={{ backgroundColor: "#1890ff" }} showZero>
-                    <Text type="secondary" style={{ fontSize: 12 }}>combo</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>{t("combo", lang)}</Text>
                   </Badge>
                   {isExpanded ? <DownOutlined /> : <RightOutlined />}
                 </Space>
@@ -360,11 +358,11 @@ export default function ProductComboList({
                 <div style={{ padding: 12 }}>
                   <div style={{ marginBottom: 8, display: "flex", justifyContent: "flex-end" }}>
                     <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => onAddCombo(productId)}>
-                      Thêm combo
+                      {t("Thêm combo", lang)}
                     </Button>
                   </div>
                   {productCombos.length === 0 ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có combo nào" />
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("Chưa có combo nào", lang)} />
                   ) : (
                     <Table
                       columns={comboColumns}
@@ -410,10 +408,10 @@ export default function ProductComboList({
               </Space>
               <Space size={16}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  {activeCombos}/{totalCombos} combo active
+                  {activeCombos}/{totalCombos} {t("combo active", lang)}
                 </Text>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  {categoryProducts.length} sản phẩm
+                  {categoryProducts.length} {t("sản phẩm", lang)}
                 </Text>
               </Space>
             </div>
@@ -480,7 +478,7 @@ export default function ProductComboList({
                       </Space>
                       <Space>
                         <Badge count={productCombos.length} style={{ backgroundColor: "#1890ff" }} showZero>
-                          <Text type="secondary" style={{ fontSize: 12 }}>combo</Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>{t("combo", lang)}</Text>
                         </Badge>
                         <Button
                           type="primary"
@@ -491,7 +489,7 @@ export default function ProductComboList({
                             onAddCombo(productId);
                           }}
                         >
-                          Thêm
+                          {t("Thêm", lang)}
                         </Button>
                         <Button
                           type="link"
@@ -502,13 +500,13 @@ export default function ProductComboList({
                             router.push(`/products/${productId}/combos`);
                           }}
                         >
-                          Chi tiết
+                          {t("Chi tiết", lang)}
                         </Button>
                       </Space>
                     </div>
                     {productCombos.length === 0 ? (
                       <div style={{ padding: 24, textAlign: "center" }}>
-                        <Text type="secondary">Chưa có combo nào</Text>
+                        <Text type="secondary">{t("Chưa có combo nào", lang)}</Text>
                       </div>
                     ) : (
                       <>
@@ -538,8 +536,8 @@ export default function ProductComboList({
                               }}
                             >
                               {showAllCombos.has(productId)
-                                ? `Thu gọn`
-                                : `Xem thêm ${productCombos.length - COMBO_PREVIEW_COUNT} combo`}
+                                ? t("Thu gọn", lang)
+                                : `${t("Xem thêm", lang)} ${productCombos.length - COMBO_PREVIEW_COUNT} ${t("combo", lang)}`}
                             </Button>
                           </div>
                         )}
@@ -567,7 +565,7 @@ export default function ProductComboList({
               label: (
                 <Space size={4}>
                   <UnorderedListOutlined />
-                  <span>Bảng</span>
+                  <span>{t("Bảng", lang)}</span>
                 </Space>
               ),
               value: "table",
@@ -576,7 +574,7 @@ export default function ProductComboList({
               label: (
                 <Space size={4}>
                   <AppstoreOutlined />
-                  <span>Card</span>
+                  <span>{t("Card", lang)}</span>
                 </Space>
               ),
               value: "cards",
@@ -588,7 +586,7 @@ export default function ProductComboList({
       {groupedData.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Không tìm thấy sản phẩm nào"
+          description={t("Không tìm thấy sản phẩm nào", lang)}
           style={{ padding: "60px 0" }}
         />
       ) : viewMode === "cards" ? (

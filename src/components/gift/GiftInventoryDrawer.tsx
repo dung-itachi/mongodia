@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Form, Input, InputNumber, Radio, Table, Tag } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
 import type { GiftListItem, GiftInventoryHistoryItem } from "@/hooks/useGifts";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 type InventoryMode = "IMPORT" | "ADJUSTMENT" | "HISTORY";
 
@@ -22,12 +24,6 @@ interface GiftInventoryDrawerProps {
   }) => void;
 }
 
-const historyLabels: Record<GiftInventoryHistoryItem["type"], string> = {
-  INITIAL: "Khởi tạo",
-  IMPORT: "Nhập thêm",
-  ADJUSTMENT: "Điều chỉnh",
-};
-
 export default function GiftInventoryDrawer({
   mode,
   gift,
@@ -38,8 +34,18 @@ export default function GiftInventoryDrawer({
   onClose,
   onSubmit,
 }: GiftInventoryDrawerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm();
   const isHistory = mode === "HISTORY";
+
+  const historyLabels = useMemo<Record<GiftInventoryHistoryItem["type"], string>>(
+    () => ({
+      INITIAL: t("Khởi tạo", lang),
+      IMPORT: t("Nhập thêm", lang),
+      ADJUSTMENT: t("Điều chỉnh", lang),
+    }),
+    [lang]
+  );
 
   useEffect(() => {
     if (open) form.resetFields();
@@ -47,10 +53,10 @@ export default function GiftInventoryDrawer({
 
   const title =
     mode === "IMPORT"
-      ? "Nhập tồn quà tặng"
+      ? t("Nhập tồn quà tặng", lang)
       : mode === "ADJUSTMENT"
-        ? "Điều chỉnh tồn quà tặng"
-        : "Lịch sử tồn quà tặng";
+        ? t("Điều chỉnh tồn quà tặng", lang)
+        : t("Lịch sử tồn quà tặng", lang);
 
   const handleSubmit = () => {
     void form.validateFields().then((values) => onSubmit(values));
@@ -64,13 +70,13 @@ export default function GiftInventoryDrawer({
       loading={loading}
       onClose={onClose}
       onSubmit={isHistory ? undefined : handleSubmit}
-      submitText={mode === "IMPORT" ? "Nhập tồn" : "Xác nhận điều chỉnh"}
+      submitText={mode === "IMPORT" ? t("Nhập tồn", lang) : t("Xác nhận điều chỉnh", lang)}
     >
       {gift && (
         <div style={{ marginBottom: 20 }}>
           <strong>{gift.name}</strong>
           <div style={{ color: "#595959", marginTop: 4 }}>
-            Tồn hiện tại: {gift.stockQuantity.toLocaleString("vi-VN")}
+            {t("Tồn hiện tại", lang)}: {gift.stockQuantity.toLocaleString("vi-VN")}
           </div>
         </div>
       )}
@@ -84,13 +90,13 @@ export default function GiftInventoryDrawer({
           dataSource={history}
           columns={[
             {
-              title: "Thời gian",
+              title: t("Thời gian", lang),
               dataIndex: "createdAt",
               width: 170,
               render: (value: string) => new Date(value).toLocaleString("vi-VN"),
             },
             {
-              title: "Loại",
+              title: t("Loại", lang),
               dataIndex: "type",
               width: 110,
               render: (value: GiftInventoryHistoryItem["type"]) => (
@@ -99,9 +105,9 @@ export default function GiftInventoryDrawer({
                 </Tag>
               ),
             },
-            { title: "Trước", dataIndex: "quantityBefore", align: "right", width: 80 },
+            { title: t("Trước", lang), dataIndex: "quantityBefore", align: "right", width: 80 },
             {
-              title: "Thay đổi",
+              title: t("Thay đổi", lang),
               dataIndex: "quantityChange",
               align: "right",
               width: 100,
@@ -111,14 +117,14 @@ export default function GiftInventoryDrawer({
                 </span>
               ),
             },
-            { title: "Sau", dataIndex: "quantityAfter", align: "right", width: 80 },
+            { title: t("Sau", lang), dataIndex: "quantityAfter", align: "right", width: 80 },
             {
-              title: "Người tạo",
+              title: t("Người tạo", lang),
               key: "createdBy",
               width: 140,
               render: (_, item) => item.createdBy?.fullName ?? "-",
             },
-            { title: "Ghi chú", dataIndex: "note" },
+            { title: t("Ghi chú", lang), dataIndex: "note" },
           ]}
         />
       ) : (
@@ -126,27 +132,27 @@ export default function GiftInventoryDrawer({
           {mode === "ADJUSTMENT" && (
             <Form.Item
               name="direction"
-              label="Loại điều chỉnh"
+              label={t("Loại điều chỉnh", lang)}
               initialValue="INCREASE"
-              rules={[{ required: true, message: "Vui lòng chọn loại điều chỉnh" }]}
+              rules={[{ required: true, message: t("Vui lòng chọn loại điều chỉnh", lang) }]}
             >
               <Radio.Group>
-                <Radio value="INCREASE">Tăng tồn</Radio>
-                <Radio value="DECREASE">Giảm tồn</Radio>
+                <Radio value="INCREASE">{t("Tăng tồn", lang)}</Radio>
+                <Radio value="DECREASE">{t("Giảm tồn", lang)}</Radio>
               </Radio.Group>
             </Form.Item>
           )}
           <Form.Item
             name="quantity"
-            label={mode === "IMPORT" ? "Số lượng nhập" : "Số lượng điều chỉnh"}
-            rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+            label={mode === "IMPORT" ? t("Số lượng nhập", lang) : t("Số lượng điều chỉnh", lang)}
+            rules={[{ required: true, message: t("Vui lòng nhập số lượng", lang) }]}
           >
             <InputNumber min={1} precision={0} style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item
             name="note"
-            label="Ghi chú"
-            rules={[{ required: true, whitespace: true, message: "Vui lòng nhập ghi chú" }]}
+            label={t("Ghi chú", lang)}
+            rules={[{ required: true, whitespace: true, message: t("Vui lòng nhập ghi chú", lang) }]}
           >
             <Input.TextArea rows={3} maxLength={1000} />
           </Form.Item>

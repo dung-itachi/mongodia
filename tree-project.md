@@ -1182,10 +1182,12 @@ Chi tiết (Form/Modal/Drawer):
 [ ] CategoryPage.tsx                         — NOT_DONE
 [ ] ComboPage.tsx                            — NOT_DONE
 [ ] ProductComboList.tsx                     — NOT_DONE
-[ ] ProductVariantForm.tsx                   — NOT_DONE
-[ ] VariantOptionForm.tsx                    — NOT_DONE
-[ ] VariantValueForm.tsx                     — NOT_DONE
-[ ] VariantPage.tsx                          — NOT_DONE
+[ ] ProductVariantForm.tsx                   — DONE
+[ ] VariantOptionForm.tsx                    — DONE
+[ ] VariantValueForm.tsx                     — DONE
+[ ] VariantPage.tsx                          — DONE
+[ ] ProductVariantsTree.tsx                  — DONE
+[ ] ProductVariantTable.tsx                  — DONE
 [ ] GiftPage.tsx                             — NOT_DONE
 [ ] GiftInventoryDrawer.tsx                  — NOT_DONE
 [ ] ActivityDrawer.tsx                       — NOT_DONE
@@ -1197,10 +1199,10 @@ Chi tiết (Form/Modal/Drawer):
 [ ] OrgNodeCard.tsx                          — NOT_DONE
 
 EN translations:
-[✓] 234 keys refined (was heuristic, now curated)
+[✓] 234 keys refined (was heuristic, now curated) + ~80 new keys (variant pages/forms)
 [✓] 0 TS errors sau khi fix double-quote bug
 ```
 
 ---
 
-*Cập nhật: 22/08/2026 — nhóm C (39 pages) DONE: 36/39 pages đã wrap i18n (PageHeader, toolbar text, table columns, alert/messages, modal titles). 3 pages skip là login/403 (auth) và 2 pages đã wrap trước đó. Nhóm A (6 forms) + nhóm B (15 tables) + nhóm C (36 pages) gộp lại ~60 components/đã wrap.*
+*Cập nhật: 22/08/2026 — nhóm A (forms) DONE: ProductVariantForm, VariantOptionForm, VariantValueForm, ProductVariantsTree, ProductVariantTable. VariantPage cũng wrap. Variant nhóm đã hoàn tất i18n.*

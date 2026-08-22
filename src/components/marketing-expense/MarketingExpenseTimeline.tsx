@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ==================================================
  * MARKETING EXPENSE TIMELINE COMPONENT
@@ -20,6 +22,8 @@ import { Timeline as AntTimeline, Empty, Card } from "antd";
 import type { MarketingExpenseHistoryItem } from "@/repositories/marketing-expense-history.repository";
 import { MarketingExpenseAction } from "@/constants/marketing-expense-action";
 import { MARKETING_EXPENSE_HISTORY_CONFIG } from "@/configs/marketing-expense-history.config";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import styles from "./marketing-expense-timeline.module.css";
 
@@ -46,18 +50,20 @@ export default function MarketingExpenseTimeline({
   history,
   loading,
 }: MarketingExpenseTimelineProps) {
+  const lang = useLanguageStore((s) => s.language);
+
   if (loading) {
     return (
-      <Card title="Lịch sử" className={styles.timelineCard}>
-        <div className={styles.loading}>Đang tải...</div>
+      <Card title={t("Lịch sử", lang)} className={styles.timelineCard}>
+        <div className={styles.loading}>{t("Đang tải...", lang)}</div>
       </Card>
     );
   }
 
   if (!history || history.length === 0) {
     return (
-      <Card title="Lịch sử" className={styles.timelineCard}>
-        <Empty description="Chưa có lịch sử" />
+      <Card title={t("Lịch sử", lang)} className={styles.timelineCard}>
+        <Empty description={t("Chưa có lịch sử", lang)} />
       </Card>
     );
   }
@@ -94,7 +100,7 @@ export default function MarketingExpenseTimeline({
   });
 
   return (
-    <Card title="Lịch sử" className={styles.timelineCard}>
+    <Card title={t("Lịch sử", lang)} className={styles.timelineCard}>
       <AntTimeline items={timelineItems} />
     </Card>
   );

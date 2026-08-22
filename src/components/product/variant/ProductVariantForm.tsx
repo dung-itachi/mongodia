@@ -31,6 +31,8 @@ import {
   CheckOutlined,
 } from "@ant-design/icons";
 import DrawerForm from "@/components/common/forms/DrawerForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type {
   ProductVariantListItem,
   ProductVariantDetail,
@@ -86,6 +88,7 @@ export default function ProductVariantForm({
 }: ProductVariantFormProps) {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
+  const lang = useLanguageStore((s) => s.language);
   const isEditing = !!editingItem;
   const [currentProductId, setCurrentProductId] = useState<string | null>(null);
 
@@ -267,7 +270,9 @@ export default function ProductVariantForm({
     setQuickAddOptionLoading(true);
     try {
       const newOption = await onAddOption(quickAddOptionName.trim());
-      message.success(`Đã thêm thuộc tính "${newOption.name}"`);
+      message.success(
+        t("Đã thêm thuộc tính", lang) + ` "${newOption.name}"`
+      );
       setQuickAddOptionName("");
       setQuickAddOptionOpen(false);
 
@@ -291,7 +296,7 @@ export default function ProductVariantForm({
       setSelectedOptionId(newOption._id);
     } catch (error) {
       const err = error as Error;
-      message.error(err.message || "Không thể thêm thuộc tính");
+      message.error(err.message || t("Không thể thêm thuộc tính", lang));
     } finally {
       setQuickAddOptionLoading(false);
     }
@@ -303,7 +308,9 @@ export default function ProductVariantForm({
     setQuickAddValueLoading(true);
     try {
       const newValue = await onAddValue(selectedOptionId, quickAddValueName.trim());
-      message.success(`Đã thêm giá trị "${newValue.name}"`);
+      message.success(
+        t("Đã thêm giá trị", lang) + ` "${newValue.name}"`
+      );
       setQuickAddValueName("");
       setQuickAddValueOpen(false);
 
@@ -360,7 +367,7 @@ export default function ProductVariantForm({
       setSelectedValueIds((prev) => [...prev, newValue._id]);
     } catch (error) {
       const err = error as Error;
-      message.error(err.message || "Không thể thêm giá trị");
+      message.error(err.message || t("Không thể thêm giá trị", lang));
     } finally {
       setQuickAddValueLoading(false);
     }
@@ -378,17 +385,17 @@ export default function ProductVariantForm({
       });
       const result = await response.json();
       if (result.success) {
-        message.success("Đã gán thuộc tính cho sản phẩm");
+        message.success(t("Đã gán thuộc tính cho sản phẩm", lang));
         setSelectedOptionIds([]);
         setShowOptionAssignment(false);
         // Invalidate and refetch queries
         void queryClient.invalidateQueries({ queryKey: ["product-variant-options", currentProductId] });
         onRefetchProductOptions?.();
       } else {
-        message.error(result.message || "Không thể gán thuộc tính");
+        message.error(result.message || t("Không thể gán thuộc tính", lang));
       }
     } catch {
-      message.error("Không thể gán thuộc tính");
+      message.error(t("Không thể gán thuộc tính", lang));
     } finally {
       setAssigningOptions(false);
     }
@@ -529,21 +536,21 @@ export default function ProductVariantForm({
   return (
     <DrawerForm
       open={open}
-      title={isEditing ? "Sửa biến thể" : "Thêm biến thể"}
+      title={isEditing ? t("Sửa biến thể", lang) : t("Thêm biến thể", lang)}
       loading={loading}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={isEditing ? "Cập nhật" : "Tạo mới"}
+      submitText={isEditing ? t("Cập nhật", lang) : t("Tạo mới", lang)}
       width={650}
     >
       <Form form={form} layout="vertical">
         <Form.Item
           name="productId"
-          label="Sản phẩm"
-          rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
+          label={t("Sản phẩm", lang)}
+          rules={[{ required: true, message: t("Vui lòng chọn sản phẩm", lang) }]}
         >
           <Select
-            placeholder="Chọn sản phẩm"
+            placeholder={t("Chọn sản phẩm", lang)}
             showSearch
             optionFilterProp="label"
             disabled={isEditing}
@@ -567,13 +574,16 @@ export default function ProductVariantForm({
             }}
           >
             <div style={{ marginBottom: 8, fontWeight: 500, color: "#333" }}>
-              Sản phẩm: <span style={{ color: "#1890ff" }}>{products.find((p) => p._id === currentProductId)?.name || currentProductId}</span>
+              {t("Sản phẩm:", lang)}{" "}
+              <span style={{ color: "#1890ff" }}>
+                {products.find((p) => p._id === currentProductId)?.name || currentProductId}
+              </span>
             </div>
             {hasVariantOptions ? (
               <>
                 <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                   <InfoCircleOutlined style={{ color: "#1890ff" }} />
-                  <strong style={{ color: "#333" }}>Thuộc tính của sản phẩm này:</strong>
+                  <strong style={{ color: "#333" }}>{t("Thuộc tính của sản phẩm này:", lang)}</strong>
                 </div>
                 <div style={{ paddingLeft: 22 }}>
                   {variantOptionsGrouped.map((option) => (
@@ -591,7 +601,7 @@ export default function ProductVariantForm({
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <InfoCircleOutlined style={{ color: "#faad14" }} />
                   <span style={{ color: "#666" }}>
-                    Sản phẩm này chưa có thuộc tính biến thể nào.
+                    {t("Sản phẩm này chưa có thuộc tính biến thể nào.", lang)}
                   </span>
                 </div>
                 {!showOptionAssignment && availableOptionsForAssignment.length > 0 && (
@@ -600,7 +610,7 @@ export default function ProductVariantForm({
                     onClick={() => setShowOptionAssignment(true)}
                     style={{ padding: 0, marginTop: 8, marginLeft: 22 }}
                   >
-                    + Gán thuộc tính từ danh sách có sẵn
+                    {t("+ Gán thuộc tính từ danh sách có sẵn", lang)}
                   </Button>
                 )}
               </>
@@ -610,7 +620,7 @@ export default function ProductVariantForm({
             {showOptionAssignment && (
               <div style={{ marginTop: 12, paddingLeft: 22 }}>
                 <div style={{ fontWeight: 500, marginBottom: 8, color: "#333" }}>
-                  Chọn thuộc tính để gán cho sản phẩm:
+                  {t("Chọn thuộc tính để gán cho sản phẩm:", lang)}
                 </div>
                 <Checkbox.Group
                   value={selectedOptionIds}
@@ -624,7 +634,7 @@ export default function ProductVariantForm({
                   ))}
                   {availableOptionsForAssignment.length === 0 && (
                     <div style={{ color: "#999", fontStyle: "italic" }}>
-                      Tất cả thuộc tính đã được gán cho sản phẩm này.
+                      {t("Tất cả thuộc tính đã được gán cho sản phẩm này.", lang)}
                     </div>
                   )}
                 </Checkbox.Group>
@@ -636,7 +646,7 @@ export default function ProductVariantForm({
                     loading={assigningOptions}
                     disabled={selectedOptionIds.length === 0}
                   >
-                    Gán {selectedOptionIds.length} thuộc tính đã chọn
+                    {t("Gán", lang)} {selectedOptionIds.length} {t("thuộc tính đã chọn", lang)}
                   </Button>
                   <Button
                     size="small"
@@ -645,7 +655,7 @@ export default function ProductVariantForm({
                       setSelectedOptionIds([]);
                     }}
                   >
-                    Hủy
+                    {t("Hủy", lang)}
                   </Button>
                 </div>
               </div>
@@ -653,10 +663,10 @@ export default function ProductVariantForm({
           </div>
         )}
 
-        <Form.Item name="sku" label="SKU">
+        <Form.Item name="sku" label={t("SKU", lang)}>
           <Space.Compact style={{ width: "100%" }}>
             <Input
-              placeholder="Sẽ tự tạo nếu để trống"
+              placeholder={t("Sẽ tự tạo nếu để trống", lang)}
               style={{ flex: 1 }}
             />
             <Button
@@ -670,16 +680,19 @@ export default function ProductVariantForm({
               }}
               disabled={!currentProductId}
             >
-              Tạo mới
+              {t("Tạo mới", lang)}
             </Button>
           </Space.Compact>
         </Form.Item>
         <div style={{ color: "#8c8c8c", fontSize: 12, marginTop: -8, marginBottom: 16 }}>
-          Để trống để tự tạo SKU theo quy tắc: Mã sản phẩm - Giá trị biến thể - Mã ngẫu nhiên
+          {t(
+            "Để trống để tự tạo SKU theo quy tắc: Mã sản phẩm - Giá trị biến thể - Mã ngẫu nhiên",
+            lang
+          )}
         </div>
 
-        <Form.Item name="barcode" label="Barcode">
-          <Input placeholder="Mã vạch (tùy chọn)" />
+        <Form.Item name="barcode" label={t("Barcode", lang)}>
+          <Input placeholder={t("Mã vạch (tùy chọn)", lang)} />
         </Form.Item>
 
         {/* New step-by-step attribute selection */}
@@ -694,7 +707,7 @@ export default function ProductVariantForm({
         >
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontWeight: 500, color: "#333", marginBottom: 8 }}>
-              Chọn thuộc tính và giá trị biến thể
+              {t("Chọn thuộc tính và giá trị biến thể", lang)}
             </div>
 
             {/* Step 1: Select Attribute */}
@@ -715,7 +728,7 @@ export default function ProductVariantForm({
                 >
                   1
                 </span>
-                <span style={{ fontWeight: 500 }}>Chọn thuộc tính</span>
+                <span style={{ fontWeight: 500 }}>{t("Chọn thuộc tính", lang)}</span>
                 {onAddOption && (
                   <Button
                     type="link"
@@ -723,12 +736,12 @@ export default function ProductVariantForm({
                     icon={<PlusOutlined />}
                     onClick={() => setQuickAddOptionOpen(true)}
                   >
-                    Thêm nhanh
+                    {t("Thêm nhanh", lang)}
                   </Button>
                 )}
               </div>
               <Select
-                placeholder="-- Chọn thuộc tính --"
+                placeholder={t("-- Chọn thuộc tính --", lang)}
                 style={{ width: "100%" }}
                 value={selectedOptionId}
                 onChange={(value) => {
@@ -754,11 +767,11 @@ export default function ProductVariantForm({
                 }}
               >
                 <div style={{ fontSize: 12, color: "#1890ff", marginBottom: 8 }}>
-                  Thêm thuộc tính mới
+                  {t("Thêm thuộc tính mới", lang)}
                 </div>
                 <Space.Compact style={{ width: "100%" }}>
                   <Input
-                    placeholder="Tên thuộc tính (VD: Kích thước)"
+                    placeholder={t("Tên thuộc tính (VD: Kích thước)", lang)}
                     value={quickAddOptionName}
                     onChange={(e) => setQuickAddOptionName(e.target.value)}
                     onPressEnter={handleQuickAddOption}
@@ -769,9 +782,11 @@ export default function ProductVariantForm({
                     loading={quickAddOptionLoading}
                     icon={<CheckOutlined />}
                   >
-                    Thêm
+                    {t("Thêm", lang)}
                   </Button>
-                  <Button onClick={() => setQuickAddOptionOpen(false)}>Hủy</Button>
+                  <Button onClick={() => setQuickAddOptionOpen(false)}>
+                    {t("Hủy", lang)}
+                  </Button>
                 </Space.Compact>
               </div>
             )}
@@ -795,7 +810,7 @@ export default function ProductVariantForm({
                   >
                     2
                   </span>
-                  <span style={{ fontWeight: 500 }}>Chọn giá trị</span>
+                  <span style={{ fontWeight: 500 }}>{t("Chọn giá trị", lang)}</span>
                   {onAddValue && (
                     <Button
                       type="link"
@@ -803,7 +818,7 @@ export default function ProductVariantForm({
                       icon={<PlusOutlined />}
                       onClick={() => setQuickAddValueOpen(!quickAddValueOpen)}
                     >
-                      Thêm nhanh
+                      {t("Thêm nhanh", lang)}
                     </Button>
                   )}
                 </div>
@@ -820,11 +835,11 @@ export default function ProductVariantForm({
                     }}
                   >
                     <div style={{ fontSize: 12, color: "#52c41a", marginBottom: 8 }}>
-                      Thêm giá trị mới cho thuộc tính đã chọn
+                      {t("Thêm giá trị mới cho thuộc tính đã chọn", lang)}
                     </div>
                     <Space.Compact style={{ width: "100%" }}>
                       <Input
-                        placeholder="Tên giá trị (VD: Lớn, Đỏ)"
+                        placeholder={t("Tên giá trị (VD: Lớn, Đỏ)", lang)}
                         value={quickAddValueName}
                         onChange={(e) => setQuickAddValueName(e.target.value)}
                         onPressEnter={handleQuickAddValue}
@@ -835,9 +850,11 @@ export default function ProductVariantForm({
                         loading={quickAddValueLoading}
                         icon={<CheckOutlined />}
                       >
-                        Thêm
+                        {t("Thêm", lang)}
                       </Button>
-                      <Button onClick={() => setQuickAddValueOpen(false)}>Hủy</Button>
+                      <Button onClick={() => setQuickAddValueOpen(false)}>
+                        {t("Hủy", lang)}
+                      </Button>
                     </Space.Compact>
                   </div>
                 )}
@@ -870,7 +887,7 @@ export default function ProductVariantForm({
                       onClick={handleConfirmValues}
                       icon={<PlusOutlined />}
                     >
-                      Thêm {selectedValueIds.length} giá trị đã chọn
+                      {t("Thêm", lang)} {selectedValueIds.length} {t("giá trị đã chọn", lang)}
                     </Button>
                   </div>
                 )}
@@ -888,7 +905,7 @@ export default function ProductVariantForm({
           {/* Selected values display */}
           <div>
             <div style={{ fontWeight: 500, marginBottom: 8 }}>
-              Các giá trị đã chọn ({selectedVariantValues.length})
+              {t("Các giá trị đã chọn", lang)} ({selectedVariantValues.length})
             </div>
             {selectedVariantValues.length > 0 ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -916,7 +933,7 @@ export default function ProductVariantForm({
               </div>
             ) : (
               <div style={{ color: "#8c8c8c", fontStyle: "italic" }}>
-                Chưa chọn giá trị nào
+                {t("Chưa chọn giá trị nào", lang)}
               </div>
             )}
           </div>
@@ -934,11 +951,11 @@ export default function ProductVariantForm({
             fontSize: 12,
           }}
         >
-          💡 Biến thể không có giá bán — giá được cấu hình trong{" "}
-          <strong>Combo</strong> theo sản phẩm.
+          💡 {t("Biến thể không có giá bán — giá được cấu hình trong", lang)}{" "}
+          <strong>{t("Combo", lang)}</strong> {t("theo sản phẩm.", lang)}
         </div>
 
-        <Form.Item name="cost" label="Giá vốn">
+        <Form.Item name="cost" label={t("Giá vốn", lang)}>
           <InputNumber
             min={0}
             style={{ width: "100%" }}
@@ -956,7 +973,7 @@ export default function ProductVariantForm({
           name="weight"
           label={
             <span>
-              Trọng lượng{" "}
+              {t("Trọng lượng", lang)}{" "}
               <span style={{ color: "#999", fontSize: 12 }}>(gram)</span>
             </span>
           }
@@ -968,12 +985,12 @@ export default function ProductVariantForm({
           />
         </Form.Item>
 
-        <Form.Item name="sortOrder" label="Thứ tự hiển thị">
+        <Form.Item name="sortOrder" label={t("Thứ tự hiển thị", lang)}>
           <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>
 
         {isEditing && (
-          <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
+          <Form.Item name="isActive" label={t("Kích hoạt", lang)} valuePropName="checked">
             <Switch />
           </Form.Item>
         )}

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ==================================================
  * MARKETING EXPENSE SUMMARY CARD COMPONENT
@@ -16,6 +18,8 @@
  */
 
 import { calculateBudgetSummary } from "@/utils/MarketingExpenseCalculator";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import styles from "@/app/(protected)/marketing/expense/marketing-expense.module.css";
 
@@ -34,6 +38,7 @@ export default function MarketingExpenseSummaryCard({
   totalLeads,
   closedLeads,
 }: MarketingExpenseSummaryCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const summary = calculateBudgetSummary({ requestedBudget, spentBudget });
 
   const roas =
@@ -55,28 +60,28 @@ export default function MarketingExpenseSummaryCard({
 
   return (
     <div className={styles.summaryCard}>
-      <div className={styles.summaryTitle}>Tổng quan</div>
+      <div className={styles.summaryTitle}>{t("Tổng quan", lang)}</div>
       <div className={styles.summaryGrid}>
         <div className={styles.summaryItem}>
-          <span className={styles.summaryLabel}>Ngân sách yêu cầu</span>
+          <span className={styles.summaryLabel}>{t("Ngân sách yêu cầu", lang)}</span>
           <span className={styles.summaryValue}>
             {formatVND(summary.requested)}
           </span>
         </div>
         <div className={styles.summaryItem}>
-          <span className={styles.summaryLabel}>Ngân sách duyệt</span>
+          <span className={styles.summaryLabel}>{t("Ngân sách duyệt", lang)}</span>
           <span className={styles.summaryValue}>
             {formatVND(summary.approved)}
           </span>
         </div>
         <div className={styles.summaryItem}>
-          <span className={styles.summaryLabel}>Ngân sách thực chi</span>
+          <span className={styles.summaryLabel}>{t("Ngân sách thực chi", lang)}</span>
           <span className={styles.summaryValue}>
             {formatVND(summary.spent)}
           </span>
         </div>
         <div className={styles.summaryItem}>
-          <span className={styles.summaryLabel}>Ngân sách còn lại</span>
+          <span className={styles.summaryLabel}>{t("Ngân sách còn lại", lang)}</span>
           <span
             className={`${styles.summaryValue} ${
               summary.remaining >= 0 ? styles.positive : styles.negative
@@ -88,7 +93,7 @@ export default function MarketingExpenseSummaryCard({
       </div>
 
       <div className={styles.performanceSection}>
-        <div className={styles.summaryTitle}>Hiệu suất</div>
+        <div className={styles.summaryTitle}>{t("Hiệu suất", lang)}</div>
         <div className={styles.performanceGrid}>
           <div className={styles.performanceItem}>
             <span className={styles.performanceLabel}>ROAS</span>
@@ -103,7 +108,7 @@ export default function MarketingExpenseSummaryCard({
             </span>
           </div>
           <div className={styles.performanceItem}>
-            <span className={styles.performanceLabel}>Tỷ lệ chuyển đổi</span>
+            <span className={styles.performanceLabel}>{t("Tỷ lệ chuyển đổi", lang)}</span>
             <span className={`${styles.performanceValue} ${styles.conversion}`}>
               {(conversionRate * 100).toFixed(2)}%
             </span>
