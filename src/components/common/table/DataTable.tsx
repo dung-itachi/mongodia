@@ -25,6 +25,7 @@ export type Column = {
   width?: number | string;
   align?: "left" | "center" | "right";
   fixed?: "left" | "right";
+  hidden?: boolean;
   render?: (value: unknown, record: Record<string, unknown>, index?: number) => ReactNode;
 };
 
@@ -66,9 +67,12 @@ export default function DataTable({
           showTotal: (total: number) => `${getTranslated("Tổng: ${total}").replace("${total}", String(total))}`,
         };
 
+  // Filter out hidden columns
+  const visibleColumns = columns.filter((col) => !col.hidden);
+
   return (
     <Table<Record<string, unknown>>
-      columns={columns}
+      columns={visibleColumns}
       dataSource={data}
       loading={loading}
       pagination={defaultPagination}

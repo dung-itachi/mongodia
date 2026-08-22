@@ -24,6 +24,7 @@ import {
   PhoneOutlined,
   ReloadOutlined,
   BarChartOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -38,8 +39,7 @@ import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
 
 import { useOrders, useDeleteOrder, useChangeOrderStatus, useToggleOrderConfirmCall, useOrderStatistics } from "@/hooks/useOrders";
 import { useDebounce } from "@/hooks/useDebounce";
-import { ORDER_STATUS_LABELS } from "@/constants/orderStatus";
-import type { OrderStatus } from "@/constants/orderStatus";
+import { ORDER_STATUS_LABELS, OrderStatus } from "@/constants/orderStatus";
 import { STATUS_ACTIONS } from "@/configs/order-status.config";
 import type { OrderListItem, OrderStatisticsResponse } from "@/types/order";
 import ReconciliationPanel from "./reconciliation/ReconciliationPanel";
@@ -124,8 +124,9 @@ function OrdersPageInner() {
   // Toggle cờ "đã gọi xác nhận" — chỉ dùng cho status=CONFIRMED
   const toggleConfirmCallMutation = useToggleOrderConfirmCall();
 
-  // Show quick action buttons only for CONFIRMED status
+  // Show quick action buttons only for CONFIRMED and SHIPPING status
   const showQuickActions = status === "CONFIRMED";
+  const showShippingActions = status === "SHIPPING";
 
   const handleFilterChange = useCallback((values: Record<string, unknown>) => {
     if (values.status !== undefined) {
@@ -207,6 +208,64 @@ function OrdersPageInner() {
     []
   );
 
+  /**
+   * Tạo nội dung confirm dialog chi tiết cho quick action
+   */
+  const getQuickActionContent = useCallback((target: NonNullable<typeof quickActionTarget>) => {
+    const { order, targetStatus } = target;
+    const totals = getOrderItemTotals(order);
+
+    const vndFormatter = new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    });
+
+    const mntFormatter = new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: 0,
+    });
+
+    const labelText = target.label === "Giao TC" ? "Thành công" : target.label;
+    const typeText = target.label === "Giao TC" ? "giao hàng thành công" :
+                     target.label === "Hoàn" ? "hoàn đơn hàng" :
+                     `${target.label.toLowerCase()} đơn hàng`;
+
+    return {
+      title: `${labelText} đơn hàng`,
+      content: (
+        <div style={{ textAlign: "left" }}>
+          <p>Bạn có chắc chắn muốn {typeText}?</p>
+          <div style={{
+            background: "#f5f5f5",
+            padding: "12px",
+            borderRadius: "8px",
+            marginTop: "12px"
+          }}>
+            <p style={{ margin: "0 0 8px 0", fontWeight: 600 }}>
+              {order.customerName || "Khách hàng"}
+            </p>
+            <p style={{ margin: "0 0 4px 0", color: "#666" }}>
+              📞 {order.customerPhone || "Không có SĐT"}
+            </p>
+            <p style={{ margin: "0 0 4px 0", color: "#666" }}>
+              📦 {totals.comboName}
+            </p>
+            <p style={{ margin: "0 0 4px 0", fontWeight: 500 }}>
+              💰 {mntFormatter.format(totals.mntSubtotal)} ₮
+            </p>
+            <p style={{ margin: 0, color: "#1890ff", fontWeight: 500 }}>
+              ({vndFormatter.format(totals.vndSubtotal)})
+            </p>
+          </div>
+          <p style={{ marginTop: "12px", color: "#666", fontSize: "12px" }}>
+            Mã đơn: <strong>{order.orderCode}</strong>
+          </p>
+        </div>
+      ),
+      type: targetStatus === "CANCELLED" || targetStatus === "RETURNED" ? "delete" : "warning",
+    };
+  }, [getOrderItemTotals]);
+
   // Confirm quick status change
   const handleConfirmQuickAction = useCallback(async () => {
     if (!quickActionTarget) return;
@@ -233,7 +292,7 @@ function OrdersPageInner() {
     } finally {
       setQuickActionLoading(false);
     }
-  }, [quickActionTarget, changeStatusMutation, refetch]);
+  }, [quickActionTarget, changeStatusMutation, refetch, getQuickActionContent]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -407,6 +466,7 @@ function OrdersPageInner() {
       dataIndex: "isCalledForConfirmation",
       width: 110,
       align: "center" as const,
+      hidden: showShippingActions,
       render: (_: unknown, record: Record<string, unknown>) => {
         const order = record as unknown as OrderListItem;
         const checked = order.isCalledForConfirmation === true;
@@ -474,7 +534,7 @@ function OrdersPageInner() {
     {
       key: "actions",
       title: "Thao tác",
-      width: showQuickActions ? 320 : 100,
+      width: showQuickActions || showShippingActions ? 280 : 100,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
         const order = record as unknown as OrderListItem;
@@ -555,6 +615,55 @@ function OrdersPageInner() {
           );
         }
 
+        // Khi filter theo status=SHIPPING, hiển thị nút Giao TC và Hoàn
+        if (showShippingActions) {
+          return (
+            <Space
+              size={6}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <Button
+                type="text"
+                icon={<EyeOutlined />}
+                size="small"
+                aria-label="Xem chi tiết"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/orders/${order._id}`);
+                }}
+              >
+                Xem
+              </Button>
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                size="small"
+                aria-label="Giao thành công"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleQuickAction(order, "DELIVERED", "Giao TC");
+                }}
+              >
+                Giao TC
+              </Button>
+              <Button
+                type="default"
+                danger
+                icon={<UndoOutlined />}
+                size="small"
+                aria-label="Hoàn đơn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleQuickAction(order, "RETURNED", "Hoàn");
+                }}
+              >
+                Hoàn
+              </Button>
+            </Space>
+          );
+        }
+
         // Mặc định: dropdown menu 3 chấm
         return (
           <Dropdown
@@ -597,7 +706,7 @@ function OrdersPageInner() {
         );
       },
     },
-  ], [router, getOrderItemTotals, showQuickActions, handleQuickAction, toggleConfirmCallMutation, page, pageSize]);
+  ], [router, getOrderItemTotals, showQuickActions, showShippingActions, handleQuickAction, toggleConfirmCallMutation, page, pageSize]);
 
   const columns = tableColumns;
 
@@ -650,12 +759,28 @@ function OrdersPageInner() {
     return label ? `Đơn hàng · ${label}` : "Đơn hàng";
   }, [status]);
 
+  const titleTooltip = useMemo(() => {
+    if (!status || isReconciliationView(status)) return;
+    const tooltipMap: Record<OrderStatus, string> = {
+      [OrderStatus.WAIT_CONFIRM]: "Sale vừa chốt đơn, chưa xác nhận lại với khách",
+      [OrderStatus.CONFIRMED]: "Đơn đã được xác nhận, sẵn sàng chuyển giao cho kho",
+      [OrderStatus.PACKING]: "Nhân viên kho đang chuẩn bị và đóng gói đơn hàng",
+      [OrderStatus.SHIPPING]: "Đơn hàng đang được vận chuyển đến khách",
+      [OrderStatus.DELIVERED]: "Giao hàng thành công, đang chờ đối soát với shipper",
+      [OrderStatus.RETURNED]: "Khách không nhận hàng, đơn hàng đã được hoàn về",
+      [OrderStatus.RECONCILED]: "Shipper đã trả tiền — đây mới là doanh thu thực",
+      [OrderStatus.CANCELLED]: "Đơn hàng đã bị hủy, không được tính doanh thu",
+    };
+    return tooltipMap[status as OrderStatus];
+  }, [status]);
+
   // Khi URL ?status=RECONCILED → render ReconciliationPanel (giao diện riêng)
   if (isReconciliationView(status)) {
     return (
       <PageContainer>
         <PageHeader
           title={pageTitle}
+          titleTooltip={titleTooltip}
           subtitle="Đối soát các đơn Giao thành công & Hoàn trả sang Đã đối soát"
           breadcrumb={[
             { label: "Trang chủ", href: "/" },
@@ -698,6 +823,7 @@ function OrdersPageInner() {
     <PageContainer>
       <PageHeader
         title={pageTitle}
+        titleTooltip={titleTooltip}
         subtitle={`${total} đơn hàng`}
           breadcrumb={[
           { label: "Trang chủ", href: "/" },
@@ -778,18 +904,10 @@ function OrdersPageInner() {
 
       <ConfirmDialog
         open={!!quickActionTarget}
-        title={`${quickActionTarget?.label ?? ""} đơn hàng`}
-        content={
-          quickActionTarget
-            ? `Bạn có chắc chắn muốn ${quickActionTarget.label.toLowerCase()} đơn hàng ${
-                quickActionTarget.order.orderCode
-              }?`
-            : ""
-        }
-        type={
-          quickActionTarget?.targetStatus === "CANCELLED" ? "delete" : "warning"
-        }
-        confirmText={quickActionTarget?.label ?? "Xác nhận"}
+        title={quickActionTarget ? getQuickActionContent(quickActionTarget).title : ""}
+        content={quickActionTarget ? getQuickActionContent(quickActionTarget).content : ""}
+        type={quickActionTarget ? getQuickActionContent(quickActionTarget).type : "warning"}
+        confirmText={quickActionTarget?.label === "Giao TC" ? "Thành công" : (quickActionTarget?.label ?? "Xác nhận")}
         loading={quickActionLoading}
         onConfirm={handleConfirmQuickAction}
         onCancel={() => setQuickActionTarget(null)}

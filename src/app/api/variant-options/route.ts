@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 
 import VariantOption from "@/models/VariantOption";
+import Product from "@/models/Product";
 
 import {
   mapVariantOption,
@@ -105,10 +106,29 @@ export async function GET(request: Request) {
       }
   
       const data = parsedBody.data;
+      
+      // Generate code from name if not provided
+      let finalCode = data.code;
+      if (!finalCode) {
+        // Convert Vietnamese name to ASCII code
+        const normalized = data.name
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        const asciiCode = normalized
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .substring(0, 20);
+        // Add random suffix for uniqueness
+        const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        finalCode = asciiCode.length >= 4 
+          ? asciiCode + suffix 
+          : `${asciiCode}${suffix}`;
+      }
   
+      // Only check for duplicate code (code must be unique globally)
       const existedCode =
         await VariantOption.exists({
-          code: data.code.toUpperCase(),
+          code: finalCode.toUpperCase(),
         });
   
       if (existedCode) {
@@ -118,27 +138,28 @@ export async function GET(request: Request) {
         );
       }
   
-      const existedName =
-        await VariantOption.exists({
-          name: data.name,
-        });
+      // Note: We don't check for duplicate name here because the same attribute name
+      // (e.g., "Kích thước") can be used for different products.
+      // Name uniqueness is enforced at the product level via the assignment API.
   
-      if (existedName) {
-        return errorResponse(
-          "Tên thuộc tính đã tồn tại",
-          400
-        );
-      }
-  
-      const option =
+const option =
         await VariantOption.create({
-          code: data.code.toUpperCase(),
-  
+          code: finalCode.toUpperCase(),
           name: data.name,
-  
           sortOrder: data.sortOrder,
         });
-  
+
+      // If productId is provided, automatically assign this option to the product
+      if (data.productId) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const mongoose = require("mongoose");
+        await Product.findByIdAndUpdate(data.productId, {
+          $addToSet: {
+            variantOptionIds: new mongoose.Types.ObjectId(option._id),
+          },
+        });
+      }
+
       return success(
         mapVariantOption(option),
         "Tạo thuộc tính biến thể thành công"

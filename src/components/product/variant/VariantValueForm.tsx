@@ -6,6 +6,7 @@
 
 "use client";
 
+import { useEffect } from "react";
 import { Form, Input, InputNumber, Select, Switch } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
 import type {
@@ -18,6 +19,7 @@ import type {
 interface VariantValueFormProps {
   open: boolean;
   editingItem?: VariantValueItem | null;
+  prefilledOption?: VariantOptionItem | null;
   variantOptions: VariantOptionItem[];
   loading?: boolean;
   onClose: () => void;
@@ -27,6 +29,7 @@ interface VariantValueFormProps {
 export default function VariantValueForm({
   open,
   editingItem,
+  prefilledOption,
   variantOptions,
   loading,
   onClose,
@@ -41,6 +44,26 @@ export default function VariantValueForm({
     }
     return "";
   };
+
+  // Reset form whenever the drawer opens with new context
+  useEffect(() => {
+    if (!open) return;
+    if (editingItem) {
+      form.setFieldsValue({
+        code: editingItem.code,
+        name: editingItem.name,
+        variantOptionId: getOptionId(editingItem.variantOptionId),
+        sortOrder: editingItem.sortOrder ?? 0,
+        isActive: editingItem.isActive ?? true,
+      });
+    } else {
+      form.setFieldsValue({
+        sortOrder: 0,
+        isActive: true,
+        variantOptionId: prefilledOption?._id,
+      });
+    }
+  }, [open, editingItem, prefilledOption, form]);
 
   const handleSubmit = () => {
     void form.validateFields().then((values) => {

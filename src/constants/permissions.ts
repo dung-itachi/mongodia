@@ -127,6 +127,10 @@ export const PERMISSIONS = [
     name: "Create Product",
   },
   {
+    code: "product.edit",
+    name: "Edit Product",
+  },
+  {
     code: "product.update",
     name: "Update Product",
   },

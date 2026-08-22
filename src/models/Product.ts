@@ -15,6 +15,9 @@ export interface IProduct {
 
   /** Account ID để phân quyền xem sản phẩm theo tài khoản */
   accountId?: Types.ObjectId;
+
+  /** Danh sách ID của các thuộc tính biến thể (VariantOption) thuộc về sản phẩm này */
+  variantOptionIds?: Types.ObjectId[];
 }
 
 const ProductSchema = new Schema<IProduct>(
@@ -58,6 +61,13 @@ const ProductSchema = new Schema<IProduct>(
       type: Schema.Types.ObjectId,
       ref: "Account",
       default: null,
+      index: true,
+    },
+
+    variantOptionIds: {
+      type: [Schema.Types.ObjectId],
+      ref: "VariantOption",
+      default: [],
       index: true,
     },
   },

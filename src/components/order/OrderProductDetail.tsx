@@ -642,7 +642,7 @@ function GiftSelectionSection({
       {giftMode === "CUSTOMER_SELECTED" && !isValidSelections && (
         <Alert
           type="warning"
-          message={`Chi tiết quà phải đủ ${totalGiftRequired} quà.`}
+          title={`Chi tiết quà phải đủ ${totalGiftRequired} quà.`}
           style={{ marginBottom: 12 }}
           showIcon
         />
@@ -675,7 +675,7 @@ function GiftSelectionSection({
       {giftMode === "RANDOM" && (
         <Alert
           type="info"
-          message={`Kho sẽ tự chọn ${totalGiftRequired} quà ngẫu nhiên theo quy tắc công ty`}
+          title={`Kho sẽ tự chọn ${totalGiftRequired} quà ngẫu nhiên theo quy tắc công ty`}
           showIcon
         />
       )}
@@ -1068,7 +1068,7 @@ function OrderItemRow({
       {validation.detailsError && (
         <Alert
           type="warning"
-          message={validation.detailsError}
+          title={validation.detailsError}
           style={{ marginBottom: 8 }}
           showIcon
         />

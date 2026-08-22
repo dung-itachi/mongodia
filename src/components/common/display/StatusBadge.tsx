@@ -5,7 +5,7 @@
  * Display status with standardized colors and optional icons.
  */
 
-import { Tag } from "antd";
+import { Tag, Tooltip } from "antd";
 import type { ReactNode } from "react";
 import {
   ClockCircleOutlined,
@@ -54,6 +54,7 @@ export type StatusConfig = {
   backgroundColor: string;
   label: string;
   icon?: ReactNode;
+  tooltip?: string;
 };
 
 export type StatusBadgeProps = {
@@ -62,6 +63,7 @@ export type StatusBadgeProps = {
   size?: "small" | "default";
   showIcon?: boolean;
   iconMapping?: Record<string, ReactNode>;
+  tooltip?: string;
 };
 
 // Standard status color mapping
@@ -86,17 +88,17 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   // Success statuses
   success: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Thành công" },
   SUCCESS: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Thành công" },
-  CONFIRMED: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đã xác nhận", icon: ICON_MAP.CheckOutlined },
-  DELIVERED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao", icon: ICON_MAP.CheckCircleOutlined },
+  CONFIRMED: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đã xác nhận", icon: ICON_MAP.CheckOutlined, tooltip: "Đơn đã được xác nhận, sẵn sàng chuyển giao cho kho" },
+  DELIVERED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao", icon: ICON_MAP.CheckCircleOutlined, tooltip: "Giao hàng thành công, đang chờ đối soát với shipper" },
 
   // Order statuses (Sprint 6.2)
-  WAIT_CONFIRM: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ xác nhận", icon: ICON_MAP.ClockCircleOutlined },
-  PACKING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Đang đóng gói", icon: ICON_MAP.InboxOutlined },
-  SHIPPING: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đang giao", icon: ICON_MAP.CarOutlined },
-  SHIPPED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao hàng" },
-  RETURNED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Đã hoàn trả", icon: ICON_MAP.UndoOutlined },
-  RECONCILED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đối soát", icon: ICON_MAP.CheckCircleOutlined },
-  CANCELLED: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Đã hủy", icon: ICON_MAP.CloseCircleOutlined },
+  WAIT_CONFIRM: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Chờ xác nhận", icon: ICON_MAP.ClockCircleOutlined, tooltip: "Sale vừa chốt đơn, chưa xác nhận lại với khách" },
+  PACKING: { color: "#fa8c16", backgroundColor: "#fff7e6", label: "Đang đóng gói", icon: ICON_MAP.InboxOutlined, tooltip: "Nhân viên kho đang chuẩn bị và đóng gói đơn hàng" },
+  SHIPPING: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đang giao", icon: ICON_MAP.CarOutlined, tooltip: "Đơn hàng đang được vận chuyển đến khách" },
+  SHIPPED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao hàng", tooltip: "Giao hàng thành công, đang chờ đối soát" },
+  RETURNED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Đã hoàn trả", icon: ICON_MAP.UndoOutlined, tooltip: "Khách không nhận hàng, đơn hàng đã được hoàn về" },
+  RECONCILED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đối soát", icon: ICON_MAP.CheckCircleOutlined, tooltip: "Shipper đã trả tiền — đây mới là doanh thu thực" },
+  CANCELLED: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Đã hủy", icon: ICON_MAP.CloseCircleOutlined, tooltip: "Đơn hàng đã bị hủy, không được tính doanh thu" },
   REJECTED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Bị từ chối", icon: ICON_MAP.StopOutlined },
   FAILED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Giao thất bại", icon: ICON_MAP.WarningOutlined },
 
@@ -152,6 +154,7 @@ export default function StatusBadge({
   size = "default",
   showIcon = false,
   iconMapping,
+  tooltip,
 }: StatusBadgeProps) {
   const config = mapping[status] || {
     color: "#8c8c8c",
@@ -159,13 +162,13 @@ export default function StatusBadge({
     label: status,
   };
 
-  // Get icon from mapping or custom iconMapping
+  const tooltipText = tooltip ?? config.tooltip;
   let icon: ReactNode | undefined = config.icon;
   if (iconMapping && iconMapping[status]) {
     icon = iconMapping[status];
   }
 
-  return (
+  const tag = (
     <Tag
       color={config.backgroundColor}
       style={{
@@ -173,6 +176,7 @@ export default function StatusBadge({
         borderColor: config.color,
         fontSize: size === "small" ? 12 : 14,
         padding: size === "small" ? "0 6px" : "2px 8px",
+        cursor: tooltipText ? "help" : undefined,
       }}
     >
       {showIcon && icon && (
@@ -181,4 +185,10 @@ export default function StatusBadge({
       {getTranslatedLabel(config.label)}
     </Tag>
   );
+
+  if (tooltipText) {
+    return <Tooltip title={tooltipText}>{tag}</Tooltip>;
+  }
+
+  return tag;
 }

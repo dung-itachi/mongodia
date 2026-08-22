@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 
 import VariantValue from "@/models/VariantValue";
 import VariantOption from "@/models/VariantOption";
+import ProductVariant from "@/models/ProductVariant";
 import mongoose from "mongoose";
 
 import {
@@ -240,6 +241,17 @@ export async function DELETE(
       return errorResponse(
         "Giá trị biến thể không tồn tại",
         404
+      );
+    }
+
+    // Dependency check: this value is used by any ProductVariant?
+    const usedByVariant = await ProductVariant.findOne({
+      variantValues: id,
+    }).lean();
+    if (usedByVariant) {
+      return errorResponse(
+        "Không thể xóa giá trị vì đang được sử dụng bởi biến thể sản phẩm",
+        400
       );
     }
 

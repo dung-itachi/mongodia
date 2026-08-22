@@ -156,7 +156,7 @@ function OrderStatisticsModalInner({
           Thống kê đơn hàng
         </span>
       }
-      destroyOnClose
+      destroyOnHidden
     >
       {loading || !data ? (
         <div style={{ padding: 16 }}>

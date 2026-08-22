@@ -4,7 +4,7 @@
  * Standard page header for all CRM pages.
  */
 
-import { Breadcrumb } from "antd";
+import { Breadcrumb, Tooltip } from "antd";
 import { ReactNode } from "react";
 
 export type BreadcrumbItem = {
@@ -23,6 +23,8 @@ export type PageHeaderProps = {
   actions?: ReactNode;
   /** Loading state */
   loading?: boolean;
+  /** Tooltip shown on title hover */
+  titleTooltip?: string;
 };
 
 export default function PageHeader({
@@ -30,6 +32,7 @@ export default function PageHeader({
   subtitle,
   breadcrumb,
   actions,
+  titleTooltip,
 }: PageHeaderProps) {
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -62,9 +65,12 @@ export default function PageHeader({
               fontWeight: 600,
               margin: 0,
               lineHeight: 1.2,
+              cursor: titleTooltip ? "help" : undefined,
             }}
           >
-            {title}
+            {titleTooltip ? (
+              <Tooltip title={titleTooltip}>{title}</Tooltip>
+            ) : title}
           </h1>
           {subtitle && (
             <p

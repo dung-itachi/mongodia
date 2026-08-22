@@ -24,3 +24,291 @@
     justify-content: stretch;
   }
 }
+
+/* ============================================================================
+   Variant Options Tree
+   ============================================================================ */
+
+.treeWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.treeToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.treeList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.treeNode {
+  display: flex;
+  flex-direction: column;
+}
+
+.treeNodeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  transition: background 0.15s;
+}
+
+.treeNodeHeader:hover {
+  background: #f0f5ff;
+}
+
+.treeToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  color: #595959;
+  user-select: none;
+}
+
+.treeNodeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.treeNodeIconBadge {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.treeNodeIconBadgeSmall {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.treeNodeChild .treeNodeIcon {
+  background: #fff7e6;
+  color: #d46b08;
+  width: 20px;
+  height: 20px;
+}
+
+.treeNodeTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.treeNodeTitle strong {
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.treeNodeCode {
+  color: #8c8c8c;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.treeNodeCount {
+  color: #1677ff;
+  font-size: 12px;
+  background: #e6f4ff;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.treeNodeActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.treeChildren {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 6px 38px;
+  position: relative;
+}
+
+.treeChildren::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 0;
+  bottom: 12px;
+  width: 1px;
+  border-left: 1px dashed #d9d9d9;
+}
+
+.treeNodeChild {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.treeNodeChild::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  border-top: 1px dashed #d9d9d9;
+}
+
+.treeNodeChild:hover {
+  background: #fafafa;
+}
+
+.treeEmptyValue {
+  padding: 8px 10px;
+  color: #bfbfbf;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.treeAddRow {
+  padding: 4px 10px;
+}
+
+.treeEmpty {
+  text-align: center;
+  color: #999;
+  padding: 40px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.searchHighlight {
+  background: #fff566;
+  padding: 0 2px;
+  border-radius: 2px;
+  color: #1f1f1f;
+}
+
+/* ============================================================================
+   Product Variants Tree (3-level: Product -> Attribute -> Value)
+   ============================================================================ */
+
+.treeNodeHeaderLv1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #e6f4ff;
+  border: 1px solid #91caff;
+  transition: background 0.15s;
+}
+
+.treeNodeHeaderLv1:hover {
+  background: #bae0ff;
+}
+
+.treeNodeHeaderLv2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  transition: background 0.15s;
+}
+
+.treeNodeHeaderLv2:hover {
+  background: #f0f5ff;
+}
+
+.treeNodeIconLv1 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #1677ff;
+  color: #fff;
+}
+
+.treeNodeIconLv1 .treeNodeIconBadge {
+  color: #fff;
+}
+
+.treeChildrenLv3 {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 6px 38px;
+  position: relative;
+}
+
+.treeChildrenLv3::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 0;
+  bottom: 12px;
+  width: 1px;
+  border-left: 1px dashed #d9d9d9;
+}
+
+.treeNodeChildLv3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.treeNodeChildLv3::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  border-top: 1px dashed #d9d9d9;
+}
+
+.treeNodeChildLv3:hover {
+  background: #fafafa;
+}
+
+.treeNodeChildLv3 .treeNodeIcon {
+  background: #fff7e6;
+  color: #d46b08;
+  width: 20px;
+  height: 20px;
+}

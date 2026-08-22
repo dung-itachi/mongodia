@@ -186,8 +186,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Generate SKU if not provided
+    let finalSku = data.sku?.trim() || "";
+    if (!finalSku) {
+      const product = await Product.findById(data.productId).lean();
+      const productCode = product?.code || "SKU";
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      finalSku = `${productCode}-${randomSuffix}`;
+    }
+
     const existedSku = await ProductVariant.exists({
-      sku: data.sku.toUpperCase(),
+      sku: finalSku.toUpperCase(),
     });
 
     if (existedSku) {
@@ -212,7 +221,7 @@ export async function POST(request: Request) {
 
     const productVariant = await ProductVariant.create({
       productId: data.productId,
-      sku: data.sku.toUpperCase(),
+      sku: finalSku.toUpperCase(),
       barcode: data.barcode ?? "",
       image: data.image ?? "",
       variantValues: data.variantValues,

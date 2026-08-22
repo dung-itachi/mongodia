@@ -335,14 +335,17 @@ export const updateCategorySchema =
     code: z
       .string()
       .min(2, "Mã thuộc tính phải có ít nhất 2 ký tự")
-      .max(50, "Mã thuộc tính không được quá 50 ký tự"),
-  
+      .max(50, "Mã thuộc tính không được quá 50 ký tự")
+      .optional(),
+
     name: z
       .string()
       .min(2, "Tên thuộc tính phải có ít nhất 2 ký tự")
       .max(100, "Tên thuộc tính không được quá 100 ký tự"),
-  
+
     sortOrder: z.number().optional().default(0),
+    
+    productId: z.string().optional(),
   });
   
   export const updateVariantOptionSchema =
@@ -391,8 +394,8 @@ export const createProductVariantSchema = z.object({
   sku: z
     .string()
     .trim()
-    .min(2, "SKU phải có ít nhất 2 ký tự")
-    .max(100, "SKU tối đa 100 ký tự"),
+    .optional()
+    .or(z.literal("")),
 
   barcode: z
     .string()

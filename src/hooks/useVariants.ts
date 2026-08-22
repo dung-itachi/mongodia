@@ -6,6 +6,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import api from "@/lib/axios";
 
 // ============================================================================
@@ -25,6 +26,7 @@ export interface CreateVariantOptionInput {
   code: string;
   name: string;
   sortOrder?: number;
+  productId?: string;
 }
 
 export interface UpdateVariantOptionInput extends CreateVariantOptionInput {
@@ -266,6 +268,17 @@ async function deleteVariantValue(id: string): Promise<void> {
   }
 }
 
+async function deleteVariantOption(id: string): Promise<void> {
+  const response = await api.delete<{
+    success: boolean;
+    message?: string;
+  }>(`/api/variant-options/${id}`);
+
+  if (!response.data.success) {
+    throw new Error(response.data.message ?? "Failed to delete variant option");
+  }
+}
+
 // ============================================================================
 // API Functions - Product Variants
 // ============================================================================
@@ -398,6 +411,9 @@ export function useCreateVariantOption() {
       void queryClient.invalidateQueries({
         queryKey: ["variant-option-list"],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["products-variant-tree"],
+      });
     },
   });
 }
@@ -419,6 +435,9 @@ export function useUpdateVariantOption() {
       });
       void queryClient.invalidateQueries({
         queryKey: ["variant-option-detail", variables.id],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["products-variant-tree"],
       });
     },
   });
@@ -459,6 +478,9 @@ export function useCreateVariantValue() {
       void queryClient.invalidateQueries({
         queryKey: ["variant-value-list"],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["products-variant-tree"],
+      });
     },
   });
 }
@@ -480,6 +502,9 @@ export function useUpdateVariantValue() {
       void queryClient.invalidateQueries({
         queryKey: ["variant-value-detail", variables.id],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ["products-variant-tree"],
+      });
     },
   });
 }
@@ -491,6 +516,33 @@ export function useDeleteVariantValue() {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["variant-value-list"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["product-variant-options"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["products-variant-tree"],
+      });
+    },
+  });
+}
+
+export function useDeleteVariantOption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteVariantOption,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["variant-option-list"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["variant-value-list"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["product-variant-options"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["products-variant-tree"],
       });
     },
   });
@@ -610,5 +662,152 @@ export function useProductVariantOptions(productId: string | null) {
     queryFn: () => fetchProductVariantOptions(productId!),
     enabled: !!productId,
     staleTime: 0,
+  });
+}
+
+// Flatten version - returns options and values as separate arrays filtered by product
+export interface ProductVariantOptionsFlat {
+  options: VariantOptionItem[];
+  values: VariantValueItem[];
+}
+
+export function useProductVariantOptionsFlat(productId: string | null) {
+  const { data, isLoading, refetch } = useProductVariantOptions(productId);
+
+  const flat = useMemo(() => {
+    if (!data?.variantOptions) {
+      return { options: [], values: [] };
+    }
+
+    const options: VariantOptionItem[] = [];
+    const values: VariantValueItem[] = [];
+
+    for (const opt of data.variantOptions) {
+      options.push({
+        _id: opt._id,
+        code: opt.code,
+        name: opt.name,
+        sortOrder: opt.sortOrder,
+        isActive: opt.isActive,
+      });
+
+      for (const val of opt.values) {
+        values.push({
+          _id: val._id,
+          code: val.code,
+          name: val.name,
+          variantOptionId: val.variantOptionId,
+          sortOrder: val.sortOrder,
+          isActive: val.isActive,
+        });
+      }
+    }
+
+    return { options, values };
+  }, [data]);
+
+  return {
+    data: flat,
+    isLoading,
+    refetch,
+  };
+}
+
+// ============================================================================
+// Product Variant Option Assignment (Assign options to a product)
+// ============================================================================
+
+interface AssignProductVariantOptionsInput {
+  variantOptionIds: string[];
+}
+
+async function assignProductVariantOptions(
+  productId: string,
+  input: AssignProductVariantOptionsInput
+) {
+  const response = await api.put<{
+    success: boolean;
+    data: { productId: string; variantOptionIds: string[] };
+    message?: string;
+  }>(`/api/products/${productId}/variant-options`, input);
+
+  if (!response.data.success) {
+    throw new Error(response.data.message ?? "Failed to assign variant options");
+  }
+
+  return response.data.data;
+}
+
+export function useAssignProductVariantOptions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      productId,
+      input,
+    }: {
+      productId: string;
+      input: AssignProductVariantOptionsInput;
+    }) => assignProductVariantOptions(productId, input),
+    onSuccess: (_, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["product-variant-options", variables.productId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["product-variant-options"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["products-variant-tree"],
+      });
+    },
+  });
+}
+
+// ============================================================================
+// Products Variant Tree (Product -> Option -> Value)
+// ============================================================================
+
+export interface ProductTreeValue {
+  _id: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface ProductTreeOption {
+  _id: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+  values: ProductTreeValue[];
+}
+
+export interface ProductTreeNode {
+  _id: string;
+  code: string;
+  name: string;
+  variantOptions: ProductTreeOption[];
+}
+
+async function fetchProductsVariantTree(): Promise<ProductTreeNode[]> {
+  const response = await api.get<{
+    success: boolean;
+    data: { products: ProductTreeNode[] };
+    message?: string;
+  }>("/api/products/variant-tree");
+
+  if (!response.data.success) {
+    throw new Error(response.data.message ?? "Failed to load products variant tree");
+  }
+  return response.data.data.products;
+}
+
+export function useProductsVariantTree() {
+  return useQuery({
+    queryKey: ["products-variant-tree"],
+    queryFn: fetchProductsVariantTree,
+    staleTime: 30_000,
   });
 }
