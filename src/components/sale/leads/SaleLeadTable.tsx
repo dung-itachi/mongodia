@@ -24,11 +24,6 @@ import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 import { convertMNTtoVND, formatMNT, formatVND } from "@/lib/format";
 
-function getTranslated(key: string): string {
-  const language = useLanguageStore.getState().language;
-  return t(key, language);
-}
-
 export interface SaleLeadTableProps {
   data: SaleLead[];
   onUpdateStatus: (lead: SaleLead, status: LeadStatus) => void;
@@ -81,6 +76,7 @@ function SaleLeadTableInner({
   currency: controlledCurrency,
   onCurrencyToggle,
 }: SaleLeadTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [internalCurrency, setInternalCurrency] = useState<"MNT" | "VND">("MNT");
   const isControlled = controlledCurrency !== undefined;
   const currency = isControlled ? controlledCurrency : internalCurrency;
@@ -111,7 +107,7 @@ function SaleLeadTableInner({
           }}
           style={{ cursor: "pointer", userSelect: "none", display: "inline-flex", alignItems: "center", gap: 4 }}
         >
-          <span>{getTranslated(label)}</span>
+          <span>{t(label, lang)}</span>
           <Tag color={currency === "MNT" ? "blue" : "purple"} style={{ margin: 0, fontSize: 10, lineHeight: "16px", padding: "0 6px" }}>
             {currency}
           </Tag>
@@ -150,7 +146,7 @@ function SaleLeadTableInner({
       // Khi bật phân trang, có thể cần truyền currentPage/pageSize để số chạy liên tục giữa các trang.
       {
         key: "stt",
-        title: getTranslated("STT"),
+        title: t("STT", lang),
         width: 60,
         align: "center",
         fixed: "left",
@@ -160,13 +156,13 @@ function SaleLeadTableInner({
       },
       {
         key: "leadCode",
-        title: getTranslated("Mã"),
+        title: t("Mã", lang),
         dataIndex: "leadCode",
         width: 130,
       },
       {
         key: "orderDate",
-        title: getTranslated("TG đơn hàng"),
+        title: t("TG đơn hàng", lang),
         dataIndex: "orderDate",
         width: 150,
         render: (value: unknown) =>
@@ -178,7 +174,7 @@ function SaleLeadTableInner({
       },
       {
         key: "receivedDate",
-        title: getTranslated("TG nhận đơn"),
+        title: t("TG nhận đơn", lang),
         dataIndex: "receivedDate",
         width: 150,
         render: (value: unknown) =>
@@ -190,7 +186,7 @@ function SaleLeadTableInner({
       },
       {
         key: "customerName",
-        title: getTranslated("Tên khách hàng"),
+        title: t("Tên khách hàng", lang),
         dataIndex: "customerName",
         width: 180,
         render: (value: unknown) => (
@@ -199,7 +195,7 @@ function SaleLeadTableInner({
       },
       {
         key: "phone",
-        title: getTranslated("SĐT"),
+        title: t("SĐT", lang),
         dataIndex: "phone",
         width: 120,
         render: (value: unknown) => (
@@ -208,7 +204,7 @@ function SaleLeadTableInner({
       },
       {
         key: "phone2",
-        title: getTranslated("SĐT 2"),
+        title: t("SĐT 2", lang),
         dataIndex: "phone2",
         width: 110,
         render: (value: unknown) =>
@@ -218,7 +214,7 @@ function SaleLeadTableInner({
       },
       {
         key: "address",
-        title: getTranslated("Địa chỉ"),
+        title: t("Địa chỉ", lang),
         dataIndex: "address",
         width: 200,
         render: (value: unknown) => String(value) || (
@@ -227,7 +223,7 @@ function SaleLeadTableInner({
       },
       {
         key: "marketingEmployee",
-        title: getTranslated("MKT phụ trách"),
+        title: t("MKT phụ trách", lang),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -243,7 +239,7 @@ function SaleLeadTableInner({
       },
       {
         key: "saleEmployee",
-        title: getTranslated("Sale phụ trách"),
+        title: t("Sale phụ trách", lang),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -255,13 +251,13 @@ function SaleLeadTableInner({
             );
           }
           return (
-            <Tag color="default">{getTranslated("Chưa phân công")}</Tag>
+            <Tag color="default">{t("Chưa phân công", lang)}</Tag>
           );
         },
       },
       {
         key: "sourceType",
-        title: getTranslated("Nguồn"),
+        title: t("Nguồn", lang),
         width: 130,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -270,7 +266,7 @@ function SaleLeadTableInner({
       },
       {
         key: "product",
-        title: getTranslated("Sản phẩm"),
+        title: t("Sản phẩm", lang),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -284,7 +280,7 @@ function SaleLeadTableInner({
       },
       {
         key: "combo",
-        title: getTranslated("Combo"),
+        title: t("Combo", lang),
         width: 150,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -298,7 +294,7 @@ function SaleLeadTableInner({
       },
       {
         key: "quantity",
-        title: getTranslated("SL"),
+        title: t("SL", lang),
         width: 60,
         align: "center",
         render: (_value: unknown, record: Record<string, unknown>) => {
@@ -365,7 +361,7 @@ function SaleLeadTableInner({
       },
       {
         key: "facebookPage",
-        title: getTranslated("Trang FB"),
+        title: t("Trang FB", lang),
         width: 130,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -376,7 +372,7 @@ function SaleLeadTableInner({
       },
       {
         key: "note",
-        title: getTranslated("Ghi chú"),
+        title: t("Ghi chú", lang),
         width: 180,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
@@ -392,7 +388,7 @@ function SaleLeadTableInner({
       },
       {
         key: "status",
-        title: getTranslated("Trạng thái"),
+        title: t("Trạng thái", lang),
         dataIndex: "status",
         width: 160,
         render: (value: unknown, record: Record<string, unknown>) => {
@@ -405,9 +401,9 @@ function SaleLeadTableInner({
                 <Tag
                   color={noAnswerCount >= 3 ? "red" : "gold"}
                   style={{ fontSize: 11, margin: 0, lineHeight: "18px" }}
-                  title={getTranslated("Đã gọi ${count} lần không nghe máy").replace("${count}", String(noAnswerCount))}
+                  title={t("Đã gọi ${count} lần không nghe máy", lang).replace("${count}", String(noAnswerCount))}
                 >
-                  📵 {getTranslated("K nghe")}: {noAnswerCount}
+                  📵 {t("K nghe", lang)}: {noAnswerCount}
                 </Tag>
               )}
             </div>
@@ -416,7 +412,7 @@ function SaleLeadTableInner({
       },
       {
         key: "actions",
-        title: getTranslated("Thao tác"),
+        title: t("Thao tác", lang),
         width: 380,
         align: "center" as const,
         render: (_value: unknown, record: Record<string, unknown>) => {
@@ -434,7 +430,7 @@ function SaleLeadTableInner({
                   disabled={lead.status === LeadStatus.CLOSED}
                   className={styles.callBtn}
                 >
-                  {getTranslated("Gọi")}
+                  {t("Gọi", lang)}
                 </Button>
               )}
 
@@ -457,11 +453,11 @@ function SaleLeadTableInner({
                   disabled={lead.status === LeadStatus.CLOSED}
                   title={
                     noAnswerCount > 0
-                      ? getTranslated("Đã gọi ${count} lần không nghe").replace("${count}", String(noAnswerCount)) + (noAnswerCount >= 3 ? " - CẢNH BÁO!" : "")
-                      : getTranslated("Chuyển sang trạng thái Không nghe máy")
+                      ? t("Đã gọi ${count} lần không nghe", lang).replace("${count}", String(noAnswerCount)) + (noAnswerCount >= 3 ? " - CẢNH BÁO!" : "")
+                      : t("Chuyển sang trạng thái Không nghe máy", lang)
                   }
                 >
-                  {getTranslated("K nghe")}
+                  {t("K nghe", lang)}
                 </Button>
               </Badge>
 
@@ -473,7 +469,7 @@ function SaleLeadTableInner({
                 onClick={() => onUpdateStatus(lead, LeadStatus.POTENTIAL)}
                 disabled={lead.status === LeadStatus.CLOSED}
               >
-                {getTranslated("Tiềm năng")}
+                {t("Tiềm năng", lang)}
               </Button>
 
               {/* Qualified Button */}
@@ -483,7 +479,7 @@ function SaleLeadTableInner({
                 onClick={() => onUpdateStatus(lead, LeadStatus.QUALIFIED)}
                 disabled={lead.status === LeadStatus.CLOSED}
               >
-                {getTranslated("Đủ điều kiện")}
+                {t("Đủ điều kiện", lang)}
               </Button>
 
               {/* Lost Button */}
@@ -493,9 +489,9 @@ function SaleLeadTableInner({
                 type={lead.status === LeadStatus.LOST ? "primary" : "default"}
                 onClick={() => onUpdateStatus(lead, LeadStatus.LOST)}
                 disabled={lead.status === LeadStatus.CLOSED}
-                title={getTranslated("Khách từ chối, không có nhu cầu")}
+                title={t("Khách từ chối, không có nhu cầu", lang)}
               >
-                {getTranslated("Không mua")}
+                {t("Không mua", lang)}
               </Button>
 
               {/* Convert Button */}
@@ -513,14 +509,14 @@ function SaleLeadTableInner({
                 }
                 title={
                   lead.isConverted
-                    ? getTranslated("Lead đã được chốt đơn")
+                    ? t("Lead đã được chốt đơn", lang)
                     : lead.status === LeadStatus.CLOSED
-                    ? getTranslated("Lead đã đóng")
-                    : getTranslated("Chốt đơn cho khách hàng này")
+                    ? t("Lead đã đóng", lang)
+                    : t("Chốt đơn cho khách hàng này", lang)
                 }
                 className={styles.convertBtn}
               >
-                {getTranslated("Chốt")}
+                {t("Chốt", lang)}
               </Button>
 
               {/* Reassign Button - Only for Admin/Manager */}
@@ -530,7 +526,7 @@ function SaleLeadTableInner({
                   icon={<UserSwitchOutlined />}
                   onClick={() => onReassign(lead)}
                 >
-                  {getTranslated("Phân công")}
+                  {t("Phân công", lang)}
                 </Button>
               )}
 
@@ -540,9 +536,9 @@ function SaleLeadTableInner({
                   size="small"
                   icon={<EyeOutlined />}
                   onClick={() => onViewDetail(lead)}
-                  title={getTranslated("Xem chi tiết khách hàng")}
+                  title={t("Xem chi tiết khách hàng", lang)}
                 >
-                  {getTranslated("Chi tiết")}
+                  {t("Chi tiết", lang)}
                 </Button>
               )}
 
@@ -552,9 +548,9 @@ function SaleLeadTableInner({
                   size="small"
                   icon={<EditOutlined />}
                   onClick={() => onEdit(lead)}
-                  title={getTranslated("Sửa thông tin khách hàng")}
+                  title={t("Sửa thông tin khách hàng", lang)}
                 >
-                  {getTranslated("Sửa")}
+                  {t("Sửa", lang)}
                 </Button>
               )}
             </div>
@@ -582,8 +578,8 @@ function SaleLeadTableInner({
               textAlign: "center",
             }}
           >
-            <span style={{ display: "block", whiteSpace: "nowrap" }}>{getTranslated("Phân")}</span>
-            <span style={{ display: "block", whiteSpace: "nowrap" }}>{getTranslated("công")}</span>
+            <span style={{ display: "block", whiteSpace: "nowrap" }}>{t("Phân", lang)}</span>
+            <span style={{ display: "block", whiteSpace: "nowrap" }}>{t("công", lang)}</span>
           </span>
         ),
         width: 90,

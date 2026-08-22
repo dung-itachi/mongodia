@@ -9,6 +9,8 @@ import { useState, useEffect } from "react";
 import { Button, Select, Space, Spin, App, Modal } from "antd";
 import { UserSwitchOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import api from "@/lib/axios";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface Employee {
   _id: string;
@@ -29,6 +31,7 @@ export default function BulkReassignToolbar({
   onClearSelection,
   onSuccess,
 }: BulkReassignToolbarProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -50,7 +53,7 @@ export default function BulkReassignToolbar({
       setEmployees(response.data.data.items || []);
     } catch (err) {
       console.error("Failed to fetch employees:", err);
-      message.error("Không thể tải danh sách nhân viên Sale");
+      message.error(t("Không thể tải danh sách nhân viên Sale", lang));
     } finally {
       setLoading(false);
     }
@@ -58,7 +61,7 @@ export default function BulkReassignToolbar({
 
   const handleReassign = async () => {
     if (selectedEmployeeIds.length === 0) {
-      message.warning("Vui lòng chọn ít nhất 1 nhân viên Sale");
+      message.warning(t("Vui lòng chọn ít nhất 1 nhân viên Sale", lang));
       return;
     }
 
@@ -72,7 +75,7 @@ export default function BulkReassignToolbar({
         leadIds: selectedKeys,
         saleEmployeeIds: selectedEmployeeIds,
       });
-      message.success(`Đã phân công ${selectedKeys.length} đơn hàng cho ${selectedEmployeeIds.length} nhân viên`);
+      message.success(t(`Đã phân công ${selectedKeys.length} đơn hàng cho ${selectedEmployeeIds.length} nhân viên`, lang));
       setConfirmOpen(false);
       onClearSelection();
       setSelectedEmployeeIds([]);
@@ -80,7 +83,7 @@ export default function BulkReassignToolbar({
     } catch (err: unknown) {
       console.error("Bulk reassign failed:", err);
       const error = err as { response?: { data?: { message?: string } } };
-      message.error(error.response?.data?.message || "Phân công thất bại");
+      message.error(error.response?.data?.message || t("Phân công thất bại", lang));
     } finally {
       setSubmitting(false);
     }
@@ -104,22 +107,22 @@ export default function BulkReassignToolbar({
       <Space>
         <CheckCircleOutlined style={{ color: "#1890ff", fontSize: 18 }} />
         <span style={{ fontWeight: 500 }}>
-          Đã chọn <span style={{ color: "#1890ff", fontSize: 16 }}>{selectedCount}</span> đơn hàng
+          {t("Đã chọn", lang)} <span style={{ color: "#1890ff", fontSize: 16 }}>{selectedCount}</span> {t("đơn hàng", lang)}
         </span>
         <Button size="small" onClick={onClearSelection}>
-          Bỏ chọn
+          {t("Bỏ chọn", lang)}
         </Button>
       </Space>
 
       <Space>
-        <span style={{ fontWeight: 500, marginRight: 8 }}>Phân công cho:</span>
+        <span style={{ fontWeight: 500, marginRight: 8 }}>{t("Phân công cho:", lang)}</span>
         {loading ? (
           <Spin size="small" />
         ) : (
           <Select
             mode="multiple"
             style={{ minWidth: 300 }}
-            placeholder="Chọn nhân viên Sale"
+            placeholder={t("Chọn nhân viên Sale", lang)}
             value={selectedEmployeeIds}
             onChange={setSelectedEmployeeIds}
             showSearch
@@ -138,25 +141,25 @@ export default function BulkReassignToolbar({
           disabled={selectedEmployeeIds.length === 0}
           loading={submitting}
         >
-          Phân công
+          {t("Phân công", lang)}
         </Button>
       </Space>
 
       <Modal
-        title="Xác nhận phân công hàng loạt"
+        title={t("Xác nhận phân công hàng loạt", lang)}
         open={confirmOpen}
         onOk={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
         confirmLoading={submitting}
-        okText="Xác nhận"
-        cancelText="Hủy"
+        okText={t("Xác nhận", lang)}
+        cancelText={t("Hủy", lang)}
       >
         <p>
-          Bạn có chắc muốn phân công <strong>{selectedKeys.length}</strong> đơn hàng cho{" "}
-          <strong>{selectedEmployeeIds.length}</strong> nhân viên Sale đã chọn?
+          {t("Bạn có chắc muốn phân công", lang)} <strong>{selectedKeys.length}</strong> {t("đơn hàng cho", lang)}{" "}
+          <strong>{selectedEmployeeIds.length}</strong> {t("nhân viên Sale đã chọn?", lang)}
         </p>
         <p style={{ color: "#888", marginTop: 8 }}>
-          Mỗi khách hàng sẽ được phân công cho một nhân viên (phân theo vòng tròn).
+          {t("Mỗi khách hàng sẽ được phân công cho một nhân viên (phân theo vòng tròn).", lang)}
         </p>
       </Modal>
     </div>

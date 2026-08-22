@@ -76,6 +76,25 @@ export interface SaleLead {
   convertedOrderId?: string;
   /** Thời điểm convert thành Order. */
   convertedAt?: string;
+  /** Sprint 8.7: Variant details snapshot để form chốt đơn prefill. */
+  variantDetails?: Array<{
+    quantity: number;
+    attributes: Array<{
+      optionId: string;
+      valueId: string;
+      optionName?: string;
+      valueName?: string;
+    }>;
+    variantId?: string;
+  }>;
+  /** Sprint 8.7: Chế độ quà tặng. */
+  giftMode?: "RANDOM" | "CUSTOMER_SELECTED";
+  /** Sprint 8.7: Yêu cầu quà của khách. */
+  giftSelections?: Array<{
+    giftProductId: string;
+    giftProductName?: string;
+    quantity: number;
+  }>;
   createdAt: string;
   updatedAt: string;
 }

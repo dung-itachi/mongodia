@@ -20,7 +20,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Button, Input, Popconfirm, Space, Switch } from "antd";
+import { Button, Input, Popconfirm, Space, Switch, Tag } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -214,6 +214,9 @@ export default function ProductVariantsTree({
                     <span className={styles.treeNodeIconBadge}>P</span>
                   </span>
                   <span className={styles.treeNodeTitle}>
+                    <Tag color="blue" className={styles.treeLevelTag}>
+                      Sản phẩm
+                    </Tag>
                     <strong>{highlight(product.name)}</strong>
                     <span className={styles.treeNodeCode}>
                       ({highlight(product.code)})
@@ -283,6 +286,9 @@ export default function ProductVariantsTree({
                                 </span>
                               </span>
                               <span className={styles.treeNodeTitle}>
+                                <Tag color="purple" className={styles.treeLevelTag}>
+                                  Thuộc tính
+                                </Tag>
                                 <strong>{highlight(opt.name)}</strong>
                                 <span className={styles.treeNodeCode}>
                                   ({highlight(opt.code)})
@@ -402,6 +408,9 @@ export default function ProductVariantsTree({
                                         </span>
                                       </span>
                                       <span className={styles.treeNodeTitle}>
+                                        <Tag color="orange" className={styles.treeLevelTag}>
+                                          Giá trị
+                                        </Tag>
                                         {highlight(v.name)}
                                         <span className={styles.treeNodeCode}>
                                           ({highlight(v.code)})

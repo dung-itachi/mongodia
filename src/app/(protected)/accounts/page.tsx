@@ -26,8 +26,11 @@ import {
   PageContainer,
   PageHeader,
 } from "@/components/common";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export default function AccountsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const user = useAuthStore((state) => state.user);
   const isGlobal = user?.permissions.includes("*") ?? false;
   const canCreate = isGlobal || (user?.permissions.includes("account.create") ?? false);
@@ -124,30 +127,30 @@ export default function AccountsPage() {
 
   const columns = useMemo(() => [
     { title: "STT", render: (_: unknown, __: Account, index: number) => index + 1, width: 60 },
-    { title: "Avatar", render: (_: unknown, item: Account) => <Avatar src={item.avatar || undefined}>{item.fullName?.charAt(0)}</Avatar>, width: 70 },
-    { title: "Mã NV", dataIndex: "employeeCode", width: 110 },
-    { title: "Họ tên", dataIndex: "fullName" },
-    { title: "Username", dataIndex: "username" },
-    { title: "Email", dataIndex: "email" },
-    { title: "Phone", dataIndex: "phone" },
-    { title: "Role", render: (_: unknown, item: Account) => <Tag color="blue">{item.role?.code ?? "-"}</Tag>, width: 110 },
-    { title: "Department", render: (_: unknown, item: Account) => <Tag color="purple">{item.department?.name ?? item.team?.code ?? "-"}</Tag>, width: 130 },
-    { title: "Team", dataIndex: "team", render: (_: unknown, item: Account) => item.team?.code ?? "-" },
-    { title: "Khu vực", render: (_: unknown, item: Account) => item.area?.code ? <Tag color="green">{item.area.code}</Tag> : "-" },
-    { title: "Leader", render: (_: unknown, item: Account) => item.leader?.fullName ?? "-" },
-    { title: "Trạng thái", render: (_: unknown, item: Account) => <Tag color={item.isActive ? "green" : "red"}>{item.isActive ? "Hoạt động" : "Đã khóa"}</Tag>, width: 110 },
+    { title: t("Avatar", lang), render: (_: unknown, item: Account) => <Avatar src={item.avatar || undefined}>{item.fullName?.charAt(0)}</Avatar>, width: 70 },
+    { title: t("Mã NV", lang), dataIndex: "employeeCode", width: 110 },
+    { title: t("Họ tên", lang), dataIndex: "fullName" },
+    { title: t("Username", lang), dataIndex: "username" },
+    { title: t("Email", lang), dataIndex: "email" },
+    { title: t("Phone", lang), dataIndex: "phone" },
+    { title: t("Role", lang), render: (_: unknown, item: Account) => <Tag color="blue">{item.role?.code ?? "-"}</Tag>, width: 110 },
+    { title: t("Department", lang), render: (_: unknown, item: Account) => <Tag color="purple">{item.department?.name ?? item.team?.code ?? "-"}</Tag>, width: 130 },
+    { title: t("Team", lang), dataIndex: "team", render: (_: unknown, item: Account) => item.team?.code ?? "-" },
+    { title: t("Khu vực", lang), render: (_: unknown, item: Account) => item.area?.code ? <Tag color="green">{item.area.code}</Tag> : "-" },
+    { title: t("Leader", lang), render: (_: unknown, item: Account) => item.leader?.fullName ?? "-" },
+    { title: t("Trạng thái", lang), render: (_: unknown, item: Account) => <Tag color={item.isActive ? "green" : "red"}>{item.isActive ? t("Hoạt động", lang) : t("Đã khóa", lang)}</Tag>, width: 110 },
     {
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       render: (_: unknown, item: Account) => (
         <Space wrap>
-          <Button size="small" onClick={() => openView(item)}>Xem</Button>
-          {canUpdate && <Button size="small" onClick={() => openEdit(item)}>Sửa</Button>}
-          {canDisable && <Popconfirm title={`${item.isActive ? "Khóa" : "Mở khóa"} tài khoản này?`} onConfirm={() => disable.mutate({ id: item._id, isActive: !item.isActive })}><Button size="small" danger={item.isActive}>{item.isActive ? "Khóa" : "Mở khóa"}</Button></Popconfirm>}
-          {canResetPassword && <Button size="small" onClick={() => { setSelected(item); passwordForm.resetFields(); setPasswordOpen(true); }}>Reset password</Button>}
+          <Button size="small" onClick={() => openView(item)}>{t("Xem", lang)}</Button>
+          {canUpdate && <Button size="small" onClick={() => openEdit(item)}>{t("Sửa", lang)}</Button>}
+          {canDisable && <Popconfirm title={`${item.isActive ? t("Khóa", lang) : t("Mở khóa", lang)} ${t("tài khoản này?", lang)}`} onConfirm={() => disable.mutate({ id: item._id, isActive: !item.isActive })}><Button size="small" danger={item.isActive}>{item.isActive ? t("Khóa", lang) : t("Mở khóa", lang)}</Button></Popconfirm>}
+          {canResetPassword && <Button size="small" onClick={() => { setSelected(item); passwordForm.resetFields(); setPasswordOpen(true); }}>{t("Reset password", lang)}</Button>}
         </Space>
       ),
     },
-  ], [canUpdate, canDisable, canResetPassword, disable, passwordForm]);
+  ], [canUpdate, canDisable, canResetPassword, disable, passwordForm, lang]);
 
   const accounts = data?.items ?? [];
   const totalAccounts = data?.total ?? 0;
@@ -200,20 +203,20 @@ export default function AccountsPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Quản lý tài khoản"
+        title={t("Quản lý tài khoản", lang)}
         subtitle={
           <span style={{ fontSize: 13, color: "#595959" }}>
-            <span style={{ fontWeight: 700, color: "#1890ff", fontSize: 16 }}>{totalAccounts}</span> tài khoản
+            <span style={{ fontWeight: 700, color: "#1890ff", fontSize: 16 }}>{totalAccounts}</span> {t("tài khoản", lang)}
             <span style={{ color: "#d9d9d9", margin: "0 8px" }}>|</span>
-            <span style={{ fontWeight: 600, color: "#52c41a" }}>{activeAccounts}</span> hoạt động
+            <span style={{ fontWeight: 600, color: "#52c41a" }}>{activeAccounts}</span> {t("hoạt động", lang)}
             <span style={{ color: "#d9d9d9", margin: "0 8px" }}>|</span>
-            <span style={{ fontWeight: 600, color: "#ff4d4f" }}>{lockedAccounts}</span> bị khóa
+            <span style={{ fontWeight: 600, color: "#ff4d4f" }}>{lockedAccounts}</span> {t("bị khóa", lang)}
           </span>
         }
         actions={
           <Space>
             <Input.Search
-              placeholder="Username, họ tên, email, mã nhân viên"
+              placeholder={t("Username, họ tên, email, mã nhân viên", lang)}
               allowClear
               onSearch={setSearch}
               style={{ width: 280 }}
@@ -223,12 +226,12 @@ export default function AccountsPage() {
               onClick={() => setShowFilters((v) => !v)}
               type={showFilters ? "primary" : "default"}
             >
-              Lọc
+              {t("Lọc", lang)}
             </Button>
             <Button icon={<ReloadOutlined />} onClick={() => void refetch()} />
             {canCreate && (
               <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-                Tạo tài khoản
+                {t("Tạo tài khoản", lang)}
               </Button>
             )}
           </Space>
@@ -237,7 +240,7 @@ export default function AccountsPage() {
 
       {error && (
         <Typography.Text type="danger" style={{ marginBottom: 16, display: "block" }}>
-          Lỗi tải dữ liệu: {(error as Error).message}. Vui lòng đăng xuất rồi đăng nhập lại.
+          {t("Lỗi tải dữ liệu:", lang)} {(error as Error).message}. {t("Vui lòng đăng xuất rồi đăng nhập lại.", lang)}
         </Typography.Text>
       )}
 
@@ -256,10 +259,10 @@ export default function AccountsPage() {
           }}
         >
           <div>
-            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Team</div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>{t("Team", lang)}</div>
             <Select
               allowClear
-              placeholder="Tất cả team"
+              placeholder={t("Tất cả team", lang)}
               style={{ width: 200 }}
               options={teamOptions}
               value={filterTeam}
@@ -267,10 +270,10 @@ export default function AccountsPage() {
             />
           </div>
           <div>
-            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Khu vực</div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>{t("Khu vực", lang)}</div>
             <Select
               allowClear
-              placeholder="Tất cả khu vực"
+              placeholder={t("Tất cả khu vực", lang)}
               style={{ width: 180 }}
               options={areaOptions}
               value={filterArea}
@@ -278,7 +281,7 @@ export default function AccountsPage() {
             />
           </div>
           <div>
-            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Ngày tạo</div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>{t("Ngày tạo", lang)}</div>
             <DatePicker.RangePicker
               value={filterCreated}
               onChange={(dates) => setFilterCreated(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
@@ -287,7 +290,7 @@ export default function AccountsPage() {
             />
           </div>
           <div>
-            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Sắp xếp</div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>{t("Sắp xếp", lang)}</div>
             <Select
               value={sortOrder}
               onChange={setSortOrder}
@@ -306,7 +309,7 @@ export default function AccountsPage() {
               setSortOrder("asc");
             }}
           >
-            Đặt lại
+            {t("Đặt lại", lang)}
           </Button>
         </div>
       )}
@@ -320,7 +323,7 @@ export default function AccountsPage() {
           pagination={{
             total: filteredAccounts.length,
             pageSize: 100,
-            showTotal: (total) => `Hiển thị ${total} tài khoản`,
+            showTotal: (total) => `${t("Hiển thị", lang)} ${total} ${t("tài khoản", lang)}`,
           }}
           scroll={{ x: 1400 }}
         />
@@ -340,10 +343,10 @@ export default function AccountsPage() {
         onSuccess={handleSaved}
       />
 
-      <Drawer title="�ặt lại mật khẩu" open={passwordOpen} onClose={() => setPasswordOpen(false)} size="default">
+      <Drawer title={t("Đặt lại mật khẩu", lang)} open={passwordOpen} onClose={() => setPasswordOpen(false)} size="default">
         <Form form={passwordForm} layout="vertical" onFinish={({ newPassword }) => selected && reset.mutate({ id: selected._id, newPassword }, { onSuccess: () => setPasswordOpen(false) })}>
-          <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
-          <Button type="primary" htmlType="submit" loading={reset.isPending}>Xác nhận</Button>
+          <Form.Item name="newPassword" label={t("Mật khẩu mới", lang)} rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
+          <Button type="primary" htmlType="submit" loading={reset.isPending}>{t("Xác nhận", lang)}</Button>
         </Form>
       </Drawer>
     </PageContainer>

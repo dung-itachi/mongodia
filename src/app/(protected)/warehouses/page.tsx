@@ -50,9 +50,12 @@ import WarehouseOverviewFilters, {
 } from "./WarehouseOverviewFilters";
 import QuickCreateProductDrawer from "./QuickCreateProductDrawer";
 import styles from "./warehouses.module.css";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export default function WarehousesPage() {
   const router = useRouter();
+  const lang = useLanguageStore((s) => s.language);
 
   // Search and filter state
   const [keyword, setKeyword] = useState("");
@@ -126,7 +129,7 @@ export default function WarehousesPage() {
   const columns = useMemo(() => [
     {
       key: "orderCode",
-      title: "Mã đơn hàng",
+      title: t("Mã đơn hàng", lang),
       dataIndex: "orderCode",
       width: 180,
       render: (value: unknown, record: Record<string, unknown>) => {
@@ -141,13 +144,13 @@ export default function WarehousesPage() {
     },
     {
       key: "warehouse",
-      title: "Kho xử lý",
+      title: t("Kho xử lý", lang),
       dataIndex: "warehouseName",
       width: 180,
       render: (_: unknown, record: Record<string, unknown>) => {
         const task = record as unknown as WarehouseTaskListItem;
         if (!task.warehouseName) {
-          return <span style={{ color: "#8c8c8c" }}>Chưa gán</span>;
+          return <span style={{ color: "#8c8c8c" }}>{t("Chưa gán", lang)}</span>;
         }
         return (
           <span>
@@ -159,7 +162,7 @@ export default function WarehousesPage() {
     },
     {
       key: "warehouseStatus",
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "warehouseStatus",
       width: 160,
       render: (value: unknown) => (
@@ -168,17 +171,17 @@ export default function WarehousesPage() {
     },
     {
       key: "assignedEmployeeId",
-      title: "Nhân viên",
+      title: t("Nhân viên", lang),
       dataIndex: "assignedEmployeeId",
       width: 150,
       render: (value: unknown) => {
-        if (!value) return <span style={{ color: "#8c8c8c" }}>Chưa giao</span>;
+        if (!value) return <span style={{ color: "#8c8c8c" }}>{t("Chưa giao", lang)}</span>;
         return <span>{String(value).slice(-6).toUpperCase()}</span>;
       },
     },
     {
       key: "note",
-      title: "Ghi chú",
+      title: t("Ghi chú", lang),
       dataIndex: "note",
       width: 200,
       ellipsis: true,
@@ -189,7 +192,7 @@ export default function WarehousesPage() {
     },
     {
       key: "createdAt",
-      title: "Ngày tạo",
+      title: t("Ngày tạo", lang),
       dataIndex: "createdAt",
       width: 120,
       render: (value: unknown) => {
@@ -203,7 +206,7 @@ export default function WarehousesPage() {
     },
     {
       key: "updatedAt",
-      title: "Cập nhật",
+      title: t("Cập nhật", lang),
       dataIndex: "updatedAt",
       width: 120,
       render: (value: unknown) => {
@@ -217,7 +220,7 @@ export default function WarehousesPage() {
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 80,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -226,13 +229,13 @@ export default function WarehousesPage() {
           {
             key: "view",
             icon: <EyeOutlined />,
-            label: "Xem chi tiết task",
+            label: t("Xem chi tiết task", lang),
             onClick: () => router.push(`/warehouses/${task._id}`),
           },
           {
             key: "view-order",
             icon: <EyeOutlined />,
-            label: "Xem đơn hàng",
+            label: t("Xem đơn hàng", lang),
             onClick: () => router.push(`/orders/${task.orderId}`),
           },
         ];
@@ -256,7 +259,7 @@ export default function WarehousesPage() {
         );
       },
     },
-  ], [router]);
+  ], [router, lang]);
 
   // Pagination config
   const pagination = useMemo(() => ({
@@ -266,28 +269,28 @@ export default function WarehousesPage() {
     showSizeChanger: true,
     showQuickJumper: true,
     pageSizeOptions: ["10", "20", "50", "100"],
-    showTotal: (totalCount: number) => `Tổng: ${totalCount}`,
+    showTotal: (totalCount: number) => `${t("Tổng:", lang)} ${totalCount}`,
     onChange: (newPage: number, newPageSize: number) => {
       setPage(newPage);
       setPageSize(newPageSize);
     },
-  }), [page, pageSize, total]);
+  }), [page, pageSize, total, lang]);
 
   // Custom filter items for FilterBar
   const customFilterItems = useMemo(() => [
     {
       key: "status",
       type: "select" as const,
-      label: "Trạng thái",
+      label: t("Trạng thái", lang),
       options: [
-        { value: "", label: "Tất cả trạng thái" },
+        { value: "", label: t("Tất cả trạng thái", lang) },
         ...Object.entries(WAREHOUSE_STATUS_LABELS).map(([value, label]) => ({
           value,
-          label,
+          label: t(label, lang),
         })),
       ],
     },
-  ], []);
+  ], [lang]);
 
   const filterValues = useMemo(() => ({
     status: status ?? "",
@@ -296,11 +299,11 @@ export default function WarehousesPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Quản lý kho"
-        subtitle={`${total} task`}
+        title={t("Quản lý kho", lang)}
+        subtitle={`${total} ${t("task", lang)}`}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Kho" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Kho", lang) },
         ]}
       />
 
@@ -319,9 +322,9 @@ export default function WarehousesPage() {
 
       <div className="card">
         <div className={styles["wh-section-head"]} style={{ padding: "12px 16px 0" }}>
-          <h2>📦 Quản lý kho</h2>
+          <h2>📦 {t("Quản lý kho", lang)}</h2>
           <Button type="primary" onClick={() => setAddProductOpen(true)}>
-            + Tạo SP nhanh
+            + {t("Tạo SP nhanh", lang)}
           </Button>
         </div>
         <div style={{ padding: "8px 16px 16px" }}>
@@ -383,8 +386,8 @@ export default function WarehousesPage() {
           <SkeletonTable columns={columns.length} />
         ) : tasks.length === 0 ? (
           <EmptyState
-            title="Không có task"
-            description="Chưa có warehouse task nào"
+            title={t("Không có task", lang)}
+            description={t("Chưa có warehouse task nào", lang)}
           />
         ) : (
           <DataTable

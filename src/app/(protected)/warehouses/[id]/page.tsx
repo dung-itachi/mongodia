@@ -40,12 +40,15 @@ import {
 } from "@/hooks/useWarehouseTasks";
 import { WAREHOUSE_STATUS_LABELS } from "@/constants/warehouseStatus";
 import { getWarehouseStatusActions } from "@/configs/warehouse-status.config";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function WarehouseDetailPage({ params }: PageProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { id } = use(params);
   const router = useRouter();
   const { message: messageApi } = App.useApp();
@@ -174,8 +177,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
     <PageContainer>
       {loading && !task && <LoadingOverlay fullScreen text="Đang tải..." />}
 
-      <PageHeader
-        title="Chi tiết Warehouse Task"
+      <PageHeader title={t("Chi tiết Warehouse Task", lang)}
         subtitle={`Task #${task._id.slice(-8).toUpperCase()} • Đơn ${task.orderCode ?? task.orderId.slice(-8).toUpperCase()}`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },

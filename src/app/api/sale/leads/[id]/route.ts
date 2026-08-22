@@ -64,9 +64,32 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (comboQuantity !== undefined) updateData.quantity = comboQuantity;
     if (unitPriceMNT !== undefined) updateData.unitPriceMNT = unitPriceMNT;
     if (exchangeRate !== undefined) updateData.exchangeRate = exchangeRate;
-    if (variantDetails !== undefined) updateData.variantDetails = variantDetails;
+    if (variantDetails !== undefined) {
+      updateData.variantDetails = Array.isArray(variantDetails)
+        ? variantDetails.map((vd: { quantity?: number; attributes?: Array<Record<string, unknown>>; variantId?: string }) => ({
+            quantity: typeof vd.quantity === "number" ? vd.quantity : 0,
+            attributes: Array.isArray(vd.attributes)
+              ? vd.attributes.map((a) => ({
+                  optionId: a.optionId?.toString() ?? "",
+                  valueId: a.valueId?.toString() ?? "",
+                  optionName: typeof a.optionName === "string" ? a.optionName : undefined,
+                  valueName: typeof a.valueName === "string" ? a.valueName : undefined,
+                }))
+              : [],
+            variantId: vd.variantId ?? undefined,
+          }))
+        : variantDetails;
+    }
     if (giftMode !== undefined) updateData.giftMode = giftMode;
-    if (giftSelections !== undefined) updateData.giftSelections = giftSelections;
+    if (giftSelections !== undefined) {
+      updateData.giftSelections = Array.isArray(giftSelections)
+        ? giftSelections.map((g: { giftProductId?: string; giftProductName?: string; quantity?: number }) => ({
+            giftProductId: g.giftProductId?.toString() ?? "",
+            giftProductName: typeof g.giftProductName === "string" ? g.giftProductName : undefined,
+            quantity: typeof g.quantity === "number" ? g.quantity : 0,
+          }))
+        : giftSelections;
+    }
 
     // Validate and capture status change so we can write a LeadHistory entry
     let statusChangedFrom: string | undefined;

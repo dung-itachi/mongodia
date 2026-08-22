@@ -33,6 +33,8 @@ import PermissionGate from "@/components/common/PermissionGate";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
 import LoadingOverlay from "@/components/common/overlay/LoadingOverlay";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import { useOrder, useDeleteOrder, useChangeOrderStatus, useUpdateOrder } from "@/hooks/useOrders";
 import { useShipOrder, useReturnOrderStock } from "@/hooks/useWarehouseWorkflow";
@@ -55,6 +57,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
   const searchParams = useSearchParams();
   const [editForm] = Form.useForm();
 
@@ -200,10 +203,10 @@ export default function OrderDetailPage({ params }: PageProps) {
     setShipLoading(true);
     try {
       await shipOrder.mutateAsync({ orderId: id, payload: {} });
-      message.success("Xuất kho cho đơn hàng thành công");
+      message.success(t("Xuất kho cho đơn hàng thành công", lang));
       await refetch();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "Xuất kho thất bại");
+      message.error(error instanceof Error ? error.message : t("Xuất kho thất bại", lang));
     } finally {
       setShipLoading(false);
     }
@@ -215,12 +218,12 @@ export default function OrderDetailPage({ params }: PageProps) {
       const data = await response.json();
       const items = (data?.data?.order?.orderItems ?? []) as Array<{ quantity: number; productName?: string; comboQuantity?: number; packageQuantity?: number; giftMode?: string; giftQuantity?: number }>;
       const shipments = items.flatMap((item) => item.productName ? [{ itemType: "PRODUCT" as const, productId: data?.data?.order?.productId, quantity: item.quantity }] : []).filter((entry) => entry.quantity > 0);
-      if (!shipments.length) { message.warning("Đơn này chưa có dữ liệu xuất để hoàn"); return; }
+      if (!shipments.length) { message.warning(t("Đơn này chưa có dữ liệu xuất để hoàn", lang)); return; }
       await returnOrder.mutateAsync({ orderId: id, payload: { items: shipments, note: `Hoàn đơn ${data?.data?.order?.orderCode}` } });
-      message.success("Hoàn kho thành công");
+      message.success(t("Hoàn kho thành công", lang));
       await refetch();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "Hoàn kho thất bại");
+      message.error(error instanceof Error ? error.message : t("Hoàn kho thất bại", lang));
     }
   }, [id, refetch, returnOrder]);
 
@@ -242,13 +245,13 @@ export default function OrderDetailPage({ params }: PageProps) {
     const needShipping = Boolean(values.needShipping);
 
     if (needShipping && (!values.receiverName?.trim() || !values.receiverPhone?.trim() || !values.address?.trim())) {
-      message.error("Vui lòng nhập đủ người nhận, số điện thoại và địa chỉ giao hàng");
+      message.error(t("Vui lòng nhập đủ người nhận, SĐT và địa chỉ", lang));
       return;
     }
 
     // Validate order items if present
     if (editOrderItems.length > 0 && !orderItemsValidation.isValid) {
-      message.error("Vui lòng kiểm tra lại chi tiết sản phẩm: " + orderItemsValidation.errors.join(", "));
+      message.error(t("Vui lòng kiểm tra lại chi tiết sản phẩm", lang) + ": " + orderItemsValidation.errors.join(", "));
       return;
     }
 
@@ -305,11 +308,11 @@ export default function OrderDetailPage({ params }: PageProps) {
         id,
         data: updateData,
       });
-      message.success("Cập nhật đơn hàng thành công");
+      message.success(t("Cập nhật đơn hàng thành công", lang));
       closeEditModal();
       await refetch();
     } catch (err) {
-      message.error(err instanceof Error ? err.message : "Cập nhật đơn hàng thất bại");
+      message.error(err instanceof Error ? err.message : t("Cập nhật đơn hàng thất bại", lang));
     } finally {
       setEditLoading(false);
     }
@@ -322,11 +325,11 @@ export default function OrderDetailPage({ params }: PageProps) {
     setDeleteLoading(true);
     try {
       await deleteMutation.mutateAsync(deleteId);
-      message.success("Xóa đơn hàng thành công");
+      message.success(t("Xóa đơn hàng thành công", lang));
       setDeleteId(null);
       router.push("/orders");
     } catch (err) {
-      message.error(err instanceof Error ? err.message : "Xóa đơn hàng thất bại");
+      message.error(err instanceof Error ? err.message : t("Xóa đơn hàng thất bại", lang));
     } finally {
       setDeleteLoading(false);
     }
@@ -340,11 +343,11 @@ export default function OrderDetailPage({ params }: PageProps) {
         id,
         data: { status: newStatus },
       });
-      message.success("Đổi trạng thái thành công");
+      message.success(t("Đổi trạng thái thành công", lang));
       setStatusTarget(null);
       await refetch();
     } catch (err) {
-      message.error(err instanceof Error ? err.message : "Đổi trạng thái thất bại");
+      message.error(err instanceof Error ? err.message : t("Đổi trạng thái thất bại", lang));
     } finally {
       setStatusLoading(false);
     }
@@ -370,7 +373,7 @@ export default function OrderDetailPage({ params }: PageProps) {
 
   const productColumns: TableColumnsType<OrderItem> = [
     {
-      title: "Combo / Sản phẩm",
+      title: t("Combo / Sản phẩm", lang),
       key: "combo",
       render: (_: unknown, item: OrderItem) => {
         const totalProducts = item.comboQuantity * item.packageQuantity;
@@ -385,7 +388,7 @@ export default function OrderDetailPage({ params }: PageProps) {
           <Space orientation="vertical" size={4} style={{ width: "100%" }}>
             {hasCombo && (
               <span>
-                <strong>Combo:</strong> {item.comboName}
+                <strong>{t("Combo", lang)}:</strong> {item.comboName}
                 {item.comboCode && (
                   <span style={{ color: "#8c8c8c", marginLeft: 4 }}>({item.comboCode})</span>
                 )}
@@ -393,12 +396,12 @@ export default function OrderDetailPage({ params }: PageProps) {
             )}
             {hasProduct && (
               <span>
-                <strong>Sản phẩm:</strong> {item.productName}
+                <strong>{t("Sản phẩm", lang)}:</strong> {item.productName}
               </span>
             )}
             {!hasCombo && !hasProduct && <strong>-</strong>}
             <span style={{ color: "#8c8c8c" }}>
-              {item.comboQuantity} combo x {item.packageQuantity} SP = {totalProducts} SP
+              {item.comboQuantity} {t("combo", lang)} x {item.packageQuantity} {t("SP", lang)} = {totalProducts} {t("SP", lang)}
             </span>
             {details.map((detail, index) => {
               const label = detail.attributes
@@ -408,11 +411,11 @@ export default function OrderDetailPage({ params }: PageProps) {
             })}
             {totalGifts > 0 && (
               <>
-                <span>Quà: {totalGifts} - {item.giftMode === "CUSTOMER_SELECTED" ? "Khách chọn" : "Ngẫu nhiên"}</span>
+                <span>{t("Quà", lang)}: {totalGifts} - {item.giftMode === "CUSTOMER_SELECTED" ? t("Khách chọn", lang) : t("Ngẫu nhiên", lang)}</span>
                 {item.giftMode === "RANDOM" ? (
-                  <span style={{ color: "#8c8c8c" }}>Kho sẽ tự chọn {totalGifts} quà khi đóng hàng.</span>
+                  <span style={{ color: "#8c8c8c" }}>{t("Kho sẽ tự chọn", lang)} {totalGifts} {t("quà khi đóng hàng.", lang)}</span>
                 ) : gifts.map((gift, index) => (
-                  <span key={`${gift.giftProductId}-${index}`}>- {gift.giftProductName || "Quà tặng"} x {gift.quantity}</span>
+                  <span key={`${gift.giftProductId}-${index}`}>- {gift.giftProductName || t("Quà tặng", lang)} x {gift.quantity}</span>
                 ))}
               </>
             )}
@@ -421,7 +424,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       },
     },
     {
-      title: "Giá combo",
+      title: t("Giá combo", lang),
       dataIndex: "sellingPrice",
       key: "sellingPrice",
       width: 140,
@@ -429,7 +432,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       render: (value: number, item: OrderItem) => formatCurrency(value ?? item.unitPrice),
     },
     {
-      title: "Giảm giá",
+      title: t("Giảm giá", lang),
       dataIndex: "discount",
       key: "discount",
       width: 120,
@@ -437,7 +440,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       render: (value: number) => value > 0 ? formatCurrency(value) : "-",
     },
     {
-      title: "Thành tiền",
+      title: t("Thành tiền", lang),
       dataIndex: "subtotal",
       key: "subtotal",
       width: 150,
@@ -452,13 +455,13 @@ export default function OrderDetailPage({ params }: PageProps) {
   // Timeline columns
   const timelineColumns = [
     {
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       dataIndex: "actionLabel",
       key: "actionLabel",
       width: 150,
     },
     {
-      title: "Chi tiết",
+      title: t("Chi tiết", lang),
       key: "detail",
       render: (_: unknown, record: OrderHistoryItem) => (
         <div>
@@ -472,7 +475,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       ),
     },
     {
-      title: "Nhân viên",
+      title: t("Nhân viên", lang),
       key: "employee",
       width: 180,
       render: (_: unknown, record: OrderHistoryItem) => {
@@ -481,7 +484,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       },
     },
     {
-      title: "Thời gian",
+      title: t("Thời gian", lang),
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
@@ -501,11 +504,11 @@ export default function OrderDetailPage({ params }: PageProps) {
     return (
       <PageContainer>
         <EmptyState
-          title="Không tìm thấy đơn hàng"
-          description={error || "Đơn hàng không tồn tại hoặc đã bị xóa"}
+          title={t("Không tìm thấy đơn hàng", lang)}
+          description={error || t("Đơn hàng không tồn tại hoặc đã bị xóa", lang)}
           action={
             <Button type="primary" onClick={() => router.push("/orders")}>
-              Quay lại danh sách
+              {t("Quay lại danh sách", lang)}
             </Button>
           }
         />
@@ -533,7 +536,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   return (
     <PageContainer>
       {(deleteLoading || statusLoading) && (
-        <LoadingOverlay fullScreen text={statusLoading ? "Đang đổi trạng thái..." : "Đang xóa đơn hàng..."} />
+        <LoadingOverlay fullScreen text={statusLoading ? t("Đang đổi trạng thái...", lang) : t("Đang xóa đơn hàng...", lang)} />
       )}
 
       <PageHeader
@@ -543,10 +546,10 @@ export default function OrderDetailPage({ params }: PageProps) {
             <StatusBadge status={order.status} />
           </div>
         }
-        subtitle={`Ngày tạo: ${formatDate(order.createdAt)}`}
+        subtitle={`${t("Ngày tạo", lang)}: ${formatDate(order.createdAt)}`}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Đơn hàng", href: "/orders" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Đơn hàng", lang), href: "/orders" },
           { label: order.orderCode },
         ]}
         actions={
@@ -557,7 +560,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <Dropdown menu={{ items: statusMenuItems }} trigger={["click"]}>
                   <Button>
                     <Space>
-                      Thao tác
+                      {t("Thao tác", lang)}
                       <DownOutlined />
                     </Space>
                   </Button>
@@ -567,7 +570,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <ActionButton
                   type="secondary"
                   icon={<EditOutlined />}
-                  label="Sửa"
+                  label={t("Sửa", lang)}
                   onClick={() => router.push(`/orders/${id}?mode=edit`)}
                 />
               )}
@@ -577,19 +580,19 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <ActionButton
                   type="danger"
                   icon={<DeleteOutlined />}
-                  label="Xóa"
+                  label={t("Xóa", lang)}
                   onClick={() => setDeleteId(id)}
                 />
               )}
             </PermissionGate>
             <PermissionGate permission="warehouse.ship">
               {order.status === OrderStatus.PACKING && (
-                <ActionButton type="primary" label="Xuất kho" onClick={handleShip} loading={shipLoading} />
+                <ActionButton type="primary" label={t("Xuất kho", lang)} onClick={handleShip} loading={shipLoading} />
               )}
             </PermissionGate>
             <PermissionGate permission="warehouse.return">
               {order.status === OrderStatus.RETURNED && (
-                <ActionButton type="secondary" label="Hoàn kho" onClick={handleReturn} loading={returnOrder.isPending} />
+                <ActionButton type="secondary" label={t("Hoàn kho", lang)} onClick={handleReturn} loading={returnOrder.isPending} />
               )}
             </PermissionGate>
           </>
@@ -601,49 +604,49 @@ export default function OrderDetailPage({ params }: PageProps) {
         <Col xs={24} lg={16}>
           {/* Order Info Card */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Thông tin đơn hàng">
+            <CardSection title={t("Thông tin đơn hàng", lang)}>
               <Row gutter={[16, 8]}>
                 <Col xs={24} sm={8}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Mã đơn</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Mã đơn", lang)}</div>
                   <div style={{ fontWeight: 500 }}>{order.orderCode}</div>
                 </Col>
                 <Col xs={24} sm={8}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Trạng thái</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Trạng thái", lang)}</div>
                   <div><StatusBadge status={order.status} /></div>
                 </Col>
                 <Col xs={24} sm={8}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Loại đơn</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Loại đơn", lang)}</div>
                   <div>{ORDER_TYPE_LABELS[order.orderType as keyof typeof ORDER_TYPE_LABELS] || order.orderType}</div>
                 </Col>
                 <Col xs={24} sm={8}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Nguồn đơn</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Nguồn đơn", lang)}</div>
                   <div>{ORDER_SOURCE_LABELS[order.orderSource as keyof typeof ORDER_SOURCE_LABELS] || order.orderSource}</div>
                 </Col>
                 <Col xs={24} sm={8}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Số lượng</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Số lượng", lang)}</div>
                   <div>{order.quantity}</div>
                 </Col>
                 <Col xs={24} sm={8}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Đơn giá</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Đơn giá", lang)}</div>
                   <div>{formatCurrency(order.unitPrice, order.currency)}</div>
                 </Col>
                 {/* Sprint 8.x: Thời gian đơn hàng */}
                 {order.orderDate && (
                   <Col xs={24} sm={8}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>TG đặt hàng</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("TG đặt hàng", lang)}</div>
                     <div>{formatDate(order.orderDate)}</div>
                   </Col>
                 )}
                 {order.receivedDate && (
                   <Col xs={24} sm={8}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>TG nhận đơn</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("TG nhận đơn", lang)}</div>
                     <div>{formatDate(order.receivedDate)}</div>
                   </Col>
                 )}
                 {typeof order.exchangeRate === "number" && (
                   <Col xs={24} sm={8}>
                     <div style={{ color: "#8c8c8c", fontSize: 12 }}>
-                      Tỷ giá lúc tạo
+                      {t("Tỷ giá lúc tạo", lang)}
                     </div>
                     <div>
                       1 USD = {formatNumber(order.exchangeRate)} ₮
@@ -656,22 +659,22 @@ export default function OrderDetailPage({ params }: PageProps) {
                   </Col>
                 )}
                 <Col xs={24} sm={8}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Đã thanh toán</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Đã thanh toán", lang)}</div>
                   <div style={{ color: "#52c41a" }}>{formatCurrency(order.totalPaid, order.currency)}</div>
                 </Col>
                 <Col xs={24} sm={8}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Thanh toán trước</div>
-                  <div>{order.isPrepaid ? "Có" : "Không"}</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Thanh toán trước", lang)}</div>
+                  <div>{order.isPrepaid ? t("Có", lang) : t("Không", lang)}</div>
                 </Col>
                 {order.estimatedWeight && (
                   <Col xs={24} sm={8}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Trọng lượng ước tính</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Trọng lượng ước tính", lang)}</div>
                     <div>{order.estimatedWeight} kg</div>
                   </Col>
                 )}
                 {order.note && (
                   <Col xs={24}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Ghi chú</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Ghi chú", lang)}</div>
                     <div>{order.note}</div>
                   </Col>
                 )}
@@ -681,20 +684,20 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* Customer Card */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Khách hàng">
+            <CardSection title={t("Khách hàng", lang)}>
               <Row gutter={[16, 8]}>
                 <Col xs={24} sm={12}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Tên</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Tên", lang)}</div>
                   <div>{order.customerName}</div>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Số điện thoại</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Số điện thoại", lang)}</div>
                   <div>{order.customerPhone || "-"}</div>
                 </Col>
                 {order.customer && (
                   <>
                     <Col xs={24} sm={12}>
-                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Mã KH</div>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Mã KH", lang)}</div>
                       <div>{order.customer.code}</div>
                     </Col>
                   </>
@@ -705,21 +708,21 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* Sale Card */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Nhân viên Sale">
+            <CardSection title={t("Nhân viên Sale", lang)}>
               {order.saleEmployee ? (
                 <Row gutter={[16, 8]}>
                   <Col xs={24} sm={12}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Tên</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Tên", lang)}</div>
                     <div>{order.saleEmployee.fullName}</div>
                   </Col>
                   <Col xs={24} sm={12}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Mã NV</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Mã NV", lang)}</div>
                     <div>{order.saleEmployee.employeeCode}</div>
                   </Col>
                 </Row>
               ) : (
                 <div style={{ textAlign: "center", color: "#8c8c8c", padding: 16 }}>
-                  Chưa phân công
+                  {t("Chưa phân công", lang)}
                 </div>
               )}
             </CardSection>
@@ -727,21 +730,21 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* Marketing Card */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Nhân viên Marketing">
+            <CardSection title={t("Nhân viên Marketing", lang)}>
               {order.marketingEmployee ? (
                 <Row gutter={[16, 8]}>
                   <Col xs={24} sm={12}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Tên</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Tên", lang)}</div>
                     <div>{order.marketingEmployee.fullName}</div>
                   </Col>
                   <Col xs={24} sm={12}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Mã NV</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Mã NV", lang)}</div>
                     <div>{order.marketingEmployee.employeeCode}</div>
                   </Col>
                 </Row>
               ) : (
                 <div style={{ textAlign: "center", color: "#8c8c8c", padding: 16 }}>
-                  Chưa phân công
+                  {t("Chưa phân công", lang)}
                 </div>
               )}
             </CardSection>
@@ -749,7 +752,7 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* Product List Card (Sprint 6.1) */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Danh sách sản phẩm">
+            <CardSection title={t("Danh sách sản phẩm", lang)}>
               {order.orderItems && order.orderItems.length > 0 ? (
                 <Table
                   dataSource={order.orderItems}
@@ -761,7 +764,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                     <>
                       <Table.Summary.Row>
                         <Table.Summary.Cell index={0} colSpan={4}>
-                          <div style={{ textAlign: "right", fontWeight: 600 }}>Tạm tính</div>
+                          <div style={{ textAlign: "right", fontWeight: 600 }}>{t("Tạm tính", lang)}</div>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={1} align="right">
                           <span>{formatCurrency(productSummary.subtotal)}</span>
@@ -769,7 +772,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                       </Table.Summary.Row>
                       <Table.Summary.Row>
                         <Table.Summary.Cell index={0} colSpan={4}>
-                          <div style={{ textAlign: "right", fontWeight: 600 }}>Giảm giá</div>
+                          <div style={{ textAlign: "right", fontWeight: 600 }}>{t("Giảm giá", lang)}</div>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={1} align="right">
                           <span style={{ color: "#ff4d4f" }}>
@@ -779,7 +782,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                       </Table.Summary.Row>
                       <Table.Summary.Row>
                         <Table.Summary.Cell index={0} colSpan={4}>
-                          <div style={{ textAlign: "right", fontWeight: 600 }}>Phí vận chuyển</div>
+                          <div style={{ textAlign: "right", fontWeight: 600 }}>{t("Phí vận chuyển", lang)}</div>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={1} align="right">
                           <span>{formatCurrency(productSummary.shippingFee)}</span>
@@ -788,7 +791,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                       <Table.Summary.Row>
                         <Table.Summary.Cell index={0} colSpan={4}>
                           <div style={{ textAlign: "right", fontWeight: 700, fontSize: 14 }}>
-                            Tổng cộng
+                            {t("Tổng cộng", lang)}
                           </div>
                         </Table.Summary.Cell>
                         <Table.Summary.Cell index={1} align="right">
@@ -804,32 +807,32 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <Row gutter={[16, 8]}>
                   {order.product && (
                     <Col xs={24} sm={12}>
-                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Sản phẩm</div>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Sản phẩm", lang)}</div>
                       <div style={{ fontWeight: 500 }}>{order.product.name}</div>
                       {order.product.code && (
-                        <div style={{ fontSize: 12, color: "#8c8c8c" }}>Mã: {order.product.code}</div>
+                        <div style={{ fontSize: 12, color: "#8c8c8c" }}>{t("Mã", lang)}: {order.product.code}</div>
                       )}
                     </Col>
                   )}
                   {order.combo && (
                     <Col xs={24} sm={12}>
-                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Combo sản phẩm</div>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Combo sản phẩm", lang)}</div>
                       <div style={{ fontWeight: 500 }}>{order.combo.name}</div>
                       {order.combo.code && (
-                        <div style={{ fontSize: 12, color: "#8c8c8c" }}>Mã: {order.combo.code}</div>
+                        <div style={{ fontSize: 12, color: "#8c8c8c" }}>{t("Mã", lang)}: {order.combo.code}</div>
                       )}
                     </Col>
                   )}
                   {typeof order.quantity === "number" && (
                     <Col xs={24} sm={12}>
-                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Số lượng</div>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Số lượng", lang)}</div>
                       <div>{order.quantity}</div>
                     </Col>
                   )}
                 </Row>
               ) : (
                 <div style={{ textAlign: "center", color: "#8c8c8c", padding: 24 }}>
-                  Chưa có sản phẩm
+                  {t("Chưa có sản phẩm", lang)}
                 </div>
               )}
             </CardSection>
@@ -837,7 +840,7 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* Payment Card */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Thanh toán">
+            <CardSection title={t("Thanh toán", lang)}>
               {order.payments && order.payments.length > 0 ? (
                 <Table
                   dataSource={order.payments.map((p, idx) => ({
@@ -848,17 +851,17 @@ export default function OrderDetailPage({ params }: PageProps) {
                     transactionId: p.transactionId || "-",
                   }))}
                   columns={[
-                    { title: "Phương thức", dataIndex: "method" },
-                    { title: "Số tiền", dataIndex: "amount", align: "right" as const },
-                    { title: "Ngày", dataIndex: "date" },
-                    { title: "Mã GD", dataIndex: "transactionId" },
+                    { title: t("Phương thức", lang), dataIndex: "method" },
+                    { title: t("Số tiền", lang), dataIndex: "amount", align: "right" as const },
+                    { title: t("Ngày", lang), dataIndex: "date" },
+                    { title: t("Mã GD", lang), dataIndex: "transactionId" },
                   ]}
                   pagination={false}
                   size="small"
                 />
               ) : (
                 <div style={{ textAlign: "center", color: "#8c8c8c", padding: 24 }}>
-                  Chưa có thanh toán
+                  {t("Chưa có thanh toán", lang)}
                 </div>
               )}
             </CardSection>
@@ -866,53 +869,53 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* Shipping Card */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Giao hàng">
+            <CardSection title={t("Giao hàng", lang)}>
               {order.shipping ? (
                 <Row gutter={[16, 8]}>
                   <Col xs={24} sm={12}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Người nhận</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Người nhận", lang)}</div>
                     <div>{order.shipping.receiverName}</div>
                   </Col>
                   <Col xs={24} sm={12}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>SĐT người nhận</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("SĐT người nhận", lang)}</div>
                     <div>{order.shipping.receiverPhone}</div>
                   </Col>
                   <Col xs={24}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Địa chỉ</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Địa chỉ", lang)}</div>
                     <div>{order.shipping.address || "-"}</div>
                   </Col>
                   <Col xs={24} sm={12}>
-                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>Phí ship</div>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Phí ship", lang)}</div>
                     <div>{formatCurrency(order.shipping.shippingFee, order.shipping.shippingFeeCurrency)}</div>
                   </Col>
                   {order.shipping.trackingNumber && (
                     <Col xs={24} sm={12}>
-                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Mã vận đơn</div>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Mã vận đơn", lang)}</div>
                       <div>{order.shipping.trackingNumber}</div>
                     </Col>
                   )}
                   {order.shipping.carrier && (
                     <Col xs={24} sm={12}>
-                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Đơn vị vận chuyển</div>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Đơn vị vận chuyển", lang)}</div>
                       <div>{order.shipping.carrier}</div>
                     </Col>
                   )}
                   {order.shipping.estimatedDelivery && (
                     <Col xs={24} sm={12}>
-                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Dự kiến giao</div>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Dự kiến giao", lang)}</div>
                       <div>{formatDate(order.shipping.estimatedDelivery)}</div>
                     </Col>
                   )}
                   {order.shipping.actualDelivery && (
                     <Col xs={24} sm={12}>
-                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>Đã giao lúc</div>
+                      <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Đã giao lúc", lang)}</div>
                       <div>{formatDate(order.shipping.actualDelivery)}</div>
                     </Col>
                   )}
                 </Row>
               ) : (
                 <div style={{ textAlign: "center", color: "#8c8c8c", padding: 24 }}>
-                  Chưa có thông tin giao hàng
+                  {t("Chưa có thông tin giao hàng", lang)}
                 </div>
               )}
             </CardSection>
@@ -923,17 +926,17 @@ export default function OrderDetailPage({ params }: PageProps) {
         <Col xs={24} lg={8}>
           {/* Order Summary Card (Sprint 6.1) */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Tổng tiền">
+            <CardSection title={t("Tổng tiền", lang)}>
               <Row gutter={[16, 12]}>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Tạm tính</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Tạm tính", lang)}</span>
                     <span>{formatCurrency(productSummary?.subtotal ?? 0)}</span>
                   </div>
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Giảm giá</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Giảm giá", lang)}</span>
                     <span style={{ color: "#ff4d4f" }}>
                       {productSummary && productSummary.discount > 0
                         ? `-${formatCurrency(productSummary.discount)}`
@@ -943,7 +946,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Phí vận chuyển</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Phí vận chuyển", lang)}</span>
                     <span>{formatCurrency(productSummary?.shippingFee ?? 0)}</span>
                   </div>
                 </Col>
@@ -958,7 +961,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                       fontSize: 16,
                     }}
                   >
-                    <span>Tổng cộng</span>
+                    <span>{t("Tổng cộng", lang)}</span>
                     <span style={{ color: "#1890ff" }}>
                       {formatCurrency(productSummary?.grandTotal ?? 0)}
                     </span>
@@ -973,7 +976,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                       borderTop: "1px solid #f0f0f0",
                     }}
                   >
-                    <span style={{ color: "#8c8c8c" }}>Đã thanh toán</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Đã thanh toán", lang)}</span>
                     <span style={{ color: "#52c41a" }}>
                       {formatCurrency(order.totalPaid, order.currency)}
                     </span>
@@ -981,7 +984,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Còn lại</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Còn lại", lang)}</span>
                     <span style={{
                       color: (order.totalAmount - order.totalPaid) > 0 ? "#ff4d4f" : "#52c41a",
                       fontWeight: 500
@@ -996,45 +999,45 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* Revenue Card */}
           <div style={{ marginBottom: 16 }}>
-            <CardSection title="Doanh thu">
+            <CardSection title={t("Doanh thu", lang)}>
               <Row gutter={[16, 8]}>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Đã khóa</span>
-                    <span>{order.revenueLocked ? "Có" : "Không"}</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Đã khóa", lang)}</span>
+                    <span>{order.revenueLocked ? t("Có", lang) : t("Không", lang)}</span>
                   </div>
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Đủ điều kiện</span>
-                    <span>{order.revenueEligible ? "Có" : "Không"}</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Đủ điều kiện", lang)}</span>
+                    <span>{order.revenueEligible ? t("Có", lang) : t("Không", lang)}</span>
                   </div>
                 </Col>
                 <Col xs={24}>
-                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>Lý do</div>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Lý do", lang)}</div>
                   <div>{order.revenueLockReasonLabel || order.revenueLockReason}</div>
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Marketing (thô)</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Marketing (thô)", lang)}</span>
                     <span>{formatCurrency(order.marketingRevenueRaw, order.currency)}</span>
                   </div>
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Marketing (cuối)</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Marketing (cuối)", lang)}</span>
                     <span style={{ fontWeight: 500 }}>{formatCurrency(order.marketingRevenueFinal, order.currency)}</span>
                   </div>
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Sale (thô)</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Sale (thô)", lang)}</span>
                     <span>{formatCurrency(order.saleRevenueRaw, order.currency)}</span>
                   </div>
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#8c8c8c" }}>Sale (cuối)</span>
+                    <span style={{ color: "#8c8c8c" }}>{t("Sale (cuối)", lang)}</span>
                     <span style={{ fontWeight: 500 }}>{formatCurrency(order.saleRevenueFinal, order.currency)}</span>
                   </div>
                 </Col>
@@ -1046,7 +1049,7 @@ export default function OrderDetailPage({ params }: PageProps) {
 
       {/* Timeline Card (Sprint 6.2) */}
       <div style={{ marginBottom: 16 }}>
-        <CardSection title="Lịch sử">
+        <CardSection title={t("Lịch sử", lang)}>
           {order.histories && order.histories.length > 0 ? (
             <Table
               dataSource={order.histories}
@@ -1058,7 +1061,7 @@ export default function OrderDetailPage({ params }: PageProps) {
           ) : (
             <div style={{ textAlign: "center", color: "#8c8c8c", padding: 24 }}>
               <ClockCircleOutlined style={{ fontSize: 24, marginBottom: 8 }} />
-              <div>Chưa có lịch sử</div>
+              <div>{t("Chưa có lịch sử", lang)}</div>
             </div>
           )}
         </CardSection>
@@ -1066,9 +1069,9 @@ export default function OrderDetailPage({ params }: PageProps) {
 
       <Modal
         open={editOpen}
-        title="Sửa đơn hàng"
-        okText="Lưu thay đổi"
-        cancelText="Hủy"
+        title={t("Sửa đơn hàng", lang)}
+        okText={t("Lưu thay đổi", lang)}
+        cancelText={t("Hủy", lang)}
         confirmLoading={editLoading}
         onOk={() => void handleEditSave()}
         onCancel={closeEditModal}
@@ -1079,20 +1082,20 @@ export default function OrderDetailPage({ params }: PageProps) {
         <Form form={editForm} layout="vertical" preserve={false}>
           {/* ========== Section 1: Thông tin cơ bản ========== */}
           <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
-            Thông tin khách hàng
+            {t("Thông tin khách hàng", lang)}
           </Divider>
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
                 name="customerName"
-                label="Tên khách hàng"
-                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập tên khách hàng" }]}
+                label={t("Tên khách hàng", lang)}
+                rules={[{ required: true, whitespace: true, message: t("Vui lòng nhập tên khách hàng", lang) }]}
               >
                 <Input maxLength={200} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
-              <Form.Item name="customerPhone" label="Số điện thoại">
+              <Form.Item name="customerPhone" label={t("Số điện thoại", lang)}>
                 <Input maxLength={20} />
               </Form.Item>
             </Col>
@@ -1100,13 +1103,13 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* ========== Section 2: Trạng thái & Loại đơn ========== */}
           <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
-            Trạng thái & Phân loại
+            {t("Trạng thái & Phân loại", lang)}
           </Divider>
           <Row gutter={16}>
             <Col xs={24} sm={8}>
-              <Form.Item name="status" label="Trạng thái đơn hàng">
+              <Form.Item name="status" label={t("Trạng thái đơn hàng", lang)}>
                 <Select
-                  placeholder="Chọn trạng thái"
+                  placeholder={t("Chọn trạng thái", lang)}
                   allowClear
                   options={Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({
                     value,
@@ -1116,9 +1119,9 @@ export default function OrderDetailPage({ params }: PageProps) {
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="orderType" label="Loại đơn hàng">
+              <Form.Item name="orderType" label={t("Loại đơn hàng", lang)}>
                 <Select
-                  placeholder="Chọn loại"
+                  placeholder={t("Chọn loại", lang)}
                   allowClear
                   options={Object.entries(ORDER_TYPE_LABELS).map(([value, label]) => ({
                     value,
@@ -1128,9 +1131,9 @@ export default function OrderDetailPage({ params }: PageProps) {
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="orderSource" label="Nguồn đơn">
+              <Form.Item name="orderSource" label={t("Nguồn đơn", lang)}>
                 <Select
-                  placeholder="Chọn nguồn"
+                  placeholder={t("Chọn nguồn", lang)}
                   allowClear
                   options={Object.entries(ORDER_SOURCE_LABELS).map(([value, label]) => ({
                     value,
@@ -1143,13 +1146,13 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* ========== Section 3: Phân công Sale ========== */}
           <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
-            Phân công nhân viên
+            {t("Phân công nhân viên", lang)}
           </Divider>
           <Row gutter={16}>
             <Col xs={24} sm={12}>
-              <Form.Item name="saleEmployeeId" label="Sale phụ trách">
+              <Form.Item name="saleEmployeeId" label={t("Sale phụ trách", lang)}>
                 <Select
-                  placeholder="Chọn Sale"
+                  placeholder={t("Chọn Sale", lang)}
                   allowClear
                   showSearch
                   filterOption={(input, option) =>
@@ -1164,9 +1167,9 @@ export default function OrderDetailPage({ params }: PageProps) {
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
-              <Form.Item name="marketingEmployeeId" label="Marketing phụ trách">
+              <Form.Item name="marketingEmployeeId" label={t("Marketing phụ trách", lang)}>
                 <Select
-                  placeholder="Chọn Marketing"
+                  placeholder={t("Chọn Marketing", lang)}
                   allowClear
                   showSearch
                   filterOption={(input, option) =>
@@ -1184,12 +1187,12 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* ========== Section 4: Sản phẩm & Combo ========== */}
           <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
-            Sản phẩm / Combo
+            {t("Sản phẩm / Combo", lang)}
           </Divider>
           {orderItemsValidation.errors.length > 0 && (
             <Alert
               type="warning"
-              message="Lỗi chi tiết sản phẩm"
+              message={t("Lỗi chi tiết sản phẩm", lang)}
               description={
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
                   {orderItemsValidation.errors.map((err, idx) => (
@@ -1211,10 +1214,10 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* ========== Section 5: Giao hàng ========== */}
           <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
-            Thông tin giao hàng
+            {t("Thông tin giao hàng", lang)}
           </Divider>
           <Form.Item name="needShipping" valuePropName="checked" style={{ marginBottom: 12 }}>
-            <Checkbox>Cần giao hàng</Checkbox>
+            <Checkbox>{t("Cần giao hàng", lang)}</Checkbox>
           </Form.Item>
           {needShipping && (
             <>
@@ -1222,8 +1225,8 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="receiverName"
-                    label="Người nhận"
-                    rules={[{ required: true, whitespace: true, message: "Vui lòng nhập người nhận" }]}
+                    label={t("Người nhận", lang)}
+                    rules={[{ required: true, whitespace: true, message: t("Vui lòng nhập người nhận", lang) }]}
                   >
                     <Input maxLength={200} />
                   </Form.Item>
@@ -1231,8 +1234,8 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="receiverPhone"
-                    label="SĐT người nhận"
-                    rules={[{ required: true, whitespace: true, message: "Vui lòng nhập số điện thoại người nhận" }]}
+                    label={t("SĐT người nhận", lang)}
+                    rules={[{ required: true, whitespace: true, message: t("Vui lòng nhập số điện thoại người nhận", lang) }]}
                   >
                     <Input maxLength={20} />
                   </Form.Item>
@@ -1240,24 +1243,24 @@ export default function OrderDetailPage({ params }: PageProps) {
               </Row>
               <Form.Item
                 name="address"
-                label="Địa chỉ giao hàng"
-                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập địa chỉ giao hàng" }]}
+                label={t("Địa chỉ giao hàng", lang)}
+                rules={[{ required: true, whitespace: true, message: t("Vui lòng nhập địa chỉ giao hàng", lang) }]}
               >
                 <Input.TextArea rows={2} maxLength={500} />
               </Form.Item>
               <Row gutter={16}>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="carrier" label="Đơn vị vận chuyển">
+                  <Form.Item name="carrier" label={t("Đơn vị vận chuyển", lang)}>
                     <Input maxLength={100} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={12}>
-                  <Form.Item name="trackingNumber" label="Mã vận đơn">
+                  <Form.Item name="trackingNumber" label={t("Mã vận đơn", lang)}>
                     <Input maxLength={100} />
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item name="shippingFee" label="Phí vận chuyển">
+              <Form.Item name="shippingFee" label={t("Phí vận chuyển", lang)}>
                 <Input type="number" min={0} step={1000} />
               </Form.Item>
             </>
@@ -1265,10 +1268,10 @@ export default function OrderDetailPage({ params }: PageProps) {
 
           {/* ========== Section 6: Ghi chú ========== */}
           <Divider style={{ margin: "16px 0 8px", fontWeight: 500 }}>
-            Ghi chú
+            {t("Ghi chú", lang)}
           </Divider>
-          <Form.Item name="note" label="Ghi chú">
-            <Input.TextArea rows={3} maxLength={1000} placeholder="Nhập ghi chú cho đơn hàng..." />
+          <Form.Item name="note" label={t("Ghi chú", lang)}>
+            <Input.TextArea rows={3} maxLength={1000} placeholder={t("Nhập ghi chú cho đơn hàng...", lang)} />
           </Form.Item>
         </Form>
       </Modal>
@@ -1276,10 +1279,10 @@ export default function OrderDetailPage({ params }: PageProps) {
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
         open={!!deleteId}
-        title="Xóa đơn hàng"
-        content="Bạn có chắc chắn muốn xóa đơn hàng này? Hành động này không thể hoàn tác."
+        title={t("Xóa đơn hàng", lang)}
+        content={t("Bạn có chắc chắn muốn xóa đơn hàng này? Hành động này không thể hoàn tác.", lang)}
         type="delete"
-        confirmText="Xóa"
+        confirmText={t("Xóa", lang)}
         loading={deleteLoading}
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
@@ -1288,10 +1291,10 @@ export default function OrderDetailPage({ params }: PageProps) {
       {/* Status Change Confirm Dialog */}
       <ConfirmDialog
         open={!!statusTarget}
-        title="Xác nhận đổi trạng thái"
-        content={`Bạn có chắc chắn muốn chuyển đơn hàng sang trạng thái "${statusTarget ? ORDER_STATUS_LABELS[statusTarget as keyof typeof ORDER_STATUS_LABELS] || statusTarget : ""}"?`}
+        title={t("Xác nhận đổi trạng thái", lang)}
+        content={`${t("Bạn có chắc chắn muốn chuyển đơn hàng sang trạng thái", lang)} "${statusTarget ? ORDER_STATUS_LABELS[statusTarget as keyof typeof ORDER_STATUS_LABELS] || statusTarget : ""}"?`}
         type="warning"
-        confirmText="Xác nhận"
+        confirmText={t("Xác nhận", lang)}
         loading={statusLoading}
         onConfirm={() => statusTarget && handleStatusChange(statusTarget)}
         onCancel={() => setStatusTarget(null)}

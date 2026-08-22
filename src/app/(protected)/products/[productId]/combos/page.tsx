@@ -31,6 +31,8 @@ import { useProductDetail } from "@/hooks/useProductCrud";
 import { useCategoryList } from "@/hooks/useCategories";
 import ComboTable from "@/components/product/combo/ComboTable";
 import ComboForm, { type ComboFormProductOption } from "@/components/product/combo/ComboForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { RangePicker } = DatePicker;
 
@@ -40,6 +42,7 @@ interface PageProps {
 
 export default function ProductCombosPage({ params }: PageProps) {
   const { productId } = use(params);
+  const lang = useLanguageStore((s) => s.language);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ComboListItem | null>(null);
   const { modal } = App.useApp();
@@ -175,26 +178,26 @@ export default function ProductCombosPage({ params }: PageProps) {
   const handleDelete = useCallback(
     (item: ComboListItem) => {
       modal.confirm({
-        title: "Xóa combo?",
+        title: t("Xóa combo?", lang),
         icon: <ExclamationCircleOutlined />,
         content: (
           <div>
             <p>
-              Combo <strong>"{item.name}"</strong> sẽ bị <strong>vô hiệu hóa</strong> (xóa mềm).
+              {t("Combo", lang)} <strong>"{item.name}"</strong> {t("sẽ bị", lang)} <strong>{t("vô hiệu hóa", lang)}</strong> ({t("xóa mềm", lang)}).
             </p>
             <p style={{ marginBottom: 4 }}>
-              • Combo sẽ không còn hiển thị trong dropdown tạo đơn / thêm lead mới.
+              • {t("Combo sẽ không còn hiển thị trong dropdown tạo đơn / thêm lead mới.", lang)}
             </p>
             <p style={{ marginBottom: 4 }}>
-              • Các đơn hàng <strong>đã tạo trước đó</strong> với combo này vẫn giữ nguyên tên combo và không bị ảnh hưởng.
+              • {t("Các đơn hàng", lang)} <strong>{t("đã tạo trước đó", lang)}</strong> {t("với combo này vẫn giữ nguyên tên combo và không bị ảnh hưởng.", lang)}
             </p>
             <p style={{ marginBottom: 0, color: "#8c8c8c", fontSize: 12 }}>
-              Số đơn đang tham chiếu combo này sẽ được thống kê sau khi xóa.
+              {t("Số đơn đang tham chiếu combo này sẽ được thống kê sau khi xóa.", lang)}
             </p>
           </div>
         ),
-        okText: "Xóa combo",
-        cancelText: "Hủy",
+        okText: t("Xóa combo", lang),
+        cancelText: t("Hủy", lang),
         okButtonProps: { danger: true },
         onOk: () =>
           new Promise<void>((resolve, reject) => {
@@ -210,7 +213,7 @@ export default function ProductCombosPage({ params }: PageProps) {
           }),
       });
     },
-    [deleteMutation, refetch, modal]
+    [deleteMutation, refetch, modal, lang]
   );
 
   const handleToggleActive = useCallback(
@@ -257,8 +260,8 @@ export default function ProductCombosPage({ params }: PageProps) {
       <PageContainer>
         <Result
           status="404"
-          title="Không tìm thấy sản phẩm"
-          subTitle="Sản phẩm không tồn tại hoặc đã bị xóa."
+          title={t("Không tìm thấy sản phẩm", lang)}
+          subTitle={t("Sản phẩm không tồn tại hoặc đã bị xóa.", lang)}
         />
       </PageContainer>
     );
@@ -270,8 +273,8 @@ export default function ProductCombosPage({ params }: PageProps) {
   return (
     <PageContainer>
       <PageHeader
-        title={`Combo của "${product.name}"`}
-        subtitle={`Mã: ${product.code}${productCategory ? ` · Danh mục: ${productCategory.code}` : ""}`}
+        title={`${t("Combo của", lang)} "${product.name}"`}
+        subtitle={`${t("Mã:", lang)} ${product.code}${productCategory ? ` · ${t("Danh mục:", lang)} ${productCategory.code}` : ""}`}
       />
 
       <CardSection>
@@ -290,11 +293,11 @@ export default function ProductCombosPage({ params }: PageProps) {
               value={filterDateRange}
               onChange={(dates) => setFilterDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
               style={{ width: 260 }}
-              placeholder={["Từ ngày", "Đến ngày"]}
+              placeholder={[t("Từ ngày", lang), t("Đến ngày", lang)]}
               format="DD/MM/YYYY"
             />
             <Input.Search
-              placeholder="Tìm tên, mã combo..."
+              placeholder={t("Tìm tên, mã combo...", lang)}
               style={{ width: 200 }}
               value={filterKeyword}
               onChange={(e) => setFilterKeyword(e.target.value || undefined)}
@@ -305,14 +308,14 @@ export default function ProductCombosPage({ params }: PageProps) {
               value={filterStatus}
               onChange={(value) => setFilterStatus(value as "all" | "active" | "inactive")}
               options={[
-                { label: "Tất cả", value: "all" },
-                { label: "Hoạt động", value: "active" },
-                { label: "Không hoạt động", value: "inactive" },
+                { label: t("Tất cả", lang), value: "all" },
+                { label: t("Hoạt động", lang), value: "active" },
+                { label: t("Không hoạt động", lang), value: "inactive" },
               ]}
             />
           </div>
           <div style={{ color: "#595959" }}>
-            Hiển thị: <strong>{filteredCombos.length}</strong> / {combos.length} combo
+            {t("Hiển thị:", lang)} <strong>{filteredCombos.length}</strong> / {combos.length} {t("combo", lang)}
           </div>
         </div>
 
@@ -329,13 +332,13 @@ export default function ProductCombosPage({ params }: PageProps) {
             onClick={handleOpenCreate}
             disabled={product.isActive === false}
           >
-            Thêm combo
+            {t("Thêm combo", lang)}
           </Button>
         </div>
 
         {product.isActive === false && (
           <div style={{ marginBottom: 16, color: "#ff4d4f" }}>
-            Sản phẩm đã ngừng hoạt động. Không thể tạo combo mới.
+            {t("Sản phẩm đã ngừng hoạt động. Không thể tạo combo mới.", lang)}
           </div>
         )}
 

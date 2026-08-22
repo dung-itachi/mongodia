@@ -35,10 +35,13 @@ import {
 } from "@/hooks/useExchangeRate";
 import { formatNumber, formatVND, convertMNTtoVND } from "@/lib/format";
 import { toast } from "@/components/common/feedback/Toast";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { Text, Title } = Typography;
 
 export default function ExchangeRateSettingsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const { data, isLoading, refetch } = useExchangeRate();
   const updateMutation = useUpdateExchangeRate();
   const [form] = Form.useForm<{ rate: number }>();
@@ -77,9 +80,7 @@ export default function ExchangeRateSettingsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Tỷ giá tiền tệ"
-        subtitle="Quản lý tỷ giá quy đổi MNT sang VND"
+      <PageHeader title={t("Tỷ giá tiền tệ", lang)} subtitle={t("Quản lý tỷ giá quy đổi MNT sang VND", lang)}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },
           { label: "Cài đặt hệ thống", href: "/settings" },

@@ -20,9 +20,12 @@ import DashboardRefreshButton from "./DashboardRefreshButton";
 import DashboardCharts from "./charts/DashboardCharts";
 import DashboardWidgets from "./widgets/DashboardWidgets";
 import type { DashboardPeriod } from "@/types/dashboard";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./dashboard.module.css";
 
 export default function DashboardPage() {
+  const lang = useLanguageStore((s) => s.language);
   const [period, setPeriod] = useState<DashboardPeriod>("month");
   const [{ data }, { refetch }] = useDashboard(period);
   const { data: exchangeRateData } = useExchangeRate();
@@ -46,8 +49,8 @@ export default function DashboardPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Dashboard tổng quan"
-        subtitle="Tổng quan hoạt động của hệ thống"
+        title={t("Dashboard tổng quan", lang)}
+        subtitle={t("Tổng quan hoạt động của hệ thống", lang)}
         actions={<DashboardRefreshButton />}
       />
 

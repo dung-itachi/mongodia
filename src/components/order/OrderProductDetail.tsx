@@ -51,6 +51,8 @@ import { resolveVariantId, validateOrderItem } from "@/types/variant";
 import { useGiftList, type GiftListItem } from "@/hooks/useGifts";
 import { formatMNT } from "@/lib/format";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { Text } = Typography;
 
@@ -238,6 +240,7 @@ function VariantDetailRow({
   disabled,
   canDelete = true,
 }: VariantDetailRowProps) {
+  const lang = useLanguageStore((s) => s.language);
   const variantOptions = product?.variantOptions || [];
   const hasVariants = variantOptions.length > 0;
   const hasPresetVariants = (product?.variants || []).length > 0;
@@ -369,7 +372,7 @@ function VariantDetailRow({
         <Text type="secondary" style={{ minWidth: 24 }}>
           #{detailIndex + 1}
         </Text>
-        <Text type="secondary">Sản phẩm không có biến thể</Text>
+        <Text type="secondary">{t("Sản phẩm không có biến thể", lang)}</Text>
         <div style={{ minWidth: 80, marginLeft: "auto" }}>
           <Text type="secondary" style={{ fontSize: 11 }}>
             SL
@@ -465,10 +468,10 @@ function VariantDetailRow({
       {selectionMode === "preset" && hasPresetVariants && (
         <div>
           <Text type="secondary" style={{ fontSize: 12, marginBottom: 4, display: "block" }}>
-            Chọn biến thể:
+            {t("Chọn biến thể", lang)}:
           </Text>
           <Select
-            placeholder="Chọn biến thể"
+            placeholder={t("Chọn biến thể", lang)}
             value={selectedPresetVariantId}
             onChange={handlePresetVariantChange}
             options={presetVariantOptions}
@@ -495,7 +498,7 @@ function VariantDetailRow({
                 {option.name}
               </Text>
               <Select
-                placeholder={`Chọn ${option.name}`}
+                placeholder={`${t("Chọn", lang)} ${option.name}`}
                 value={selectedAttributes[option._id]}
                 onChange={(value) => {
                   setSelectedAttributes((prev) => ({
@@ -557,6 +560,7 @@ function GiftSelectionSection({
   onSelectionsChange,
   disabled,
 }: GiftSelectionSectionProps) {
+  const lang = useLanguageStore((s) => s.language);
   // Fetch danh sách quà active từ Gift API
   const { data: giftsData, isLoading: isLoadingGifts } = useGiftList({
     isActive: true,
@@ -581,9 +585,20 @@ function GiftSelectionSection({
       if (mode === "RANDOM") {
         // Reset selections khi chuyển về RANDOM
         onSelectionsChange([]);
+      } else if (mode === "CUSTOMER_SELECTED") {
+        // Auto-fill đủ số dòng = totalGiftRequired (mỗi dòng SL=1, giftProductId="").
+        // User chỉ cần chọn sản phẩm cho từng dòng, không phải bấm "Thêm quà" thủ công.
+        // Nếu đã có selections hợp lệ → giữ nguyên; nếu thiếu → bổ sung; nếu thừa → giữ nguyên (user tự xóa).
+        const required = Math.max(0, totalGiftRequired);
+        const current = giftSelections ?? [];
+        const padded = [...current];
+        while (padded.length < required) {
+          padded.push({ giftProductId: "", giftProductName: "", quantity: 1 });
+        }
+        onSelectionsChange(padded);
       }
     },
-    [onModeChange, onSelectionsChange]
+    [onModeChange, onSelectionsChange, giftSelections, totalGiftRequired]
   );
 
   const handleAddGift = useCallback(() => {
@@ -626,14 +641,14 @@ function GiftSelectionSection({
       {/* Header */}
       <div style={{ marginBottom: 12 }}>
         <Space>
-          <Text strong>Quà tặng ({totalGiftRequired})</Text>
+          <Text strong>{t("Quà tặng", lang)} ({totalGiftRequired})</Text>
           {giftMode === "CUSTOMER_SELECTED" && (
             <Tag color={isValidSelections ? "green" : "red"}>
               {currentTotal} / {totalGiftRequired}
             </Tag>
           )}
           {giftMode === "RANDOM" && (
-            <Tag color="purple">Shop tự chọn</Tag>
+            <Tag color="purple">{t("Shop tự chọn", lang)}</Tag>
           )}
         </Space>
       </div>
@@ -642,7 +657,7 @@ function GiftSelectionSection({
       {giftMode === "CUSTOMER_SELECTED" && !isValidSelections && (
         <Alert
           type="warning"
-          title={`Chi tiết quà phải đủ ${totalGiftRequired} quà.`}
+          title={`${t("Chi tiết quà phải đủ", lang)} ${totalGiftRequired} ${t("quà", lang)}.`}
           style={{ marginBottom: 12 }}
           showIcon
         />
@@ -659,13 +674,13 @@ function GiftSelectionSection({
           <Radio value="RANDOM">
             <Space>
               <QuestionOutlined />
-              <Text>Để shop chọn ngẫu nhiên</Text>
+              <Text>{t("Để shop chọn ngẫu nhiên", lang)}</Text>
             </Space>
           </Radio>
           <Radio value="CUSTOMER_SELECTED">
             <Space>
               <GiftOutlined />
-              <Text>Khách chọn</Text>
+              <Text>{t("Khách chọn", lang)}</Text>
             </Space>
           </Radio>
         </Space>
@@ -675,7 +690,7 @@ function GiftSelectionSection({
       {giftMode === "RANDOM" && (
         <Alert
           type="info"
-          title={`Kho sẽ tự chọn ${totalGiftRequired} quà ngẫu nhiên theo quy tắc công ty`}
+          title={`${t("Kho sẽ tự chọn", lang)} ${totalGiftRequired} ${t("quà ngẫu nhiên theo quy tắc công ty", lang)}`}
           showIcon
         />
       )}
@@ -683,7 +698,7 @@ function GiftSelectionSection({
       {/* CUSTOMER_SELECTED: Hiển thị danh sách yêu cầu */}
       {giftMode === "CUSTOMER_SELECTED" && (
         <>
-          {giftSelections.length === 0 ? (
+          {giftSelections.length === 0 && totalGiftRequired === 0 ? (
             <div
               style={{
                 textAlign: "center",
@@ -692,14 +707,14 @@ function GiftSelectionSection({
                 borderRadius: 4,
               }}
             >
-              <Text type="secondary">Chưa có quà nào được chọn</Text>
+              <Text type="secondary">{t("Chưa có quà nào được chọn", lang)}</Text>
               {!disabled && (
                 <Button
                   type="link"
                   onClick={handleAddGift}
                   icon={<PlusOutlined />}
                 >
-                  Thêm quà
+                  {t("Thêm quà", lang)}
                 </Button>
               )}
             </div>
@@ -721,7 +736,7 @@ function GiftSelectionSection({
                 >
                   <GiftOutlined style={{ color: "#fa8c16" }} />
                   <Select
-                    placeholder={isLoadingGifts ? "Đang tải..." : "Chọn sản phẩm"}
+                    placeholder={isLoadingGifts ? t("Đang tải...", lang) : t("Chọn sản phẩm", lang)}
                     value={gift.giftProductId || undefined}
                     onChange={(value, option) => {
                       handleUpdateGift(index, {
@@ -755,7 +770,7 @@ function GiftSelectionSection({
                       disabled={disabled}
                     />
                   </div>
-                  {!disabled && (
+                  {!disabled && giftSelections.length > totalGiftRequired && (
                     <Button
                       type="text"
                       danger
@@ -767,7 +782,7 @@ function GiftSelectionSection({
                 </div>
               ))}
 
-              {!disabled && (
+              {!disabled && giftSelections.length < totalGiftRequired && (
                 <Button
                   type="dashed"
                   icon={<PlusOutlined />}
@@ -805,6 +820,7 @@ function OrderItemRow({
   onDelete,
   disabled,
 }: OrderItemRowProps) {
+  const lang = useLanguageStore((s) => s.language);
   const variantOptions = product?.variantOptions || [];
   const hasVariants = variantOptions.length > 0;
   const message = useMessage();
@@ -837,7 +853,7 @@ function OrderItemRow({
         existingIndex !== index && existing.attributes.map((attribute) => attribute.valueId).sort().join(":") === combinationKey
       );
       if (combinationKey && duplicate) {
-        void message.warning("Biến thể này đã tồn tại.");
+        void message.warning(t("Biến thể này đã tồn tại.", lang));
         return;
       }
       const newDetails = [...item.details];
@@ -908,10 +924,10 @@ function OrderItemRow({
           <Text strong>{item.comboName}</Text>
           <Tag color="purple">{item.comboCode}</Tag>
           {hasVariants && (
-            <Tag color="orange">{variantOptions.length} thuộc tính</Tag>
+            <Tag color="orange">{variantOptions.length} {t("thuộc tính", lang)}</Tag>
           )}
           {!validation.isValid && (
-            <Tag color="red">Lỗi validation</Tag>
+            <Tag color="red">{t("Lỗi validation", lang)}</Tag>
           )}
         </Space>
       }
@@ -938,7 +954,7 @@ function OrderItemRow({
       >
         <div style={{ minWidth: 100 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Số combo
+            {t("Số combo", lang)}
           </Text>
           <InputNumber
             min={1}
@@ -952,7 +968,7 @@ function OrderItemRow({
 
         <div style={{ minWidth: 100 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            SP/Combo
+            {t("SP/Combo", lang)}
           </Text>
           <InputNumber
             min={1}
@@ -965,7 +981,7 @@ function OrderItemRow({
 
         <div style={{ minWidth: 80 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Quà/Combo
+            {t("Quà/Combo", lang)}
           </Text>
           <InputNumber
             min={0}
@@ -978,7 +994,7 @@ function OrderItemRow({
 
         <div style={{ minWidth: 120 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Giá combo
+            {t("Giá combo", lang)}
           </Text>
           <InputNumber
             min={0}
@@ -996,7 +1012,7 @@ function OrderItemRow({
 
         <div style={{ minWidth: 80 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Giảm giá
+            {t("Giảm giá", lang)}
           </Text>
           <InputNumber
             min={0}
@@ -1014,7 +1030,7 @@ function OrderItemRow({
 
         <div style={{ minWidth: 120 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Thành tiền
+            {t("Thành tiền", lang)}
           </Text>
           <Text strong style={{ display: "block", color: "#1890ff", fontSize: 16 }}>
             {formatMNT(item.subtotal)}
@@ -1035,9 +1051,9 @@ function OrderItemRow({
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <Text strong style={{ fontSize: 12, color: "#1890ff" }}>
-              Biến thể có sẵn của sản phẩm:
+              {t("Biến thể có sẵn của sản phẩm", lang)}:
             </Text>
-            <Tag color="blue">{availableVariants.length} biến thể</Tag>
+            <Tag color="blue">{availableVariants.length} {t("biến thể", lang)}</Tag>
           </div>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             {availableVariants.slice(0, 6).map((v) => (
@@ -1046,7 +1062,7 @@ function OrderItemRow({
               </Tag>
             ))}
             {availableVariants.length > 6 && (
-              <Tag style={{ fontSize: 11 }}>+{availableVariants.length - 6} more</Tag>
+              <Tag style={{ fontSize: 11 }}>+{availableVariants.length - 6} {t("nữa", lang)}</Tag>
             )}
           </div>
         </div>
@@ -1055,7 +1071,7 @@ function OrderItemRow({
       {/* Variant Details Section */}
       <Divider style={{ margin: "12px 0" }}>
         <Space>
-          <Text strong>Chi tiết sản phẩm</Text>
+          <Text strong>{t("Chi tiết sản phẩm", lang)}</Text>
           <Tag color={validation.detailsError ? "red" : "green"}>
             {totalDetailsQuantity} / {totalProductsRequired}
           </Tag>
@@ -1128,12 +1144,12 @@ function OrderItemRow({
       <Divider style={{ margin: "16px 0 12px" }}>
         <Space>
           <GiftOutlined />
-          <Text strong>Quà tặng</Text>
-          <Tag color="gold">{totalGiftsRequired} quà</Tag>
+          <Text strong>{t("Quà tặng", lang)}</Text>
+          <Tag color="gold">{totalGiftsRequired} {t("quà", lang)}</Tag>
           {item.giftMode === "RANDOM" ? (
-            <Tag color="purple">Shop tự chọn</Tag>
+            <Tag color="purple">{t("Shop tự chọn", lang)}</Tag>
           ) : (
-            <Tag color="orange">Khách chọn</Tag>
+            <Tag color="orange">{t("Khách chọn", lang)}</Tag>
           )}
         </Space>
       </Divider>
@@ -1161,6 +1177,7 @@ export default function OrderProductDetail({
   onChange,
   disabled = false,
 }: OrderProductDetailProps) {
+  const lang = useLanguageStore((s) => s.language);
   const variantOptions = product?.variantOptions || [];
   const hasVariants = variantOptions.length > 0;
   const message = useMessage();
@@ -1191,7 +1208,7 @@ export default function OrderProductDetail({
               <Text strong>{product.name}</Text>
               {hasVariants && (
                 <Tag color="orange">
-                  {variantOptions.length} thuộc tính:{" "}
+                  {variantOptions.length} {t("thuộc tính", lang)}:{" "}
                   {variantOptions.map((o) => o.name).join(", ")}
                 </Tag>
               )}
@@ -1201,11 +1218,11 @@ export default function OrderProductDetail({
         >
           {hasVariants ? (
             <Text type="secondary">
-              Sale nhập chi tiết biến thể cho mỗi sản phẩm
+              {t("Sale nhập chi tiết biến thể cho mỗi sản phẩm", lang)}
             </Text>
           ) : (
             <Text type="secondary">
-              Sản phẩm không có biến thể - Sale nhập số lượng tổng
+              {t("Sản phẩm không có biến thể - Sale nhập số lượng tổng", lang)}
             </Text>
           )}
         </Card>
@@ -1224,9 +1241,9 @@ export default function OrderProductDetail({
             }}
           >
             <ShoppingOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-            <div>Chưa có combo nào</div>
+            <div>{t("Chưa có combo nào", lang)}</div>
             <div style={{ fontSize: 12, marginTop: 4 }}>
-              Chọn combo để thêm vào đơn hàng
+              {t("Chọn combo để thêm vào đơn hàng", lang)}
             </div>
           </div>
         </Card>
@@ -1263,31 +1280,31 @@ export default function OrderProductDetail({
             }}
           >
             <div>
-              <Text type="secondary">Tổng combo:</Text>
+              <Text type="secondary">{t("Tổng combo", lang)}:</Text>
               <Text strong style={{ marginLeft: 8 }}>
                 {totals.totalComboCount}
               </Text>
             </div>
             <div>
-              <Text type="secondary">Tổng SP:</Text>
+              <Text type="secondary">{t("Tổng SP", lang)}:</Text>
               <Text strong style={{ marginLeft: 8 }}>
                 {totals.totalProducts}
               </Text>
             </div>
             <div>
-              <Text type="secondary">Tổng quà:</Text>
+              <Text type="secondary">{t("Tổng quà", lang)}:</Text>
               <Text strong style={{ marginLeft: 8, color: "#fa8c16" }}>
                 {totals.totalGifts}
               </Text>
             </div>
             <div>
-              <Text type="secondary">Tổng giảm giá:</Text>
+              <Text type="secondary">{t("Tổng giảm giá", lang)}:</Text>
               <Text style={{ marginLeft: 8, color: "#ff4d4f" }}>
                 -{formatMNT(totals.totalDiscount)}
               </Text>
             </div>
             <div>
-              <Text type="secondary">Tổng cộng:</Text>
+              <Text type="secondary">{t("Tổng cộng", lang)}:</Text>
               <Text
                 strong
                 style={{ marginLeft: 8, fontSize: 18, color: "#1890ff" }}

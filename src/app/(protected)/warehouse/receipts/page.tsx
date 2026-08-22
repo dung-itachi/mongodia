@@ -13,10 +13,14 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useCreateReceipt, useWarehouseReceipts } from "@/hooks/useWarehouseWorkflow";
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 type ItemRow = { itemType: "PRODUCT" | "GIFT"; productId?: string; variantId?: string; giftId?: string; orderedQuantity: number; receivedQuantity: number };
 
 export default function WarehouseReceiptsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const { warehouses } = useWarehouses();
   const { data: giftResponse } = useGiftList();
   const message = useMessage();
@@ -120,8 +124,7 @@ export default function WarehouseReceiptsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Nhập kho"
+      <PageHeader title={t("Nhập kho", lang)}
         subtitle={`${data?.total ?? 0} phiếu`}
         breadcrumb={[{ label: "Trang chủ", href: "/" }, { label: "Kho", href: "/warehouses" }, { label: "Nhập kho" }]}
         actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Tạo phiếu nhập</Button>}

@@ -21,6 +21,8 @@ import {
   PageHeader,
   PageStatsBanner,
 } from "@/components/common";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 type Team = {
   _id: string;
@@ -36,6 +38,7 @@ type Team = {
 
 export default function TeamsPage() {
   const { message } = useAntApp();
+  const lang = useLanguageStore((s) => s.language);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Team | null>(null);
   const [open, setOpen] = useState(false);
@@ -100,27 +103,27 @@ export default function TeamsPage() {
 
   const columns = useMemo(() => [
     { title: "STT", render: (_: unknown, __: Team, index: number) => index + 1, width: 60 },
-    { title: "Mã Team", dataIndex: "code", width: 120 },
-    { title: "Tên Team", dataIndex: "name" },
-    { title: "Phòng ban", render: (_: unknown, item: Team) => item.departmentId?.name ?? "-" },
-    { title: "Khu vực", render: (_: unknown, item: Team) => item.areaId?.name ?? "-" },
-    { title: "Trưởng nhóm (Leader)", render: (_: unknown, item: Team) => item.leaderId?.fullName ?? "-" },
-    { title: "Quản lý (Manager)", render: (_: unknown, item: Team) => item.managerId?.fullName ?? "-" },
-    { title: "Trạng thái", render: (_: unknown, item: Team) => <Tag color={item.isActive !== false ? "green" : "red"}>{item.isActive !== false ? "Hoạt động" : "Không hoạt động"}</Tag>, width: 130 },
+    { title: t("Mã Team", lang), dataIndex: "code", width: 120 },
+    { title: t("Tên Team", lang), dataIndex: "name" },
+    { title: t("Phòng ban", lang), render: (_: unknown, item: Team) => item.departmentId?.name ?? "-" },
+    { title: t("Khu vực", lang), render: (_: unknown, item: Team) => item.areaId?.name ?? "-" },
+    { title: t("Trưởng nhóm (Leader)", lang), render: (_: unknown, item: Team) => item.leaderId?.fullName ?? "-" },
+    { title: t("Quản lý (Manager)", lang), render: (_: unknown, item: Team) => item.managerId?.fullName ?? "-" },
+    { title: t("Trạng thái", lang), render: (_: unknown, item: Team) => <Tag color={item.isActive !== false ? "green" : "red"}>{item.isActive !== false ? t("Hoạt động", lang) : t("Không hoạt động", lang)}</Tag>, width: 130 },
     {
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       render: (_: unknown, item: Team) => (
         <Space>
-          <Button size="small" onClick={() => openView(item)}>Xem</Button>
-          <Button size="small" onClick={() => openEdit(item)}>Sửa</Button>
-          <Popconfirm title="Xóa team này?" onConfirm={() => handleDelete(item._id)}>
-            <Button size="small" danger>Xóa</Button>
+          <Button size="small" onClick={() => openView(item)}>{t("Xem", lang)}</Button>
+          <Button size="small" onClick={() => openEdit(item)}>{t("Sửa", lang)}</Button>
+          <Popconfirm title={t("Xóa team này?", lang)} onConfirm={() => handleDelete(item._id)}>
+            <Button size="small" danger>{t("Xóa", lang)}</Button>
           </Popconfirm>
         </Space>
       ),
       width: 180,
     },
-  ], []);
+  ], [lang]);
 
   const openCreate = () => {
     setSelected(null);
@@ -158,10 +161,10 @@ export default function TeamsPage() {
     try {
       setLoading(true);
       await api.delete(`/api/teams/${id}`);
-      message.success("Xóa thành công");
+      message.success(t("Xóa thành công", lang));
       void refetch();
     } catch {
-      message.error("Xóa thất bại");
+      message.error(t("Xóa thất bại", lang));
     } finally {
       setLoading(false);
     }
@@ -180,16 +183,16 @@ export default function TeamsPage() {
       };
       if (mode === "create") {
         await api.post("/api/teams", payload);
-        message.success("Tạo team thành công");
+        message.success(t("Tạo team thành công", lang));
         setDraftData(null);
       } else if (selected) {
         await api.put(`/api/teams/${selected._id}`, payload);
-        message.success("Cập nhật thành công");
+        message.success(t("Cập nhật thành công", lang));
       }
       setOpen(false);
       void refetch();
     } catch (e) {
-      message.error((e as Error).message ?? "Thao tác thất bại");
+      message.error((e as Error).message ?? t("Thao tác thất bại", lang));
     } finally {
       setLoading(false);
     }
@@ -203,24 +206,24 @@ export default function TeamsPage() {
     setOpen(false);
   };
 
-  const drawerTitle = mode === "create" ? "Tạo Team" : mode === "edit" ? "Cập nhật Team" : "Chi tiết Team";
+  const drawerTitle = mode === "create" ? t("Tạo Team", lang) : mode === "edit" ? t("Cập nhật Team", lang) : t("Chi tiết Team", lang);
 
   return (
     <PageContainer>
       <PageHeader
-        title="Quản lý Teams"
-        subtitle={`${totalTeams} teams trong hệ thống`}
+        title={t("Quản lý Teams", lang)}
+        subtitle={`${totalTeams} ${t("teams trong hệ thống", lang)}`}
         actions={
           <Space>
             <Input.Search
-              placeholder="Mã team, tên team"
+              placeholder={t("Mã team, tên team", lang)}
               allowClear
               onSearch={setSearch}
               style={{ width: 250 }}
             />
             <Button icon={<ReloadOutlined />} onClick={() => void refetch()} />
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-              Tạo Team
+              {t("Tạo Team", lang)}
             </Button>
           </Space>
         }
@@ -232,35 +235,35 @@ export default function TeamsPage() {
           {
             key: "total",
             value: totalTeams,
-            label: "Tổng Teams",
+            label: t("Tổng Teams", lang),
             icon: <TeamOutlined style={{ color: "#1890ff" }} />,
             color: "blue",
           },
           {
             key: "active",
             value: activeTeams,
-            label: "Đang hoạt động",
+            label: t("Đang hoạt động", lang),
             icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
             color: "green",
           },
           {
             key: "inactive",
             value: inactiveTeams,
-            label: "Không hoạt động",
+            label: t("Không hoạt động", lang),
             icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
             color: "red",
           },
           {
             key: "leaders",
             value: totalLeaders,
-            label: "Có Trưởng nhóm",
+            label: t("Có Trưởng nhóm", lang),
             icon: <CrownOutlined style={{ color: "#722ed1" }} />,
             color: "purple",
           },
           {
             key: "managers",
             value: totalManagers,
-            label: "Có Quản lý",
+            label: t("Có Quản lý", lang),
             icon: <TeamOutlined style={{ color: "#fa8c16" }} />,
             color: "orange",
           },
@@ -271,7 +274,7 @@ export default function TeamsPage() {
 
       {error && (
         <Typography.Text type="danger" style={{ marginBottom: 16, display: "block" }}>
-          Lỗi tải dữ liệu: {(error as Error).message}
+          {t("Lỗi tải dữ liệu:", lang)} {(error as Error).message}
         </Typography.Text>
       )}
 
@@ -284,7 +287,7 @@ export default function TeamsPage() {
           pagination={{
             total: filteredData.length,
             pageSize: 50,
-            showTotal: (total) => `Tổng ${total} team`,
+            showTotal: (total) => `${t("Tổng", lang)} ${total} ${t("team", lang)}`,
           }}
           scroll={{ x: 900 }}
         />
@@ -293,32 +296,32 @@ export default function TeamsPage() {
       <Drawer title={drawerTitle} open={open} onClose={handleCloseDrawer} size="default">
         {mode === "view" && selected ? (
           <Space orientation="vertical">
-            <p><b>Mã Team:</b> {selected.code}</p>
-            <p><b>Tên Team:</b> {selected.name}</p>
-            <p><b>Phòng ban:</b> {selected.departmentId?.name ?? "-"}</p>
-            <p><b>Khu vực:</b> {(selected as { areaId?: { name?: string } }).areaId?.name ?? "-"}</p>
-            <p><b>Trưởng nhóm (Leader):</b> {selected.leaderId?.fullName ?? "-"}</p>
-            <p><b>Quản lý (Manager):</b> {selected.managerId?.fullName ?? "-"}</p>
-            <p><b>Trạng thái:</b> <Tag color={selected.isActive !== false ? "green" : "red"}>{selected.isActive !== false ? "Hoạt động" : "Không hoạt động"}</Tag></p>
-            <p><b>Ngày tạo:</b> {selected.createdAt ?? "-"}</p>
+            <p><b>{t("Mã Team:", lang)}</b> {selected.code}</p>
+            <p><b>{t("Tên Team:", lang)}</b> {selected.name}</p>
+            <p><b>{t("Phòng ban:", lang)}</b> {selected.departmentId?.name ?? "-"}</p>
+            <p><b>{t("Khu vực:", lang)}</b> {(selected as { areaId?: { name?: string } }).areaId?.name ?? "-"}</p>
+            <p><b>{t("Trưởng nhóm (Leader):", lang)}</b> {selected.leaderId?.fullName ?? "-"}</p>
+            <p><b>{t("Quản lý (Manager):", lang)}</b> {selected.managerId?.fullName ?? "-"}</p>
+            <p><b>{t("Trạng thái:", lang)}</b> <Tag color={selected.isActive !== false ? "green" : "red"}>{selected.isActive !== false ? t("Hoạt động", lang) : t("Không hoạt động", lang)}</Tag></p>
+            <p><b>{t("Ngày tạo:", lang)}</b> {selected.createdAt ?? "-"}</p>
           </Space>
         ) : (
           <Form form={form} layout="vertical" onFinish={handleSubmit}>
-            <Form.Item name="code" label="Mã Team" rules={[{ required: true, min: 2 }]}><Input /></Form.Item>
-            <Form.Item name="name" label="Tên Team" rules={[{ required: true, min: 2 }]}><Input /></Form.Item>
-            <Form.Item name="departmentCode" label="Phòng ban" rules={[{ required: true }]}>
-              <Select options={departmentOptions} placeholder="Chọn phòng ban" />
+            <Form.Item name="code" label={t("Mã Team", lang)} rules={[{ required: true, min: 2 }]}><Input /></Form.Item>
+            <Form.Item name="name" label={t("Tên Team", lang)} rules={[{ required: true, min: 2 }]}><Input /></Form.Item>
+            <Form.Item name="departmentCode" label={t("Phòng ban", lang)} rules={[{ required: true }]}>
+              <Select options={departmentOptions} placeholder={t("Chọn phòng ban", lang)} />
             </Form.Item>
-            <Form.Item name="areaCode" label="Khu vực">
-              <Select options={areaOptions} allowClear placeholder="Chọn khu vực" />
+            <Form.Item name="areaCode" label={t("Khu vực", lang)}>
+              <Select options={areaOptions} allowClear placeholder={t("Chọn khu vực", lang)} />
             </Form.Item>
-            <Form.Item name="leaderCode" label="Trưởng nhóm (Leader)">
-              <Select options={leaderOptions} allowClear placeholder="Chọn leader" showSearch filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())} />
+            <Form.Item name="leaderCode" label={t("Trưởng nhóm (Leader)", lang)}>
+              <Select options={leaderOptions} allowClear placeholder={t("Chọn leader", lang)} showSearch filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())} />
             </Form.Item>
-            <Form.Item name="managerCode" label="Quản lý (Manager)">
-              <Select options={managerOptions} allowClear placeholder="Chọn manager" showSearch filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())} />
+            <Form.Item name="managerCode" label={t("Quản lý (Manager)", lang)}>
+              <Select options={managerOptions} allowClear placeholder={t("Chọn manager", lang)} showSearch filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())} />
             </Form.Item>
-            <Form.Item><Button type="primary" htmlType="submit" loading={loading}>{mode === "create" ? "Tạo Team" : "Lưu thay đổi"}</Button></Form.Item>
+            <Form.Item><Button type="primary" htmlType="submit" loading={loading}>{mode === "create" ? t("Tạo Team", lang) : t("Lưu thay đổi", lang)}</Button></Form.Item>
           </Form>
         )}
       </Drawer>

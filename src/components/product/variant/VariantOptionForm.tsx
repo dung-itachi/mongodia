@@ -2,15 +2,17 @@
  * Variant Option Form Component (Sprint 8.4.1)
  *
  * Form for creating and editing Variant Options.
+ * Supports quick-add of initial values via a textarea (one value per line).
  */
 
 "use client";
 
-import { useEffect } from "react";
-import { Form, Input, InputNumber, Switch } from "antd";
+import { useEffect, useState } from "react";
+import { Form, Input, InputNumber, Switch, message } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
 import type {
   VariantOptionItem,
+  VariantValueItem,
   CreateVariantOptionInput,
   UpdateVariantOptionInput,
 } from "@/hooks/useVariants";
@@ -22,7 +24,10 @@ interface VariantOptionFormProps {
   selectedProductId?: string | null;
   products?: Array<{ _id: string; name: string }>;
   onClose: () => void;
-  onSubmit: (values: CreateVariantOptionInput | UpdateVariantOptionInput) => void;
+  onSubmit: (
+    values: CreateVariantOptionInput | UpdateVariantOptionInput,
+    options?: { quickValues?: string[]; createdOption?: VariantOptionItem }
+  ) => void;
 }
 
 // Helper function to generate code from Vietnamese name
@@ -30,15 +35,15 @@ function generateCodeFromName(name: string): string {
   const normalized = name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, ""); // Remove diacritics
-  
+
   const asciiCode = normalized
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "")
     .substring(0, 20);
-  
-  // Use first 4 chars + random suffix to ensure uniqueness
+
+  // Random suffix for uniqueness
   const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return asciiCode.length >= 4 
+  return asciiCode.length >= 4
     ? asciiCode + suffix
     : `${asciiCode}${suffix}`;
 }
@@ -54,6 +59,7 @@ export default function VariantOptionForm({
 }: VariantOptionFormProps) {
   const [form] = Form.useForm();
   const isEditing = !!editingItem;
+  const [quickValuesText, setQuickValuesText] = useState("");
 
   // Get selected product name
   const selectedProductName = selectedProductId
@@ -72,12 +78,12 @@ export default function VariantOptionForm({
         });
       } else {
         form.resetFields();
-        // Set default values for new items
         form.setFieldsValue({
           sortOrder: 0,
           isActive: true,
         });
       }
+      setQuickValuesText("");
     }
   }, [open, editingItem, form]);
 
@@ -87,12 +93,20 @@ export default function VariantOptionForm({
       if (!isEditing && !values.code && values.name) {
         values.code = generateCodeFromName(values.name);
       }
+
       // Include productId for new items
       const submitValues = { ...values } as CreateVariantOptionInput;
       if (!isEditing && selectedProductId) {
         submitValues.productId = selectedProductId;
       }
-      onSubmit(submitValues);
+
+      // Parse quick values (one per line, skip empty)
+      const quickValues = quickValuesText
+        .split(/\r?\n/)
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0);
+
+      onSubmit(submitValues, { quickValues });
     });
   };
 
@@ -101,7 +115,6 @@ export default function VariantOptionForm({
     if (!isEditing) {
       const name = e.target.value;
       form.setFieldValue("name", name);
-      // Auto-generate code suggestion when name changes
       if (name) {
         form.setFieldValue("code", generateCodeFromName(name));
       }
@@ -116,10 +129,18 @@ export default function VariantOptionForm({
       onClose={onClose}
       onSubmit={handleSubmit}
       submitText={isEditing ? "Cập nhật" : "Tạo mới"}
-      width={500}
+      width={520}
     >
       {selectedProductName && (
-        <div style={{ marginBottom: 16, padding: "8px 12px", background: "#e6f7ff", borderRadius: 6, color: "#1890ff" }}>
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "8px 12px",
+            background: "#e6f7ff",
+            borderRadius: 6,
+            color: "#1890ff",
+          }}
+        >
           Thuộc tính cho sản phẩm: <strong>{selectedProductName}</strong>
         </div>
       )}
@@ -149,8 +170,8 @@ export default function VariantOptionForm({
             { max: 100, message: "Tên tối đa 100 ký tự" },
           ]}
         >
-          <Input 
-            placeholder="VD: Kích thước, Màu sắc, Hộp" 
+          <Input
+            placeholder="VD: Kích thước, Màu sắc, Hộp"
             onChange={handleNameChange}
           />
         </Form.Item>
@@ -160,8 +181,34 @@ export default function VariantOptionForm({
           label="Mã thuộc tính (tự động tạo)"
           tooltip="Sẽ tự động tạo từ tên nếu để trống"
         >
-          <Input placeholder="VD: KICHTHUOC01 - Sẽ tự sinh nếu để trống" disabled={isEditing} />
+          <Input
+            placeholder="VD: KICHTHUOC01 - Sẽ tự sinh nếu để trống"
+            disabled={isEditing}
+          />
         </Form.Item>
+
+        {!isEditing && (
+          <Form.Item label="Thêm nhanh giá trị (tùy chọn)">
+            <Input.TextArea
+              value={quickValuesText}
+              onChange={(e) => setQuickValuesText(e.target.value)}
+              placeholder="Mỗi dòng là một giá trị. VD:&#10;S&#10;M&#10;L"
+              rows={4}
+              maxLength={2000}
+              showCount
+            />
+            <div
+              style={{
+                color: "#8c8c8c",
+                fontSize: 12,
+                marginTop: 4,
+              }}
+            >
+              Mỗi dòng sẽ được tạo thành một giá trị của thuộc tính này. Mã giá
+              trị sẽ tự sinh từ tên.
+            </div>
+          </Form.Item>
+        )}
 
         <Form.Item name="sortOrder" label="Thứ tự hiển thị">
           <InputNumber min={0} style={{ width: "100%" }} />

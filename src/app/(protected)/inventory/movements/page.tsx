@@ -21,8 +21,12 @@ import SkeletonCard from "@/components/common/overlay/SkeletonCard";
 
 import { useInventoryMovements } from "@/hooks/useInventoryMovements";
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_COLORS } from "@/configs/inventory.config";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 export default function InventoryMovementsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState("");
@@ -160,9 +164,7 @@ export default function InventoryMovementsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Inventory Movements"
-        subtitle="Lịch sử xuất/nhập kho"
+      <PageHeader title={t("Inventory Movements", lang)} subtitle={t("Lịch sử xuất/nhập kho", lang)}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },
           { label: "Inventory", href: "/inventory/movements" },

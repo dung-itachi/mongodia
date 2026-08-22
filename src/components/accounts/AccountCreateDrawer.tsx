@@ -40,6 +40,8 @@ import {
   deleteCloudinaryImage,
   type ValidationError,
 } from "@/lib/cloudinary";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./AccountCreateDrawer.module.css";
 import ImageSizeErrorModal from "./ImageSizeErrorModal";
 
@@ -104,6 +106,7 @@ export default function AccountCreateDrawer({
   showBankFields = true,
 }: AccountCreateDrawerProps) {
   const [form] = Form.useForm<FormValues>();
+  const lang = useLanguageStore((s) => s.language);
   const create = useCreateAccount();
   const update = useUpdateAccount();
 
@@ -269,10 +272,10 @@ export default function AccountCreateDrawer({
 
   const title =
     mode === "create"
-      ? "Tạo tài khoản"
+      ? t("Tạo tài khoản", lang)
       : mode === "edit"
-        ? "Cập nhật tài khoản"
-        : "Chi tiết tài khoản";
+        ? t("Cập nhật tài khoản", lang)
+        : t("Chi tiết tài khoản", lang);
 
   return (
     <Drawer
@@ -297,25 +300,25 @@ export default function AccountCreateDrawer({
                 <img src={getAvatarDisplayUrl(selected.avatar)} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
                 <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#999", fontSize: 11 }}>
-                  Không có avatar
+                  {t("Không có avatar", lang)}
                 </div>
               )}
             </div>
           </div>
           <Typography.Paragraph>
-            <b>Mã NV:</b> {selected.employeeCode}
+            <b>{t("Mã NV", lang)}:</b> {selected.employeeCode}
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>Username:</b> {selected.username}
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Họ tên:</b> {selected.fullName}
+            <b>{t("Họ tên", lang)}:</b> {selected.fullName}
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>Email:</b> {selected.email || "-"}
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Phone:</b> {selected.phone || "-"}
+            <b>{t("Điện thoại", lang)}:</b> {selected.phone || "-"}
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>Role:</b>{" "}
@@ -323,7 +326,7 @@ export default function AccountCreateDrawer({
             {selected.role?.name ?? "-"})
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Department:</b>{" "}
+            <b>{t("Phòng ban", lang)}:</b>{" "}
             <Tag color="purple">{selected.department?.name ?? selected.departmentId?.name ?? "-"}</Tag>
           </Typography.Paragraph>
           <Typography.Paragraph>
@@ -331,20 +334,20 @@ export default function AccountCreateDrawer({
             {selected.team?.name ? `(${selected.team.name})` : ""}
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Khu vực:</b>{" "}
+            <b>{t("Khu vực", lang)}:</b>{" "}
             <Tag color="green">{selected.area?.code ?? selected.area?.name ?? "-"}</Tag>
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>Leader:</b> {selected.leader?.fullName ?? "-"}
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Trạng thái:</b>{" "}
+            <b>{t("Trạng thái", lang)}:</b>{" "}
             <Tag color={selected.isActive ? "green" : "red"}>
-              {selected.isActive ? "Hoạt động" : "Đã khóa"}
+              {selected.isActive ? t("Hoạt động", lang) : t("Đã khóa", lang)}
             </Tag>
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Ngày tạo:</b> {selected.createdAt}
+            <b>{t("Ngày tạo", lang)}:</b> {selected.createdAt}
           </Typography.Paragraph>
           {showBankFields &&
             (selected.bankName ||
@@ -352,16 +355,16 @@ export default function AccountCreateDrawer({
               selected.bankAccountHolder) && (
               <>
                 <Typography.Paragraph>
-                  <b>Tài khoản ngân hàng:</b>
+                  <b>{t("Tài khoản ngân hàng", lang)}:</b>
                 </Typography.Paragraph>
                 <Typography.Paragraph style={{ paddingLeft: 16 }}>
-                  <b>Ngân hàng:</b> {selected.bankName || "-"}
+                  <b>{t("Ngân hàng", lang)}:</b> {selected.bankName || "-"}
                 </Typography.Paragraph>
                 <Typography.Paragraph style={{ paddingLeft: 16 }}>
-                  <b>Số TK:</b> {selected.bankAccountNumber || "-"}
+                  <b>{t("Số TK", lang)}:</b> {selected.bankAccountNumber || "-"}
                 </Typography.Paragraph>
                 <Typography.Paragraph style={{ paddingLeft: 16 }}>
-                  <b>Chủ TK:</b> {selected.bankAccountHolder || "-"}
+                  <b>{t("Chủ TK", lang)}:</b> {selected.bankAccountHolder || "-"}
                 </Typography.Paragraph>
               </>
             )}
@@ -384,14 +387,14 @@ export default function AccountCreateDrawer({
           {mode === "create" && (
             <Form.Item
               name="password"
-              label="Mật khẩu"
+              label={t("Mật khẩu", lang)}
               rules={[{ required: true, min: 6 }]}
             >
               <Input.Password autoComplete="new-password" />
             </Form.Item>
           )}
 
-          <Form.Item name="fullName" label="Họ tên" rules={[{ required: true }]}>
+          <Form.Item name="fullName" label={t("Họ tên", lang)} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
@@ -399,7 +402,7 @@ export default function AccountCreateDrawer({
             <Input />
           </Form.Item>
 
-          <Form.Item name="phone" label="Điện thoại">
+          <Form.Item name="phone" label={t("Điện thoại", lang)}>
             <Input />
           </Form.Item>
 
@@ -410,7 +413,7 @@ export default function AccountCreateDrawer({
                   <img src={displayAvatarUrl} alt="Avatar" />
                 ) : (
                   <div className={styles.avatarPlaceholder}>
-                    <span>Chưa có avatar</span>
+                    <span>{t("Chưa có avatar", lang)}</span>
                   </div>
                 )}
               </div>
@@ -418,7 +421,7 @@ export default function AccountCreateDrawer({
                 {isUploading && (
                   <div className={styles.uploadProgress}>
                     <Progress percent={uploadProgress} size="small" status="active" />
-                    <span>Đang tải lên...</span>
+                    <span>{t("Đang tải lên...", lang)}</span>
                   </div>
                 )}
                 <Button
@@ -426,10 +429,10 @@ export default function AccountCreateDrawer({
                   onClick={handleUploadClick}
                   loading={isUploading}
                 >
-                  {displayAvatarUrl && !previewUrl ? "Chọn ảnh mới" : "Tải lên avatar"}
+                  {displayAvatarUrl && !previewUrl ? t("Chọn ảnh mới", lang) : t("Tải lên avatar", lang)}
                 </Button>
                 <Typography.Text type="secondary" className={styles.uploadHint}>
-                  JPG / PNG / WebP - Tối đa 5MB
+                  JPG / PNG / WebP - {t("Tối đa 5MB", lang)}
                 </Typography.Text>
               </div>
             </div>
@@ -440,7 +443,7 @@ export default function AccountCreateDrawer({
           <Form.Item name="roleCode" label="Role">
             <Select
               options={roleOptions}
-              placeholder="Chọn role"
+              placeholder={t("Chọn role", lang)}
               disabled={locked.has("roleCode")}
             />
           </Form.Item>
@@ -449,24 +452,24 @@ export default function AccountCreateDrawer({
             <Select
               options={teamOptions}
               allowClear
-              placeholder="Chọn team"
+              placeholder={t("Chọn team", lang)}
               disabled={locked.has("teamId")}
             />
           </Form.Item>
 
-          <Form.Item name="departmentId" label="Phòng ban">
+          <Form.Item name="departmentId" label={t("Phòng ban", lang)}>
             <Select
               options={departmentOptions}
               allowClear
-              placeholder="Chọn phòng ban"
+              placeholder={t("Chọn phòng ban", lang)}
             />
           </Form.Item>
 
-          <Form.Item name="areaId" label="Khu vực">
+          <Form.Item name="areaId" label={t("Khu vực", lang)}>
             <Select
               options={areaOptions}
               allowClear
-              placeholder="Chọn khu vực"
+              placeholder={t("Chọn khu vực", lang)}
             />
           </Form.Item>
 
@@ -474,7 +477,7 @@ export default function AccountCreateDrawer({
             <Select
               options={leaderOptions}
               allowClear
-              placeholder="Chọn leader"
+              placeholder={t("Chọn leader", lang)}
               disabled={locked.has("leaderId")}
             />
           </Form.Item>
@@ -482,15 +485,15 @@ export default function AccountCreateDrawer({
           {showBankFields && (
             <>
               <Divider plain style={{ margin: "16px 0 8px" }}>
-                Tài khoản ngân hàng
+                {t("Tài khoản ngân hàng", lang)}
               </Divider>
-              <Form.Item name="bankName" label="Tên ngân hàng">
+              <Form.Item name="bankName" label={t("Tên ngân hàng", lang)}>
                 <Input />
               </Form.Item>
-              <Form.Item name="bankAccountNumber" label="Số tài khoản">
+              <Form.Item name="bankAccountNumber" label={t("Số tài khoản", lang)}>
                 <Input />
               </Form.Item>
-              <Form.Item name="bankAccountHolder" label="Tên chủ tài khoản">
+              <Form.Item name="bankAccountHolder" label={t("Tên chủ tài khoản", lang)}>
                 <Input />
               </Form.Item>
             </>
@@ -502,7 +505,7 @@ export default function AccountCreateDrawer({
               htmlType="submit"
               loading={create.isPending || update.isPending}
             >
-              {mode === "create" ? "Tạo tài khoản" : "Lưu thay đổi"}
+              {mode === "create" ? t("Tạo tài khoản", lang) : t("Lưu thay đổi", lang)}
             </Button>
           </Form.Item>
         </Form>

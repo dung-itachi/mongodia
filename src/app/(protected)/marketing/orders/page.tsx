@@ -38,10 +38,13 @@ import type { MarketingLead } from "@/types/marketing-lead";
 import LeadDrawer from "@/app/(protected)/marketing/input/LeadDrawer";
 import type { LeadFormData } from "@/app/(protected)/marketing/input/LeadDrawer";
 import { LeadDetailView } from "@/components/marketing/leads/LeadDetailView";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export default function MarketingOrdersPage() {
   const { message } = useAntApp();
   const user = useAuthStore((s) => s.user);
+  const lang = useLanguageStore((s) => s.language);
 
   // Sprint 8.x: Check permissions for admin features
   // - View all orders: marketing-order.viewAll (ADMIN/ADMIN equivalent)
@@ -118,15 +121,15 @@ export default function MarketingOrdersPage() {
     (data: LeadFormData) => {
       createMutation.mutate(data as unknown as Record<string, unknown>, {
         onSuccess: () => {
-          void message.success("Tạo lead thành công");
+          void message.success(t("Tạo lead thành công", lang));
           setDrawerOpen(false);
         },
         onError: (err) => {
-          void message.error(`Lỗi: ${err.message}`);
+          void message.error(`${t("Lỗi:", lang)} ${err.message}`);
         },
       });
     },
-    [createMutation]
+    [createMutation, lang]
   );
 
   const handleUpdateLead = useCallback(
@@ -155,17 +158,17 @@ export default function MarketingOrdersPage() {
         { id: editingLead._id, data: cleanedData },
         {
           onSuccess: () => {
-            void message.success("Cập nhật lead thành công");
+            void message.success(t("Cập nhật lead thành công", lang));
             setDrawerOpen(false);
             setEditingLead(null);
           },
           onError: (err) => {
-            void message.error(`Lỗi: ${err.message}`);
+            void message.error(`${t("Lỗi:", lang)} ${err.message}`);
           },
         }
       );
     },
-    [editingLead, updateMutation]
+    [editingLead, updateMutation, lang]
   );
 
   const handleDeleteClick = useCallback((lead: MarketingLead) => {
@@ -178,15 +181,15 @@ export default function MarketingOrdersPage() {
 
     deleteMutation.mutate(deletingLead._id, {
       onSuccess: () => {
-        void message.success("Xóa lead thành công");
+        void message.success(t("Xóa lead thành công", lang));
         setDeleteConfirmOpen(false);
         setDeletingLead(null);
       },
       onError: (err) => {
-        void message.error(`Lỗi: ${err.message}`);
+        void message.error(`${t("Lỗi:", lang)} ${err.message}`);
       },
     });
-  }, [deletingLead, deleteMutation]);
+  }, [deletingLead, deleteMutation, lang]);
 
   const handleDrawerClose = useCallback(() => {
     setDrawerOpen(false);
@@ -216,8 +219,8 @@ export default function MarketingOrdersPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="QL đơn hàng MKT"
-        subtitle="Danh sách leads đã tạo"
+        title={t("QL đơn hàng MKT", lang)}
+        subtitle={t("Danh sách leads đã tạo", lang)}
       />
 
       <CardSection>
@@ -231,7 +234,7 @@ export default function MarketingOrdersPage() {
           onPushToSale={() => {}}
           selectedCount={0}
           loading={loading}
-          createLabel="Thêm đơn hàng"
+          createLabel={t("Thêm đơn hàng", lang)}
           showAreaFilter={canFilterByArea}
         />
 
@@ -249,18 +252,18 @@ export default function MarketingOrdersPage() {
           <SkeletonTable rows={5} columns={10} />
         ) : error ? (
           <EmptyState
-            title="Lỗi tải dữ liệu"
+            title={t("Lỗi tải dữ liệu", lang)}
             description={error}
             action={
-              <button onClick={() => { void refetch(); }}>Thử lại</button>
+              <button onClick={() => { void refetch(); }}>{t("Thử lại", lang)}</button>
             }
           />
         ) : leads.length === 0 ? (
           <EmptyState
-            title="Chưa có đơn hàng nào"
-            description="Bắt đầu bằng cách tạo đơn hàng mới"
+            title={t("Chưa có đơn hàng nào", lang)}
+            description={t("Bắt đầu bằng cách tạo đơn hàng mới", lang)}
             action={
-              <button onClick={() => setDrawerOpen(true)}>Tạo đơn hàng</button>
+              <button onClick={() => setDrawerOpen(true)}>{t("Tạo đơn hàng", lang)}</button>
             }
           />
         ) : (
@@ -288,7 +291,7 @@ export default function MarketingOrdersPage() {
                 pageSize={filters.limit ?? 20}
                 total={total}
                 onChange={handlePageChange}
-                showTotal={(t) => `Tổng: ${t} leads`}
+                showTotal={(total) => `${t("Tổng:", lang)} ${total} ${t("leads", lang)}`}
               />
             )}
           </>
@@ -301,17 +304,17 @@ export default function MarketingOrdersPage() {
         lead={editingLead}
         onClose={handleDrawerClose}
         onSubmit={editingLead ? handleUpdateLead : handleCreateLead}
-        createTitle="Thêm đơn hàng"
-        editTitle="Sửa đơn hàng"
+        createTitle={t("Thêm đơn hàng", lang)}
+        editTitle={t("Sửa đơn hàng", lang)}
       />
 
       <ConfirmDialog
         open={deleteConfirmOpen}
-        title="Xác nhận xóa"
-        content={`Bạn có chắc muốn xóa đơn hàng "${deletingLead?.customerName}" không?`}
+        title={t("Xác nhận xóa", lang)}
+        content={`${t("Bạn có chắc muốn xóa đơn hàng", lang)} "${deletingLead?.customerName}"?`}
         type="delete"
-        confirmText="Xóa"
-        cancelText="Hủy"
+        confirmText={t("Xóa", lang)}
+        cancelText={t("Hủy", lang)}
         loading={deleteMutation.isPending}
         onConfirm={handleDeleteConfirm}
         onCancel={() => {
@@ -325,7 +328,7 @@ export default function MarketingOrdersPage() {
         title={
           <span>
             <EyeOutlined style={{ marginRight: 8 }} />
-            Chi tiết đơn hàng
+            {t("Chi tiết đơn hàng", lang)}
           </span>
         }
         open={!!viewingLead}

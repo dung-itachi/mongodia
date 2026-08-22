@@ -164,8 +164,34 @@ export default function SaleLeadsPage() {
   const handleConfirmConvert = useCallback((orderItem: OrderItem) => {
     if (!convertingLead) return;
 
+    // Sprint 8.7 — Lưu variantDetails mới nhất (vừa chốt) lên Lead để audit/revert.
+    const payload = {
+      variantDetails: orderItem.details.map((d) => ({
+        quantity: d.quantity,
+        attributes: d.attributes.map((a) => ({
+          optionId: a.optionId,
+          valueId: a.valueId,
+          optionName: a.optionName,
+          valueName: a.valueName,
+        })),
+        variantId: d.variantId ?? "",
+      })),
+      giftMode: orderItem.giftMode,
+      giftSelections: orderItem.giftSelections.map((g) => ({
+        giftProductId: g.giftProductId,
+        giftProductName: g.giftProductName ?? "",
+        quantity: g.quantity,
+      })),
+    };
+
     convertMutation.mutate({ leadId: convertingLead._id, orderItem }, {
       onSuccess: () => {
+        // Best-effort: persist latest variant details snapshot (không block convert).
+        void fetch(`/api/sale/leads/${convertingLead._id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }).catch(() => undefined);
         void message.success(getTranslated("Đã tạo đơn hàng thành công"));
         setConvertingLead(null);
         void refetch();

@@ -23,8 +23,11 @@ import { useMemo } from "react";
 import { PageContainer, PageHeader } from "@/components/common";
 import { useOrgChart } from "@/hooks/useOrgChart";
 import OrganizationChart from "@/components/orgchart/OrganizationChart";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export default function EmployeesPage() {
+  const lang = useLanguageStore((s) => s.language);
   const { data, isLoading, isError, error, refetch } = useOrgChart();
 
   const orgChart = useMemo(() => {
@@ -38,8 +41,8 @@ export default function EmployeesPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Sơ đồ tổ chức"
-        subtitle="Trực quan hóa cơ cấu quản lý · Admin → Manager → Leader → Employee"
+        title={t("Sơ đồ tổ chức", lang)}
+        subtitle={t("Trực quan hóa cơ cấu quản lý · Admin → Manager → Leader → Employee", lang)}
       />
 
       {isError ? (
@@ -53,7 +56,7 @@ export default function EmployeesPage() {
             marginBottom: 16,
           }}
         >
-          Không thể tải sơ đồ tổ chức: {(error as Error)?.message ?? "Lỗi không xác định"}
+          {t("Không thể tải sơ đồ tổ chức:", lang)} {(error as Error)?.message ?? t("Lỗi không xác định", lang)}
           <button
             type="button"
             onClick={() => void refetch()}
@@ -67,7 +70,7 @@ export default function EmployeesPage() {
               cursor: "pointer",
             }}
           >
-            Thử lại
+            {t("Thử lại", lang)}
           </button>
         </div>
       ) : null}
@@ -90,7 +93,7 @@ export default function EmployeesPage() {
             fontSize: 14,
           }}
         >
-          {isLoading ? "Đang tải sơ đồ…" : "Chưa có dữ liệu"}
+          {isLoading ? t("Đang tải sơ đồ…", lang) : t("Chưa có dữ liệu", lang)}
         </div>
       )}
     </PageContainer>

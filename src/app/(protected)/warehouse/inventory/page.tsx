@@ -13,6 +13,9 @@ import WarehouseInventoryFiltersComponent from "@/components/warehouse/inventory
 import WarehouseInventoryTable from "@/components/warehouse/inventory/WarehouseInventoryTable";
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 import type { NormalizedInventoryItem } from "@/hooks/useWarehouseInventory";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 const { Text } = Typography;
 const DEFAULT_PAGE_SIZE = 20;
@@ -34,6 +37,7 @@ function computeStats(items: NormalizedInventoryItem[]): SummaryStats {
 }
 
 export default function WarehouseInventoryPage() {
+  const lang = useLanguageStore((s) => s.language);
   const [filters, setFilters] = useState<WarehouseInventoryFilters>({
     page: 1,
     limit: DEFAULT_PAGE_SIZE,
@@ -75,8 +79,7 @@ export default function WarehouseInventoryPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Tồn kho"
+      <PageHeader title={t("Tồn kho", lang)}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },
           { label: "Kho", href: "/warehouses" },

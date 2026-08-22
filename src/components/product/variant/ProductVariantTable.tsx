@@ -12,6 +12,8 @@ import { Switch, Popconfirm, Tag, Tooltip } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { ProductVariantListItem } from "@/hooks/useVariants";
 
 interface ProductVariantTableProps {
@@ -37,6 +39,7 @@ export default function ProductVariantTable({
   onDelete,
   onToggleActive,
 }: ProductVariantTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const getProductInfo = useCallback((productId: ProductVariantListItem["productId"]) => {
     if (typeof productId === "object" && productId !== null) {
       return {
@@ -99,7 +102,7 @@ export default function ProductVariantTable({
     (variantValues: ProductVariantListItem["variantValues"]) => {
       const parsed = parseVariantValues(variantValues);
       if (parsed.length === 0) {
-        return <span style={{ color: "#999" }}>Không có thuộc tính</span>;
+        return <span style={{ color: "#999" }}>{t("Không có thuộc tính", lang)}</span>;
       }
 
       const groups = groupVariantValuesByOption(parsed);
@@ -125,7 +128,7 @@ export default function ProductVariantTable({
         </div>
       );
     },
-    [parseVariantValues, groupVariantValuesByOption]
+    [parseVariantValues, groupVariantValuesByOption, lang]
   );
 
   const handleToggleActive = useCallback(
@@ -138,7 +141,7 @@ export default function ProductVariantTable({
   const columns: Column[] = [
     {
       key: "product",
-      title: "Sản phẩm",
+      title: t("Sản phẩm", lang),
       width: 180,
       fixed: "left",
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -191,7 +194,7 @@ export default function ProductVariantTable({
     },
     {
       key: "variantValues",
-      title: "Thuộc tính biến thể",
+      title: t("Thuộc tính biến thể", lang),
       width: 280,
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductVariantListItem;
@@ -202,7 +205,7 @@ export default function ProductVariantTable({
     // Ẩn cột "Giá" vì variant không có giá — giá nằm ở Combo.
     {
       key: "isActive",
-      title: "Kích hoạt",
+      title: t("Kích hoạt", lang),
       dataIndex: "isActive",
       width: 100,
       align: "center",
@@ -219,7 +222,7 @@ export default function ProductVariantTable({
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 100,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -231,11 +234,11 @@ export default function ProductVariantTable({
               onClick={() => onEdit(item)}
             />
             <Popconfirm
-              title="Xóa biến thể?"
-              description="Biến thể sẽ bị xóa."
+              title={t("Xóa biến thể?", lang)}
+              description={t("Biến thể sẽ bị xóa.", lang)}
               onConfirm={() => onDelete(item)}
-              okText="Xóa"
-              cancelText="Hủy"
+              okText={t("Xóa", lang)}
+              cancelText={t("Hủy", lang)}
               okButtonProps={{ danger: true }}
             >
               <DeleteOutlined
@@ -255,7 +258,7 @@ export default function ProductVariantTable({
       loading={loading}
       rowKey="_id"
       pagination={false}
-      emptyText="Chưa có biến thể nào"
+      emptyText={t("Chưa có biến thể nào", lang)}
       scroll={{ y: 400 }}
     />
   );

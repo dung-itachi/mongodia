@@ -13,11 +13,6 @@ import { useMessage } from "@/contexts/MessageContext";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 
-function getTranslated(key: string): string {
-  const language = useLanguageStore.getState().language;
-  return t(key, language);
-}
-
 interface Employee {
   _id: string;
   employeeCode: string;
@@ -37,6 +32,7 @@ export default function ReassignModal({
   onClose,
   onSuccess,
 }: ReassignModalProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -53,11 +49,11 @@ export default function ReassignModal({
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/api/employees?role=SALE&isActive=true&limit=100");
+      const response = await api.get("/api/employees?role=SALE&isActive=true&limit=100", lang);
       setEmployees(response.data.data.items || []);
     } catch (err) {
       console.error("Failed to fetch employees:", err);
-      message.error(getTranslated("Không thể tải danh sách nhân viên Sale"));
+      message.error(t("Không thể tải danh sách nhân viên Sale", lang));
     } finally {
       setLoading(false);
     }
@@ -65,7 +61,7 @@ export default function ReassignModal({
 
   const handleSubmit = async () => {
     if (!lead || !selectedEmployeeId) {
-      message.warning(getTranslated("Vui lòng chọn nhân viên Sale"));
+      message.warning(t("Vui lòng chọn nhân viên Sale", lang));
       return;
     }
 
@@ -74,13 +70,13 @@ export default function ReassignModal({
       await api.patch(`/api/sale/leads/${lead._id}/reassign`, {
         saleEmployeeId: selectedEmployeeId,
       });
-      message.success(getTranslated("Phân công thành công!"));
+      message.success(t("Phân công thành công!", lang));
       onSuccess();
       handleClose();
     } catch (err: unknown) {
       console.error("Reassign failed:", err);
       const error = err as { response?: { data?: { message?: string } } };
-      message.error(error.response?.data?.message || getTranslated("Phân công thất bại"));
+      message.error(error.response?.data?.message || t("Phân công thất bại", lang));
     } finally {
       setSubmitting(false);
     }
@@ -91,21 +87,21 @@ export default function ReassignModal({
     onClose();
   };
 
-  const currentSaleName = lead?.saleEmployeeId?.name || lead?.saleEmployeeId?.employeeCode || getTranslated("Chưa phân công");
+  const currentSaleName = lead?.saleEmployeeId?.name || lead?.saleEmployeeId?.employeeCode || t("Chưa phân công", lang);
 
   return (
     <Modal
       title={
         <span>
           <UserSwitchOutlined style={{ marginRight: 8 }} />
-          {getTranslated("Phân công Khách hàng cho Sale")}
+          {t("Phân công Khách hàng cho Sale", lang)}
         </span>
       }
       open={open}
       onCancel={handleClose}
       onOk={handleSubmit}
-      okText={getTranslated("Phân công")}
-      cancelText={getTranslated("Hủy")}
+      okText={t("Phân công", lang)}
+      cancelText={t("Hủy", lang)}
       confirmLoading={submitting}
       destroyOnHidden
       width={500}
@@ -118,9 +114,9 @@ export default function ReassignModal({
             icon={<UserSwitchOutlined />}
             message={
               <div>
-                <div><strong>{getTranslated("Khách hàng")}:</strong> {lead.leadCode} - {lead.customerName}</div>
-                <div><strong>{getTranslated("Điện thoại")}:</strong> {lead.phone || "-"}</div>
-                <div><strong>{getTranslated("Sale hiện tại")}:</strong> {currentSaleName}</div>
+                <div><strong>{t("Khách hàng", lang)}:</strong> {lead.leadCode} - {lead.customerName}</div>
+                <div><strong>{t("Điện thoại", lang)}:</strong> {lead.phone || "-"}</div>
+                <div><strong>{t("Sale hiện tại", lang)}:</strong> {currentSaleName}</div>
               </div>
             }
           />
@@ -129,16 +125,16 @@ export default function ReassignModal({
 
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
-          {getTranslated("Chọn nhân viên Sale:")}
+          {t("Chọn nhân viên Sale:", lang)}
         </label>
         {loading ? (
           <div style={{ textAlign: "center", padding: 20 }}>
-            <Spin /> {getTranslated("Đang tải...")}
+            <Spin /> {t("Đang tải...", lang)}
           </div>
         ) : (
           <Select
             style={{ width: "100%" }}
-            placeholder={getTranslated("Chọn nhân viên Sale")}
+            placeholder={t("Chọn nhân viên Sale", lang)}
             value={selectedEmployeeId}
             onChange={setSelectedEmployeeId}
             showSearch

@@ -69,9 +69,12 @@ import { useDebounce } from "@/hooks/useDebounce";
 import type { OrderListItem } from "@/types/order";
 import ShipDrawer from "@/components/warehouse/ShipDrawer";
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import { useMessage } from "@/contexts/MessageContext";
 
 export default function WarehouseShipmentsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const router = useRouter();
   const message = useMessage();
 
@@ -300,8 +303,7 @@ export default function WarehouseShipmentsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Xuất kho"
+      <PageHeader title={t("Xuất kho", lang)}
         subtitle={`${total} đơn cần xử lý`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },

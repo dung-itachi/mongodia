@@ -173,6 +173,28 @@ export interface CreateLeadInput {
   orderDate?: Date;
   /** Thời gian nhận đơn (Sprint 8.x) */
   receivedDate?: Date;
+  /**
+   * Sprint 8.7: Variant details snapshot để /leads prefill khi Sale chốt đơn.
+   * Mỗi dòng tương ứng 1 biến thể trong đơn.
+   */
+  variantDetails?: Array<{
+    quantity: number;
+    attributes: Array<{
+      optionId: string;
+      valueId: string;
+      optionName?: string;
+      valueName?: string;
+    }>;
+    variantId?: string;
+  }>;
+  /** Sprint 8.7: Chế độ quà tặng (RANDOM | CUSTOMER_SELECTED). */
+  giftMode?: "RANDOM" | "CUSTOMER_SELECTED";
+  /** Sprint 8.7: Yêu cầu quà của khách (dùng khi CUSTOMER_SELECTED). */
+  giftSelections?: Array<{
+    giftProductId: string;
+    giftProductName?: string;
+    quantity: number;
+  }>;
 }
 
 /**
@@ -221,6 +243,28 @@ export interface UpdateLeadInput {
   orderDate?: Date;
   /** Thời gian nhận đơn (Sprint 8.x) */
   receivedDate?: Date;
+  /**
+   * Sprint 8.7: Variant details snapshot để /leads prefill khi Sale chốt đơn.
+   * Mỗi dòng tương ứng 1 biến thể trong đơn.
+   */
+  variantDetails?: Array<{
+    quantity: number;
+    attributes: Array<{
+      optionId: string;
+      valueId: string;
+      optionName?: string;
+      valueName?: string;
+    }>;
+    variantId?: string;
+  }>;
+  /** Sprint 8.7: Chế độ quà tặng (RANDOM | CUSTOMER_SELECTED). */
+  giftMode?: "RANDOM" | "CUSTOMER_SELECTED";
+  /** Sprint 8.7: Yêu cầu quà của khách (dùng khi CUSTOMER_SELECTED). */
+  giftSelections?: Array<{
+    giftProductId: string;
+    giftProductName?: string;
+    quantity: number;
+  }>;
 }
 
 /**

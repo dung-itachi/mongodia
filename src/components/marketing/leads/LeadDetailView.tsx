@@ -37,6 +37,8 @@ import { useAuthStore } from "@/store/auth.store";
 import { hasPermission } from "@/lib/permission";
 import styles from "@/app/(protected)/marketing/input/[id]/lead-detail.module.css";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 dayjs.extend(relativeTime);
 
@@ -98,40 +100,41 @@ function getSourceTag(source: LeadSource | string) {
 // =============================================================================
 
 function LeadInfoTab({ lead }: { lead: MarketingLead }) {
+  const lang = useLanguageStore((s) => s.language);
   return (
     <div className={styles["tab-content"]}>
       <CardSection>
         <DescriptionList
-          title="Thông tin Khách hàng"
+          title={t("Thông tin Khách hàng", lang)}
           columns={3}
           size="small"
           items={[
             {
-              label: "Mã Khách hàng",
+              label: t("Mã Khách hàng", lang),
               value: <span className={styles["lead-code"]}>{lead.leadCode}</span>,
             },
             {
-              label: "Trạng thái",
+              label: t("Trạng thái", lang),
               value: getStatusTag(lead),
             },
             {
-              label: "Nguồn",
+              label: t("Nguồn", lang),
               value: getSourceTag(lead.source),
             },
             {
-              label: "Ngày tạo",
+              label: t("Ngày tạo", lang),
               value: formatDateTime(lead.createdAt),
             },
             {
-              label: "Cập nhật lần cuối",
+              label: t("Cập nhật lần cuối", lang),
               value: formatDateTime(lead.updatedAt),
             },
             {
-              label: "Trùng lặp",
-              value: lead.isDuplicate ? "Có" : "Không",
+              label: t("Trùng lặp", lang),
+              value: lead.isDuplicate ? t("Có", lang) : t("Không", lang),
             },
             {
-              label: "Trang Facebook",
+              label: t("Trang Facebook", lang),
               value: lead.facebookPage ? (
                 <span>
                   <Tag color="blue">{lead.facebookPage.name}</Tag>
@@ -149,32 +152,32 @@ function LeadInfoTab({ lead }: { lead: MarketingLead }) {
 
       <CardSection>
         <DescriptionList
-          title="Thông tin Khách hàng"
+          title={t("Thông tin Khách hàng", lang)}
           columns={2}
           size="small"
           items={[
             {
-              label: "Tên khách hàng",
+              label: t("Tên khách hàng", lang),
               value: <span className={styles["primary-text"]}>{lead.customerName}</span>,
             },
             {
-              label: "Điện thoại",
+              label: t("Điện thoại", lang),
               value: lead.phone ?? "-",
             },
             {
-              label: "Điện thoại 2",
+              label: t("Điện thoại 2", lang),
               value: lead.phone2 ?? "-",
             },
             {
-              label: "Email",
+              label: t("Email", lang),
               value: lead.email ?? "-",
             },
             {
-              label: "Địa chỉ",
+              label: t("Địa chỉ", lang),
               value: lead.address ?? "-",
             },
             {
-              label: "Facebook",
+              label: t("Facebook", lang),
               value: lead.facebookLink ? (
                 <a href={lead.facebookLink} target="_blank" rel="noopener noreferrer">
                   {lead.facebookLink}
@@ -191,16 +194,16 @@ function LeadInfoTab({ lead }: { lead: MarketingLead }) {
       {lead.combo && (
         <CardSection>
           <DescriptionList
-            title="Thông tin Combo"
+            title={t("Thông tin Combo", lang)}
             columns={2}
             size="small"
             items={[
               {
-                label: "Tên Combo",
+                label: t("Tên Combo", lang),
                 value: <span className={styles["combo-text"]}>{lead.combo.name}</span>,
               },
               {
-                label: "Mã Combo",
+                label: t("Mã Combo", lang),
                 value: lead.combo.code ?? "-",
               },
             ]}
@@ -210,16 +213,16 @@ function LeadInfoTab({ lead }: { lead: MarketingLead }) {
 
       <CardSection>
         <DescriptionList
-          title="Thông tin Marketing"
+          title={t("Thông tin Marketing", lang)}
           columns={2}
           size="small"
           items={[
             {
-              label: "Nhân viên Marketing",
+              label: t("Nhân viên Marketing", lang),
               value: lead.marketingEmployee?.name ?? "-",
             },
             {
-              label: "Mã Marketing",
+              label: t("Mã Marketing", lang),
               value: lead.marketingEmployee?.employeeCode ?? "-",
             },
           ]}
@@ -228,16 +231,16 @@ function LeadInfoTab({ lead }: { lead: MarketingLead }) {
 
       <CardSection>
         <DescriptionList
-          title="Thông tin Sale"
+          title={t("Thông tin Sale", lang)}
           columns={2}
           size="small"
           items={[
             {
-              label: "Nhân viên Sale",
+              label: t("Nhân viên Sale", lang),
               value: lead.saleEmployee?.name ?? "-",
             },
             {
-              label: "Mã Sale",
+              label: t("Mã Sale", lang),
               value: lead.saleEmployee?.employeeCode ?? "-",
             },
           ]}
@@ -246,12 +249,12 @@ function LeadInfoTab({ lead }: { lead: MarketingLead }) {
 
       <CardSection>
         <DescriptionList
-          title="Ghi chú"
+          title={t("Ghi chú", lang)}
           columns={1}
           size="small"
           items={[
             {
-              label: "Nội dung",
+              label: t("Nội dung", lang),
               value: lead.note || "Không có ghi chú",
               span: 1,
             },
@@ -267,6 +270,7 @@ function LeadInfoTab({ lead }: { lead: MarketingLead }) {
 // =============================================================================
 
 function HistoryTab({ lead }: { lead: MarketingLead }) {
+  const lang = useLanguageStore((s) => s.language);
   return (
     <div className={styles["tab-content"]}>
       <CardSection>
@@ -280,7 +284,7 @@ function HistoryTab({ lead }: { lead: MarketingLead }) {
               value: getStatusTag(lead),
             },
             {
-              label: "Ngày tạo",
+              label: t("Ngày tạo", lang),
               value: formatDateTime(lead.createdAt),
             },
             {
@@ -305,6 +309,7 @@ function HistoryTab({ lead }: { lead: MarketingLead }) {
 // =============================================================================
 
 function TimelineTab({ leadId }: { leadId: string }) {
+  const lang = useLanguageStore((s) => s.language);
   const { items, loading, error } = useLeadTimeline(leadId);
 
   if (loading) {
@@ -448,6 +453,7 @@ function getActionColor(action: string): string {
 // =============================================================================
 
 function CallLogTab({ leadId }: { leadId: string }) {
+  const lang = useLanguageStore((s) => s.language);
   const { callHistory, loading, error } = useLeadCallHistory(leadId);
 
   if (loading) {
@@ -517,6 +523,7 @@ export interface LeadDetailViewProps {
 export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailViewProps) {
   const router = useRouter();
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
   const queryClient = useQueryClient();
 
   const updateMutation = useUpdateLead();
@@ -549,11 +556,11 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
     const json = await res.json();
 
     if (!json.success) {
-      void message.error(json.message ?? "Phân công Sale thất bại");
+      void message.error(json.message ?? t(t("Phân công Sale thất bại", lang), lang));
       return;
     }
 
-    void message.success("Phân công Sale thành công");
+    void message.success(t(t("Phân công Sale thành công", lang), lang));
     setAssignDrawerOpen(false);
 
     await queryClient.invalidateQueries({ queryKey: ["marketing-lead", lead._id] });
@@ -568,12 +575,12 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
   const handleConvertConfirm = () => {
     convertMutation.mutate(lead._id, {
       onSuccess: (result) => {
-        void message.success("Chuyển đổi Khách hàng thành công");
+        void message.success(t("Chuyển đổi Khách hàng thành công", lang));
         setConvertModalOpen(false);
         void router.push(`/orders/${result.orderId}`);
       },
       onError: (err) => {
-        void message.error(`Lỗi: ${err.message}`);
+        void message.error(`${t("Lỗi:", lang)} ${err.message}`);
         setConvertModalOpen(false);
       },
     });
@@ -585,7 +592,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
       label: (
         <span className={styles["tab-label"]}>
           <InfoCircleOutlined />
-          Thông tin
+          {t("Thông tin", lang)}
         </span>
       ),
       children: <LeadInfoTab lead={lead} />,
@@ -595,7 +602,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
       label: (
         <span className={styles["tab-label"]}>
           <HistoryOutlined />
-          Lịch sử
+          {t("Lịch sử", lang)}
         </span>
       ),
       children: <HistoryTab lead={lead} />,
@@ -614,7 +621,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
       label: (
         <span className={styles["tab-label"]}>
           <PhoneOutlined />
-          Cuộc gọi
+          {t("Cuộc gọi", lang)}
         </span>
       ),
       children: <CallLogTab leadId={lead._id} />,
@@ -624,7 +631,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
       label: (
         <span className={styles["tab-label"]}>
           <PaperClipOutlined />
-          File đính kèm
+          {t("File đính kèm", lang)}
         </span>
       ),
       children: <AttachmentsTab />,
@@ -635,7 +642,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
     { type: "divider" as const },
     {
       key: "delete",
-      label: "Xóa Khách hàng",
+      label: t("Xóa Khách hàng", lang),
       icon: <DeleteOutlined />,
       danger: true,
     },
@@ -654,13 +661,13 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
         <div className={styles["action-bar"]}>
           {hasPermission(permissions, "lead.update") && lead.status === LeadStatus.NEW && (
             <Button icon={<EditOutlined />} onClick={onEdit}>
-              Sửa
+              {t("Sửa", lang)}
             </Button>
           )}
 
           {hasPermission(permissions, "lead.assign") && !lead.saleEmployee && (
             <Button icon={<UserSwitchOutlined />} onClick={handleAssignSaleOpen}>
-              Giao Sale
+              {t("Giao Sale", lang)}
             </Button>
           )}
 
@@ -670,7 +677,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
               icon={<CheckCircleFilled />}
               onClick={handleConvert}
             >
-              Chuyển đổi
+              {t("Chuyển đổi", lang)}
             </Button>
           )}
 
@@ -725,22 +732,23 @@ function ConvertConfirmModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const lang = useLanguageStore((s) => s.language);
   return (
     <Modal
-      title="Xác nhận Chuyển đổi Khách hàng"
+      title={t("Xác nhận Chuyển đổi Khách hàng", lang)}
       open={open}
-      okText="Chuyển đổi"
-      cancelText="Hủy"
+      okText={t("Chuyển đổi", lang)}
+      cancelText={t("Hủy", lang)}
       onCancel={onCancel}
       onOk={onConfirm}
       okButtonProps={{ loading }}
     >
       <p>
-        Bạn có chắc muốn chuyển đổi khách hàng <strong>{lead.leadCode}</strong> —{" "}
-        <strong>{lead.customerName}</strong> thành đơn hàng?
+        {t("Bạn có chắc muốn chuyển đổi khách hàng", lang)} <strong>{lead.leadCode}</strong> —{" "}
+        <strong>{lead.customerName}</strong> {t("thành đơn hàng?", lang)}
       </p>
       <p style={{ color: "#8c8c8c", fontSize: 13 }}>
-        Hành động này sẽ tạo Order mới và không thể hoàn tác.
+        {t("Hành động này sẽ tạo Order mới và không thể hoàn tác.", lang)}
       </p>
     </Modal>
   );

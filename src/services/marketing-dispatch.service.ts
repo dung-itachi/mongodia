@@ -593,6 +593,29 @@ export class MarketingDispatchService {
               name: (doc.saleEmployeeId as { fullName: string }).fullName,
             }
           : undefined,
+        // Sprint 8.7 — variant details snapshot đã có sẵn trên doc (Mixed type)
+        variantDetails: Array.isArray(doc.variantDetails)
+          ? (doc.variantDetails as Array<Record<string, unknown>>).map((vd) => ({
+              quantity: typeof vd.quantity === "number" ? vd.quantity : 0,
+              attributes: Array.isArray(vd.attributes)
+                ? (vd.attributes as Array<Record<string, unknown>>).map((a) => ({
+                    optionId: a.optionId?.toString() ?? "",
+                    valueId: a.valueId?.toString() ?? "",
+                    optionName: typeof a.optionName === "string" ? a.optionName : undefined,
+                    valueName: typeof a.valueName === "string" ? a.valueName : undefined,
+                  }))
+                : [],
+              variantId: vd.variantId?.toString() ?? undefined,
+            }))
+          : undefined,
+        giftMode: doc.giftMode === "CUSTOMER_SELECTED" ? "CUSTOMER_SELECTED" : doc.giftMode === "RANDOM" ? "RANDOM" : undefined,
+        giftSelections: Array.isArray(doc.giftSelections)
+          ? (doc.giftSelections as Array<Record<string, unknown>>).map((g) => ({
+              giftProductId: g.giftProductId?.toString() ?? "",
+              giftProductName: typeof g.giftProductName === "string" ? g.giftProductName : undefined,
+              quantity: typeof g.quantity === "number" ? g.quantity : 0,
+            }))
+          : undefined,
         assignedAt: doc.assignedAt,
         isConverted: doc.isConverted,
         isDuplicate: doc.isDuplicate,

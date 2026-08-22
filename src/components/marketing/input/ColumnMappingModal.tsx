@@ -30,6 +30,8 @@ import {
   type ColumnFieldSpec,
 } from "./columnLayouts";
 import type { ColumnMappings, InputMode } from "./useColumnMapping";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./ColumnMappingModal.module.css";
 
 export interface ColumnMappingModalProps {
@@ -58,6 +60,7 @@ export default function ColumnMappingModal({
   onClose,
 }: ColumnMappingModalProps) {
   const { message } = App.useApp();
+  const lang = useLanguageStore((s) => s.language);
 
   // Layout đang sửa = layout của mode đang active
   const layout = mappings[activeMode];
@@ -116,7 +119,7 @@ export default function ColumnMappingModal({
 
   const handleRemove = (idx: number) => {
     if (layout.length <= 1) {
-      message.warning("Phải có ít nhất 1 cột");
+      message.warning(t("Phải có ít nhất 1 cột", lang));
       return;
     }
     const next = layout.filter((_, i) => i !== idx);
@@ -289,7 +292,10 @@ export default function ColumnMappingModal({
 
   const handleReset = () => {
     onChange(activeMode, getDefaultLayout(activeMode));
-    message.success(`Đã khôi phục layout mặc định cho ${activeMode === "comment" ? "Comment" : "Landing"}`);
+    message.success(
+      t("Đã khôi phục layout mặc định cho", lang) +
+        ` ${activeMode === "comment" ? "Comment" : "Landing"}`,
+    );
   };
 
   // Tính preview: Tên · SĐT · Đ/c · ...
@@ -323,7 +329,7 @@ export default function ColumnMappingModal({
               key: "ladi",
               label: (
                 <span>
-                  <GlobalOutlined /> Landing
+                  <GlobalOutlined /> {t("Landing", lang)}
                 </span>
               ),
             },
@@ -336,24 +342,27 @@ export default function ColumnMappingModal({
       destroyOnHidden={false}
       footer={[
         <Button key="reset" icon={<ReloadOutlined />} onClick={handleReset}>
-          Khôi phục mặc định
+          {t("Khôi phục mặc định", lang)}
         </Button>,
         <Button key="close" type="primary" onClick={onClose}>
-          Xong
+          {t("Xong", lang)}
         </Button>,
       ]}
     >
       <div className={styles.help}>
-        Sắp xếp thứ tự các cột <strong>theo đúng thứ tự bạn dán</strong> cho tab{" "}
-        <strong>{activeMode === "comment" ? "Comment" : "Landing"}</strong>.
-        Mỗi hàng tương ứng với 1 cột TAB-separated trong textarea.
+        {t("Sắp xếp thứ tự các cột", lang)}{" "}
+        <strong>{t("theo đúng thứ tự bạn dán", lang)}</strong> {t("cho tab", lang)}{" "}
+        <strong>{activeMode === "comment" ? "Comment" : t("Landing", lang)}</strong>.
+        {t("Mỗi hàng tương ứng với 1 cột TAB-separated trong textarea.", lang)}
         <br />
-        💡 <strong>Kéo thả</strong> icon <span className={styles.handleHint}>⋮⋮</span> để đổi thứ tự nhanh.
+        💡 <strong>{t("Kéo thả", lang)}</strong> {t("icon", lang)}{" "}
+        <span className={styles.handleHint}>⋮⋮</span> {t("để đổi thứ tự nhanh.", lang)}
         <br />
-        🔄 Có thể chuyển sang tab khác để sửa layout của tab đó.
+        🔄 {t("Có thể chuyển sang tab khác để sửa layout của tab đó.", lang)}
         {!hasPhone && (
           <div className={styles.warning}>
-            ⚠ Thiếu cột <strong>SĐT</strong> — hệ thống sẽ tự thêm khi lưu.
+            ⚠ {t("Thiếu cột", lang)} <strong>{t("SĐT", lang)}</strong> —{" "}
+            {t("hệ thống sẽ tự thêm khi lưu.", lang)}
           </div>
         )}
       </div>
@@ -393,20 +402,20 @@ export default function ColumnMappingModal({
                 draggable
                 onDragStart={handleDragStart(idx)}
                 onDragEnd={handleDragEnd}
-                title="Kéo để đổi thứ tự"
-                aria-label="Kéo để đổi thứ tự"
+                title={t("Kéo để đổi thứ tự", lang)}
+                aria-label={t("Kéo để đổi thứ tự", lang)}
                 role="button"
                 tabIndex={0}
               >
                 <HolderOutlined />
               </span>
-              <div className={styles.colIndex}>Cột {idx + 1}</div>
+              <div className={styles.colIndex}>{t("Cột", lang)} {idx + 1}</div>
               <Select
                 value={key}
                 onChange={(v) => handleSelect(idx, v as ColumnFieldKey)}
                 options={opts}
                 style={{ flex: 1 }}
-                placeholder="Chọn trường"
+                placeholder={t("Chọn trường", lang)}
               />
               <Button
                 type="text"
@@ -414,7 +423,7 @@ export default function ColumnMappingModal({
                 icon={<DeleteOutlined />}
                 onClick={() => handleRemove(idx)}
                 disabled={layout.length <= 1}
-                title="Xóa cột"
+                title={t("Xóa cột", lang)}
               />
             </div>
           );
@@ -428,16 +437,16 @@ export default function ColumnMappingModal({
         block
         style={{ marginTop: 12 }}
       >
-        Thêm cột
+        {t("Thêm cột", lang)}
       </Button>
 
       <div className={styles.preview}>
-        <span className={styles.previewLabel}>Preview thứ tự:</span>
+        <span className={styles.previewLabel}>{t("Preview thứ tự", lang)}:</span>
         <code className={styles.previewValue}>{previewText}</code>
       </div>
 
       <div className={styles.example}>
-        <div className={styles.exampleLabel}>Ví dụ dán đúng cấu hình trên:</div>
+        <div className={styles.exampleLabel}>{t("Ví dụ dán đúng cấu hình trên", lang)}:</div>
         <code className={styles.exampleValue}>
           {layout
             .map((k) => exampleFor(k as ColumnFieldSpec["key"]))

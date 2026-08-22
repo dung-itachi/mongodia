@@ -30,6 +30,8 @@ import {
   LEAD_CALL_STATUS_LABELS,
   NO_ANSWER_STATUSES,
 } from "@/constants/leadCallStatus";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import styles from "./log-call-modal.module.css";
 
@@ -64,6 +66,7 @@ function getStatusIcon(status: LeadCallStatus) {
 }
 
 function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm();
   const [selectedStatus, setSelectedStatus] = useState<LeadCallStatus | null>(null);
 
@@ -120,7 +123,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
       title={
         <Space>
           <PhoneOutlined />
-          <span>Ghi nhận cuộc gọi</span>
+          <span>{t("Ghi nhận cuộc gọi", lang)}</span>
         </Space>
       }
       open={open}
@@ -132,7 +135,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
       {lead && (
         <div className={styles.leadInfo}>
           <Text strong>{lead.customerName}</Text>
-          <Text type="secondary"> | {lead.phone || "Không có SĐT"}</Text>
+          <Text type="secondary"> | {lead.phone || t("Không có SĐT", lang)}</Text>
           <Divider style={{ margin: "8px 0" }} />
         </div>
       )}
@@ -148,11 +151,11 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
       >
         <Form.Item
           name="status"
-          label="Kết quả cuộc gọi"
-          rules={[{ required: true, message: "Vui lòng chọn kết quả cuộc gọi" }]}
+          label={t("Kết quả cuộc gọi", lang)}
+          rules={[{ required: true, message: t("Vui lòng chọn kết quả cuộc gọi", lang) }]}
         >
           <Select
-            placeholder="Chọn kết quả cuộc gọi"
+            placeholder={t("Chọn kết quả cuộc gọi", lang)}
             options={statusOptions}
             onChange={handleStatusChange}
             size="large"
@@ -177,8 +180,8 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             type="warning"
             message={
               <Text>
-                Khách hàng sẽ được chuyển sang trạng thái <Text strong>"Không nghe máy"</Text>.
-                Số lần gọi không nghe sẽ được cập nhật.
+                {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Không nghe máy", lang)}&quot;</Text>.
+                {t("Số lần gọi không nghe sẽ được cập nhật.", lang)}
               </Text>
             }
             showIcon
@@ -191,8 +194,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             type="info"
             message={
               <Text>
-                Khách hàng sẽ được chuyển sang trạng thái <Text strong>"Đã liên hệ"</Text> và
-                được hẹn gọi lại sau.
+                {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Đã liên hệ", lang)}&quot;</Text> {t("và được hẹn gọi lại sau.", lang)}
               </Text>
             }
             showIcon
@@ -205,8 +207,8 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             type="success"
             message={
               <Text>
-                Khách hàng sẽ được chuyển sang trạng thái <Text strong>"Tiềm năng"</Text>.
-                Bạn có thể tiến hành chốt đơn.
+                {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Tiềm năng", lang)}&quot;</Text>.
+                {t("Bạn có thể tiến hành chốt đơn.", lang)}
               </Text>
             }
             showIcon
@@ -219,8 +221,8 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
             type="success"
             message={
               <Text>
-                Khách hàng sẽ được chuyển sang trạng thái <Text strong>"Đã chốt"</Text>.
-                Bạn có thể tiến hành tạo đơn hàng.
+                {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Đã chốt", lang)}&quot;</Text>.
+                {t("Bạn có thể tiến hành tạo đơn hàng.", lang)}
               </Text>
             }
             showIcon
@@ -228,10 +230,10 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
           />
         )}
 
-        <Form.Item name="note" label="Ghi chú (tùy chọn)">
+        <Form.Item name="note" label={t("Ghi chú (tùy chọn)", lang)}>
           <TextArea
             rows={3}
-            placeholder="Nhập ghi chú về cuộc gọi..."
+            placeholder={t("Nhập ghi chú về cuộc gọi...", lang)}
             maxLength={1000}
             showCount
           />
@@ -239,14 +241,14 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
 
         <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={handleClose}>Hủy</Button>
+            <Button onClick={handleClose}>{t("Hủy", lang)}</Button>
             <Button
               type="primary"
               htmlType="submit"
               loading={logCallMutation.isPending}
               icon={<PhoneOutlined />}
             >
-              Ghi nhận cuộc gọi
+              {t("Ghi nhận cuộc gọi", lang)}
             </Button>
           </Space>
         </Form.Item>

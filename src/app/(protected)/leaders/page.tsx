@@ -11,9 +11,12 @@ import { useEmployees as useEmployeesAll } from "@/hooks/useEmployees";
 import { useAuthStore } from "@/store/auth.store";
 import type { EmployeeListItem } from "@/hooks/useEmployees";
 import AccountCreateDrawer from "@/components/accounts/AccountCreateDrawer";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export default function LeadersPage() {
   const user = useAuthStore((state) => state.user);
+  const lang = useLanguageStore((s) => s.language);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const { data, isLoading, error, refetch } = useEmployees({ pageSize: 200 });
@@ -64,56 +67,56 @@ export default function LeadersPage() {
   const columns = useMemo(() => [
     { title: "STT", render: (_: unknown, __: EmployeeListItem, index: number) => index + 1, width: 60 },
     {
-      title: "Avatar",
+      title: t("Avatar", lang),
       render: (_: unknown, item: EmployeeListItem) => (
         <Avatar src={item.avatar || undefined}>{item.fullName?.charAt(0)}</Avatar>
       ),
       width: 70,
     },
-    { title: "Mã NV", dataIndex: "employeeCode", width: 110 },
-    { title: "Họ tên", dataIndex: "fullName" },
-    { title: "Username", dataIndex: "username" },
-    { title: "Email", render: (_: unknown, item: EmployeeListItem) => item.email || "-" },
-    { title: "Phone", render: (_: unknown, item: EmployeeListItem) => item.phone || "-" },
+    { title: t("Mã NV", lang), dataIndex: "employeeCode", width: 110 },
+    { title: t("Họ tên", lang), dataIndex: "fullName" },
+    { title: t("Username", lang), dataIndex: "username" },
+    { title: t("Email", lang), render: (_: unknown, item: EmployeeListItem) => item.email || "-" },
+    { title: t("Phone", lang), render: (_: unknown, item: EmployeeListItem) => item.phone || "-" },
     {
-      title: "Team",
+      title: t("Team", lang),
       render: (_: unknown, item: EmployeeListItem) => {
         return item.team?.name ?? "-";
       },
     },
     {
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       render: (_: unknown, item: EmployeeListItem) => (
-        <Tag color={item.isActive ? "green" : "red"}>{item.isActive ? "Hoạt động" : "Đã khóa"}</Tag>
+        <Tag color={item.isActive ? "green" : "red"}>{item.isActive ? t("Hoạt động", lang) : t("Đã khóa", lang)}</Tag>
       ),
       width: 110,
     },
-  ], []);
+  ], [lang]);
 
   return (
     <div style={{ padding: 24 }}>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <Space style={{ justifyContent: "space-between", width: "100%" }}>
-          <Typography.Title level={3} style={{ margin: 0 }}>Quản lý Leaders</Typography.Title>
+          <Typography.Title level={3} style={{ margin: 0 }}>{t("Quản lý Leaders", lang)}</Typography.Title>
           <Space>
             <Input.Search
-              placeholder="Tìm kiếm leader"
+              placeholder={t("Tìm kiếm leader", lang)}
               onSearch={setSearch}
               allowClear
               style={{ width: 250 }}
             />
-            <Button icon={<ReloadOutlined />} onClick={() => void refetch()}>Làm mới</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Thêm Leader</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => void refetch()}>{t("Làm mới", lang)}</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>{t("Thêm Leader", lang)}</Button>
           </Space>
         </Space>
-        {error && <Typography.Text type="danger">Lỗi tải dữ liệu: {(error as Error).message}</Typography.Text>}
+        {error && <Typography.Text type="danger">{t("Lỗi tải dữ liệu:", lang)} {(error as Error).message}</Typography.Text>}
         <div style={{ background: "#fff", padding: 12, borderRadius: 6 }}>
           <Table
             rowKey="_id"
             loading={isLoading}
             dataSource={filteredData}
             columns={columns}
-            pagination={{ total: filteredData.length, pageSize: 50, showTotal: (total) => `Tổng ${total} leader` }}
+            pagination={{ total: filteredData.length, pageSize: 50, showTotal: (total) => `${t("Tổng", lang)} ${total} ${t("leader", lang)}` }}
             scroll={{ x: 900 }}
           />
         </div>

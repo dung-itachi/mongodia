@@ -21,6 +21,8 @@ import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import DrawerForm from "@/components/common/forms/DrawerForm";
 import { useCreateCombo } from "@/hooks/useCombos";
 import { toast } from "@/components/common/feedback/Toast";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface QuickComboDrawerProps {
   open: boolean;
@@ -56,6 +58,7 @@ export default function QuickComboDrawer({
   onClose,
   onSuccess,
 }: QuickComboDrawerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm<QuickFormValues>();
   const createComboMutation = useCreateCombo();
 
@@ -72,7 +75,7 @@ export default function QuickComboDrawer({
   const handleSubmit = async () => {
     try {
       if (!productId) {
-        toast.error("Vui lòng chọn sản phẩm trước");
+        toast.error(t("Vui lòng chọn sản phẩm trước", lang));
         return;
       }
 
@@ -80,7 +83,7 @@ export default function QuickComboDrawer({
       const combosValues = values.combos ?? [];
 
       if (combosValues.length === 0) {
-        toast.warning("Vui lòng thêm ít nhất 1 combo");
+        toast.warning(t("Vui lòng thêm ít nhất 1 combo", lang));
         return;
       }
 
@@ -104,9 +107,9 @@ export default function QuickComboDrawer({
               namesNormalized.indexOf(label.toLowerCase()) === idx
           );
         toast.error(
-          `Lỗi: đã tồn tại tên combo "${dupLabels.join(
+          `${t("Lỗi: đã tồn tại tên combo", lang)} "${dupLabels.join(
             ", "
-          )}", vui lòng chọn tên combo khác`
+          )}", ${t("vui lòng chọn tên combo khác", lang)}`,
         );
         return;
       }
@@ -133,7 +136,9 @@ export default function QuickComboDrawer({
         createdCombos.push(combo._id);
       }
 
-      toast.success(`Đã tạo ${createdCombos.length} combo cho "${productName ?? "sản phẩm"}"`);
+      toast.success(
+        `${t("Đã tạo", lang)} ${createdCombos.length} ${t("combo cho", lang)} "${productName ?? t("sản phẩm", lang)}"`,
+      );
       onSuccess(createdCombos);
       onClose();
     } catch {
@@ -146,23 +151,23 @@ export default function QuickComboDrawer({
   return (
     <DrawerForm
       open={open}
-      title={`Thêm combo cho "${productName ?? "sản phẩm"}"`}
+      title={`${t("Thêm combo cho", lang)} "${productName ?? t("sản phẩm", lang)}"`}
       loading={createComboMutation.isPending}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText="Tạo combo"
+      submitText={t("Tạo combo", lang)}
       width={560}
     >
       <Alert
         type="info"
         showIcon
-        title="Thêm combo mới cho sản phẩm đang chọn. Bấm 'Thêm combo' để thêm dòng combo mới."
+        title={t("Thêm combo mới cho sản phẩm đang chọn. Bấm 'Thêm combo' để thêm dòng combo mới.", lang)}
         style={{ marginBottom: 16 }}
       />
 
       <Form form={form} layout="vertical">
         {/* === COMBOS (Form.List) === */}
-        <Divider plain>Combo(s)</Divider>
+        <Divider plain>{t("Combo(s)", lang)}</Divider>
 
         <Form.List name="combos">
           {(fields, { add, remove }) => (
@@ -181,7 +186,7 @@ export default function QuickComboDrawer({
                   <Space
                     style={{ width: "100%", justifyContent: "space-between" }}
                   >
-                    <strong>Combo #{field.name + 1}</strong>
+                    <strong>{t("Combo", lang)} #{field.name + 1}</strong>
                     {fields.length > 1 && (
                       <Button
                         type="text"
@@ -194,22 +199,22 @@ export default function QuickComboDrawer({
 
                   <Form.Item
                     name={[field.name, "comboName"]}
-                    label="Tên combo"
+                    label={t("Tên combo", lang)}
                     rules={[
-                      { required: true, message: "Vui lòng nhập tên combo" },
+                      { required: true, message: t("Vui lòng nhập tên combo", lang) },
                     ]}
                     style={{ marginBottom: 8, marginTop: 8 }}
                   >
-                    <Input placeholder="VD: Combo 3 hộp" />
+                    <Input placeholder={t("VD: Combo 3 hộp", lang)} />
                   </Form.Item>
 
                   <Space.Compact style={{ width: "100%" }}>
                     <Form.Item
                       name={[field.name, "packageQuantity"]}
-                      label="SL / combo"
+                      label={t("SL / combo", lang)}
                       rules={[
-                        { required: true, message: "Nhập số lượng" },
-                        { type: "number", min: 1, message: "SL >= 1" },
+                        { required: true, message: t("Nhập số lượng", lang) },
+                        { type: "number", min: 1, message: t("SL >= 1", lang) },
                       ]}
                       style={{ width: "50%", marginBottom: 0 }}
                     >
@@ -218,10 +223,10 @@ export default function QuickComboDrawer({
 
                     <Form.Item
                       name={[field.name, "sellingPrice"]}
-                      label="Giá bán (₮)"
+                      label={t("Giá bán (₮)", lang)}
                       rules={[
-                        { required: true, message: "Nhập giá" },
-                        { type: "number", min: 0, message: "Giá >= 0" },
+                        { required: true, message: t("Nhập giá", lang) },
+                        { type: "number", min: 0, message: t("Giá >= 0", lang) },
                       ]}
                       style={{ width: "50%", marginBottom: 0 }}
                     >
@@ -248,7 +253,7 @@ export default function QuickComboDrawer({
                 icon={<PlusOutlined />}
                 block
               >
-                Thêm combo
+                {t("Thêm combo", lang)}
               </Button>
             </>
           )}

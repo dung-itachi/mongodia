@@ -13,6 +13,8 @@
 import { useEffect, useMemo, useCallback } from "react";
 import { Form, Input, InputNumber, Select, Switch, Alert } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type {
   ComboListItem,
   ComboDetail,
@@ -113,6 +115,7 @@ export default function ComboForm({
   existingCodes = [],
 }: ComboFormProps) {
   const [form] = Form.useForm<FormValues>();
+  const lang = useLanguageStore((s) => s.language);
   const isEditing = !!editingItem;
 
   const selectedProductId = Form.useWatch("productId", form) as string | undefined;
@@ -220,44 +223,44 @@ export default function ComboForm({
   return (
     <DrawerForm
       open={open}
-      title={isEditing ? "Sửa combo" : "Thêm combo"}
+      title={isEditing ? t("Sửa combo", lang) : t("Thêm combo", lang)}
       loading={loading}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={isEditing ? "Cập nhật" : "Tạo mới"}
+      submitText={isEditing ? t("Cập nhật", lang) : t("Tạo mới", lang)}
       width={600}
     >
       <Form<FormValues> form={form} layout="vertical">
         <Form.Item
           name="code"
-          label="Mã combo"
-          extra="Để trống để tự sinh mã: {Mã sản phẩm}C01"
+          label={t("Mã combo", lang)}
+          extra={t("Để trống để tự sinh mã: {Mã sản phẩm}C01", lang)}
           rules={[
-            { min: 1, message: "Mã tối thiểu 1 ký tự" },
-            { max: 50, message: "Mã tối đa 50 ký tự" },
+            { min: 1, message: t("Mã tối thiểu 1 ký tự", lang) },
+            { max: 50, message: t("Mã tối đa 50 ký tự", lang) },
           ]}
         >
-          <Input placeholder="VD: SANPHAM001 (để trống để tự sinh)" disabled={isEditing} />
+          <Input placeholder={t("VD: SANPHAM001 (để trống để tự sinh)", lang)} disabled={isEditing} />
         </Form.Item>
 
         <Form.Item
           name="name"
-          label="Tên combo"
+          label={t("Tên combo", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập tên combo" },
-            { min: 1, message: "Tên tối thiểu 1 ký tự" },
+            { required: true, message: t("Vui lòng nhập tên combo", lang) },
+            { min: 1, message: t("Tên tối thiểu 1 ký tự", lang) },
           ]}
         >
-          <Input placeholder="VD: Combo 3 hộp - 350.000₮" />
+          <Input placeholder={t("VD: Combo 3 hộp - 350.000₮", lang)} />
         </Form.Item>
 
         <Form.Item
           name="productId"
-          label="Sản phẩm"
-          rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
+          label={t("Sản phẩm", lang)}
+          rules={[{ required: true, message: t("Vui lòng chọn sản phẩm", lang) }]}
         >
           <Select
-            placeholder="Chọn sản phẩm"
+            placeholder={t("Chọn sản phẩm", lang)}
             showSearch
             optionFilterProp="label"
             disabled={isEditing || lockProductSelection || products.length === 1}
@@ -265,14 +268,14 @@ export default function ComboForm({
           />
         </Form.Item>
 
-        <Form.Item label="Danh mục">
+        <Form.Item label={t("Danh mục", lang)}>
           {categoryDisplay ? (
             <Input value={`${categoryDisplay.code} - ${categoryDisplay.name}`} disabled />
           ) : (
             <Alert
               type="info"
               showIcon
-              title="Chọn sản phẩm để tự động xác định danh mục"
+              title={t("Chọn sản phẩm để tự động xác định danh mục", lang)}
             />
           )}
         </Form.Item>
@@ -280,10 +283,10 @@ export default function ComboForm({
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <Form.Item
             name="packageQuantity"
-            label="Số lượng sản phẩm / combo"
+            label={t("Số lượng sản phẩm / combo", lang)}
             rules={[
-              { required: true, message: "Vui lòng nhập số lượng" },
-              { type: "number", min: 1, message: "Số lượng phải > 0" },
+              { required: true, message: t("Vui lòng nhập số lượng", lang) },
+              { type: "number", min: 1, message: t("Số lượng phải > 0", lang) },
             ]}
           >
             <InputNumber min={1} style={{ width: "100%" }} />
@@ -291,19 +294,19 @@ export default function ComboForm({
 
           <Form.Item
             name="giftQuantity"
-            label="Số lượng quà / combo"
-            rules={[{ type: "number", min: 0, message: "Số quà phải >= 0" }]}
+            label={t("Số lượng quà / combo", lang)}
+            rules={[{ type: "number", min: 0, message: t("Số quà phải >= 0", lang) }]}
           >
-            <InputNumber min={0} style={{ width: "100%" }} placeholder="0 = không có quà" />
+            <InputNumber min={0} style={{ width: "100%" }} placeholder={t("0 = không có quà", lang)} />
           </Form.Item>
         </div>
 
         <Form.Item
           name="sellingPrice"
-          label="Giá bán (₮)"
+          label={t("Giá bán (₮)", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập giá bán" },
-            { type: "number", min: 0, message: "Giá bán phải >= 0" },
+            { required: true, message: t("Vui lòng nhập giá bán", lang) },
+            { type: "number", min: 0, message: t("Giá bán phải >= 0", lang) },
           ]}
         >
           <InputNumber
@@ -311,24 +314,24 @@ export default function ComboForm({
             style={{ width: "100%" }}
             formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
             parser={(value) => Number((value ?? "").replace(/,/g, "") || 0) as 0}
-            placeholder="Nhập giá bán"
+            placeholder={t("Nhập giá bán", lang)}
           />
         </Form.Item>
 
-        <Form.Item name="displayOrder" label="Thứ tự hiển thị">
+        <Form.Item name="displayOrder" label={t("Thứ tự hiển thị", lang)}>
           <InputNumber min={0} style={{ width: "100%" }} placeholder="0" />
         </Form.Item>
 
-        <Form.Item name="image" label="URL hình ảnh">
+        <Form.Item name="image" label={t("URL hình ảnh", lang)}>
           <Input placeholder="https://example.com/image.jpg" />
         </Form.Item>
 
-        <Form.Item name="description" label="Mô tả">
-          <TextArea rows={2} placeholder="Mô tả combo (tùy chọn)" />
+        <Form.Item name="description" label={t("Mô tả", lang)}>
+          <TextArea rows={2} placeholder={t("Mô tả combo (tùy chọn)", lang)} />
         </Form.Item>
 
         {isEditing && (
-          <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
+          <Form.Item name="isActive" label={t("Kích hoạt", lang)} valuePropName="checked">
             <Switch />
           </Form.Item>
         )}
@@ -336,7 +339,7 @@ export default function ComboForm({
         <Alert
           type="info"
           showIcon
-          title="Combo không lưu phân loại sản phẩm và quà cụ thể. Phân loại sản phẩm sẽ được Sale chọn khi chốt đơn."
+          title={t("Combo không lưu phân loại sản phẩm và quà cụ thể. Phân loại sản phẩm sẽ được Sale chọn khi chốt đơn.", lang)}
           style={{ marginTop: 8 }}
         />
       </Form>

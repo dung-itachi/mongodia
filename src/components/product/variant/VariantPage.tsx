@@ -62,6 +62,21 @@ function VariantPageInner() {
   const searchParams = useSearchParams();
   const productIdFromQuery = searchParams.get("productId");
 
+  // Helper: derive an ASCII code from a Vietnamese value name with a random suffix.
+  const makeValueCodeFromName = (name: string): string => {
+    const normalized = name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    const asciiCode = normalized
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .substring(0, 20);
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return asciiCode.length >= 4
+      ? asciiCode + suffix
+      : `${asciiCode}${suffix}`;
+  };
+
   const [activeTab, setActiveTab] = useState("attributes");
 
   // Option drawer state
@@ -196,7 +211,10 @@ function VariantPageInner() {
   }, []);
 
   const handleSubmitOption = useCallback(
-    async (values: CreateVariantOptionInput) => {
+    async (
+      values: CreateVariantOptionInput,
+      options?: { quickValues?: string[]; createdOption?: VariantOptionItem }
+    ) => {
       const targetProductId = selectedProductIdForOptions;
       try {
         if (editingOption) {
@@ -205,33 +223,62 @@ function VariantPageInner() {
             input: values as UpdateVariantOptionInput,
           });
           handleCloseOption();
-        } else {
-          const created = await createOptionMutation.mutateAsync(values);
-          handleCloseOption();
+          return;
+        }
 
-          // Auto-assign to selected product if any
-          if (targetProductId) {
-            try {
-              await assignVariantOptionsMutation.mutateAsync({
-                productId: targetProductId,
-                input: { variantOptionIds: [created._id] },
-              });
-              void queryClient.invalidateQueries({
-                queryKey: ["product-variant-options", targetProductId],
-              });
-              void message.success("Đã tạo thuộc tính và gán vào sản phẩm");
-            } catch (assignError) {
-              console.error("Assignment error:", assignError);
-              void queryClient.invalidateQueries({
-                queryKey: ["product-variant-options", targetProductId],
-              });
-              void message.warning(
-                "Đã tạo thuộc tính nhưng chưa gán được vào sản phẩm"
-              );
-            }
-          } else {
-            void message.success("Đã tạo thuộc tính thành công");
+        // 1) Create the option first
+        const created = await createOptionMutation.mutateAsync(values);
+
+        // 2) If quick values were provided, create them now (sequentially to keep order)
+        const quickValues = options?.quickValues ?? [];
+        let valueCreatedCount = 0;
+        for (const name of quickValues) {
+          try {
+            const code = makeValueCodeFromName(name);
+            await createValueMutation.mutateAsync({
+              code,
+              name,
+              variantOptionId: created._id,
+              sortOrder: 0,
+            });
+            valueCreatedCount += 1;
+          } catch (err) {
+            // Continue creating remaining values even if one fails
+            console.error("Quick value create failed:", err);
           }
+        }
+
+        // 3) Auto-assign to selected product if any
+        if (targetProductId) {
+          try {
+            await assignVariantOptionsMutation.mutateAsync({
+              productId: targetProductId,
+              input: { variantOptionIds: [created._id] },
+            });
+            void queryClient.invalidateQueries({
+              queryKey: ["product-variant-options", targetProductId],
+            });
+          } catch (assignError) {
+            console.error("Assignment error:", assignError);
+            void queryClient.invalidateQueries({
+              queryKey: ["product-variant-options", targetProductId],
+            });
+          }
+        }
+
+        // 4) Refresh trees so the new option/values appear immediately
+        void queryClient.invalidateQueries({ queryKey: ["products-variant-tree"] });
+        void queryClient.invalidateQueries({ queryKey: ["variant-value-list"] });
+        void queryClient.invalidateQueries({ queryKey: ["product-variant-options"] });
+
+        handleCloseOption();
+
+        if (valueCreatedCount > 0) {
+          void message.success(
+            `Đã tạo thuộc tính "${created.name}" với ${valueCreatedCount} giá trị`
+          );
+        } else {
+          void message.success("Đã tạo thuộc tính thành công");
         }
       } catch (error) {
         const err = error as Error;
@@ -241,6 +288,7 @@ function VariantPageInner() {
     [
       editingOption,
       createOptionMutation,
+      createValueMutation,
       updateOptionMutation,
       handleCloseOption,
       selectedProductIdForOptions,

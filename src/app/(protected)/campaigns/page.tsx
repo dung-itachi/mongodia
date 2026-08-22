@@ -39,8 +39,11 @@ import CampaignsTable from "./CampaignsTable";
 import CampaignDrawer from "./CampaignDrawer";
 
 import styles from "./campaigns.module.css";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export default function CampaignsListPage() {
+  const lang = useLanguageStore((s) => s.language);
   // ── Search state ───────────────────────────────────────────────────────────
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebounce(keyword, 500);
@@ -158,8 +161,7 @@ export default function CampaignsListPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Campaigns"
+      <PageHeader title={t("Campaigns", lang)}
         subtitle={`${total} campaigns cho Marketing`}
       />
 

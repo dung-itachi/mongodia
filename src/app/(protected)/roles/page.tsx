@@ -25,8 +25,12 @@
 
 import { useAuthStore } from "@/store/auth.store";
 import PermissionTreePage from "./PermissionTreePage";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 export default function RolesPage() {
+  const lang = useLanguageStore((s) => s.language);
   const user = useAuthStore((s) => s.user);
   const currentUserPermissions = user?.permissions ?? [];
   return (

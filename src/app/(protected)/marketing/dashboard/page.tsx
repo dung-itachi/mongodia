@@ -46,6 +46,8 @@ import type { MarketingDashboardFilter, DrillDownContext } from "@/types/marketi
 import { exportToExcel, exportToPDF } from "@/lib/export-utils";
 import styles from "./marketing.module.css";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 /**
  * ADMIN (role=ADMIN) hoặc user có wildcard permission "*" được xem tất cả MKT.
@@ -60,6 +62,7 @@ export default function MarketingDashboardPage() {
   const user = useAuthStore((state) => state.user);
   const isGlobal = isGlobalUser(user);
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
 
   const [period, setPeriod] = useState<ChartPeriod>("7d");
   const [advancedFilter, setAdvancedFilter] = useState<MarketingDashboardFilter>({ period });
@@ -168,55 +171,55 @@ export default function MarketingDashboardPage() {
 
   const handleExportExcel = useCallback(async () => {
     if (!exportData) {
-      message.warning("Vui lòng đợi dữ liệu export được tải");
+      message.warning(t("Vui lòng đợi dữ liệu export được tải", lang));
       return;
     }
     setExportLoading(true);
     try {
       const timestamp = new Date().toISOString().slice(0, 10);
       exportToExcel(exportData, `marketing-dashboard-${timestamp}`);
-      message.success("Đã xuất file Excel thành công");
+      message.success(t("Đã xuất file Excel thành công", lang));
     } catch {
-      message.error("Lỗi khi xuất file Excel");
+      message.error(t("Lỗi khi xuất file Excel", lang));
     } finally {
       setExportLoading(false);
     }
-  }, [exportData]);
+  }, [exportData, lang]);
 
   const handleExportPDF = useCallback(async () => {
     if (!exportData) {
-      message.warning("Vui lòng đợi dữ liệu export được tải");
+      message.warning(t("Vui lòng đợi dữ liệu export được tải", lang));
       return;
     }
     setExportLoading(true);
     try {
       const timestamp = new Date().toISOString().slice(0, 10);
       exportToPDF(exportData, `marketing-dashboard-${timestamp}`);
-      message.success("Đã xuất file PDF thành công");
+      message.success(t("Đã xuất file PDF thành công", lang));
     } catch {
-      message.error("Lỗi khi xuất file PDF");
+      message.error(t("Lỗi khi xuất file PDF", lang));
     } finally {
       setExportLoading(false);
     }
-  }, [exportData]);
+  }, [exportData, lang]);
 
   const stats = data ? buildMarketingStats(data) : null;
 
   if (loading) {
-    return <LoadingOverlay text="Đang tải marketing dashboard..." />;
+    return <LoadingOverlay text={t("Đang tải marketing dashboard...", lang)} />;
   }
 
   if (error || !data || !stats) {
     return (
       <PageContainer>
         <PageHeader
-          title="Dashboard Marketing"
-          subtitle="Tổng quan hoạt động marketing"
+          title={t("Dashboard Marketing", lang)}
+          subtitle={t("Tổng quan hoạt động marketing", lang)}
         />
         <MarketingErrorState
           icon={<TeamOutlined />}
-          title="Không thể tải marketing dashboard"
-          message={error || "Đã xảy ra lỗi khi tải dữ liệu"}
+          title={t("Không thể tải marketing dashboard", lang)}
+          message={error || t("Đã xảy ra lỗi khi tải dữ liệu", lang)}
         />
       </PageContainer>
     );
@@ -225,8 +228,8 @@ export default function MarketingDashboardPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Dashboard Marketing"
-        subtitle="Tổng quan hoạt động marketing"
+        title={t("Dashboard Marketing", lang)}
+        subtitle={t("Tổng quan hoạt động marketing", lang)}
         actions={
           <Space>
             <Button
@@ -234,14 +237,14 @@ export default function MarketingDashboardPage() {
               onClick={handleExportExcel}
               loading={exportLoading}
             >
-              Export Excel
+              {t("Export Excel", lang)}
             </Button>
             <Button
               icon={<FilePdfOutlined />}
               onClick={handleExportPDF}
               loading={exportLoading}
             >
-              Export PDF
+              {t("Export PDF", lang)}
             </Button>
           </Space>
         }
@@ -276,7 +279,7 @@ export default function MarketingDashboardPage() {
             <div className={styles["mk-area-filters"]}>
               <Select
                 allowClear
-                placeholder="Khu vực"
+                placeholder={t("Khu vực", lang)}
                 value={selectedAreaForOverview}
                 onChange={(v) => {
                   setSelectedAreaForOverview(v);
@@ -284,7 +287,7 @@ export default function MarketingDashboardPage() {
                   setSelectedMktForOverview(undefined);
                 }}
                 options={[
-                  { value: "__all__", label: "Tất cả Khu vực" },
+                  { value: "__all__", label: t("Tất cả Khu vực", lang) },
                   ...areaOptions,
                 ]}
                 showSearch
@@ -300,14 +303,14 @@ export default function MarketingDashboardPage() {
               />
               <Select
                 allowClear
-                placeholder="Team"
+                placeholder={t("Team", lang)}
                 value={selectedTeamForOverview}
                 onChange={(v) => {
                   setSelectedTeamForOverview(v);
                   setSelectedMktForOverview(undefined);
                 }}
                 options={[
-                  { value: "__all__", label: "Tất cả Team" },
+                  { value: "__all__", label: t("Tất cả Team", lang) },
                   ...teamOptions,
                 ]}
                 showSearch
@@ -324,11 +327,11 @@ export default function MarketingDashboardPage() {
               />
               <Select
                 allowClear
-                placeholder="MKT"
+                placeholder={t("MKT", lang)}
                 value={selectedMktForOverview}
                 onChange={(v) => setSelectedMktForOverview(v)}
                 options={[
-                  { value: "__all__", label: "Tất cả MKT" },
+                  { value: "__all__", label: t("Tất cả MKT", lang) },
                   ...employeeOptions,
                 ]}
                 showSearch

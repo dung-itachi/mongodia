@@ -96,6 +96,26 @@ export default function ProductVariantForm({
   // State for selected variant values (separate from form for display purposes)
   const [selectedVariantValues, setSelectedVariantValues] = useState<string[]>([]);
 
+  // Local cache of newly-added options/values so UI updates instantly
+  // without waiting for parent refetch (the parent will also refetch).
+  const [localOptions, setLocalOptions] = useState<
+    Array<{
+      _id: string;
+      code: string;
+      name: string;
+      sortOrder?: number;
+      isActive?: boolean;
+      values: Array<{
+        _id: string;
+        code: string;
+        name: string;
+        variantOptionId: string;
+        sortOrder?: number;
+        isActive?: boolean;
+      }>;
+    }>
+  >([]);
+
   // State for quick-add
   const [quickAddOptionOpen, setQuickAddOptionOpen] = useState(false);
   const [quickAddOptionName, setQuickAddOptionName] = useState("");
@@ -142,6 +162,7 @@ export default function ProductVariantForm({
       setSelectedValueIds([]);
       setShowOptionAssignment(false);
       setSelectedOptionIds([]);
+      setLocalOptions([]);
     }
   }, [open, editingItem, selectedProductId]);
 
@@ -210,11 +231,21 @@ export default function ProductVariantForm({
     form.setFieldValue("variantValues", selectedVariantValues);
 
     void form.validateFields().then((values) => {
-      // Ensure SKU is in values (in case it was just generated)
+      // Ensure all numeric fields are actual numbers (InputNumber should already
+      // do this, but the API validator will reject strings, so be defensive).
+      const toNumber = (v: unknown): number => {
+        if (typeof v === "number") return v;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      };
+
       const finalValues = {
         ...values,
         sku: form.getFieldValue("sku"),
         variantValues: selectedVariantValues,
+        cost: toNumber(values.cost),
+        weight: toNumber(values.weight),
+        sortOrder: toNumber(values.sortOrder),
       };
       onSubmit(finalValues as CreateProductVariantInput | UpdateProductVariantInput);
     });
@@ -239,10 +270,28 @@ export default function ProductVariantForm({
       message.success(`Đã thêm thuộc tính "${newOption.name}"`);
       setQuickAddOptionName("");
       setQuickAddOptionOpen(false);
+
+      // Update local cache so the option appears immediately in dropdowns.
+      setLocalOptions((prev) => {
+        const withoutExisting = prev.filter((o) => o._id !== newOption._id);
+        return [
+          ...withoutExisting,
+          {
+            _id: newOption._id,
+            code: newOption.code,
+            name: newOption.name,
+            sortOrder: newOption.sortOrder ?? 0,
+            isActive: newOption.isActive ?? true,
+            values: [],
+          },
+        ];
+      });
+
       // Auto-select the new option
       setSelectedOptionId(newOption._id);
-    } catch {
-      message.error("Không thể thêm thuộc tính");
+    } catch (error) {
+      const err = error as Error;
+      message.error(err.message || "Không thể thêm thuộc tính");
     } finally {
       setQuickAddOptionLoading(false);
     }
@@ -257,10 +306,61 @@ export default function ProductVariantForm({
       message.success(`Đã thêm giá trị "${newValue.name}"`);
       setQuickAddValueName("");
       setQuickAddValueOpen(false);
+
+      // Update local cache for the new value.
+      // Make sure the parent option also exists in local cache so the merge
+      // shows the value immediately even if the server response hasn't arrived.
+      const parentOption = variantOptionsGrouped.find(
+        (opt) => opt._id === selectedOptionId
+      );
+
+      setLocalOptions((prev) => {
+        const existing = prev.find((opt) => opt._id === selectedOptionId);
+        const newValueEntry = {
+          _id: newValue._id,
+          code: newValue.code,
+          name: newValue.name,
+          variantOptionId: selectedOptionId,
+          sortOrder: newValue.sortOrder ?? 0,
+          isActive: newValue.isActive ?? true,
+        };
+
+        if (!existing && parentOption) {
+          // Seed the parent option so we can add the new value under it
+          return [
+            ...prev,
+            {
+              _id: parentOption._id,
+              code: parentOption.code,
+              name: parentOption.name,
+              sortOrder: parentOption.sortOrder ?? 0,
+              isActive: parentOption.isActive ?? true,
+              values: [newValueEntry],
+            },
+          ];
+        }
+
+        if (!existing && !parentOption) {
+          return prev;
+        }
+
+        return prev.map((opt) => {
+          if (opt._id === selectedOptionId) {
+            const withoutExisting = opt.values.filter((v) => v._id !== newValue._id);
+            return {
+              ...opt,
+              values: [...withoutExisting, newValueEntry],
+            };
+          }
+          return opt;
+        });
+      });
+
       // Auto-select the new value
       setSelectedValueIds((prev) => [...prev, newValue._id]);
-    } catch {
-      message.error("Không thể thêm giá trị");
+    } catch (error) {
+      const err = error as Error;
+      message.error(err.message || "Không thể thêm giá trị");
     } finally {
       setQuickAddValueLoading(false);
     }
@@ -363,13 +463,61 @@ export default function ProductVariantForm({
     }
   }, [open, editingItem, form, selectedProductId, generateSKU]);
 
-  // Group variant values by option
+  // Group variant values by option, merging server data with locally-added options/values
+  // so the UI updates immediately after a quick-add (no waiting for parent refetch).
   const variantOptionsGrouped = useMemo(() => {
-    return productVariantOptions.map((option) => ({
-      ...option,
-      values: option.values || [],
-    }));
-  }, [productVariantOptions]);
+    const merged = new Map<
+      string,
+      ProductVariantOptionWithValues & {
+        values: Array<{
+          _id: string;
+          code: string;
+          name: string;
+          variantOptionId: string;
+          sortOrder?: number;
+          isActive?: boolean;
+        }>;
+      }
+    >();
+
+    // Seed with server-provided options
+    for (const opt of productVariantOptions) {
+      merged.set(opt._id, {
+        ...opt,
+        values: (opt.values || []).map((v) => ({
+          _id: v._id,
+          code: v.code,
+          name: v.name,
+          variantOptionId: opt._id,
+          sortOrder: v.sortOrder,
+          isActive: v.isActive,
+        })),
+      });
+    }
+
+    // Merge locally-added options/values
+    for (const localOpt of localOptions) {
+      const existing = merged.get(localOpt._id);
+      if (!existing) {
+        // New option not yet on server side
+        merged.set(localOpt._id, {
+          _id: localOpt._id,
+          code: localOpt.code,
+          name: localOpt.name,
+          sortOrder: localOpt.sortOrder ?? 0,
+          isActive: localOpt.isActive ?? true,
+          values: localOpt.values,
+        });
+      } else {
+        // Existing option: merge new values that aren't in server response yet
+        const existingValueIds = new Set(existing.values.map((v) => v._id));
+        const newValues = localOpt.values.filter((v) => !existingValueIds.has(v._id));
+        existing.values = [...existing.values, ...newValues];
+      }
+    }
+
+    return Array.from(merged.values());
+  }, [productVariantOptions, localOptions]);
 
   // Check if product has any variant options
   const hasVariantOptions = variantOptionsGrouped.length > 0;
@@ -794,16 +942,30 @@ export default function ProductVariantForm({
           <InputNumber
             min={0}
             style={{ width: "100%" }}
-            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-            parser={(value) => Number(value?.replace(/,/g, "") || 0) as 0}
+            formatter={(value) =>
+              `${value ?? ""}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+            }
+            parser={(value) => {
+              const num = Number((value ?? "").toString().replace(/,/g, ""));
+              return (Number.isFinite(num) ? num : 0) as 0;
+            }}
           />
         </Form.Item>
 
-        <Form.Item name="weight" label="Trọng lượng">
-          <Space.Compact>
-            <InputNumber min={0} style={{ width: "100%" }} />
-            <Input suffix="g" disabled style={{ width: 60, background: '#f5f5f5' }} />
-          </Space.Compact>
+        <Form.Item
+          name="weight"
+          label={
+            <span>
+              Trọng lượng{" "}
+              <span style={{ color: "#999", fontSize: 12 }}>(gram)</span>
+            </span>
+          }
+        >
+          <InputNumber
+            min={0}
+            style={{ width: "100%" }}
+            placeholder="0"
+          />
         </Form.Item>
 
         <Form.Item name="sortOrder" label="Thứ tự hiển thị">

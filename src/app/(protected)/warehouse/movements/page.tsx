@@ -13,6 +13,9 @@ import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 import type { WarehouseStockMovementItem } from "@/types/warehouse-history";
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_TYPE_COLORS, REFERENCE_TYPE_LABELS } from "@/types/warehouse-history";
 import type { WarehouseStockMovementType } from "@/models/WarehouseStockMovement";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 const { RangePicker } = DatePicker;
 
@@ -48,6 +51,7 @@ function formatQuantity(quantity: number, movementType: WarehouseStockMovementTy
 }
 
 export default function WarehouseMovementsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const { warehouses } = useWarehouses();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -169,8 +173,7 @@ export default function WarehouseMovementsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Lịch sử kho"
+      <PageHeader title={t("Lịch sử kho", lang)}
         subtitle={`${data?.total ?? 0} movement`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },

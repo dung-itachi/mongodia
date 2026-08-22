@@ -37,6 +37,8 @@ import Link from "next/link";
 import { useBatchCustomerLookup } from "@/hooks/useCustomers";
 import OrderDetailModal from "@/components/orders/OrderDetailModal";
 import type { OrderListItem } from "@/types/order";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import styles from "./BatchCheckCustomersModal.module.css";
 
@@ -76,13 +78,11 @@ export default function BatchCheckCustomersModal({
   phones,
   onClose,
 }: BatchCheckCustomersModalProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [searchFilter, setSearchFilter] = useState("");
   /** ID đơn hàng muốn xem chi tiết (popup stack). */
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
 
-  // Chỉ fetch khi modal mở
-  // Fetch tối đa 20 đơn gần nhất cho mỗi khách — đủ để xem trong popup batch.
-  // Nếu khách có > 20 đơn, vẫn hiển thị cảnh báo "xem trang khách" cho các đơn cũ hơn.
   const { items, summary, loading, settled } = useBatchCustomerLookup(phones, {
     enabled: open && phones.length > 0,
     limit: 20,
@@ -138,33 +138,25 @@ export default function BatchCheckCustomersModal({
         title={
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <HistoryOutlined />
-            <span>Check khách hàng loạt ({summary.total} SĐT)</span>
+            <span>{t("Check khách hàng loạt", lang)} ({summary.total} {t("SĐT", lang)})</span>
           </span>
         }
       >
         <div>
           {/* Summary cards */}
           <div className={styles.summaryRow}>
-            <SummaryCard
-              value={summary.total}
-              label="Tổng"
-              variant="default"
-            />
+            <SummaryCard value={summary.total} label={t("Tổng", lang)} variant="default" />
             <SummaryCard
               value={summary.withOrders}
-              label="Có đơn"
+              label={t("Có đơn", lang)}
               variant="withOrders"
             />
             <SummaryCard
               value={summary.notFound}
-              label="Khách mới"
+              label={t("Khách mới", lang)}
               variant="notFound"
             />
-            <SummaryCard
-              value={summary.failed}
-              label="Lỗi"
-              variant="failed"
-            />
+            <SummaryCard value={summary.failed} label={t("Lỗi", lang)} variant="failed" />
           </div>
 
           {/* Search */}
@@ -174,7 +166,7 @@ export default function BatchCheckCustomersModal({
               size="large"
               allowClear
               prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-              placeholder="Lọc theo SĐT hoặc tên..."
+              placeholder={t("Lọc theo SĐT hoặc tên...", lang)}
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
             />
@@ -183,24 +175,23 @@ export default function BatchCheckCustomersModal({
           {/* Loading state */}
           {loading && (
             <div className={styles.empty}>
-              <Spin /> &nbsp; Đang tra cứu {summary.total} SĐT...
+              <Spin /> &nbsp; {t("Đang tra cứu", lang)} {summary.total} {t("SĐT", lang)}...
             </div>
           )}
 
           {/* Settled — show groups */}
           {!loading && settled && summary.total === 0 && (
-            <Empty description="Không có SĐT nào để tra cứu" />
+            <Empty description={t("Không có SĐT nào để tra cứu", lang)} />
           )}
 
           {!loading && settled && summary.total > 0 && (
             <>
-              {/* Errors */}
               {groups.failed.length > 0 && (
                 <Alert
                   type="warning"
                   showIcon
                   style={{ marginBottom: 16 }}
-                  message={`${groups.failed.length} SĐT tra cứu lỗi`}
+                  message={`${groups.failed.length} ${t("SĐT tra cứu lỗi", lang)}`}
                   description={
                     <div style={{ fontSize: 12 }}>
                       {groups.failed.map((it) => (
@@ -211,28 +202,25 @@ export default function BatchCheckCustomersModal({
                 />
               )}
 
-              {/* Khách cũ có đơn */}
               <Group
                 icon={<CheckCircleOutlined />}
-                title={`Khách cũ · có đơn (${groups.withOrders.length})`}
+                title={`${t("Khách cũ · có đơn", lang)} (${groups.withOrders.length})`}
                 variant="withOrders"
                 items={groups.withOrders}
                 onOpenOrder={setDetailOrderId}
               />
 
-              {/* Khách cũ chưa có đơn */}
               <Group
                 icon={<UserOutlined />}
-                title={`Khách cũ · chưa có đơn (${groups.foundNoOrder.length})`}
+                title={`${t("Khách cũ · chưa có đơn", lang)} (${groups.foundNoOrder.length})`}
                 variant="found"
                 items={groups.foundNoOrder}
                 onOpenOrder={setDetailOrderId}
               />
 
-              {/* Khách mới */}
               <Group
                 icon={<UserAddOutlined />}
-                title={`Khách mới (${groups.notFound.length})`}
+                title={`${t("Khách mới", lang)} (${groups.notFound.length})`}
                 variant="notFound"
                 items={groups.notFound}
                 onOpenOrder={setDetailOrderId}
@@ -242,7 +230,6 @@ export default function BatchCheckCustomersModal({
         </div>
       </Modal>
 
-      {/* Stack popup — chi tiết đơn hàng */}
       <OrderDetailModal
         open={!!detailOrderId}
         orderId={detailOrderId}
@@ -316,6 +303,7 @@ function BatchItem({
   variant: "found" | "notFound" | "withOrders";
   onOpenOrder: (orderId: string) => void;
 }) {
+  const lang = useLanguageStore((s) => s.language);
   const customer = item.result?.customer;
   const orders = item.result?.orders.items ?? [];
   const totalOrdersInSystem = item.result?.orders.total ?? orders.length;
@@ -329,7 +317,6 @@ function BatchItem({
 
   return (
     <div className={styles.item}>
-      {/* Avatar */}
       <div className={`${styles.itemAvatar} ${variant === "notFound" ? styles.notFound : ""}`}>
         {variant === "notFound" ? <UserAddOutlined /> : getInitials(customer?.fullName)}
       </div>
@@ -348,31 +335,29 @@ function BatchItem({
             </Tag>
           )}
           {variant === "notFound" && (
-            <Tag color="orange">Khách mới</Tag>
+            <Tag color="orange">{t("Khách mới", lang)}</Tag>
           )}
         </div>
 
-        {/* Stats ngắn */}
         {customer && stats && (
           <div className={styles.itemMetaRow}>
             <span className={styles.itemMetaItem}>
-              <strong>{stats.totalOrders}</strong> đơn
+              <strong>{stats.totalOrders}</strong> {t("đơn", lang)}
             </span>
             <span className={styles.itemMetaItem}>
-              DT: <strong>{formatCurrency(stats.totalRevenue, "VND")}</strong>
+              {t("DT", lang)}: <strong>{formatCurrency(stats.totalRevenue, "VND")}</strong>
             </span>
             <span className={styles.itemMetaItem}>
-              Gần nhất: <strong>{formatDate(stats.lastOrderDate)}</strong>
+              {t("Gần nhất", lang)}: <strong>{formatDate(stats.lastOrderDate)}</strong>
             </span>
             {customer.saleEmployee && (
               <span className={styles.itemMetaItem}>
-                Sale: <strong>{customer.saleEmployee.fullName}</strong>
+                {t("Sale", lang)}: <strong>{customer.saleEmployee.fullName}</strong>
               </span>
             )}
           </div>
         )}
 
-        {/* Orders list */}
         {orders.length > 0 && (
           <div style={{ marginTop: 4 }}>
             <div
@@ -386,7 +371,7 @@ function BatchItem({
                 gap: 4,
               }}
             >
-              Đơn gần nhất
+              {t("Đơn gần nhất", lang)}
               <span style={{ textTransform: "none", color: "#bfbfbf" }}>
                 ({totalOrdersInSystem})
               </span>
@@ -396,7 +381,6 @@ function BatchItem({
                 <OrderRow key={o._id} order={o} onOpen={() => onOpenOrder(o._id)} />
               ))}
 
-              {/* "+N đơn nữa..." — click để mở rộng các đơn đã fetch */}
               {!expanded && hiddenCount > 0 && (
                 <button
                   type="button"
@@ -418,11 +402,10 @@ function BatchItem({
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#1890ff")}
                 >
                   <DownOutlined style={{ fontSize: 10 }} />
-                  +{hiddenCount} đơn nữa (đã fetch) — bấm để xem
+                  +{hiddenCount} {t("đơn nữa (đã fetch) — bấm để xem", lang)}
                 </button>
               )}
 
-              {/* Đã mở rộng hết các đơn đã fetch */}
               {expanded && orders.length > INITIAL_VISIBLE && (
                 <button
                   type="button"
@@ -442,11 +425,10 @@ function BatchItem({
                   }}
                 >
                   <UpOutlined style={{ fontSize: 10 }} />
-                  Thu gọn
+                  {t("Thu gọn", lang)}
                 </button>
               )}
 
-              {/* Còn nhiều đơn trong hệ thống mà chưa fetch hết */}
               {moreInSystem > 0 && customer?._id && (
                 <Link
                   href={`/customers/${customer._id}`}
@@ -464,7 +446,7 @@ function BatchItem({
                   onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
                   onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
                 >
-                  +{moreInSystem} đơn cũ hơn — mở trang khách để xem →
+                  +{moreInSystem} {t("đơn cũ hơn — mở trang khách để xem →", lang)}
                 </Link>
               )}
             </div>
@@ -475,11 +457,11 @@ function BatchItem({
       <div className={styles.itemActions}>
         {variant === "notFound" && (
           <Tag color="orange" icon={<UserAddOutlined />}>
-            Có thể tạo mới
+            {t("Có thể tạo mới", lang)}
           </Tag>
         )}
         {variant === "withOrders" && (
-          <Tag color="blue">Khách quay lại</Tag>
+          <Tag color="blue">{t("Khách quay lại", lang)}</Tag>
         )}
       </div>
     </div>

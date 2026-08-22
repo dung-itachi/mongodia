@@ -43,6 +43,8 @@ import {
 import { useDebounce } from "@/hooks/useDebounce";
 import type { Customer, CustomerFilter } from "@/types/customer";
 import { CustomerStatus } from "@/types/customer";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const STATUS_OPTIONS = [
   { label: "Tất cả trạng thái", value: "" },
@@ -51,9 +53,30 @@ const STATUS_OPTIONS = [
   { label: "Bị chặn", value: CustomerStatus.BLOCKED },
 ];
 
+function CustomerStatusLabel({ value }: { value: string }) {
+  const lang = useLanguageStore((s) => s.language);
+  const statusValue = value as CustomerStatus;
+  const colorMap: Record<string, string> = {
+    [CustomerStatus.ACTIVE]: "green",
+    [CustomerStatus.INACTIVE]: "default",
+    [CustomerStatus.BLOCKED]: "red",
+  };
+  const labelMap: Record<string, string> = {
+    [CustomerStatus.ACTIVE]: "Hoạt động",
+    [CustomerStatus.INACTIVE]: "Không hoạt động",
+    [CustomerStatus.BLOCKED]: "Bị chặn",
+  };
+  return (
+    <Tag color={colorMap[statusValue]}>
+      {t(labelMap[statusValue] || statusValue, lang)}
+    </Tag>
+  );
+}
+
 export default function CustomersPage() {
   const router = useRouter();
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
 
   // Search and filter state
   const [keyword, setKeyword] = useState("");
@@ -102,7 +125,7 @@ export default function CustomersPage() {
   const columns: TableProps<Customer>["columns"] = useMemo(() => [
     {
       key: "customerCode",
-      title: "Mã KH",
+      title: t("Mã KH", lang),
       dataIndex: "customerCode",
       width: 120,
       render: (value: string, record: Customer) => (
@@ -113,64 +136,47 @@ export default function CustomersPage() {
     },
     {
       key: "fullName",
-      title: "Tên khách hàng",
+      title: t("Tên khách hàng", lang),
       dataIndex: "fullName",
       width: 180,
     },
     {
       key: "phone",
-      title: "Số điện thoại",
+      title: t("Số điện thoại", lang),
       dataIndex: "phone",
       width: 130,
     },
     {
       key: "email",
-      title: "Email",
+      title: t("Email", lang),
       dataIndex: "email",
       width: 180,
       render: (value: string) => value || "-",
     },
     {
       key: "saleEmployee",
-      title: "Sale",
+      title: t("Sale", lang),
       dataIndex: "saleEmployeeId",
       width: 140,
-      render: (value: string) => value ? "NV Sale" : "-",
+      render: (value: string) => value ? t("NV Sale", lang) : "-",
     },
     {
       key: "marketingEmployee",
-      title: "Marketing",
+      title: t("Marketing", lang),
       dataIndex: "marketingEmployeeId",
       width: 140,
-      render: (value: string) => value ? "NV MKT" : "-",
+      render: (value: string) => value ? t("NV MKT", lang) : "-",
     },
     {
       key: "status",
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "status",
       width: 120,
-      render: (value: string) => {
-        const statusValue = value as CustomerStatus;
-        const colorMap: Record<string, string> = {
-          [CustomerStatus.ACTIVE]: "green",
-          [CustomerStatus.INACTIVE]: "default",
-          [CustomerStatus.BLOCKED]: "red",
-        };
-        const labelMap: Record<string, string> = {
-          [CustomerStatus.ACTIVE]: "Hoạt động",
-          [CustomerStatus.INACTIVE]: "Không hoạt động",
-          [CustomerStatus.BLOCKED]: "Bị chặn",
-        };
-        return (
-          <Tag color={colorMap[statusValue]}>
-            {labelMap[statusValue] || statusValue}
-          </Tag>
-        );
-      },
+      render: (value: string) => <CustomerStatusLabel value={value} />,
     },
     {
       key: "createdAt",
-      title: "Ngày tạo",
+      title: t("Ngày tạo", lang),
       dataIndex: "createdAt",
       width: 120,
       render: (value: string) => {
@@ -181,7 +187,7 @@ export default function CustomersPage() {
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 80,
       fixed: "right" as const,
       render: (_: unknown, record: Customer) => (
@@ -191,20 +197,20 @@ export default function CustomersPage() {
               {
                 key: "view",
                 icon: <EyeOutlined />,
-                label: "Xem chi tiết",
+                label: t("Xem chi tiết", lang),
                 onClick: () => router.push(`/customers/${record._id}`),
               },
               {
                 key: "edit",
                 icon: <EditOutlined />,
-                label: "Chỉnh sửa",
+                label: t("Chỉnh sửa", lang),
                 onClick: () => router.push(`/customers/${record._id}/edit`),
               },
               { type: "divider" as const },
               {
                 key: "delete",
                 icon: <DeleteOutlined />,
-                label: "Xóa",
+                label: t("Xóa", lang),
                 danger: true,
                 onClick: () => setDeleteId(record._id),
               },
@@ -218,18 +224,18 @@ export default function CustomersPage() {
         </Dropdown>
       ),
     },
-  ], [router]);
+  ], [router, lang]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleteLoading(true);
     try {
       await deleteMutation.mutateAsync(deleteId);
-      message.success("Xóa khách hàng thành công");
+      message.success(t("Xóa khách hàng thành công", lang));
       setDeleteId(null);
       refetch();
     } catch (error) {
-      message.error((error as Error).message || "Không thể xóa khách hàng");
+      message.error((error as Error).message || t("Không thể xóa khách hàng", lang));
     } finally {
       setDeleteLoading(false);
     }
@@ -242,12 +248,12 @@ export default function CustomersPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Khách hàng"
-        subtitle={`${total} khách hàng`}
+        title={t("Khách hàng", lang)}
+        subtitle={`${total} ${t("khách hàng", lang)}`}
         actions={
           <PermissionGate permission="customer.create">
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              Thêm khách hàng
+              {t("Thêm khách hàng", lang)}
             </Button>
           </PermissionGate>
         }
@@ -259,28 +265,28 @@ export default function CustomersPage() {
           {
             key: "total",
             value: customerStats.total,
-            label: "Tổng khách hàng",
+            label: t("Tổng khách hàng", lang),
             icon: <TeamOutlined style={{ color: "#1890ff" }} />,
             color: "blue",
           },
           {
             key: "active",
             value: customerStats.active,
-            label: "Đang hoạt động",
+            label: t("Đang hoạt động", lang),
             icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
             color: "green",
           },
           {
             key: "inactive",
             value: customerStats.inactive,
-            label: "Không hoạt động",
+            label: t("Không hoạt động", lang),
             icon: <UserOutlined style={{ color: "#fa8c16" }} />,
             color: "orange",
           },
           {
             key: "blocked",
             value: customerStats.blocked,
-            label: "Bị chặn",
+            label: t("Bị chặn", lang),
             icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
             color: "red",
           },
@@ -293,7 +299,7 @@ export default function CustomersPage() {
         {/* Search and filters */}
         <div className="mb-4 flex gap-4 flex-wrap">
           <Input.Search
-            placeholder="Tìm kiếm theo tên, số điện thoại, email..."
+            placeholder={t("Tìm kiếm theo tên, số điện thoại, email...", lang)}
             value={keyword}
             onChange={(e) => {
               setKeyword(e.target.value);
@@ -305,9 +311,9 @@ export default function CustomersPage() {
           <Select
             value={status}
             onChange={(value) => handleFilterChange(value, "status")}
-            options={STATUS_OPTIONS}
+            options={STATUS_OPTIONS.map((opt) => ({ ...opt, label: t(opt.label, lang) }))}
             style={{ width: 180 }}
-            placeholder="Chọn trạng thái"
+            placeholder={t("Chọn trạng thái", lang)}
           />
         </div>
 
@@ -316,12 +322,12 @@ export default function CustomersPage() {
           <SkeletonTable columns={columns.length || 8} />
         ) : customers.length === 0 ? (
           <EmptyState
-            title="Chưa có khách hàng"
-            description="Bắt đầu bằng cách thêm khách hàng mới"
+            title={t("Chưa có khách hàng", lang)}
+            description={t("Bắt đầu bằng cách thêm khách hàng mới", lang)}
             action={
               <PermissionGate permission="customer.create">
                 <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                  Thêm khách hàng
+                  {t("Thêm khách hàng", lang)}
                 </Button>
               </PermissionGate>
             }
@@ -338,7 +344,7 @@ export default function CustomersPage() {
               total,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: (t) => `Tổng ${t} khách hàng`,
+              showTotal: (total) => `${t("Tổng", lang)} ${total} ${t("khách hàng", lang)}`,
               onChange: (p, ps) => {
                 setPage(p);
                 setPageSize(ps);
@@ -352,11 +358,11 @@ export default function CustomersPage() {
       {/* Delete confirmation dialog */}
       <ConfirmDialog
         open={!!deleteId}
-        title="Xóa khách hàng"
-        content="Bạn có chắc chắn muốn xóa khách hàng này? Hành động này không thể hoàn tác."
+        title={t("Xóa khách hàng", lang)}
+        content={t("Bạn có chắc chắn muốn xóa khách hàng này? Hành động này không thể hoàn tác.", lang)}
         type="delete"
-        confirmText="Xóa"
-        cancelText="Hủy"
+        confirmText={t("Xóa", lang)}
+        cancelText={t("Hủy", lang)}
         loading={deleteLoading}
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}

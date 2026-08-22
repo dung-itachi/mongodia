@@ -60,6 +60,8 @@ import QuickComboDrawer from "./QuickComboDrawer";
 import ColumnMappingModal from "./ColumnMappingModal";
 import { useColumnMapping, type ColumnMappings, type InputMode } from "./useColumnMapping";
 import { COLUMN_FIELDS } from "./columnLayouts";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { TextArea } = Input;
 
@@ -113,6 +115,7 @@ export interface MarketingInputSectionProps {
 export default function MarketingInputSection({
   onLeadsCreated,
 }: MarketingInputSectionProps) {
+  const lang = useLanguageStore((s) => s.language);
   // State
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedComboId, setSelectedComboId] = useState<string | null>(null);
@@ -397,7 +400,7 @@ export default function MarketingInputSection({
 
       const newLead: StagedLead = {
         id: `staged-${Date.now()}`,
-        customerName: customerName || "Khách hàng",
+        customerName: customerName || t("Khách hàng", lang),
         phone,
         address: address || undefined,
         source: LeadSource.FACEBOOK_COMMENT,
@@ -944,7 +947,7 @@ export default function MarketingInputSection({
       }
 
       if (!finalCombo) {
-        comboError = "Không tìm thấy combo";
+        comboError = t("Không tìm thấy combo", lang);
       }
 
       return {
@@ -1138,7 +1141,7 @@ export default function MarketingInputSection({
               undefined,
             // Sprint 8.x: leadDate từ Landing page
             leadDate: leadDate || undefined,
-            error: comboError || "Không tìm thấy combo",
+            error: comboError || t("Không tìm thấy combo", lang),
             // Sprint 8.x: thời gian đơn hàng
             orderDate: finalOrderDate || new Date().toISOString(),
           });
@@ -1165,19 +1168,19 @@ export default function MarketingInputSection({
       );
     } else if (errorCount > 0) {
       toast.warning(
-        `Đã thêm ${newLeads.length} lead, có ${errorCount} lỗi không tìm thấy combo`
+        `${t("Đã thêm", lang)} ${newLeads.length} ${t("lead, có", lang)} ${errorCount} ${t("lỗi không tìm thấy combo", lang)}`
       );
     } else if (autoDetectCount > 0) {
-      toast.success(`Đã thêm ${newLeads.length} lead (tự động detect ${autoDetectCount} combo)`);
+      toast.success(`${t("Đã thêm", lang)} ${newLeads.length} ${t("lead (tự động detect", lang)} ${autoDetectCount} combo)`);
     } else {
-      toast.success(`Đã thêm ${newLeads.length} lead vào staging`);
+      toast.success(`${t("Đã thêm", lang)} ${newLeads.length} ${t("lead vào staging", lang)}`);
     }
 
     // Trường hợp paste không có thông tin sản phẩm/combo → báo ngắn gọn
     if (noProductInfoCount > 0) {
       const rowsText = noProductInfoRows.join(", ");
       toast.warning(
-        `⚠ Dòng STT: ${rowsText} đang thiếu dữ liệu sản phẩm/combo — hãy chọn sản phẩm/combo ở trên.`,
+        `⚠ ${t("Dòng STT", lang)}: ${rowsText} ${t("đang thiếu dữ liệu sản phẩm/combo — hãy chọn sản phẩm/combo ở trên.", lang)}`,
         6
       );
     }
@@ -1185,10 +1188,10 @@ export default function MarketingInputSection({
     // Cảnh báo mismatch giữa dữ liệu paste và sản phẩm/combo đang chọn
     if (uniqueWarnings.length > 0) {
       const warningText =
-        `⚠ Dữ liệu paste KHÔNG trùng khớp sản phẩm/combo đang chọn:\n` +
+        `⚠ ${t("Dữ liệu paste KHÔNG trùng khớp sản phẩm/combo đang chọn", lang)}:\n` +
         `• ${uniqueWarnings.slice(0, 3).join("\n• ")}` +
         (uniqueWarnings.length > 3
-          ? `\n• ... và ${uniqueWarnings.length - 3} cảnh báo khác`
+          ? `\n• ... ${t("và", lang)} ${uniqueWarnings.length - 3} ${t("cảnh báo khác", lang)}`
           : "");
       toast.warning(warningText, 8);
     }
@@ -1241,7 +1244,7 @@ export default function MarketingInputSection({
           l.id === editingLead.id
             ? {
                 ...l,
-                customerName: customerName || "Khách hàng",
+                customerName: customerName || t("Khách hàng", lang),
                 phone,
                 address: address || undefined,
                 note: note || undefined,
@@ -1376,7 +1379,7 @@ export default function MarketingInputSection({
       {/* Sprint 8.6: Facebook Page selection. Persists across batches
           until the user changes it or clears it. */}
       <Card
-        title="① Chọn trang Facebook"
+        title={`① ${t("Chọn trang Facebook", lang)}`}
         size="small"
         className={styles.card}
       >
@@ -1391,10 +1394,10 @@ export default function MarketingInputSection({
               }
               placeholder={
                 pagesLoading
-                  ? "Đang tải danh sách trang..."
+                  ? t("Đang tải danh sách trang...", lang)
                   : facebookPages.length === 0
-                    ? "Chưa có Facebook Page nào (liên hệ Admin)"
-                    : "Vui lòng chọn trang Facebook"
+                    ? t("Chưa có Facebook Page nào (liên hệ Admin)", lang)
+                    : t("Vui lòng chọn trang Facebook", lang)
               }
               showSearch
               optionFilterProp="label"
@@ -1445,7 +1448,7 @@ export default function MarketingInputSection({
               icon={<PlusOutlined />}
               onClick={() => setFacebookPageDrawerOpen(true)}
               aria-label="Tạo Facebook Page"
-              title="Tạo Facebook Page"
+              title={t("Tạo Facebook Page", lang)}
             >
               Tạo mới
             </Button>
@@ -1503,7 +1506,7 @@ export default function MarketingInputSection({
           >
             <Input
               allowClear
-              placeholder="Tìm theo tên, mã SP, danh mục..."
+              placeholder={t("Tìm theo tên, mã SP, danh mục...", lang)}
               value={productSearch}
               onChange={(e) => setProductSearch(e.target.value)}
               style={{ flex: 1, minWidth: 180 }}
@@ -1513,7 +1516,7 @@ export default function MarketingInputSection({
               value={productCategoryFilter}
               onChange={setProductCategoryFilter}
               style={{ minWidth: 160 }}
-              placeholder="Tìm kiếm danh mục..."
+              placeholder={t("Tìm kiếm danh mục...", lang)}
               showSearch
               allowClear
               filterOption={(input, option) =>
@@ -1564,14 +1567,14 @@ export default function MarketingInputSection({
         ) : null}
 
         {isLoading ? (
-          <div className={styles.loading}>Đang tải sản phẩm...</div>
+          <div className={styles.loading}>{t("Đang tải sản phẩm...", lang)}</div>
         ) : categories.length === 0 && !categoriesError ? (
           <div className={styles.empty}>
-            Chưa có sản phẩm nào - liên hệ Admin
+            {t("Chưa có sản phẩm nào - liên hệ Admin", lang)}
           </div>
         ) : filteredCategories.length === 0 ? (
           <div className={styles.empty}>
-            Không tìm thấy sản phẩm phù hợp
+            {t("Không tìm thấy sản phẩm phù hợp", lang)}
           </div>
         ) : (
           <div className={styles.productGrid}>
@@ -1622,8 +1625,8 @@ export default function MarketingInputSection({
                       style={{ padding: 0, marginTop: 4, fontSize: 12 }}
                     >
                       {isExpanded
-                        ? `Thu gọn (${hiddenCount} sản phẩm ẩn)`
-                        : `Mở rộng (+${hiddenCount} sản phẩm)`}
+                        ? `${t("Thu gọn", lang)} (${hiddenCount} ${t("sản phẩm ẩn", lang)})`
+                        : `${t("Mở rộng (+", lang)}${hiddenCount} ${t("sản phẩm)", lang)}`}
                     </Button>
                   )}
                 </div>
@@ -1636,7 +1639,7 @@ export default function MarketingInputSection({
         {selectedProductId && (
           <div className={styles.comboSection}>
             <div className={styles.comboHeader}>
-              <span className={styles.comboLabel}>Combos (từ MongoDB):</span>
+              <span className={styles.comboLabel}>{t("Combos (từ MongoDB)", lang)}:</span>
               <Button
                 type="link"
                 size="small"
@@ -1644,14 +1647,14 @@ export default function MarketingInputSection({
                 onClick={() => setQuickComboDrawerOpen(true)}
                 className={styles.addComboBtn}
               >
-                Thêm combo
+                {t("Thêm combo", lang)}
               </Button>
             </div>
             {combosLoading ? (
-              <div className={styles.loading}>Đang tải combos...</div>
+              <div className={styles.loading}>{t("Đang tải combos...", lang)}</div>
             ) : productCombos.length === 0 ? (
               <div className={styles.noCombo}>
-                Chưa có combo - liên hệ Admin tạo combo cho sản phẩm này
+                {t("Chưa có combo - liên hệ Admin tạo combo cho sản phẩm này", lang)}
               </div>
             ) : (
               <>
@@ -1680,8 +1683,8 @@ export default function MarketingInputSection({
                             fontWeight: 500,
                           }}
                         >
-                          ({combo.packageQuantity} SP
-                          {combo.giftQuantity ? ` + ${combo.giftQuantity} quà` : ""})
+                          ({combo.packageQuantity} {t("SP", lang)}
+                          {combo.giftQuantity ? ` + ${combo.giftQuantity} ${t("quà", lang)}` : ""})
                         </span>
                       </span>
                       <span className={styles.comboPrice}>
@@ -1698,8 +1701,8 @@ export default function MarketingInputSection({
                     style={{ padding: 0, marginTop: 4 }}
                   >
                     {comboExpanded
-                      ? `Thu gọn (${productCombos.length - 4} combo ẩn)`
-                      : `Mở rộng (còn ${productCombos.length - 4} combo)`}
+                      ? `${t("Thu gọn", lang)} (${productCombos.length - 4} ${t("combo ẩn", lang)})`
+                      : `${t("Mở rộng (còn", lang)} ${productCombos.length - 4} combo)`}
                   </Button>
                 )}
               </>
@@ -1725,7 +1728,7 @@ export default function MarketingInputSection({
 
       {/* Lead Input */}
       <Card
-        title="② Dán số"
+        title={`② ${t("Dán số", lang)}`}
         size="small"
         className={styles.card}
         extra={
@@ -1764,7 +1767,7 @@ export default function MarketingInputSection({
         </div>
 
         {!selectedFacebookPageId ? (
-          <Tooltip title="Vui lòng chọn trang Facebook" mouseEnterDelay={0}>
+          <Tooltip title={t("Vui lòng chọn trang Facebook", lang)} mouseEnterDelay={0}>
             <PasteTable
               inputType={inputType}
               layout={columnMapping.getLayout(inputType)}
@@ -1821,7 +1824,7 @@ export default function MarketingInputSection({
               setColumnMappingActiveMode(inputType);
               setColumnMappingOpen(true);
             }}
-            title="Cấu hình thứ tự cột khi dán"
+            title={t("Cấu hình thứ tự cột khi dán", lang)}
           >
             Cấu hình cột
           </Button>
@@ -1833,7 +1836,7 @@ export default function MarketingInputSection({
 
       {/* Manual Order Modal */}
       <Modal
-        title="Nhập đơn hàng thủ công"
+        title={t("Nhập đơn hàng thủ công", lang)}
         open={manualOrderOpen}
         onCancel={() => {
           setManualOrderOpen(false);
@@ -1858,11 +1861,11 @@ export default function MarketingInputSection({
         >
           <Form.Item
             name="facebookPageId"
-            label="Trang Facebook"
-            rules={[{ required: true, message: "Vui lòng chọn trang Facebook" }]}
+            label={t("Trang Facebook", lang)}
+            rules={[{ required: true, message: t("Vui lòng chọn trang Facebook", lang) }]}
           >
             <Select
-              placeholder="Chọn trang Facebook"
+              placeholder={t("Chọn trang Facebook", lang)}
               showSearch
               filterOption={(input, option) =>
                 (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
@@ -1876,31 +1879,31 @@ export default function MarketingInputSection({
 
           <Form.Item
             name="customerName"
-            label="Tên khách hàng"
-            rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+            label={t("Tên khách hàng", lang)}
+            rules={[{ required: true, message: t("Vui lòng nhập tên", lang) }]}
           >
-            <Input placeholder="Nhập tên khách hàng" />
+            <Input placeholder={t("Nhập tên khách hàng", lang)} />
           </Form.Item>
 
           <Form.Item
             name="phone"
-            label="Số điện thoại"
+            label={t("Số điện thoại", lang)}
             rules={[
-              { required: true, message: "Vui lòng nhập SĐT" },
-              { pattern: /^[0-9]{6,15}$/, message: "SĐT không hợp lệ" }
+              { required: true, message: t("Vui lòng nhập SĐT", lang) },
+              { pattern: /^[0-9]{6,15}$/, message: t("SĐT không hợp lệ", lang) }
             ]}
           >
-            <Input placeholder="Nhập số điện thoại" />
+            <Input placeholder={t("Nhập số điện thoại", lang)} />
           </Form.Item>
 
-          <Form.Item name="address" label="Địa chỉ">
-            <Input placeholder="Nhập địa chỉ (tùy chọn)" />
+          <Form.Item name="address" label={t("Địa chỉ", lang)}>
+            <Input placeholder={t("Nhập địa chỉ (tùy chọn)", lang)} />
           </Form.Item>
 
           <Form.Item
             name="orderDate"
-            label="Thời gian đặt hàng"
-            tooltip="Ngày giờ khách đặt hàng. Nếu để trống sẽ lấy thời gian hiện tại."
+            label={t("Thời gian đặt hàng", lang)}
+            tooltip={t("Ngày giờ khách đặt hàng. Nếu để trống sẽ lấy thời gian hiện tại.", lang)}
           >
             <DatePicker
               showTime
@@ -1908,17 +1911,17 @@ export default function MarketingInputSection({
               classNames={{ popup: { root: "picker-with-time" } }}
               format="DD/MM/YYYY HH:mm"
               style={{ width: "100%" }}
-              placeholder="Chọn ngày giờ"
+              placeholder={t("Chọn ngày giờ", lang)}
             />
           </Form.Item>
 
           <Form.Item
             name="productId"
-            label="Sản phẩm"
-            rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
+            label={t("Sản phẩm", lang)}
+            rules={[{ required: true, message: t("Vui lòng chọn sản phẩm", lang) }]}
           >
             <Select
-              placeholder="Chọn sản phẩm"
+              placeholder={t("Chọn sản phẩm", lang)}
               showSearch
               filterOption={(input, option) =>
                 (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
@@ -1944,16 +1947,16 @@ export default function MarketingInputSection({
                   rules={[{ required: true, message: "Vui lòng chọn combo" }]}
                 >
                   <Select
-                    placeholder={productId ? "Chọn combo" : "Chọn sản phẩm trước"}
+                    placeholder={productId ? t("Chọn combo", lang) : t("Chọn sản phẩm trước", lang)}
                     disabled={!productId}
                     options={[
                       ...combosForProduct.map(c => ({
                         value: c._id,
-                        label: `${c.name} - ${c.sellingPrice?.toLocaleString()}₫ (${c.packageQuantity} cái)`,
+                        label: `${c.name} - ${c.sellingPrice?.toLocaleString()}₫ (${c.packageQuantity} ${t("cái", lang)})`,
                       })),
                       ...(productId ? [{
                         value: "__create_new__",
-                        label: "+ Tạo combo mới cho sản phẩm này",
+                        label: `+ ${t("Tạo combo mới cho sản phẩm này", lang)}`,
                       }] : []),
                     ]}
                     onChange={(value) => {
@@ -1971,10 +1974,10 @@ export default function MarketingInputSection({
 
           <Form.Item
             name="note"
-            label="Ghi chú"
+            label={t("Ghi chú", lang)}
           >
             <Input.TextArea
-              placeholder="Nhập ghi chú (tùy chọn)"
+              placeholder={t("Nhập ghi chú (tùy chọn)", lang)}
               autoSize={{ minRows: 2, maxRows: 10 }}
             />
           </Form.Item>
@@ -2001,28 +2004,28 @@ export default function MarketingInputSection({
         >
           <Form.Item
             name="customerName"
-            label="Tên khách hàng"
-            rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+            label={t("Tên khách hàng", lang)}
+            rules={[{ required: true, message: t("Vui lòng nhập tên", lang) }]}
           >
-            <Input placeholder="Nhập tên khách hàng" />
+            <Input placeholder={t("Nhập tên khách hàng", lang)} />
           </Form.Item>
 
           <Form.Item
             name="phone"
-            label="Số điện thoại"
-            rules={[{ required: true, message: "Vui lòng nhập SĐT" }]}
+            label={t("Số điện thoại", lang)}
+            rules={[{ required: true, message: t("Vui lòng nhập SĐT", lang) }]}
           >
-            <Input placeholder="Nhập số điện thoại" />
+            <Input placeholder={t("Nhập số điện thoại", lang)} />
           </Form.Item>
 
-          <Form.Item name="address" label="Địa chỉ">
-            <Input placeholder="Nhập địa chỉ (tùy chọn)" />
+          <Form.Item name="address" label={t("Địa chỉ", lang)}>
+            <Input placeholder={t("Nhập địa chỉ (tùy chọn)", lang)} />
           </Form.Item>
 
           <Form.Item
             name="orderDate"
-            label="Thời gian đặt hàng"
-            tooltip="Ngày giờ khách đặt hàng."
+            label={t("Thời gian đặt hàng", lang)}
+            tooltip={t("Ngày giờ khách đặt hàng.", lang)}
           >
             <DatePicker
               showTime
@@ -2030,17 +2033,17 @@ export default function MarketingInputSection({
               classNames={{ popup: { root: "picker-with-time" } }}
               format="DD/MM/YYYY HH:mm"
               style={{ width: "100%" }}
-              placeholder="Chọn ngày giờ"
+              placeholder={t("Chọn ngày giờ", lang)}
             />
           </Form.Item>
 
           <Form.Item
             name="productId"
-            label="Sản phẩm"
-            rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
+            label={t("Sản phẩm", lang)}
+            rules={[{ required: true, message: t("Vui lòng chọn sản phẩm", lang) }]}
           >
             <Select
-              placeholder="Chọn sản phẩm"
+              placeholder={t("Chọn sản phẩm", lang)}
               showSearch
               optionFilterProp="label"
               options={productSelectOptions}
@@ -2058,9 +2061,9 @@ export default function MarketingInputSection({
                 : [];
 
               return (
-                <Form.Item name="comboId" label="Combo">
+                <Form.Item name="comboId" label={t("Combo", lang)}>
                   <Select
-                    placeholder={productId ? "Chọn combo" : "Chọn sản phẩm trước"}
+                    placeholder={productId ? t("Chọn combo", lang) : t("Chọn sản phẩm trước", lang)}
                     allowClear
                     options={combosForProduct.map((c) => ({
                       value: c._id,
@@ -2074,10 +2077,10 @@ export default function MarketingInputSection({
 
           <Form.Item
             name="note"
-            label="Ghi chú"
+            label={t("Ghi chú", lang)}
           >
             <Input.TextArea
-              placeholder="Nhập ghi chú (tùy chọn)"
+              placeholder={t("Nhập ghi chú (tùy chọn)", lang)}
               autoSize={{ minRows: 2, maxRows: 10 }}
             />
           </Form.Item>
@@ -2142,7 +2145,7 @@ export default function MarketingInputSection({
                 icon={<TeamOutlined />}
                 onClick={() => setBatchCheckOpen(true)}
                 disabled={stagingPhones.length === 0}
-                title="Tra cứu tất cả SĐT trong staging để biết khách cũ / khách mới"
+                title={t("Tra cứu tất cả SĐT trong staging để biết khách cũ / khách mới", lang)}
               >
                 Check khách loạt ({stagingPhones.length})
               </Button>
@@ -2203,7 +2206,7 @@ export default function MarketingInputSection({
                           size="small"
                           icon={<EditOutlined />}
                           onClick={() => handleOpenEditLead(lead)}
-                          title="Sửa"
+                          title={t("Sửa", lang)}
                         />
                       </div>
                     </td>

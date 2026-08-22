@@ -34,6 +34,8 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/common/layout/PageContainer";
 import { PermissionGate } from "@/components/common";
 import MarketingExpenseDetail from "@/components/marketing-expense/MarketingExpenseDetail";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,6 +43,7 @@ interface PageProps {
 
 export default function MarketingExpenseDetailPage({ params }: PageProps) {
   const router = useRouter();
+  const lang = useLanguageStore((s) => s.language);
 
   return (
     <PageContainer>
@@ -48,11 +51,11 @@ export default function MarketingExpenseDetailPage({ params }: PageProps) {
         permission="marketing-expense.view"
         fallback={
           <div style={{ padding: 24, textAlign: "center" }}>
-            Bạn không có quyền xem báo cáo chi phí marketing.
+            {t("Bạn không có quyền xem báo cáo chi phí marketing.", lang)}
           </div>
         }
       >
-        <Suspense fallback={<div>Đang tải...</div>}>
+        <Suspense fallback={<div>{t("Đang tải...", lang)}</div>}>
           <MarketingExpenseDetailWrapper params={params} />
         </Suspense>
       </PermissionGate>

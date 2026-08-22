@@ -11,6 +11,8 @@ import { Switch, Popconfirm, Image } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { ProductListItem } from "@/hooks/useProductCrud";
 
 interface ProductTableProps {
@@ -28,6 +30,7 @@ export default function ProductTable({
   onDelete,
   onToggleActive,
 }: ProductTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const getCategoryName = useCallback((category: ProductListItem["category"]) => {
     if (typeof category === "object" && category !== null) {
       return (category as { name: string }).name;
@@ -45,7 +48,7 @@ export default function ProductTable({
   const columns: Column[] = [
     {
       key: "image",
-      title: "Ảnh",
+      title: t("Ảnh", lang),
       width: 70,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -67,18 +70,18 @@ export default function ProductTable({
     },
     {
       key: "code",
-      title: "Mã",
+      title: t("Mã", lang),
       dataIndex: "code",
       width: 120,
     },
     {
       key: "name",
-      title: "Tên sản phẩm",
+      title: t("Tên sản phẩm", lang),
       dataIndex: "name",
     },
     {
       key: "category",
-      title: "Danh mục",
+      title: t("Danh mục", lang),
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductListItem;
         return getCategoryName(item.category);
@@ -86,13 +89,13 @@ export default function ProductTable({
     },
     {
       key: "description",
-      title: "Mô tả",
+      title: t("Mô tả", lang),
       dataIndex: "description",
       width: 200,
     },
     {
       key: "isActive",
-      title: "Kích hoạt",
+      title: t("Kích hoạt", lang),
       dataIndex: "isActive",
       width: 100,
       align: "center",
@@ -109,7 +112,7 @@ export default function ProductTable({
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 100,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -121,11 +124,11 @@ export default function ProductTable({
               onClick={() => onEdit(item)}
             />
             <Popconfirm
-              title="Xóa sản phẩm?"
-              description="Sản phẩm sẽ bị vô hiệu hóa."
+              title={t("Xóa sản phẩm?", lang)}
+              description={t("Sản phẩm sẽ bị vô hiệu hóa.", lang)}
               onConfirm={() => onDelete(item)}
-              okText="Xóa"
-              cancelText="Hủy"
+              okText={t("Xóa", lang)}
+              cancelText={t("Hủy", lang)}
               okButtonProps={{ danger: true }}
             >
               <DeleteOutlined
@@ -145,7 +148,7 @@ export default function ProductTable({
       loading={loading}
       rowKey="_id"
       pagination={false}
-      emptyText="Chưa có sản phẩm nào"
+      emptyText={t("Chưa có sản phẩm nào", lang)}
       scroll={{ y: 400 }}
     />
   );

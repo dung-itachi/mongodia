@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Button,
+Button,
   Col,
   Form,
   Input,
@@ -30,6 +30,8 @@ import { useWarehouses } from "@/hooks/useWarehouses";
 import { useGiftList } from "@/hooks/useGifts";
 import type { WarehouseTransferStatus } from "@/models/WarehouseTransfer";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { Text } = Typography;
 
@@ -125,6 +127,7 @@ function sumQuantities(
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export default function WarehouseTransfersPage() {
+  const lang = useLanguageStore((s) => s.language);
   const { warehouses } = useWarehouses();
   const { data: giftResponse } = useGiftList();
   const message = useMessage();
@@ -500,8 +503,7 @@ export default function WarehouseTransfersPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <PageContainer>
-      <PageHeader
-        title="Chuyển kho"
+      <PageHeader title={t("Chuyển kho", lang)}
         subtitle={`${data?.total ?? 0} phiếu chuyển`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },

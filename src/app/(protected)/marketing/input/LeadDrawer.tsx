@@ -17,8 +17,14 @@ import { defaultLeadForm, marketingLeadFormSchema, type MarketingLeadForm } from
 import type { MarketingLead } from "@/types/marketing-lead";
 import { useActiveFacebookPages } from "@/hooks/useFacebookPages";
 import { useProducts, useCombosByProduct, type ComboItem } from "@/hooks/useProducts";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { TextArea } = Input;
+
+const DEFAULT_CREATE_TITLE = "Thêm Lead";
+const DEFAULT_EDIT_TITLE = "Sửa Lead";
+const DEFAULT_SUBMIT_TEXT = "Lưu";
 
 export type LeadFormData = MarketingLeadForm;
 
@@ -40,9 +46,10 @@ function LeadDrawerInner({
   lead,
   onClose,
   onSubmit,
-  createTitle = "Thêm Lead",
-  editTitle = "Sửa Lead",
+  createTitle = DEFAULT_CREATE_TITLE,
+  editTitle = DEFAULT_EDIT_TITLE,
 }: LeadDrawerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const isEdit = !!lead;
   const { control, handleSubmit, reset, resetField, formState: { errors } } =
     useForm<LeadFormData>({
@@ -134,45 +141,45 @@ function LeadDrawerInner({
   return (
     <DrawerForm
       open={open}
-      title={isEdit ? editTitle : createTitle}
+      title={isEdit ? t(editTitle, lang) : t(createTitle, lang)}
       width={560}
       loading={loading}
       onClose={handleClose}
       onSubmit={handleSubmit(onSubmit)}
-      submitText="Lưu"
+      submitText={t(DEFAULT_SUBMIT_TEXT, lang)}
     >
-      <FormSection title="Thông tin khách hàng">
-        <FormField label="Tên khách hàng" required error={errors.customerName?.message}>
+      <FormSection title={t("Thông tin khách hàng", lang)}>
+        <FormField label={t("Tên khách hàng", lang)} required error={errors.customerName?.message}>
           <Controller
             name="customerName"
             control={control}
             render={({ field }) => (
-              <Input {...field} placeholder="Nhập tên khách hàng" status={errors.customerName ? "error" : undefined} />
+              <Input {...field} placeholder={t("Nhập tên khách hàng", lang)} status={errors.customerName ? "error" : undefined} />
             )}
           />
         </FormField>
 
-        <FormField label="Số điện thoại" required error={errors.phone?.message}>
+        <FormField label={t("Số điện thoại", lang)} required error={errors.phone?.message}>
           <Controller
             name="phone"
             control={control}
             render={({ field }) => (
-              <Input {...field} placeholder="Nhập số điện thoại" status={errors.phone ? "error" : undefined} />
+              <Input {...field} placeholder={t("Nhập số điện thoại", lang)} status={errors.phone ? "error" : undefined} />
             )}
           />
         </FormField>
 
-        <FormField label="Email" error={errors.email?.message}>
+        <FormField label={t("Email", lang)} error={errors.email?.message}>
           <Controller
             name="email"
             control={control}
-            render={({ field }) => <Input {...field} placeholder="Nhập email (không bắt buộc)" />}
+            render={({ field }) => <Input {...field} placeholder={t("Nhập email (không bắt buộc)", lang)} />}
           />
         </FormField>
       </FormSection>
 
-      <FormSection title="Nguồn & Trạng thái">
-        <FormField label="Nguồn" required error={errors.source?.message}>
+      <FormSection title={t("Nguồn & Trạng thái", lang)}>
+        <FormField label={t("Nguồn", lang)} required error={errors.source?.message}>
           <Controller
             name="source"
             control={control}
@@ -181,14 +188,14 @@ function LeadDrawerInner({
                 {...field}
                 style={{ width: "100%" }}
                 options={LEAD_SOURCE_OPTIONS as SelectProps["options"]}
-                placeholder="Chọn nguồn"
+                placeholder={t("Chọn nguồn", lang)}
                 status={errors.source ? "error" : undefined}
               />
             )}
           />
         </FormField>
 
-        <FormField label="Trang Facebook (Sprint 8.6)" error={errors.facebookPageId?.message}>
+        <FormField label={`${t("Trang Facebook (Sprint 8.6)", lang)}`} error={errors.facebookPageId?.message}>
           <Controller
             name="facebookPageId"
             control={control}
@@ -199,16 +206,16 @@ function LeadDrawerInner({
                 allowClear
                 loading={pagesLoading}
                 options={facebookPageOptions}
-                placeholder={pagesLoading ? "Đang tải..." : "Chọn trang Facebook (không bắt buộc)"}
+                placeholder={pagesLoading ? t("Đang tải...", lang) : t("Chọn trang Facebook (không bắt buộc)", lang)}
                 showSearch
                 optionFilterProp="label"
-                notFoundContent={pagesLoading ? null : "Chưa có trang Facebook nào"}
+                notFoundContent={pagesLoading ? null : t("Chưa có trang Facebook nào", lang)}
               />
             )}
           />
         </FormField>
 
-        <FormField label="Trạng thái" required error={errors.status?.message}>
+        <FormField label={t("Trạng thái", lang)} required error={errors.status?.message}>
           <Controller
             name="status"
             control={control}
@@ -217,7 +224,7 @@ function LeadDrawerInner({
                 {...field}
                 style={{ width: "100%" }}
                 options={LEAD_STATUS_OPTIONS as SelectProps["options"]}
-                placeholder="Chọn trạng thái"
+                placeholder={t("Chọn trạng thái", lang)}
                 status={errors.status ? "error" : undefined}
                 disabled={isEdit}
               />
@@ -225,7 +232,7 @@ function LeadDrawerInner({
           />
         </FormField>
 
-        <FormField label="Sản phẩm" error={errors.productId?.message}>
+        <FormField label={t("Sản phẩm", lang)} error={errors.productId?.message}>
           <Controller
             name="productId"
             control={control}
@@ -236,16 +243,16 @@ function LeadDrawerInner({
                 allowClear
                 loading={productsLoading}
                 options={productOptions}
-                placeholder={productsLoading ? "Đang tải..." : "Chọn sản phẩm (không bắt buộc)"}
+                placeholder={productsLoading ? t("Đang tải...", lang) : t("Chọn sản phẩm (không bắt buộc)", lang)}
                 showSearch
                 optionFilterProp="label"
-                notFoundContent={productsLoading ? null : "Chưa có sản phẩm nào"}
+                notFoundContent={productsLoading ? null : t("Chưa có sản phẩm nào", lang)}
               />
             )}
           />
         </FormField>
 
-        <FormField label="Combo sản phẩm" error={errors.comboId?.message}>
+        <FormField label={t("Combo sản phẩm", lang)} error={errors.comboId?.message}>
           <Controller
             name="comboId"
             control={control}
@@ -256,18 +263,18 @@ function LeadDrawerInner({
                 allowClear
                 loading={combosLoading}
                 options={comboOptions}
-                placeholder={combosLoading ? "Đang tải..." : "Chọn combo (không bắt buộc)"}
+                placeholder={combosLoading ? t("Đang tải...", lang) : t("Chọn combo (không bắt buộc)", lang)}
                 showSearch
                 optionFilterProp="label"
-                notFoundContent={combosLoading ? null : "Chưa có combo nào"}
+                notFoundContent={combosLoading ? null : t("Chưa có combo nào", lang)}
               />
             )}
           />
         </FormField>
       </FormSection>
 
-      <FormSection title="Thời gian đơn hàng (Sprint 8.x)">
-        <FormField label="Thời gian đơn hàng" error={errors.orderDate?.message}>
+      <FormSection title={t("Thời gian đơn hàng (Sprint 8.x)", lang)}>
+        <FormField label={t("Thời gian đơn hàng", lang)} error={errors.orderDate?.message}>
           <Controller
             name="orderDate"
             control={control}
@@ -278,7 +285,7 @@ function LeadDrawerInner({
                 classNames={{ popup: { root: "picker-with-time" } }}
                 value={field.value ? dayjs(field.value) : null}
                 onChange={(date) => field.onChange(date?.toISOString() ?? "")}
-                placeholder="Chọn ngày giờ đặt hàng"
+                placeholder={t("Chọn ngày giờ đặt hàng", lang)}
                 format="DD/MM/YYYY HH:mm"
                 getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
               />
@@ -286,7 +293,7 @@ function LeadDrawerInner({
           />
         </FormField>
 
-        <FormField label="Thời gian nhận đơn" error={errors.receivedDate?.message}>
+        <FormField label={t("Thời gian nhận đơn", lang)} error={errors.receivedDate?.message}>
           <Controller
             name="receivedDate"
             control={control}
@@ -298,7 +305,7 @@ function LeadDrawerInner({
                   classNames={{ popup: { root: "picker-with-time" } }}
                   value={field.value ? dayjs(field.value) : null}
                   onChange={(date) => field.onChange(date?.toISOString() ?? "")}
-                  placeholder="Chọn thời gian Marketing nhận đơn"
+                  placeholder={t("Chọn thời gian Marketing nhận đơn", lang)}
                   format="DD/MM/YYYY HH:mm"
                   getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
                 />
@@ -308,15 +315,15 @@ function LeadDrawerInner({
         </FormField>
       </FormSection>
 
-      <FormSection title="Địa chỉ">
-        <FormField label="Địa chỉ" error={errors.address?.message}>
+      <FormSection title={t("Địa chỉ", lang)}>
+        <FormField label={t("Địa chỉ", lang)} error={errors.address?.message}>
           <Controller
             name="address"
             control={control}
             render={({ field }) => (
               <TextArea
                 {...field}
-                placeholder="Nhập địa chỉ (Mông Cổ / các nước khác không phân cấp)"
+                placeholder={t("Nhập địa chỉ (Mông Cổ / các nước khác không phân cấp)", lang)}
                 rows={2}
                 autoSize={{ minRows: 2, maxRows: 4 }}
               />
@@ -325,12 +332,12 @@ function LeadDrawerInner({
         </FormField>
       </FormSection>
 
-      <FormSection title="Ghi chú">
-        <FormField label="Ghi chú" error={errors.note?.message}>
+      <FormSection title={t("Ghi chú", lang)}>
+        <FormField label={t("Ghi chú", lang)} error={errors.note?.message}>
           <Controller
             name="note"
             control={control}
-            render={({ field }) => <TextArea {...field} placeholder="Nhập ghi chú" rows={3} />}
+            render={({ field }) => <TextArea {...field} placeholder={t("Nhập ghi chú", lang)} rows={3} />}
           />
         </FormField>
       </FormSection>

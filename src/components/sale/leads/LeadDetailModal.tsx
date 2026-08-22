@@ -22,6 +22,8 @@ import {
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import { LEAD_STATUS_LABELS, LeadStatus } from "@/constants/leadStatus";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./lead-detail-modal.module.css";
 
 const { Text } = Typography;
@@ -73,6 +75,7 @@ function getStatusColor(status: LeadStatus): string {
 }
 
 export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModalProps) {
+  const lang = useLanguageStore((s) => s.language);
   if (!lead) {
     return (
       <Modal
@@ -80,7 +83,7 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
         onCancel={onClose}
         footer={null}
         width={600}
-        title="Chi tiết Khách hàng"
+        title={t("Chi tiết Khách hàng", lang)}
       >
         <div className={styles.center}>
           <Spin />
@@ -99,7 +102,7 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
       title={
         <Space>
           <UserOutlined />
-          <span>Chi tiết Khách hàng</span>
+          <span>{t("Chi tiết Khách hàng", lang)}</span>
           <Tag color="blue">{lead.leadCode}</Tag>
         </Space>
       }
@@ -108,7 +111,7 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
         {/* Customer Info */}
         <div className={styles.section}>
           <div className={styles.sectionTitle}>
-            <UserOutlined /> Thông tin khách hàng
+            <UserOutlined /> {t("Thông tin khách hàng", lang)}
           </div>
           <Descriptions
             column={1}
@@ -116,21 +119,21 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
             bordered
             styles={{ label: { width: 160, fontWeight: 600 } }}
           >
-            <Descriptions.Item label="Tên khách hàng">
+            <Descriptions.Item label={t("Tên khách hàng", lang)}>
               <Text strong>{lead.customerName}</Text>
             </Descriptions.Item>
 
-            <Descriptions.Item label="Số điện thoại">
+            <Descriptions.Item label={t("Số điện thoại", lang)}>
               <Space>
                 <PhoneOutlined />
-                <Text strong>{lead.phone || "Không có"}</Text>
+                <Text strong>{lead.phone || t("Không có", lang)}</Text>
               </Space>
             </Descriptions.Item>
 
-            <Descriptions.Item label="Địa chỉ">
+            <Descriptions.Item label={t("Địa chỉ", lang)}>
               <Space>
                 <EnvironmentOutlined />
-                <Text>{lead.address || "Không có"}</Text>
+                <Text>{lead.address || t("Không có", lang)}</Text>
               </Space>
             </Descriptions.Item>
           </Descriptions>
@@ -141,7 +144,7 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
         {/* Product Info */}
         <div className={styles.section}>
           <div className={styles.sectionTitle}>
-            <ShopOutlined /> Sản phẩm / Combo
+            <ShopOutlined /> {t("Sản phẩm / Combo", lang)}
           </div>
           <Descriptions
             column={1}
@@ -149,19 +152,19 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
             bordered
             styles={{ label: { width: 160, fontWeight: 600 } }}
           >
-            <Descriptions.Item label="Sản phẩm">
+            <Descriptions.Item label={t("Sản phẩm", lang)}>
               {lead.product?.name || "-"}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Combo">
+            <Descriptions.Item label={t("Combo", lang)}>
               {lead.combo?.name || "-"}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Số lượng">
+            <Descriptions.Item label={t("Số lượng", lang)}>
               {lead.quantity || "-"}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Đơn giá (MNT)">
+            <Descriptions.Item label={t("Đơn giá (MNT)", lang)}>
               {lead.unitPriceMNT ? (
                 <Text strong style={{ color: "#52c41a" }}>
                   {lead.unitPriceMNT.toLocaleString("vi-VN")} ₮
@@ -172,7 +175,7 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
             </Descriptions.Item>
 
             {lead.exchangeRate && (
-              <Descriptions.Item label="Tỷ giá">
+              <Descriptions.Item label={t("Tỷ giá", lang)}>
                 1 ₮ = {lead.exchangeRate.toLocaleString("vi-VN")} VND
               </Descriptions.Item>
             )}
@@ -184,7 +187,7 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
         {/* Status & Source */}
         <div className={styles.section}>
           <div className={styles.sectionTitle}>
-            <CalendarOutlined /> Trạng thái & Nguồn
+            <CalendarOutlined /> {t("Trạng thái & Nguồn", lang)}
           </div>
           <Descriptions
             column={1}
@@ -192,24 +195,24 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
             bordered
             styles={{ label: { width: 160, fontWeight: 600 } }}
           >
-            <Descriptions.Item label="Trạng thái">
+            <Descriptions.Item label={t("Trạng thái", lang)}>
               <Tag color={getStatusColor(lead.status)} style={{ fontSize: 13 }}>
                 {LEAD_STATUS_LABELS[lead.status] ?? lead.status}
               </Tag>
               {lead.noAnswerCount && lead.noAnswerCount > 0 && (
                 <Tag color={lead.noAnswerCount >= 3 ? "red" : "orange"}>
-                  📵 K nghe: {lead.noAnswerCount}
+                  📵 {t("K nghe", lang)}: {lead.noAnswerCount}
                 </Tag>
               )}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Nguồn">
+            <Descriptions.Item label={t("Nguồn", lang)}>
               <Tag>
                 {LEAD_SOURCE_LABELS[lead.sourceType as LeadSource] ?? lead.sourceType}
               </Tag>
             </Descriptions.Item>
 
-            <Descriptions.Item label="Trang Facebook">
+            <Descriptions.Item label={t("Trang Facebook", lang)}>
               {lead.facebookPage?.name || "-"}
             </Descriptions.Item>
           </Descriptions>
@@ -220,7 +223,7 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
         {/* Assignment Info */}
         <div className={styles.section}>
           <div className={styles.sectionTitle}>
-            <TeamOutlined /> Phân công
+            <TeamOutlined /> {t("Phân công", lang)}
           </div>
           <Descriptions
             column={1}
@@ -228,19 +231,19 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
             bordered
             styles={{ label: { width: 160, fontWeight: 600 } }}
           >
-            <Descriptions.Item label="NV Marketing">
+            <Descriptions.Item label={t("NV Marketing", lang)}>
               {lead.marketingEmployeeId?.name
                 ? `${lead.marketingEmployeeId.name} (${lead.marketingEmployeeId.employeeCode})`
                 : "-"}
             </Descriptions.Item>
 
-            <Descriptions.Item label="NV Sale phụ trách">
+            <Descriptions.Item label={t("NV Sale phụ trách", lang)}>
               {lead.saleEmployeeId?.name
                 ? `${lead.saleEmployeeId.name} (${lead.saleEmployeeId.employeeCode})`
-                : <Text type="secondary">Chưa phân công</Text>}
+                : <Text type="secondary">{t("Chưa phân công", lang)}</Text>}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Ngày phân công">
+            <Descriptions.Item label={t("Ngày phân công", lang)}>
               {formatDate(lead.assignedAt)}
             </Descriptions.Item>
           </Descriptions>
@@ -251,7 +254,7 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
         {/* Timeline */}
         <div className={styles.section}>
           <div className={styles.sectionTitle}>
-            <CalendarOutlined /> Timeline
+            <CalendarOutlined /> {t("Timeline", lang)}
           </div>
           <Descriptions
             column={1}
@@ -259,19 +262,19 @@ export default function LeadDetailModal({ open, lead, onClose }: LeadDetailModal
             bordered
             styles={{ label: { width: 160, fontWeight: 600 } }}
           >
-            <Descriptions.Item label="Ngày tạo">
+            <Descriptions.Item label={t("Ngày tạo", lang)}>
               {formatDate(lead.createdAt)}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Cập nhật lần cuối">
+            <Descriptions.Item label={t("Cập nhật lần cuối", lang)}>
               {formatDate(lead.updatedAt)}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Đã chốt đơn">
+            <Descriptions.Item label={t("Đã chốt đơn", lang)}>
               {lead.isConverted ? (
-                <Tag color="green">✓ Đã chốt</Tag>
+                <Tag color="green">✓ {t("Đã chốt", lang)}</Tag>
               ) : (
-                <Tag>Chưa chốt</Tag>
+                <Tag>{t("Chưa chốt", lang)}</Tag>
               )}
             </Descriptions.Item>
           </Descriptions>

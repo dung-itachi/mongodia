@@ -10,7 +10,11 @@
  * của user.
  */
 import NotificationManagementPage from "@/components/settings/NotificationManagement/NotificationManagementPage";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 export default function NotificationManagementRoutePage() {
+  const lang = useLanguageStore((s) => s.language);
   return <NotificationManagementPage />;
 }

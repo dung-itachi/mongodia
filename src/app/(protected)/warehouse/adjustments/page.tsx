@@ -12,6 +12,9 @@ import { useWarehouseAdjustments, useCreateAdjustment } from "@/hooks/useWarehou
 import WarehouseQuickPick from "@/components/warehouse/WarehouseQuickPick";
 import { useMessage } from "@/contexts/MessageContext";
 import type { WarehouseStockMovementType } from "@/models/WarehouseStockMovement";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 type AdjustmentRow = {
   itemType: "PRODUCT" | "GIFT";
@@ -46,6 +49,7 @@ function formatQuantity(value: unknown): string {
 }
 
 export default function WarehouseAdjustmentsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const { warehouses } = useWarehouses();
   const { data: giftResponse } = useGiftList();
   const message = useMessage();
@@ -220,8 +224,7 @@ export default function WarehouseAdjustmentsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Lịch sử tồn kho"
+      <PageHeader title={t("Lịch sử tồn kho", lang)}
         subtitle={`${data?.total ?? 0} movement`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },

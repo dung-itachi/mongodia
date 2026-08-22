@@ -38,6 +38,8 @@ import {
 } from "@/hooks/useShippingFee";
 import { formatMNT, formatNumber } from "@/lib/format";
 import { toast } from "@/components/common/feedback/Toast";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { Text, Title } = Typography;
 
@@ -47,6 +49,7 @@ type FormValues = {
 };
 
 export default function ShippingFeeSettingsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const { data, isLoading, refetch } = useShippingFee();
   const updateMutation = useUpdateShippingFee();
   const [form] = Form.useForm<FormValues>();
@@ -87,9 +90,7 @@ export default function ShippingFeeSettingsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Phí ship"
-        subtitle="Phí ship cố định cộng vào tổng giá trị combo để tính doanh số đơn hàng"
+      <PageHeader title={t("Phí ship", lang)} subtitle={t("Phí ship cố định cộng vào tổng giá trị combo để tính doanh số đơn hàng", lang)}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },
           { label: "Cài đặt hệ thống", href: "/settings" },

@@ -48,6 +48,8 @@ import { useProducts } from "@/hooks/useProducts";
 import OrderProductDetail, { createOrderItemFromCombo } from "@/components/order/OrderProductDetail";
 import { validateOrderItem, type OrderItem } from "@/types/variant";
 import { formatMNT } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./edit-lead-modal.module.css";
 
 const { Text } = Typography;
@@ -77,6 +79,7 @@ function productId(combo: ComboListItem): string | null {
 }
 
 function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm<LeadFormValues>();
   const updateLeadMutation = useUpdateLead();
   const { data: exchangeRateData } = useExchangeRate();
@@ -186,19 +189,19 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
       const item = items[0];
 
       if (!selectedProductId) {
-        void message.error("Vui lòng chọn sản phẩm");
+        void message.error(t("Vui lòng chọn sản phẩm", lang));
         return;
       }
 
       if (!item) {
-        void message.error("Vui lòng chọn combo");
+        void message.error(t("Vui lòng chọn combo", lang));
         return;
       }
 
       // Validate order item
       const validation = validateOrderItem(item);
       if (!validation.isValid) {
-        void message.error(validation.detailsError || validation.giftsError || "Thông tin combo không hợp lệ");
+        void message.error(validation.detailsError || validation.giftsError || t("Thông tin combo không hợp lệ", lang));
         return;
       }
 
@@ -221,13 +224,13 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
         },
       });
 
-      void message.success("Đã cập nhật đơn hàng thành công");
+      void message.success(t("Đã cập nhật đơn hàng thành công", lang));
       form.resetFields();
       onSuccess?.();
       onClose();
     } catch (error) {
       if (error instanceof Error) {
-        void message.error(`Lỗi: ${error.message}`);
+        void message.error(`${t("Lỗi", lang)}: ${error.message}`);
       }
       console.error("Failed to update lead:", error);
     }
@@ -251,7 +254,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
       title={
         <Space>
           <EditOutlined />
-          <span>Sửa đơn hàng</span>
+          <span>{t("Sửa đơn hàng", lang)}</span>
           <Text type="secondary" style={{ fontWeight: 400, fontSize: 13 }}>
             {lead.leadCode}
           </Text>
@@ -264,7 +267,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
       footer={[
         <div key="footer" className={styles.footer}>
           <button key="cancel" onClick={handleClose} className={styles.cancelBtn}>
-            Hủy
+            {t("Hủy", lang)}
           </button>
           <button
             key="submit"
@@ -272,7 +275,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             className={styles.submitBtn}
             disabled={updateLeadMutation.isPending || isLoading || !item || !selectedProductId}
           >
-            {updateLeadMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+            {updateLeadMutation.isPending ? t("Đang lưu...", lang) : t("Lưu thay đổi", lang)}
           </button>
         </div>,
       ]}
@@ -291,40 +294,40 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
           }}
         >
           <Divider titlePlacement="left" styles={{ content: { marginInlineStart: 0 } }} plain style={{ marginTop: 0 }}>
-            <UserOutlined /> Thông tin khách hàng
+            <UserOutlined /> {t("Thông tin khách hàng", lang)}
           </Divider>
 
           <Form.Item
             name="customerName"
-            label="Tên khách hàng"
-            rules={[{ required: true, message: "Vui lòng nhập tên khách hàng" }]}
+            label={t("Tên khách hàng", lang)}
+            rules={[{ required: true, message: t("Vui lòng nhập tên khách hàng", lang) }]}
           >
             <Input
               prefix={<UserOutlined style={{ color: "#bfbfbf" }} />}
-              placeholder="Nhập tên khách hàng"
+              placeholder={t("Nhập tên khách hàng", lang)}
               size="large"
             />
           </Form.Item>
 
-          <Form.Item name="phone" label="Số điện thoại">
+          <Form.Item name="phone" label={t("Số điện thoại", lang)}>
             <Input
               prefix={<PhoneOutlined style={{ color: "#bfbfbf" }} />}
-              placeholder="Nhập số điện thoại"
+              placeholder={t("Nhập số điện thoại", lang)}
               size="large"
             />
           </Form.Item>
 
-          <Form.Item name="address" label="Địa chỉ">
+          <Form.Item name="address" label={t("Địa chỉ", lang)}>
             <TextArea
               rows={2}
-              placeholder="Nhập địa chỉ giao hàng"
+              placeholder={t("Nhập địa chỉ giao hàng", lang)}
             />
           </Form.Item>
 
-          <Form.Item name="note" label="Ghi chú">
+          <Form.Item name="note" label={t("Ghi chú", lang)}>
             <TextArea
               rows={2}
-              placeholder="Nhập ghi chú đơn hàng (tùy chọn)"
+              placeholder={t("Nhập ghi chú đơn hàng (tùy chọn)", lang)}
             />
           </Form.Item>
 
@@ -332,18 +335,18 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             name="status"
             label={
               <Space>
-                <span>Trạng thái đơn hàng</span>
+                <span>{t("Trạng thái đơn hàng", lang)}</span>
                 {lead.isConverted && (
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    (Lead đã chốt - không thể thay đổi)
+                    {t("(Lead đã chốt - không thể thay đổi)", lang)}
                   </Text>
                 )}
               </Space>
             }
-            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+            rules={[{ required: true, message: t("Vui lòng chọn trạng thái", lang) }]}
           >
             <Select
-              placeholder="-- Chọn trạng thái --"
+              placeholder={t("-- Chọn trạng thái --", lang)}
               size="large"
               disabled={lead.isConverted}
               options={(Object.values(LeadStatus) as LeadStatus[]).map((status) => ({
@@ -354,14 +357,14 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
           </Form.Item>
 
           <Divider titlePlacement="left" styles={{ content: { marginInlineStart: 0 } }} plain>
-            <ShopOutlined /> Sản phẩm & Combo
+            <ShopOutlined /> {t("Sản phẩm & Combo", lang)}
           </Divider>
 
           {/* Product Selection */}
           <div className={styles.comboSection}>
             <div className={styles.fieldLabel}>
               <ProductOutlined />
-              <Text strong>Chọn Sản phẩm:</Text>
+              <Text strong>{t("Chọn Sản phẩm:", lang)}</Text>
             </div>
             {productsLoading ? (
               <Spin size="small" />
@@ -371,7 +374,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
                 value={selectedProductId}
                 onChange={handleProductChange}
                 style={{ width: "100%", marginTop: 8 }}
-                placeholder="-- Chọn sản phẩm --"
+                placeholder={t("-- Chọn sản phẩm --", lang)}
                 showSearch
                 filterOption={(input, option) =>
                   (option?.label as string ?? "").toLowerCase().includes(input.toLowerCase())
@@ -389,14 +392,14 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
             <div className={styles.comboSection}>
               <div className={styles.fieldLabel}>
                 <ShopOutlined />
-                <Text strong>Chọn Combo:</Text>
+                <Text strong>{t("Chọn Combo:", lang)}</Text>
               </div>
               {combosLoading ? (
                 <Spin size="small" />
               ) : combos.length === 0 ? (
                 <Alert
                   type="warning"
-                  title="Sản phẩm này chưa có combo nào"
+                  title={t("Sản phẩm này chưa có combo nào", lang)}
                   showIcon
                   style={{ marginTop: 8 }}
                 />
@@ -406,14 +409,14 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
                   value={selectedComboId}
                   onChange={handleComboChange}
                   style={{ width: "100%", marginTop: 8 }}
-                  placeholder="-- Chọn combo --"
+                  placeholder={t("-- Chọn combo --", lang)}
                   showSearch
                   filterOption={(input, option) =>
                     (option?.label as string ?? "").toLowerCase().includes(input.toLowerCase())
                   }
                   options={combos.map((combo) => ({
                     value: combo._id,
-                    label: `${combo.name} (${combo.packageQuantity} SP${combo.giftQuantity > 0 ? ` | ${combo.giftQuantity} quà` : ""}) - ${formatMNT(combo.sellingPrice)} ₮`,
+                    label: `${combo.name} (${combo.packageQuantity} ${t("SP", lang)}${combo.giftQuantity > 0 ? ` | ${combo.giftQuantity} ${t("quà", lang)}` : ""}) - ${formatMNT(combo.sellingPrice)} ₮`,
                   }))}
                 />
               )}
@@ -426,12 +429,12 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
               <Divider plain style={{ margin: "16px 0" }}>
                 <Space>
                   <SwapOutlined />
-                  <Text strong>Chi tiết biến thể</Text>
+                  <Text strong>{t("Chi tiết biến thể", lang)}</Text>
                 </Space>
               </Divider>
               {productLoading ? (
                 <div className={styles.loading}>
-                  <Spin /> Đang tải thông tin sản phẩm...
+                  <Spin /> {t("Đang tải thông tin sản phẩm...", lang)}
                 </div>
               ) : (
                 <OrderProductDetail
@@ -445,21 +448,21 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
           )}
 
           <Divider titlePlacement="left" styles={{ content: { marginInlineStart: 0 } }} plain>
-            <DollarOutlined /> Giá & Tỷ giá
+            <DollarOutlined /> {t("Giá & Tỷ giá", lang)}
           </Divider>
 
           <div style={{ display: "flex", gap: 12 }}>
             <Form.Item
               name="sellingPrice"
-              label="Đơn giá (MNT)"
+              label={t("Đơn giá (MNT)", lang)}
               style={{ flex: 1 }}
-              rules={[{ required: true, message: "Vui lòng nhập đơn giá" }]}
+              rules={[{ required: true, message: t("Vui lòng nhập đơn giá", lang) }]}
             >
               <InputNumber<number>
                 min={0}
                 step={1000}
                 style={{ width: "100%" }}
-                placeholder="Đơn giá"
+                placeholder={t("Đơn giá", lang)}
                 formatter={(value) =>
                   value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""
                 }
@@ -476,7 +479,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
               />
             </Form.Item>
 
-            <Form.Item label="Tỷ giá (1 ₮ = ? VND)" style={{ flex: 1 }}>
+            <Form.Item label={t("Tỷ giá (1 ₮ = ? VND)", lang)} style={{ flex: 1 }}>
               <InputNumber<number>
                 value={exchangeRateData?.rate ?? lead.exchangeRate}
                 min={0}
@@ -500,7 +503,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
               type="info"
               title={
                 <Space>
-                  <Text>Thành tiền:</Text>
+                  <Text>{t("Thành tiền:", lang)}</Text>
                   <Text strong style={{ color: "#1890ff", fontSize: 16 }}>
                     {formatMNT(item.subtotal)} ₮
                   </Text>

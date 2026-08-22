@@ -13,6 +13,8 @@ import { useNotificationStore } from "@/store/notification.store";
 import type { NotificationItem } from "@/types/notification";
 import NotificationItemRow from "@/components/notifications/NotificationItemRow";
 import "@/components/notifications/notification.css";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 type ReadFilter = "all" | "unread";
 type DateFilter = "1" | "3" | "7" | "all";
@@ -37,6 +39,7 @@ const ACTIVE_FILTERS: { key: ActiveFilter; label: string }[] = [
 ];
 
 export default function NotificationsPage() {
+  const lang = useLanguageStore((s) => s.language);
   const canView = useCan("notification.view");
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const [readFilter, setReadFilter] = useState<ReadFilter>("all");

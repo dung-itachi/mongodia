@@ -17,6 +17,8 @@ import { Switch, Image, Tag } from "antd";
 import { EditOutlined, DeleteOutlined, GiftOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { ComboListItem } from "@/hooks/useCombos";
 import { formatMNT } from "@/lib/format";
 
@@ -35,6 +37,7 @@ export default function ComboTable({
   onDelete,
   onToggleActive,
 }: ComboTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const getProductName = useCallback((product: ComboListItem["product"]) => {
     if (typeof product === "object" && product !== null) {
       return (product as { name: string }).name;
@@ -52,7 +55,7 @@ export default function ComboTable({
   const columns: Column[] = [
     {
       key: "image",
-      title: "Ảnh",
+      title: t("Ảnh", lang),
       width: 70,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -74,18 +77,18 @@ export default function ComboTable({
     },
     {
       key: "code",
-      title: "Mã",
+      title: t("Mã", lang),
       dataIndex: "code",
       width: 120,
     },
     {
       key: "name",
-      title: "Tên combo",
+      title: t("Tên combo", lang),
       dataIndex: "name",
     },
     {
       key: "product",
-      title: "Sản phẩm",
+      title: t("Sản phẩm", lang),
       width: 180,
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ComboListItem;
@@ -101,14 +104,14 @@ export default function ComboTable({
     },
     {
       key: "packageQuantity",
-      title: "SL SP",
+      title: t("SL SP", lang),
       dataIndex: "packageQuantity",
       width: 80,
       align: "center",
     },
     {
       key: "giftQuantity",
-      title: "SL quà",
+      title: t("SL quà", lang),
       dataIndex: "giftQuantity",
       width: 80,
       align: "center",
@@ -121,7 +124,7 @@ export default function ComboTable({
     },
     {
       key: "sellingPrice",
-      title: "Giá bán",
+      title: t("Giá bán", lang),
       dataIndex: "sellingPrice",
       width: 120,
       align: "right",
@@ -138,7 +141,7 @@ export default function ComboTable({
     },
     {
       key: "isActive",
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "isActive",
       width: 100,
       align: "center",
@@ -149,8 +152,8 @@ export default function ComboTable({
           <Switch
             checked={active}
             onChange={(checked) => onToggleActive?.(item, checked)}
-            checkedChildren="Active"
-            unCheckedChildren="Off"
+            checkedChildren={t("Active", lang)}
+            unCheckedChildren={t("Off", lang)}
             size="small"
           />
         );
@@ -158,7 +161,7 @@ export default function ComboTable({
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 100,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -188,7 +191,7 @@ export default function ComboTable({
       loading={loading}
       rowKey="_id"
       pagination={false}
-      emptyText="Chưa có combo nào"
+      emptyText={t("Chưa có combo nào", lang)}
       scroll={{ y: 400 }}
     />
   );

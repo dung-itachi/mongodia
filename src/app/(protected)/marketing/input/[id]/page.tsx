@@ -19,6 +19,8 @@ import { PageContainer, PageHeader } from "@/components/common";
 import { useMarketingLead, useDeleteLead } from "@/hooks/useMarketingLeads";
 import { LeadDetailView } from "@/components/marketing/leads/LeadDetailView";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 // =============================================================================
 // Main Page
@@ -33,6 +35,7 @@ export default function LeadDetailPage({
   const message = useMessage();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const lang = useLanguageStore((s) => s.language);
 
   const { data: lead, loading, error } = useMarketingLead(id);
   const deleteMutation = useDeleteLead();
@@ -57,12 +60,12 @@ export default function LeadDetailPage({
 
     deleteMutation.mutate(lead._id, {
       onSuccess: () => {
-        void message.success("Xóa lead thành công");
+        void message.success(t("Xóa lead thành công", lang));
         setDeleteConfirmOpen(false);
         void router.push("/marketing/input");
       },
       onError: (err) => {
-        void message.error(`Lỗi: ${err.message}`);
+        void message.error(`${t("Lỗi:", lang)} ${err.message}`);
         setDeleteConfirmOpen(false);
       },
     });
@@ -75,15 +78,15 @@ export default function LeadDetailPage({
   return (
     <PageContainer>
       <PageHeader
-        title="Chi tiết Lead"
+        title={t("Chi tiết Lead", lang)}
         breadcrumb={[
-          { label: "Marketing", href: "/marketing" },
-          { label: "Nhập số", href: "/marketing/input" },
+          { label: t("Marketing", lang), href: "/marketing" },
+          { label: t("Nhập số", lang), href: "/marketing/input" },
           { label: lead?.leadCode ?? "..." },
         ]}
         actions={
           <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
-            Quay lại
+            {t("Quay lại", lang)}
           </Button>
         }
       />
@@ -130,22 +133,23 @@ function DeleteConfirmModal({
   onCancel: () => void;
 }) {
   const { Modal } = require("antd");
+  const lang = useLanguageStore((s) => s.language);
 
   return (
     <Modal
-      title="Xác nhận xóa Lead"
+      title={t("Xác nhận xóa Lead", lang)}
       open={open}
-      okText="Xóa"
+      okText={t("Xóa", lang)}
       okButtonProps={{ danger: true, loading }}
-      cancelText="Hủy"
+      cancelText={t("Hủy", lang)}
       onCancel={onCancel}
       onOk={onConfirm}
     >
       <p>
-        Bạn có chắc muốn xóa lead <strong>{lead.leadCode}</strong> —{" "}
-        <strong>{lead.customerName}</strong> không?
+        {t("Bạn có chắc muốn xóa lead", lang)} <strong>{lead.leadCode}</strong> —{" "}
+        <strong>{lead.customerName}</strong>?
       </p>
-      <p style={{ color: "#8c8c8c", fontSize: 13 }}>Hành động này không thể hoàn tác.</p>
+      <p style={{ color: "#8c8c8c", fontSize: 13 }}>{t("Hành động này không thể hoàn tác.", lang)}</p>
     </Modal>
   );
 }

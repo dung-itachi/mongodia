@@ -13,6 +13,8 @@ import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Checkbox, Dropdown, Space, Tooltip } from "antd";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import {
   EyeOutlined,
   EditOutlined,
@@ -63,6 +65,7 @@ export default function OrdersPage() {
 
 function OrdersPageInner() {
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -146,10 +149,10 @@ function OrdersPageInner() {
   const handleRefresh = useCallback(async () => {
     try {
       await refetch();
-      message.success("Đã làm mới đơn hàng");
+      message.success(t("Đã làm mới đơn hàng", lang));
     } catch (err) {
       message.error(
-        err instanceof Error ? err.message : "Làm mới đơn hàng thất bại"
+        err instanceof Error ? err.message : t("Làm mới đơn hàng thất bại", lang)
       );
     }
   }, [refetch]);
@@ -166,14 +169,14 @@ function OrdersPageInner() {
     try {
       const data = await statsMutation.mutateAsync({
         keyword: debouncedKeyword,
-        status, // urlStatus filter để funnel phản ánh view hiện tại
+        status: status as OrderStatus | undefined, // urlStatus filter để funnel phản ánh view hiện tại
         dateFrom: dateRange?.[0],
         dateTo: dateRange?.[1],
       });
       setStatsData(data);
     } catch (err) {
       message.error(
-        err instanceof Error ? err.message : "Lấy thống kê thất bại"
+        err instanceof Error ? err.message : t("Lấy thống kê thất bại", lang)
       );
       setStatsOpen(false);
     }
@@ -225,16 +228,16 @@ function OrdersPageInner() {
       maximumFractionDigits: 0,
     });
 
-    const labelText = target.label === "Giao TC" ? "Thành công" : target.label;
-    const typeText = target.label === "Giao TC" ? "giao hàng thành công" :
-                     target.label === "Hoàn" ? "hoàn đơn hàng" :
-                     `${target.label.toLowerCase()} đơn hàng`;
+    const labelText = target.label === t("Giao TC", lang) ? t("Thành công", lang) : target.label;
+    const typeText = target.label === t("Giao TC", lang) ? t("giao hàng thành công", lang) :
+                     target.label === t("Hoàn", lang) ? t("hoàn đơn hàng", lang) :
+                     `${target.label.toLowerCase()} ${t("đơn hàng", lang)}`;
 
     return {
-      title: `${labelText} đơn hàng`,
+      title: `${labelText} ${t("đơn hàng", lang)}`,
       content: (
         <div style={{ textAlign: "left" }}>
-          <p>Bạn có chắc chắn muốn {typeText}?</p>
+          <p>{t("Bạn có chắc chắn muốn", lang)} {typeText}?</p>
           <div style={{
             background: "#f5f5f5",
             padding: "12px",
@@ -242,10 +245,10 @@ function OrdersPageInner() {
             marginTop: "12px"
           }}>
             <p style={{ margin: "0 0 8px 0", fontWeight: 600 }}>
-              {order.customerName || "Khách hàng"}
+              {order.customerName || t("Khách hàng", lang)}
             </p>
             <p style={{ margin: "0 0 4px 0", color: "#666" }}>
-              📞 {order.customerPhone || "Không có SĐT"}
+              📞 {order.customerPhone || t("Không có SĐT", lang)}
             </p>
             <p style={{ margin: "0 0 4px 0", color: "#666" }}>
               📦 {totals.comboName}
@@ -258,7 +261,7 @@ function OrdersPageInner() {
             </p>
           </div>
           <p style={{ marginTop: "12px", color: "#666", fontSize: "12px" }}>
-            Mã đơn: <strong>{order.orderCode}</strong>
+            {t("Mã đơn", lang)}: <strong>{order.orderCode}</strong>
           </p>
         </div>
       ),
@@ -279,12 +282,12 @@ function OrdersPageInner() {
       const targetLabel =
         ORDER_STATUS_LABELS[quickActionTarget.targetStatus as OrderStatus] ??
         quickActionTarget.targetStatus;
-      message.success(`Đã chuyển đơn sang "${targetLabel}"`);
+      message.success(`${t("Đã chuyển đơn sang", lang)} "${targetLabel}"`);
       setQuickActionTarget(null);
       void refetch();
     } catch (error) {
       message.error(
-        error instanceof Error ? error.message : "Chuyển trạng thái thất bại"
+        error instanceof Error ? error.message : t("Chuyển trạng thái thất bại", lang)
       );
       // Refetch để danh sách phản ánh trạng thái mới nhất trong DB
       // (tránh user click lại đơn đã đổi trạng thái do call trước lỗi).
@@ -301,11 +304,11 @@ function OrdersPageInner() {
     setDeleteLoading(true);
     try {
       await deleteMutation.mutateAsync(deleteId);
-      message.success("Xóa đơn hàng thành công");
+      message.success(t("Xóa đơn hàng thành công", lang));
       setDeleteId(null);
       void refetch();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "Xóa đơn hàng thất bại");
+      message.error(error instanceof Error ? error.message : t("Xóa đơn hàng thất bại", lang));
     } finally {
       setDeleteLoading(false);
     }
@@ -327,14 +330,14 @@ function OrdersPageInner() {
     },
     {
       key: "orderCode",
-      title: "Mã đơn",
+      title: t("Mã đơn", lang),
       dataIndex: "orderCode",
       width: 140,
       render: (value: unknown) => <span>{String(value)}</span>,
     },
     {
       key: "customerName",
-      title: "Khách hàng",
+      title: t("Khách hàng", lang),
       dataIndex: "customerName",
       width: 180,
       render: (value: unknown, record: Record<string, unknown>) => (
@@ -350,13 +353,13 @@ function OrdersPageInner() {
     },
     {
       key: "combo",
-      title: "Combo",
+      title: t("Combo", lang),
       width: 200,
       render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).comboName,
     },
     {
       key: "product",
-      title: "Sản phẩm",
+      title: t("Sản phẩm", lang),
       width: 180,
       render: (_: unknown, record: Record<string, unknown>) => {
         const order = record as unknown as OrderListItem;
@@ -369,7 +372,7 @@ function OrdersPageInner() {
     },
     {
       key: "comboProduct",
-      title: "Combo sản phẩm",
+      title: t("Combo sản phẩm", lang),
       width: 180,
       render: (_: unknown, record: Record<string, unknown>) => {
         const order = record as unknown as OrderListItem;
@@ -382,21 +385,21 @@ function OrdersPageInner() {
     },
     {
       key: "totalProducts",
-      title: "Tổng SP",
+      title: t("Tổng SP", lang),
       width: 90,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).productQuantity || "-",
     },
     {
       key: "totalGifts",
-      title: "Tổng quà",
+      title: t("Tổng quà", lang),
       width: 90,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).giftQuantity || "-",
     },
     {
       key: "amountMNT",
-      title: "Số tiền (MNT)",
+      title: t("Số tiền (MNT)", lang),
       width: 140,
       align: "right" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -410,7 +413,7 @@ function OrdersPageInner() {
     },
     {
       key: "amountVND",
-      title: "Số tiền (VND quy đổi)",
+      title: t("Số tiền (VND quy đổi)", lang),
       width: 160,
       align: "right" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -422,7 +425,7 @@ function OrdersPageInner() {
           maximumFractionDigits: 0,
         });
         return (
-          <Tooltip title={`Tỷ giá: 1 MNT = ${rate} VND`}>
+          <Tooltip title={`${t("Tỷ giá: 1 MNT =", lang)} ${rate} VND`}>
             <span style={{ fontWeight: 500 }}>{formatter.format(vndSubtotal)}</span>
           </Tooltip>
         );
@@ -430,7 +433,7 @@ function OrdersPageInner() {
     },
     {
       key: "saleEmployee",
-      title: "Sale",
+      title: t("Sale", lang),
       dataIndex: "saleEmployee",
       width: 150,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -448,7 +451,7 @@ function OrdersPageInner() {
     },
     {
       key: "status",
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "status",
       width: 130,
       render: (value: unknown) => (
@@ -459,8 +462,8 @@ function OrdersPageInner() {
       // Cột "Xác nhận gọi" — chỉ hiển thị khi đang filter CONFIRMED.
       key: "confirmCall",
       title: (
-        <Tooltip title="Đánh dấu đã gọi điện xác nhận với khách trước khi đóng gói">
-          <span>Xác nhận</span>
+        <Tooltip title={t("Đánh dấu đã gọi điện xác nhận với khách trước khi đóng gói", lang)}>
+          <span>{t("Xác nhận", lang)}</span>
         </Tooltip>
       ),
       dataIndex: "isCalledForConfirmation",
@@ -474,8 +477,8 @@ function OrdersPageInner() {
           <Tooltip
             title={
               checked
-                ? "Đã gọi xác nhận (click để bỏ)"
-                : "Chưa gọi xác nhận — click để đánh dấu"
+                ? t("Đã gọi xác nhận (click để bỏ)", lang)
+                : t("Chưa gọi xác nhận — click để đánh dấu", lang)
             }
           >
             <Checkbox
@@ -491,12 +494,12 @@ function OrdersPageInner() {
                   message.error(
                     err instanceof Error
                       ? err.message
-                      : "Không thể cập nhật xác nhận"
+                      : t("Không thể cập nhật xác nhận", lang)
                   );
                 }
               }}
             >
-              {checked ? "Đã gọi" : "Chưa gọi"}
+              {checked ? t("Đã gọi", lang) : t("Chưa gọi", lang)}
             </Checkbox>
           </Tooltip>
         );
@@ -504,7 +507,7 @@ function OrdersPageInner() {
     },
     {
       key: "totalAmount",
-      title: "Tổng tiền",
+      title: t("Tổng tiền", lang),
       dataIndex: "totalAmount",
       width: 140,
       align: "right" as const,
@@ -519,7 +522,7 @@ function OrdersPageInner() {
     },
     {
       key: "createdAt",
-      title: "Ngày tạo",
+      title: t("Ngày tạo", lang),
       dataIndex: "createdAt",
       width: 120,
       render: (value: unknown) => {
@@ -533,7 +536,7 @@ function OrdersPageInner() {
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: showQuickActions || showShippingActions ? 280 : 100,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -555,13 +558,13 @@ function OrdersPageInner() {
                 type="text"
                 icon={<EyeOutlined />}
                 size="small"
-                aria-label="Xem chi tiết"
+                aria-label={t("Xem chi tiết", lang)}
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/orders/${order._id}`);
                 }}
               >
-                Xem
+                {t("Xem", lang)}
               </Button>
               {renderableActions.map((action) => {
                 const isDanger = action.color === "red";
@@ -589,7 +592,7 @@ function OrdersPageInner() {
                       if (gatingBlock) {
                         e.stopPropagation();
                         message.warning(
-                          "Cần đánh dấu 'Đã gọi xác nhận' trước khi đóng gói"
+                          t("Cần đánh dấu 'Đã gọi xác nhận' trước khi đóng gói", lang)
                         );
                         return;
                       }
@@ -603,7 +606,7 @@ function OrdersPageInner() {
                 return gatingBlock ? (
                   <Tooltip
                     key={action.targetStatus}
-                    title="Tick 'Đã gọi xác nhận' ở cột Xác nhận trước"
+                    title={t("Tick 'Đã gọi xác nhận' ở cột Xác nhận trước", lang)}
                   >
                     <span>{button}</span>
                   </Tooltip>
@@ -627,38 +630,38 @@ function OrdersPageInner() {
                 type="text"
                 icon={<EyeOutlined />}
                 size="small"
-                aria-label="Xem chi tiết"
+                aria-label={t("Xem chi tiết", lang)}
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/orders/${order._id}`);
                 }}
               >
-                Xem
+                {t("Xem", lang)}
               </Button>
               <Button
                 type="primary"
                 icon={<CheckCircleOutlined />}
                 size="small"
-                aria-label="Giao thành công"
+                aria-label={t("Giao thành công", lang)}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleQuickAction(order, "DELIVERED", "Giao TC");
+                  handleQuickAction(order, "DELIVERED", t("Giao TC", lang));
                 }}
               >
-                Giao TC
+                {t("Giao TC", lang)}
               </Button>
               <Button
                 type="default"
                 danger
                 icon={<UndoOutlined />}
                 size="small"
-                aria-label="Hoàn đơn"
+                aria-label={t("Hoàn đơn", lang)}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleQuickAction(order, "RETURNED", "Hoàn");
+                  handleQuickAction(order, "RETURNED", t("Hoàn", lang));
                 }}
               >
-                Hoàn
+                {t("Hoàn", lang)}
               </Button>
             </Space>
           );
@@ -674,13 +677,13 @@ function OrdersPageInner() {
                 {
                   key: "view",
                   icon: <EyeOutlined />,
-                  label: "Xem chi tiết",
+                  label: t("Xem chi tiết", lang),
                   onClick: () => router.push(`/orders/${order._id}`),
                 },
                 {
                   key: "edit",
                   icon: <EditOutlined />,
-                  label: "Sửa",
+                  label: t("Sửa", lang),
                   disabled: order.status === "DELIVERED" || order.status === "CANCELLED",
                   onClick: () => router.push(`/orders/${order._id}?mode=edit`),
                 },
@@ -688,7 +691,7 @@ function OrdersPageInner() {
                 {
                   key: "delete",
                   icon: <DeleteOutlined />,
-                  label: "Xóa",
+                  label: t("Xóa", lang),
                   danger: true,
                   disabled: order.status === "DELIVERED",
                   onClick: () => setDeleteId(order._id),
@@ -700,7 +703,7 @@ function OrdersPageInner() {
               type="text"
               icon={<MoreOutlined />}
               size="small"
-              aria-label="Thao tác đơn hàng"
+              aria-label={t("Thao tác đơn hàng", lang)}
             />
           </Dropdown>
         );
@@ -718,7 +721,7 @@ function OrdersPageInner() {
     showSizeChanger: true,
     showQuickJumper: true,
     pageSizeOptions: ["10", "20", "50", "100"],
-    showTotal: (totalCount: number) => `Tổng: ${totalCount}`,
+    showTotal: (totalCount: number) => `${t("Tổng", lang)}: ${totalCount}`,
     onChange: (newPage: number, newPageSize: number) => {
       setPage(newPage);
       setPageSize(newPageSize);
@@ -730,9 +733,9 @@ function OrdersPageInner() {
     {
       key: "status",
       type: "select" as const,
-      label: "Trạng thái",
+      label: t("Trạng thái", lang),
       options: [
-        { value: "", label: "Tất cả trạng thái" },
+        { value: "", label: t("Tất cả trạng thái", lang) },
         ...Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({
           value,
           label,
@@ -742,9 +745,9 @@ function OrdersPageInner() {
     {
       key: "dateRange",
       type: "dateRange" as const,
-      label: "Ngày tạo",
+      label: t("Ngày tạo", lang),
     },
-  ], []);
+  ], [lang]);
 
   const filterValues = useMemo(() => ({
     status: status ?? "",
@@ -753,26 +756,26 @@ function OrdersPageInner() {
 
   // Title dynamic theo status filter (từ URL ?status=...)
   const pageTitle = useMemo(() => {
-    if (!status) return "Đơn hàng";
-    if (isReconciliationView(status)) return "Đối soát đơn hàng";
+    if (!status) return t("Đơn hàng", lang);
+    if (isReconciliationView(status)) return t("Đối soát đơn hàng", lang);
     const label = ORDER_STATUS_LABELS[status as OrderStatus];
-    return label ? `Đơn hàng · ${label}` : "Đơn hàng";
-  }, [status]);
+    return label ? `${t("Đơn hàng", lang)} · ${label}` : t("Đơn hàng", lang);
+  }, [status, lang]);
 
   const titleTooltip = useMemo(() => {
     if (!status || isReconciliationView(status)) return;
     const tooltipMap: Record<OrderStatus, string> = {
-      [OrderStatus.WAIT_CONFIRM]: "Sale vừa chốt đơn, chưa xác nhận lại với khách",
-      [OrderStatus.CONFIRMED]: "Đơn đã được xác nhận, sẵn sàng chuyển giao cho kho",
-      [OrderStatus.PACKING]: "Nhân viên kho đang chuẩn bị và đóng gói đơn hàng",
-      [OrderStatus.SHIPPING]: "Đơn hàng đang được vận chuyển đến khách",
-      [OrderStatus.DELIVERED]: "Giao hàng thành công, đang chờ đối soát với shipper",
-      [OrderStatus.RETURNED]: "Khách không nhận hàng, đơn hàng đã được hoàn về",
-      [OrderStatus.RECONCILED]: "Shipper đã trả tiền — đây mới là doanh thu thực",
-      [OrderStatus.CANCELLED]: "Đơn hàng đã bị hủy, không được tính doanh thu",
+      [OrderStatus.WAIT_CONFIRM]: t("Sale vừa chốt đơn, chưa xác nhận lại với khách", lang),
+      [OrderStatus.CONFIRMED]: t("Đơn đã được xác nhận, sẵn sàng chuyển giao cho kho", lang),
+      [OrderStatus.PACKING]: t("Nhân viên kho đang chuẩn bị và đóng gói đơn hàng", lang),
+      [OrderStatus.SHIPPING]: t("Đơn hàng đang được vận chuyển đến khách", lang),
+      [OrderStatus.DELIVERED]: t("Giao hàng thành công, đang chờ đối soát với shipper", lang),
+      [OrderStatus.RETURNED]: t("Khách không nhận hàng, đơn hàng đã được hoàn về", lang),
+      [OrderStatus.RECONCILED]: t("Shipper đã trả tiền — đây mới là doanh thu thực", lang),
+      [OrderStatus.CANCELLED]: t("Đơn hàng đã bị hủy, không được tính doanh thu", lang),
     };
     return tooltipMap[status as OrderStatus];
-  }, [status]);
+  }, [status, lang]);
 
   // Khi URL ?status=RECONCILED → render ReconciliationPanel (giao diện riêng)
   if (isReconciliationView(status)) {
@@ -781,11 +784,11 @@ function OrdersPageInner() {
         <PageHeader
           title={pageTitle}
           titleTooltip={titleTooltip}
-          subtitle="Đối soát các đơn Giao thành công & Hoàn trả sang Đã đối soát"
+          subtitle={t("Đối soát các đơn Giao thành công & Hoàn trả sang Đã đối soát", lang)}
           breadcrumb={[
-            { label: "Trang chủ", href: "/" },
-            { label: "Đơn hàng" },
-            { label: "Đối soát" },
+            { label: t("Trang chủ", lang), href: "/" },
+            { label: t("Đơn hàng", lang) },
+            { label: t("Đối soát", lang) },
           ]}
           actions={
             <Space>
@@ -794,7 +797,7 @@ function OrdersPageInner() {
                 icon={<BarChartOutlined />}
                 onClick={() => void handleOpenStatistics()}
               >
-                Thống kê đơn hàng
+                {t("Thống kê đơn hàng", lang)}
               </Button>
               <Button
                 type="primary"
@@ -802,7 +805,7 @@ function OrdersPageInner() {
                 onClick={() => void handleRefresh()}
                 loading={loading}
               >
-                Làm mới đơn hàng
+                {t("Làm mới đơn hàng", lang)}
               </Button>
             </Space>
           }
@@ -824,10 +827,10 @@ function OrdersPageInner() {
       <PageHeader
         title={pageTitle}
         titleTooltip={titleTooltip}
-        subtitle={`${total} đơn hàng`}
+        subtitle={`${total} ${t("đơn hàng", lang)}`}
           breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Đơn hàng" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Đơn hàng", lang) },
         ]}
         actions={
           <Space>
@@ -836,7 +839,7 @@ function OrdersPageInner() {
               icon={<BarChartOutlined />}
               onClick={() => void handleOpenStatistics()}
             >
-              Thống kê đơn hàng
+              {t("Thống kê đơn hàng", lang)}
             </Button>
             <Button
               type="primary"
@@ -844,7 +847,7 @@ function OrdersPageInner() {
               onClick={() => void handleRefresh()}
               loading={loading}
             >
-              Làm mới đơn hàng
+              {t("Làm mới đơn hàng", lang)}
             </Button>
           </Space>
         }
@@ -854,7 +857,7 @@ function OrdersPageInner() {
         <TableToolbar
           searchValue={keyword}
           onSearchChange={setKeyword}
-          searchPlaceholder="Tìm mã đơn, tên khách hàng..."
+          searchPlaceholder={t("Tìm mã đơn, tên khách hàng...", lang)}
           onRefresh={() => void handleRefresh()}
           loading={loading}
         />
@@ -872,11 +875,11 @@ function OrdersPageInner() {
           <SkeletonTable rows={10} columns={14} />
         ) : orders.length === 0 ? (
           <EmptyState
-            title="Chưa có đơn hàng"
+            title={t("Chưa có đơn hàng", lang)}
             description={
               debouncedKeyword || status || dateRange
-                ? "Không tìm thấy đơn hàng nào phù hợp với bộ lọc"
-                : "Bắt đầu bằng cách tạo đơn hàng mới"
+                ? t("Không tìm thấy đơn hàng nào phù hợp với bộ lọc", lang)
+                : t("Bắt đầu bằng cách tạo đơn hàng mới", lang)
             }
           />
         ) : (
@@ -893,10 +896,10 @@ function OrdersPageInner() {
 
       <ConfirmDialog
         open={!!deleteId}
-        title="Xóa đơn hàng"
-        content="Bạn có chắc chắn muốn xóa đơn hàng này? Hành động này không thể hoàn tác."
+        title={t("Xóa đơn hàng", lang)}
+        content={t("Bạn có chắc chắn muốn xóa đơn hàng này? Hành động này không thể hoàn tác.", lang)}
         type="delete"
-        confirmText="Xóa"
+        confirmText={t("Xóa", lang)}
         loading={deleteLoading}
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
@@ -906,8 +909,12 @@ function OrdersPageInner() {
         open={!!quickActionTarget}
         title={quickActionTarget ? getQuickActionContent(quickActionTarget).title : ""}
         content={quickActionTarget ? getQuickActionContent(quickActionTarget).content : ""}
-        type={quickActionTarget ? getQuickActionContent(quickActionTarget).type : "warning"}
-        confirmText={quickActionTarget?.label === "Giao TC" ? "Thành công" : (quickActionTarget?.label ?? "Xác nhận")}
+        type={(() => {
+          if (!quickActionTarget) return "warning" as const;
+          const targetType = getQuickActionContent(quickActionTarget).type;
+          return (targetType === "delete" || targetType === "warning" || targetType === "confirm") ? targetType : "warning" as const;
+        })()}
+        confirmText={quickActionTarget?.label === t("Giao TC", lang) ? t("Thành công", lang) : (quickActionTarget?.label ?? t("Xác nhận", lang))}
         loading={quickActionLoading}
         onConfirm={handleConfirmQuickAction}
         onCancel={() => setQuickActionTarget(null)}

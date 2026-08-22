@@ -6,6 +6,8 @@
 
 import { Form, Input, InputNumber, Switch } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type {
   GiftListItem,
   CreateGiftInput,
@@ -28,6 +30,7 @@ export default function GiftForm({
   onSubmit,
 }: GiftFormProps) {
   const [form] = Form.useForm();
+  const lang = useLanguageStore((s) => s.language);
   const isEditing = !!editingItem;
 
   const handleSubmit = () => {
@@ -39,11 +42,11 @@ export default function GiftForm({
   return (
     <DrawerForm
       open={open}
-      title={isEditing ? "Sửa quà tặng" : "Thêm quà tặng"}
+      title={isEditing ? t("Sửa quà tặng", lang) : t("Thêm quà tặng", lang)}
       loading={loading}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={isEditing ? "Cập nhật" : "Tạo mới"}
+      submitText={isEditing ? t("Cập nhật", lang) : t("Tạo mới", lang)}
       width={500}
     >
       <Form
@@ -63,22 +66,22 @@ export default function GiftForm({
       >
         <Form.Item
           name="name"
-          label="Tên quà"
+          label={t("Tên quà", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập tên quà" },
-            { min: 2, message: "Tên tối thiểu 2 ký tự" },
-            { max: 100, message: "Tên tối đa 100 ký tự" },
+            { required: true, message: t("Vui lòng nhập tên quà", lang) },
+            { min: 2, message: t("Tên tối thiểu 2 ký tự", lang) },
+            { max: 100, message: t("Tên tối đa 100 ký tự", lang) },
           ]}
         >
-          <Input placeholder="VD: Dầu gội, Khăn mặt" />
+          <Input placeholder={t("VD: Dầu gội, Khăn mặt", lang)} />
         </Form.Item>
 
         {!isEditing && (
           <Form.Item
             name="stockQuantity"
-            label="Tồn kho ban đầu"
+            label={t("Tồn kho ban đầu", lang)}
             rules={[
-              { required: true, message: "Vui lòng nhập tồn kho ban đầu" },
+              { required: true, message: t("Vui lòng nhập tồn kho ban đầu", lang) },
             ]}
           >
             <InputNumber
@@ -92,7 +95,7 @@ export default function GiftForm({
         {isEditing && (
           <Form.Item
             name="isActive"
-            label="Trạng thái"
+            label={t("Trạng thái", lang)}
             valuePropName="checked"
           >
             <Switch />

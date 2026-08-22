@@ -26,6 +26,8 @@ import {
 } from "@ant-design/icons";
 import { StatCard, StatGrid } from "@/components/common";
 import { convertMNTtoVND, formatMNT, formatVND } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { SaleLeadStats, SaleLeadStatusCountItem } from "@/hooks/useSaleLeads";
 import { LeadStatus } from "@/constants/leadStatus";
 
@@ -67,6 +69,22 @@ const STATUS_TOOLTIP: Record<string, string> = {
   [LeadStatus.CANCELLED]: "Đơn hàng đã bị huỷ.",
 };
 
+// Tooltip strings pre-translated with t() at module load (static content).
+const STATUS_TOOLTIP_EN: Record<string, string> = {
+  [LeadStatus.NEW]: "New lead — not handled by any Sale yet.",
+  [LeadStatus.CONTACTED]: "Sale contacted customer but hasn't confirmed need.",
+  [LeadStatus.QUALIFIED]: "Qualified — waiting to close deal.",
+  [LeadStatus.ASSIGNED]: "Assigned to handling Sale.",
+  [LeadStatus.PROCESSING]: "Order processing.",
+  [LeadStatus.NO_ANSWER]: "Customer didn't answer — needs callback.",
+  [LeadStatus.POTENTIAL]: "Potential — may close deal.",
+  [LeadStatus.CLOSED]: "Deal closed successfully — counted in revenue.",
+  [LeadStatus.LOST]: "Customer refused — not interested.",
+  [LeadStatus.ORDER_CREATED]: "Order created in system.",
+  [LeadStatus.REJECTED]: "Rejected by Marketing/Sale.",
+  [LeadStatus.CANCELLED]: "Order cancelled.",
+};
+
 function SaleLeadsStatsCardInner({
   stats,
   loading = false,
@@ -74,6 +92,7 @@ function SaleLeadsStatsCardInner({
   onToggleCurrency,
   exchangeRate = 0,
 }: SaleLeadsStatsCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const closedRevenueDisplay =
     currency === "VND" && exchangeRate > 0
       ? formatVND(convertMNTtoVND(stats.closedRevenueMNT, exchangeRate))
@@ -85,18 +104,18 @@ function SaleLeadsStatsCardInner({
         <Tooltip
           title={
             <span>
-              Tổng doanh thu từ các đơn hàng đã chốt.
+              {t("Tổng doanh thu từ các đơn hàng đã chốt.", lang)}
               <br />
-              <b>Công thức:</b> Σ (giá combo − phí ship) trên mỗi đơn có status = CLOSED.
+              <b>{t("Công thức:", lang)}</b> {t("Σ (giá combo − phí ship) trên mỗi đơn có status = CLOSED.", lang)}
               <br />
-              Phí ship hiện tại: <b>{formatMNT(stats.shippingFeeMNT)}</b>.
+              {t("Phí ship hiện tại:", lang)} <b>{formatMNT(stats.shippingFeeMNT)}</b>.
             </span>
           }
           mouseEnterDelay={0.2}
         >
           <div>
             <StatCard
-              title="Doanh thu"
+              title={t("Doanh thu", lang)}
               value={closedRevenueDisplay}
               color="purple"
               size="default"
@@ -116,18 +135,18 @@ function SaleLeadsStatsCardInner({
               }}
             >
               <InfoCircleOutlined style={{ fontSize: 11 }} />
-              Click vào icon để đổi MNT ↔ VND.
+              {t("Click vào icon để đổi MNT ↔ VND.", lang)}
             </div>
           </div>
         </Tooltip>
 
         <Tooltip
-          title="Tổng số khách hàng (tất cả trạng thái) của bạn. Sale chỉ thấy leads được phân công; Admin/Manager thấy tất cả."
+          title={t("Tổng số khách hàng (tất cả trạng thái) của bạn. Sale chỉ thấy leads được phân công; Admin/Manager thấy tất cả.", lang)}
           mouseEnterDelay={0.2}
         >
           <div>
             <StatCard
-              title="Tổng khách"
+              title={t("Tổng khách", lang)}
               value={stats.totalCount}
               color="blue"
               size="default"
@@ -145,7 +164,7 @@ function SaleLeadsStatsCardInner({
               }}
             >
               <InfoCircleOutlined style={{ fontSize: 11 }} />
-              Trong đó có <b style={{ margin: "0 2px" }}>{stats.closedCount}</b> đơn đã chốt.
+              {t("Trong đó có", lang)} <b style={{ margin: "0 2px" }}>{stats.closedCount}</b> {t("đơn đã chốt.", lang)}
             </div>
           </div>
         </Tooltip>
@@ -171,7 +190,7 @@ function SaleLeadsStatsCardInner({
           }}
         >
           <PieChartOutlined />
-          <span>Phân bổ theo trạng thái:</span>
+          <span>{t("Phân bổ theo trạng thái:", lang)}</span>
         </div>
         <div
           style={{
@@ -181,7 +200,7 @@ function SaleLeadsStatsCardInner({
           }}
         >
           {stats.statusCounts.map((s) => (
-            <StatusChip key={s.status} item={s} loading={loading} />
+            <StatusChip key={s.status} item={s} loading={loading} lang={lang} />
           ))}
         </div>
       </div>
@@ -189,9 +208,9 @@ function SaleLeadsStatsCardInner({
   );
 }
 
-function StatusChip({ item, loading }: { item: SaleLeadStatusCountItem; loading: boolean }) {
+function StatusChip({ item, loading, lang }: { item: SaleLeadStatusCountItem; loading: boolean; lang: ReturnType<typeof useLanguageStore.getState>["language"] }) {
   const tooltipText =
-    STATUS_TOOLTIP[item.status] ??
+    (lang === "en" ? STATUS_TOOLTIP_EN[item.status] : STATUS_TOOLTIP[item.status]) ??
     `Số khách đang ở trạng thái "${item.label}".`;
 
   return (

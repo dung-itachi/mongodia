@@ -12,11 +12,6 @@ import styles from "./sale-leads.module.css";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 
-function getTranslated(key: string): string {
-  const language = useLanguageStore.getState().language;
-  return t(key, language);
-}
-
 export interface SaleLeadsToolbarProps {
   statusFilter: LeadStatus | "all";
   onStatusChange: (status: LeadStatus | "all") => void;
@@ -55,6 +50,7 @@ export default function SaleLeadsToolbar({
   total,
   onShowLegend,
 }: SaleLeadsToolbarProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [checkInput, setCheckInput] = useState("");
 
   const handleCheckSubmit = () => {
@@ -76,7 +72,7 @@ export default function SaleLeadsToolbar({
               onClick={() => onStatusChange(option.value)}
               className={statusFilter === option.value ? styles.activeFilter : ""}
             >
-              {getTranslated(option.labelKey)}
+              {t(option.labelKey)}
             </Button>
           ))}
         </div>
@@ -84,7 +80,7 @@ export default function SaleLeadsToolbar({
 
       <div className={styles.toolbarRight}>
         <Input.Search
-          placeholder={getTranslated("Nhập SĐT hoặc tên khách hàng để tra cứu...")}
+          placeholder={t("Nhập SĐT hoặc tên khách hàng để tra cứu...", lang)}
           value={checkCustomerValue ?? checkInput}
           onChange={(e) => {
             const val = e.target.value;
@@ -99,20 +95,20 @@ export default function SaleLeadsToolbar({
               icon={<SearchOutlined />}
               className={styles.checkCustomerToolbarBtn}
             >
-              {getTranslated("Check khách")}
+              {t("Check khách", lang)}
             </Button>
           }
           className={styles.checkCustomerInput}
           allowClear
         />
-        <span className={styles.totalCount}>{getTranslated("Tổng: ${total}").replace("${total}", String(total))}</span>
+        <span className={styles.totalCount}>{t("Tổng: ${total}", lang).replace("${total}", String(total))}</span>
         {onShowLegend && (
           <Button
             icon={<QuestionCircleOutlined />}
             onClick={onShowLegend}
-            title={getTranslated("Xem ý nghĩa các trạng thái")}
+            title={t("Xem ý nghĩa các trạng thái", lang)}
           >
-            {getTranslated("Trạng thái")}
+            {t("Trạng thái", lang)}
           </Button>
         )}
         <Button
@@ -120,7 +116,7 @@ export default function SaleLeadsToolbar({
           onClick={onRefresh}
           loading={loading}
         >
-          {getTranslated("Làm mới")}
+          {t("Làm mới", lang)}
         </Button>
       </div>
     </div>

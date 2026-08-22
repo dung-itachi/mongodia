@@ -28,6 +28,8 @@ import {
 } from "@/hooks/useCategories";
 import { useCreateCombo } from "@/hooks/useCombos";
 import { toast } from "@/components/common/feedback/Toast";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface QuickProductDrawerProps {
   open: boolean;
@@ -69,6 +71,7 @@ export default function QuickProductDrawer({
   onClose,
   onSuccess,
 }: QuickProductDrawerProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm<QuickFormValues>();
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [categoryForm] = Form.useForm<{
@@ -116,7 +119,7 @@ export default function QuickProductDrawer({
       const combosValues = values.combos ?? [];
 
       if (combosValues.length === 0) {
-        toast.warning("Vui lòng thêm ít nhất 1 combo");
+        toast.warning(t("Vui lòng thêm ít nhất 1 combo", lang));
         return;
       }
 
@@ -140,9 +143,9 @@ export default function QuickProductDrawer({
               namesNormalized.indexOf(label.toLowerCase()) === idx
           );
         toast.error(
-          `Lỗi: đã tồn tại tên combo "${dupLabels.join(
+          `${t("Lỗi: đã tồn tại tên combo", lang)} "${dupLabels.join(
             ", "
-          )}", vui lòng chọn tên combo khác`
+          )}", ${t("vui lòng chọn tên combo khác", lang)}`,
         );
         return;
       }
@@ -176,7 +179,7 @@ export default function QuickProductDrawer({
       }
 
       toast.success(
-        `Đã tạo sản phẩm "${product.name}" và ${createdCombos.length} combo`
+        `${t("Đã tạo sản phẩm", lang)} "${product.name}" ${t("và", lang)} ${createdCombos.length} ${t("combo", lang)}`,
       );
       onSuccess(product._id, product.name, createdCombos);
       onClose();
@@ -199,7 +202,7 @@ export default function QuickProductDrawer({
         code: values.code.trim().toUpperCase(),
         name: values.name.trim(),
       });
-      toast.success(`Đã tạo danh mục "${created.name}"`);
+      toast.success(`${t("Đã tạo danh mục", lang)} "${created.name}"`);
       // Auto-select category vừa tạo
       form.setFieldValue(["product", "categoryCode"], created.code);
       categoryForm.resetFields();
@@ -212,42 +215,42 @@ export default function QuickProductDrawer({
   return (
     <DrawerForm
       open={open}
-      title="Thêm nhanh sản phẩm"
+      title={t("Thêm nhanh sản phẩm", lang)}
       loading={isLoading}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText="Tạo sản phẩm & Combo"
+      submitText={t("Tạo sản phẩm & Combo", lang)}
       width={560}
     >
       <Alert
         type="info"
         showIcon
-        title="Tạo nhanh sản phẩm kèm nhiều combo. Bấm 'Thêm combo' để thêm dòng combo mới."
+        title={t("Tạo nhanh sản phẩm kèm nhiều combo. Bấm 'Thêm combo' để thêm dòng combo mới.", lang)}
         style={{ marginBottom: 16 }}
       />
 
       <Form form={form} layout="vertical">
         {/* === PRODUCT === */}
-        <Divider plain>Sản phẩm</Divider>
+        <Divider plain>{t("Sản phẩm", lang)}</Divider>
 
         <Form.Item
           name={["product", "name"]}
-          label="Tên sản phẩm"
+          label={t("Tên sản phẩm", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập tên sản phẩm" },
-            { min: 2, message: "Tên tối thiểu 2 ký tự" },
+            { required: true, message: t("Vui lòng nhập tên sản phẩm", lang) },
+            { min: 2, message: t("Tên tối thiểu 2 ký tự", lang) },
           ]}
         >
-          <Input placeholder="VD: Bánh Oreo" />
+          <Input placeholder={t("VD: Bánh Oreo", lang)} />
         </Form.Item>
 
         <Form.Item
           name={["product", "categoryCode"]}
-          label="Danh mục"
-          rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
+          label={t("Danh mục", lang)}
+          rules={[{ required: true, message: t("Vui lòng chọn danh mục", lang) }]}
         >
           <Select
-            placeholder="Chọn danh mục"
+            placeholder={t("Chọn danh mục", lang)}
             showSearch
             optionFilterProp="label"
             options={categoryOptions}
@@ -262,7 +265,7 @@ export default function QuickProductDrawer({
                   block
                   style={{ textAlign: "left" }}
                 >
-                  Tạo danh mục mới
+                  {t("Tạo danh mục mới", lang)}
                 </Button>
               </>
             )}
@@ -270,7 +273,7 @@ export default function QuickProductDrawer({
         </Form.Item>
 
         {/* === COMBOS (Form.List) === */}
-        <Divider plain>Combo(s)</Divider>
+        <Divider plain>{t("Combo(s)", lang)}</Divider>
 
         <Form.List name="combos">
           {(fields, { add, remove }) => (
@@ -289,7 +292,7 @@ export default function QuickProductDrawer({
                   <Space
                     style={{ width: "100%", justifyContent: "space-between" }}
                   >
-                    <strong>Combo #{field.name + 1}</strong>
+                    <strong>{t("Combo", lang)} #{field.name + 1}</strong>
                     {fields.length > 1 && (
                       <Button
                         type="text"
@@ -302,22 +305,22 @@ export default function QuickProductDrawer({
 
                   <Form.Item
                     name={[field.name, "comboName"]}
-                    label="Tên combo"
+                    label={t("Tên combo", lang)}
                     rules={[
-                      { required: true, message: "Vui lòng nhập tên combo" },
+                      { required: true, message: t("Vui lòng nhập tên combo", lang) },
                     ]}
                     style={{ marginBottom: 8, marginTop: 8 }}
                   >
-                    <Input placeholder="VD: Combo 3 hộp" />
+                    <Input placeholder={t("VD: Combo 3 hộp", lang)} />
                   </Form.Item>
 
                   <Space.Compact style={{ width: "100%" }}>
                     <Form.Item
                       name={[field.name, "packageQuantity"]}
-                      label="SL / combo"
+                      label={t("SL / combo", lang)}
                       rules={[
-                        { required: true, message: "Nhập số lượng" },
-                        { type: "number", min: 1, message: "SL >= 1" },
+                        { required: true, message: t("Nhập số lượng", lang) },
+                        { type: "number", min: 1, message: t("SL >= 1", lang) },
                       ]}
                       style={{ width: "50%", marginBottom: 0 }}
                     >
@@ -326,10 +329,10 @@ export default function QuickProductDrawer({
 
                     <Form.Item
                       name={[field.name, "sellingPrice"]}
-                      label="Giá bán (₮)"
+                      label={t("Giá bán (₮)", lang)}
                       rules={[
-                        { required: true, message: "Nhập giá" },
-                        { type: "number", min: 0, message: "Giá >= 0" },
+                        { required: true, message: t("Nhập giá", lang) },
+                        { type: "number", min: 0, message: t("Giá >= 0", lang) },
                       ]}
                       style={{ width: "50%", marginBottom: 0 }}
                     >
@@ -356,7 +359,7 @@ export default function QuickProductDrawer({
                 icon={<PlusOutlined />}
                 block
               >
-                Thêm combo
+                {t("Thêm combo", lang)}
               </Button>
             </>
           )}
@@ -365,7 +368,7 @@ export default function QuickProductDrawer({
 
       {/* Modal tạo danh mục nhanh */}
       <Modal
-        title="Tạo danh mục mới"
+        title={t("Tạo danh mục mới", lang)}
         open={categoryModalOpen}
         onCancel={() => {
           categoryForm.resetFields();
@@ -373,26 +376,26 @@ export default function QuickProductDrawer({
         }}
         onOk={handleCreateCategory}
         confirmLoading={createCategoryMutation.isPending}
-        okText="Tạo"
-        cancelText="Hủy"
+        okText={t("Tạo", lang)}
+        cancelText={t("Hủy", lang)}
         destroyOnHidden
       >
         <Form form={categoryForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="code"
-            label="Mã danh mục"
+            label={t("Mã danh mục", lang)}
             rules={[
-              { required: true, message: "Vui lòng nhập mã" },
-              { min: 2, message: "Mã tối thiểu 2 ký tự" },
+              { required: true, message: t("Vui lòng nhập mã", lang) },
+              { min: 2, message: t("Mã tối thiểu 2 ký tự", lang) },
               {
                 pattern: /^[A-Z0-9_-]+$/i,
-                message: "Mã chỉ gồm chữ, số, gạch ngang/underscore",
+                message: t("Mã chỉ gồm chữ, số, gạch ngang/underscore", lang),
               },
             ]}
           >
             <Space.Compact style={{ width: "100%" }}>
               <Input
-                value="MÃ"
+                value={t("MÃ", lang)}
                 disabled
                 style={{
                   width: 60,
@@ -404,27 +407,27 @@ export default function QuickProductDrawer({
                 name="code"
                 noStyle
                 rules={[
-                  { required: true, message: "Vui lòng nhập mã" },
-                  { min: 2, message: "Mã tối thiểu 2 ký tự" },
+                  { required: true, message: t("Vui lòng nhập mã", lang) },
+                  { min: 2, message: t("Mã tối thiểu 2 ký tự", lang) },
                   {
                     pattern: /^[A-Z0-9_-]+$/i,
-                    message: "Mã chỉ gồm chữ, số, gạch ngang/underscore",
+                    message: t("Mã chỉ gồm chữ, số, gạch ngang/underscore", lang),
                   },
                 ]}
               >
-                <Input placeholder="SNACK" style={{ width: "calc(100% - 60px)" }} />
+                <Input placeholder={t("SNACK", lang)} style={{ width: "calc(100% - 60px)" }} />
               </Form.Item>
             </Space.Compact>
           </Form.Item>
           <Form.Item
             name="name"
-            label="Tên danh mục"
+            label={t("Tên danh mục", lang)}
             rules={[
-              { required: true, message: "Vui lòng nhập tên" },
-              { min: 2, message: "Tên tối thiểu 2 ký tự" },
+              { required: true, message: t("Vui lòng nhập tên", lang) },
+              { min: 2, message: t("Tên tối thiểu 2 ký tự", lang) },
             ]}
           >
-            <Input placeholder="VD: Đồ ăn vặt" />
+            <Input placeholder={t("VD: Đồ ăn vặt", lang)} />
           </Form.Item>
         </Form>
       </Modal>

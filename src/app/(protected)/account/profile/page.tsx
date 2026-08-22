@@ -9,11 +9,14 @@ import { useAuthStore } from "@/store/auth.store";
 import { uploadToCloudinary, getAvatarDisplayUrl, extractPublicId, deleteCloudinaryImage, type ValidationError } from "@/lib/cloudinary";
 import type { Account } from "@/hooks/useAccounts";
 import ImageSizeErrorModal from "@/components/accounts/ImageSizeErrorModal";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 type ProfileFields = Pick<Account, "fullName" | "email" | "phone" | "avatar">;
 type PasswordFields = { currentPassword: string; newPassword: string };
 
 export default function ProfilePage() {
+  const lang = useLanguageStore((s) => s.language);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -173,7 +176,7 @@ export default function ProfilePage() {
                 <Space>
                   <Button type="primary" htmlType="submit" loading={update.isPending}>Lưu thông tin</Button>
                   {canChangePassword && (
-                    <Button onClick={() => setPasswordModalOpen(true)}>Đổi mật khẩu</Button>
+                    <Button onClick={() => setPasswordModalOpen(true)}>{t("Đổi mật khẩu", lang)}</Button>
                   )}
                 </Space>
               )}
@@ -181,7 +184,7 @@ export default function ProfilePage() {
           </div>
           {!canEditProfile && canChangePassword && (
             <div className={styles.passwordSection}>
-              <Typography.Title level={4}>Đổi mật khẩu</Typography.Title>
+              <Typography.Title level={4}>{t("Đổi mật khẩu", lang)}</Typography.Title>
               <Form<PasswordFields>
                 form={passwordForm}
                 layout="vertical"
@@ -190,7 +193,7 @@ export default function ProfilePage() {
                 <Form.Item name="currentPassword" label="Mật khẩu hiện tại" rules={[{ required: true }]}><Input.Password /></Form.Item>
                 <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
                 <Space>
-                  <Button type="primary" htmlType="submit" loading={changePassword.isPending}>Đổi mật khẩu</Button>
+                  <Button type="primary" htmlType="submit" loading={changePassword.isPending}>{t("Đổi mật khẩu", lang)}</Button>
                 </Space>
               </Form>
             </div>
@@ -199,7 +202,7 @@ export default function ProfilePage() {
       </Card>
 
       <Modal
-        title="Đổi mật khẩu"
+        title={t("Đổi mật khẩu", lang)}
         open={passwordModalOpen}
         onCancel={() => setPasswordModalOpen(false)}
         footer={null}

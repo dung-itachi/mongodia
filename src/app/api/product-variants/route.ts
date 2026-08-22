@@ -66,10 +66,14 @@ export async function GET(request: Request) {
     const [items, total] = await Promise.all([
       ProductVariant.find(filter)
         .populate("productId", "_id code name")
-        .populate(
-          "variantValues",
-          "_id code name variantOptionId"
-        )
+        .populate({
+          path: "variantValues",
+          select: "_id code name variantOptionId",
+          populate: {
+            path: "variantOptionId",
+            select: "_id code name",
+          },
+        })
         .sort({
           sortOrder: 1,
           createdAt: -1,

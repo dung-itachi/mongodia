@@ -35,12 +35,16 @@ import MarketingExpenseDrawer from "@/components/marketing-expense/MarketingExpe
 
 import type { MarketingExpenseFilter } from "@/hooks/useMarketingExpenses";
 import { MarketingExpenseReportStatus } from "@/constants/marketing-expense";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 // ============================================================================
 // Page
 // ============================================================================
 
 export default function MarketingExpenseListPage() {
+  const lang = useLanguageStore((s) => s.language);
+
   // ── Search state ───────────────────────────────────────────────────────────
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebounce(keyword, 500);
@@ -93,8 +97,8 @@ export default function MarketingExpenseListPage() {
 
   const errorMsg = useMemo(() => {
     if (!error) return null;
-    return error || "Đã xảy ra lỗi";
-  }, [error]);
+    return error || t("Đã xảy ra lỗi", lang);
+  }, [error, lang]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleToolbarFiltersChange = useCallback(
@@ -174,10 +178,10 @@ export default function MarketingExpenseListPage() {
       showSizeChanger: true,
       showQuickJumper: true,
       pageSizeOptions: ["10", "20", "50", "100"] as string[],
-      showTotal: (totalCount: number) => `Tổng: ${totalCount}`,
+      showTotal: (totalCount: number) => `${t("Tổng:", lang)} ${totalCount}`,
       onChange: handlePageChange,
     }),
-    [page, pageSize, total, handlePageChange]
+    [page, pageSize, total, handlePageChange, lang]
   );
 
   // ── Render helpers ───────────────────────────────────────────────────────────
@@ -185,7 +189,7 @@ export default function MarketingExpenseListPage() {
     return (
       <PageContainer>
         <EmptyState
-          title="Không thể tải dữ liệu"
+          title={t("Không thể tải dữ liệu", lang)}
           description={errorMsg}
         />
       </PageContainer>
@@ -195,8 +199,8 @@ export default function MarketingExpenseListPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Chi phí Marketing"
-        subtitle={`Quản lý báo cáo chi phí marketing`}
+        title={t("Chi phí Marketing", lang)}
+        subtitle={t("Quản lý báo cáo chi phí marketing", lang)}
         actions={null}
       />
 

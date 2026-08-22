@@ -12,6 +12,8 @@ import { Button, Card, Empty, Tag, Badge, Space, Popconfirm, Switch, Tooltip, In
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ShopOutlined, AppstoreOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type {
   ProductVariantListItem,
   ProductVariantOptionWithValues,
@@ -55,6 +57,7 @@ export default function ProductVariantsList({
   onProductSelect,
 }: ProductVariantsListProps) {
   const [internalSelectedProductId, setInternalSelectedProductId] = useState<string | null>(null);
+  const lang = useLanguageStore((s) => s.language);
 
   // Use external selected product ID if provided, otherwise use internal
   const selectedProductId = externalSelectedProductId ?? internalSelectedProductId;
@@ -107,12 +110,25 @@ export default function ProductVariantsList({
     return counts;
   }, [variants]);
 
-  // Parse variant values
+  // Parse variant values.
+  // If `variantOptionId` is just a string ID, look up the option name from `variantOptions` prop.
   const parseVariantValues = useCallback(
     (variantValues: ProductVariantListItem["variantValues"]): VariantValueDisplay[] => {
       if (!Array.isArray(variantValues) || variantValues.length === 0) {
         return [];
       }
+
+      // Build a map of optionId -> option for fast lookup
+      const optionMap = new Map<string, { name: string }>();
+      for (const opt of variantOptions) {
+        optionMap.set(opt._id, { name: opt.name });
+        for (const val of opt.values) {
+          // Also allow value lookup -> its option id
+          // (only used if we need to find parent option from value)
+          optionMap.set(`val:${val._id}`, { name: opt.name });
+        }
+      }
+
       return variantValues
         .map((v) => {
           if (typeof v === "object" && v !== null) {
@@ -125,6 +141,16 @@ export default function ProductVariantsList({
               const optionObj = variantOptionId as Record<string, unknown>;
               optionId = (optionObj._id as string) || "";
               optionName = (optionObj.name as string) || "";
+            } else if (typeof variantOptionId === "string") {
+              optionId = variantOptionId;
+              optionName = optionMap.get(variantOptionId)?.name ?? "";
+            }
+
+            // Last resort: if optionId is still empty but we have a value id,
+            // try to find the value in our options and resolve its parent option.
+            if (!optionId && typeof obj._id === "string") {
+              const valueEntry = optionMap.get(`val:${obj._id}`);
+              if (valueEntry) optionName = valueEntry.name;
             }
 
             return {
@@ -138,7 +164,7 @@ export default function ProductVariantsList({
         })
         .filter((v): v is VariantValueDisplay => v !== null);
     },
-    []
+    [variantOptions]
   );
 
   // Group variant values by option
@@ -156,24 +182,45 @@ export default function ProductVariantsList({
     []
   );
 
-  // Format variant display
+  // Format variant display - "Tên thuộc tính: giá trị" mỗi dòng
   const formatVariantDisplay = useCallback(
     (variantValues: ProductVariantListItem["variantValues"]) => {
       const parsed = parseVariantValues(variantValues);
       if (parsed.length === 0) {
-        return <span style={{ color: "#999" }}>Không có thuộc tính</span>;
+        return <span style={{ color: "#999" }}>{t("Không có thuộc tính", lang)}</span>;
       }
 
       const groups = groupVariantValuesByOption(parsed);
 
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {Object.entries(groups).map(([optionId, group]) => (
-            <div key={optionId} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ color: "#666", fontSize: 12, minWidth: 70 }}>{group.optionName}:</span>
+            <div
+              key={optionId}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  color: "#722ed1",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  minWidth: 70,
+                }}
+              >
+                {group.optionName || t("Thuộc tính", lang)}:
+              </span>
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 {group.values.map((vv) => (
-                  <Tag key={vv._id} color="blue" style={{ margin: 0, fontSize: 11 }}>
+                  <Tag
+                    key={vv._id}
+                    color="blue"
+                    style={{ margin: 0, fontSize: 11 }}
+                  >
                     {vv.name}
                   </Tag>
                 ))}
@@ -183,14 +230,14 @@ export default function ProductVariantsList({
         </div>
       );
     },
-    [parseVariantValues, groupVariantValuesByOption]
+    [parseVariantValues, groupVariantValuesByOption, lang]
   );
 
   // Variant table columns
   const variantColumns: Column[] = useMemo(() => [
     {
       key: "sku",
-      title: "SKU",
+      title: t("SKU", lang),
       dataIndex: "sku",
       width: 140,
       render: (value: unknown) => (
@@ -201,7 +248,7 @@ export default function ProductVariantsList({
     },
     {
       key: "barcode",
-      title: "Barcode",
+      title: t("Barcode", lang),
       dataIndex: "barcode",
       width: 120,
       render: (value: unknown) => (
@@ -212,7 +259,7 @@ export default function ProductVariantsList({
     },
     {
       key: "variantValues",
-      title: "Thuộc tính",
+      title: t("Thuộc tính", lang),
       width: 250,
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductVariantListItem;
@@ -221,7 +268,7 @@ export default function ProductVariantsList({
     },
     {
       key: "isActive",
-      title: "Kích hoạt",
+      title: t("Kích hoạt", lang),
       dataIndex: "isActive",
       width: 90,
       align: "center",
@@ -238,28 +285,28 @@ export default function ProductVariantsList({
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 90,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as ProductVariantListItem;
         return (
           <Space size={4}>
-            <Tooltip title="Sửa">
+            <Tooltip title={t("Sửa", lang)}>
               <EditOutlined
                 style={{ color: "#1890ff", cursor: "pointer", fontSize: 14 }}
                 onClick={() => onEditVariant(item)}
               />
             </Tooltip>
             <Popconfirm
-              title="Xóa biến thể?"
-              description="Biến thể sẽ bị xóa."
+              title={t("Xóa biến thể?", lang)}
+              description={t("Biến thể sẽ bị xóa.", lang)}
               onConfirm={() => onDeleteVariant(item)}
-              okText="Xóa"
-              cancelText="Hủy"
+              okText={t("Xóa", lang)}
+              cancelText={t("Hủy", lang)}
               okButtonProps={{ danger: true }}
             >
-              <Tooltip title="Xóa">
+              <Tooltip title={t("Xóa", lang)}>
                 <DeleteOutlined
                   style={{ color: "#ff4d4f", cursor: "pointer", fontSize: 14 }}
                 />
@@ -269,7 +316,7 @@ export default function ProductVariantsList({
         );
       },
     },
-  ], [formatVariantDisplay, onEditVariant, onDeleteVariant, onToggleVariantActive]);
+  ], [formatVariantDisplay, onEditVariant, onDeleteVariant, onToggleVariantActive, lang]);
 
   return (
     <div style={{ display: "flex", gap: 16, height: "calc(100vh - 220px)" }}>
@@ -295,7 +342,7 @@ export default function ProductVariantsList({
         >
           <div style={{ marginBottom: 8 }}>
             <Input
-              placeholder="Tìm sản phẩm..."
+              placeholder={t("Tìm sản phẩm...", lang)}
               prefix={<SearchOutlined style={{ color: "#999" }} />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -305,7 +352,7 @@ export default function ProductVariantsList({
           </div>
           <div style={{ fontWeight: 500, color: "#333", fontSize: 14 }}>
             <ShopOutlined style={{ marginRight: 6 }} />
-            Danh sách sản phẩm ({filteredProducts.length})
+            {t("Danh sách sản phẩm", lang)} ({filteredProducts.length})
           </div>
         </div>
 
@@ -317,7 +364,7 @@ export default function ProductVariantsList({
             </div>
           ) : filteredProducts.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center" }}>
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có sản phẩm" />
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("Không có sản phẩm", lang)} />
             </div>
           ) : (
             <div>
@@ -404,15 +451,15 @@ export default function ProductVariantsList({
               <div>
                 <div style={{ fontWeight: 500, color: "#333", fontSize: 14 }}>
                   <AppstoreOutlined style={{ marginRight: 6 }} />
-                  Biến thể của: {selectedProduct.name}
+                  {t("Biến thể của:", lang)} {selectedProduct.name}
                 </div>
                 <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
-                  {selectedProduct.code} • {selectedProductVariants.length} biến thể
+                  {selectedProduct.code} • {selectedProductVariants.length} {t("biến thể", lang)}
                 </div>
               </div>
             ) : (
               <div style={{ color: "#999", fontSize: 14 }}>
-                Chọn một sản phẩm để xem biến thể
+                {t("Chọn một sản phẩm để xem biến thể", lang)}
               </div>
             )}
           </div>
@@ -424,7 +471,7 @@ export default function ProductVariantsList({
               onClick={() => onAddVariant(selectedProduct._id)}
               size="small"
             >
-              Thêm biến thể
+              {t("Thêm biến thể", lang)}
             </Button>
           )}
         </div>
@@ -439,7 +486,7 @@ export default function ProductVariantsList({
             }}
           >
             <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-              Thuộc tính có sẵn:
+              {t("Thuộc tính có sẵn:", lang)}
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {selectedProductOptions.map((opt) => (
@@ -461,7 +508,7 @@ export default function ProductVariantsList({
                 loading={variantsLoading}
                 rowKey="_id"
                 pagination={false}
-                emptyText="Chưa có biến thể nào"
+                emptyText={t("Chưa có biến thể nào", lang)}
                 scroll={{ y: 400 }}
               />
             ) : (
@@ -469,13 +516,13 @@ export default function ProductVariantsList({
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
                   <div>
-                    <div style={{ marginBottom: 8 }}>Chưa có biến thể nào cho sản phẩm này</div>
+                    <div style={{ marginBottom: 8 }}>{t("Chưa có biến thể nào cho sản phẩm này", lang)}</div>
                     <Button
                       type="primary"
                       icon={<PlusOutlined />}
                       onClick={() => onAddVariant(selectedProduct._id)}
                     >
-                      Thêm biến thể đầu tiên
+                      {t("Thêm biến thể đầu tiên", lang)}
                     </Button>
                   </div>
                 }
@@ -484,7 +531,7 @@ export default function ProductVariantsList({
           ) : (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="Chọn một sản phẩm từ danh sách bên trái"
+              description={t("Chọn một sản phẩm từ danh sách bên trái", lang)}
             />
           )}
         </div>

@@ -11,6 +11,9 @@ import WarehouseStats from "./components/WarehouseStats";
 import LowStockAlert from "./components/LowStockAlert";
 import { LOW_STOCK_THRESHOLD } from "./warehouse.constants";
 import styles from "./warehouse-dashboard.module.css";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 export type WarehouseStats = {
   totalSKU: number;
@@ -96,6 +99,7 @@ function computeLowStockItems(
 }
 
 export default function WarehouseDashboardPage() {
+  const lang = useLanguageStore((s) => s.language);
   const { warehouses, loading: warehousesLoading } = useWarehouses();
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | undefined>(undefined);
 
@@ -158,8 +162,7 @@ export default function WarehouseDashboardPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Dashboard Kho"
+      <PageHeader title={t("Dashboard Kho", lang)}
         subtitle={warehousesLoading ? "Đang tải..." : `${activeWarehouses.length} kho đang hoạt động`}
         breadcrumb={[
           { label: "Trang chủ", href: "/" },

@@ -34,8 +34,12 @@ import FacebookPagesTable from "./FacebookPagesTable";
 import FacebookPageDrawer from "./FacebookPageDrawer";
 
 import styles from "./facebook-pages.module.css";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
+
 
 export default function FacebookPagesListPage() {
+  const lang = useLanguageStore((s) => s.language);
   // ── Search state ───────────────────────────────────────────────────────────
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebounce(keyword, 500);
@@ -160,9 +164,7 @@ export default function FacebookPagesListPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Facebook Pages"
-        subtitle="Quản lý Facebook Pages cho Marketing"
+      <PageHeader title={t("Facebook Pages", lang)} subtitle={t("Quản lý Facebook Pages cho Marketing", lang)}
       />
 
       <div className={styles["fb-page"]}>

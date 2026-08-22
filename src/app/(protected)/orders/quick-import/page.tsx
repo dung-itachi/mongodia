@@ -50,6 +50,8 @@ import {
 import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import type {
   EditableQuickOrderRow,
@@ -123,6 +125,7 @@ const CURRENCY_FORMAT = new Intl.NumberFormat("mn-MN", {
 export default function QuickOrderImportPage() {
   const router = useRouter();
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
 
   // State
   const [pastedText, setPastedText] = useState("");
@@ -176,7 +179,7 @@ export default function QuickOrderImportPage() {
   // Parse pasted text
   const handleParse = useCallback(async () => {
     if (!pastedText.trim()) {
-      message.warning("Vui lòng paste dữ liệu trước");
+      message.warning(t("Vui lòng paste dữ liệu trước", lang));
       return;
     }
 
@@ -258,15 +261,15 @@ export default function QuickOrderImportPage() {
         setProducts(Array.from(productMap.values()));
         setCombosByProduct(comboMap);
 
-        message.success(`Đã phân tích ${result.data.totalRows} dòng`);
+        message.success(`${t("Đã phân tích", lang)} ${result.data.totalRows} ${t("dòng", lang)}`);
       }
     } catch (error) {
       console.error("Parse error:", error);
-      message.error(error instanceof Error ? error.message : "Lỗi khi phân tích dữ liệu");
+      message.error(error instanceof Error ? error.message : t("Lỗi khi phân tích dữ liệu", lang));
     } finally {
       setLoading(false);
     }
-  }, [pastedText]);
+  }, [pastedText, lang, message]);
 
   // Update a single row field
   const updateRow = useCallback(
@@ -306,13 +309,13 @@ export default function QuickOrderImportPage() {
   // Import orders
   const handleImport = useCallback(async () => {
     if (rows.length === 0) {
-      message.warning("Không có dữ liệu để import");
+      message.warning(t("Không có dữ liệu để import", lang));
       return;
     }
 
     const invalidRows = rows.filter((r) => r.status === "INVALID");
     if (invalidRows.length > 0) {
-      message.error(`Còn ${invalidRows.length} dòng lỗi. Vui lòng sửa trước khi import.`);
+      message.error(`${t("Còn", lang)} ${invalidRows.length} ${t("dòng lỗi. Vui lòng sửa trước khi import.", lang)}`);
       return;
     }
 
@@ -333,7 +336,7 @@ export default function QuickOrderImportPage() {
 
       if (result.success) {
         message.success(
-          `Đã tạo ${result.data.createdOrders} đơn hàng (${result.data.createdCustomers} khách mới)`
+          `${t("Đã tạo", lang)} ${result.data.createdOrders} ${t("đơn hàng", lang)} (${result.data.createdCustomers} ${t("khách mới", lang)})`
         );
 
         // Navigate to orders list
@@ -341,11 +344,11 @@ export default function QuickOrderImportPage() {
       }
     } catch (error) {
       console.error("Import error:", error);
-      message.error(error instanceof Error ? error.message : "Lỗi khi tạo đơn hàng");
+      message.error(error instanceof Error ? error.message : t("Lỗi khi tạo đơn hàng", lang));
     } finally {
       setImporting(false);
     }
-  }, [rows, router]);
+  }, [rows, router, lang, message]);
 
   // Table columns
   const columns = useMemo(
@@ -358,51 +361,51 @@ export default function QuickOrderImportPage() {
       },
       {
         key: "customerName",
-        title: "Khách hàng",
+        title: t("Khách hàng", lang),
         width: 150,
         render: (_: unknown, record: EditableQuickOrderRow, index: number) => (
           <Input
             value={record.editableCustomerName}
             onChange={(e) => updateRow(index, "editableCustomerName", e.target.value)}
-            placeholder="Tên khách hàng"
+            placeholder={t("Tên khách hàng", lang)}
             status={record.errors.find((e) => e.field === "customerName") ? "error" : undefined}
           />
         ),
       },
       {
         key: "phone",
-        title: "SĐT",
+        title: t("SĐT", lang),
         width: 120,
         render: (_: unknown, record: EditableQuickOrderRow, index: number) => (
           <Input
             value={record.editablePhone}
             onChange={(e) => updateRow(index, "editablePhone", e.target.value)}
-            placeholder="Số điện thoại"
+            placeholder={t("Số điện thoại", lang)}
             status={record.errors.find((e) => e.field === "phone") ? "error" : undefined}
           />
         ),
       },
       {
         key: "address",
-        title: "Địa chỉ",
+        title: t("Địa chỉ", lang),
         width: 180,
         render: (_: unknown, record: EditableQuickOrderRow, index: number) => (
           <Input
             value={record.editableAddress}
             onChange={(e) => updateRow(index, "editableAddress", e.target.value)}
-            placeholder="Địa chỉ"
+            placeholder={t("Địa chỉ", lang)}
           />
         ),
       },
       {
         key: "product",
-        title: "Sản phẩm",
+        title: t("Sản phẩm", lang),
         width: 150,
         render: (_: unknown, record: EditableQuickOrderRow, index: number) => (
           <Select
             value={record.editableProductId}
             onChange={(value) => updateRow(index, "editableProductId", value)}
-            placeholder="Chọn sản phẩm"
+            placeholder={t("Chọn sản phẩm", lang)}
             allowClear
             style={{ width: "100%" }}
             status={record.errors.find((e) => e.field === "product") ? "error" : undefined}
@@ -415,7 +418,7 @@ export default function QuickOrderImportPage() {
       },
       {
         key: "combo",
-        title: "Combo",
+        title: t("Combo", lang),
         width: 180,
         render: (_: unknown, record: EditableQuickOrderRow, index: number) => {
           const availableCombos = record.editableProductId
@@ -432,7 +435,7 @@ export default function QuickOrderImportPage() {
             <Select
               value={record.editableComboId}
               onChange={(value) => updateRow(index, "editableComboId", value)}
-              placeholder="Chọn combo"
+              placeholder={t("Chọn combo", lang)}
               allowClear
               style={{ width: "100%" }}
               status={record.errors.find((e) => e.field === "combo") ? "error" : undefined}
@@ -446,7 +449,7 @@ export default function QuickOrderImportPage() {
       },
       {
         key: "quantity",
-        title: "SL",
+        title: t("SL", lang),
         width: 80,
         render: (_: unknown, record: EditableQuickOrderRow, index: number) => (
           <InputNumber
@@ -460,7 +463,7 @@ export default function QuickOrderImportPage() {
       },
       {
         key: "price",
-        title: "Giá",
+        title: t("Giá", lang),
         width: 130,
         render: (_: unknown, record: EditableQuickOrderRow, index: number) => (
           <InputNumber
@@ -478,7 +481,7 @@ export default function QuickOrderImportPage() {
       },
       {
         key: "total",
-        title: "Tổng",
+        title: t("Tổng", lang),
         width: 130,
         render: (_: unknown, record: EditableQuickOrderRow) =>
           CURRENCY_FORMAT.format(
@@ -487,13 +490,13 @@ export default function QuickOrderImportPage() {
       },
       {
         key: "status",
-        title: "Trạng thái",
+        title: t("Trạng thái", lang),
         width: 120,
         render: (_: unknown, record: EditableQuickOrderRow) => {
           if (record.status === "VALID") {
             return (
               <Tag color="success" icon={<CheckCircleOutlined />}>
-                {record.isNewCustomer ? "Khách mới" : "Hợp lệ"}
+                {record.isNewCustomer ? t("Khách mới", lang) : t("Hợp lệ", lang)}
               </Tag>
             );
           }
@@ -513,7 +516,7 @@ export default function QuickOrderImportPage() {
                 }
               >
                 <Tag color="error" icon={<CloseCircleOutlined />}>
-                  Lỗi
+                  {t("Lỗi", lang)}
                 </Tag>
               </Tooltip>
             );
@@ -531,7 +534,7 @@ export default function QuickOrderImportPage() {
                 }
               >
                 <Tag color="warning" icon={<WarningOutlined />}>
-                  Cảnh báo
+                  {t("Cảnh báo", lang)}
                 </Tag>
               </Tooltip>
             );
@@ -554,28 +557,28 @@ export default function QuickOrderImportPage() {
         ),
       },
     ],
-    [products, combosByProduct, updateRow, handleDeleteRow]
+    [products, combosByProduct, updateRow, handleDeleteRow, lang]
   );
 
   return (
     <PageContainer>
       <PageHeader
-        title="Nhập đơn nhanh"
-        subtitle="Dán dữ liệu từ Excel / Google Sheets / Facebook"
+        title={t("Nhập đơn nhanh", lang)}
+        subtitle={t("Dán dữ liệu từ Excel / Google Sheets / Facebook", lang)}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Đơn hàng", href: "/orders" },
-          { label: "Nhập nhanh" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Đơn hàng", lang), href: "/orders" },
+          { label: t("Nhập nhanh", lang) },
         ]}
       />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Input Section */}
-        <Card title="Dữ liệu nguồn" size="small">
+        <Card title={t("Dữ liệu nguồn", lang)} size="small">
           <TextArea
             value={pastedText}
             onChange={(e) => setPastedText(e.target.value)}
-            placeholder={`Paste dữ liệu vào đây...\n\nVí dụ:\n${EXAMPLE_TEXT}`}
+            placeholder={`${t("Paste dữ liệu vào đây...", lang)}\n\n${t("Ví dụ:", lang)}\n${EXAMPLE_TEXT}`}
             rows={8}
             style={{ fontFamily: "monospace" }}
           />
@@ -588,17 +591,17 @@ export default function QuickOrderImportPage() {
               loading={loading}
               disabled={!pastedText.trim()}
             >
-              Phân tích dữ liệu
+              {t("Phân tích dữ liệu", lang)}
             </Button>
 
             {parsed && (
               <Button icon={<ReloadOutlined />} onClick={handleParse} loading={loading}>
-                Phân tích lại
+                {t("Phân tích lại", lang)}
               </Button>
             )}
 
             <Button icon={<DeleteOutlined />} onClick={handleClear}>
-              Xóa
+              {t("Xóa", lang)}
             </Button>
           </div>
 
@@ -609,7 +612,7 @@ export default function QuickOrderImportPage() {
               icon={<UploadOutlined />}
               message={
                 <span>
-                  Tỷ giá MNT → VND: <strong>{exchangeRate}</strong>
+                  {t("Tỷ giá MNT → VND:", lang)} <strong>{exchangeRate}</strong>
                 </span>
               }
               style={{ marginTop: 12 }}
@@ -624,7 +627,7 @@ export default function QuickOrderImportPage() {
             <Card size="small">
               <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
                 <div>
-                  <Text type="secondary">Đã phân tích:</Text>
+                  <Text type="secondary">{t("Đã phân tích:", lang)}</Text>
                   <Badge
                     count={stats.total}
                     showZero
@@ -633,7 +636,7 @@ export default function QuickOrderImportPage() {
                   />
                 </div>
                 <div>
-                  <Text type="secondary">Hợp lệ:</Text>
+                  <Text type="secondary">{t("Hợp lệ:", lang)}</Text>
                   <Badge
                     count={stats.valid}
                     showZero
@@ -642,7 +645,7 @@ export default function QuickOrderImportPage() {
                   />
                 </div>
                 <div>
-                  <Text type="secondary">Cần kiểm tra:</Text>
+                  <Text type="secondary">{t("Cần kiểm tra:", lang)}</Text>
                   <Badge
                     count={stats.warnings}
                     showZero
@@ -651,7 +654,7 @@ export default function QuickOrderImportPage() {
                   />
                 </div>
                 <div>
-                  <Text type="secondary">Lỗi:</Text>
+                  <Text type="secondary">{t("Lỗi:", lang)}</Text>
                   <Badge
                     count={stats.invalid}
                     showZero
@@ -661,7 +664,7 @@ export default function QuickOrderImportPage() {
                 </div>
                 <Divider type="vertical" />
                 <div>
-                  <Text type="secondary">Khách mới:</Text>
+                  <Text type="secondary">{t("Khách mới:", lang)}</Text>
                   <Badge
                     count={stats.newCustomers}
                     showZero
@@ -670,7 +673,7 @@ export default function QuickOrderImportPage() {
                   />
                 </div>
                 <div>
-                  <Text type="secondary">Khách cũ:</Text>
+                  <Text type="secondary">{t("Khách cũ:", lang)}</Text>
                   <Badge
                     count={stats.existingCustomers}
                     showZero
@@ -680,7 +683,7 @@ export default function QuickOrderImportPage() {
                 </div>
                 <Divider type="vertical" />
                 <div>
-                  <Text type="secondary">Tổng tiền:</Text>
+                  <Text type="secondary">{t("Tổng tiền:", lang)}</Text>
                   <Text strong style={{ marginLeft: 8 }}>
                     {CURRENCY_FORMAT.format(stats.totalPrice)}
                   </Text>
@@ -695,14 +698,14 @@ export default function QuickOrderImportPage() {
               extra={
                 <Space>
                   <Text type="secondary">
-                    {rows.length} dòng
+                    {rows.length} {t("dòng", lang)}
                   </Text>
                 </Space>
               }
             >
               {loading ? (
                 <div style={{ textAlign: "center", padding: 48 }}>
-                  <Spin tip="Đang phân tích..." />
+                  <Spin tip={t("Đang phân tích...", lang)} />
                 </div>
               ) : (
                 <Table
@@ -726,7 +729,7 @@ export default function QuickOrderImportPage() {
                   {stats.invalid > 0 && (
                     <Alert
                       type="error"
-                      message={`Còn ${stats.invalid} dòng lỗi. Không thể tạo đơn.`}
+                      message={`${t("Còn", lang)} ${stats.invalid} ${t("dòng lỗi. Không thể tạo đơn.", lang)}`}
                       showIcon
                       style={{ display: "inline-block" }}
                     />
@@ -734,7 +737,7 @@ export default function QuickOrderImportPage() {
                   {stats.invalid === 0 && stats.valid > 0 && (
                     <Alert
                       type="success"
-                      message={`${stats.valid} đơn hàng sẵn sàng để tạo.`}
+                      message={`${stats.valid} ${t("đơn hàng sẵn sàng để tạo.", lang)}`}
                       showIcon
                       style={{ display: "inline-block" }}
                     />
@@ -742,7 +745,7 @@ export default function QuickOrderImportPage() {
                 </div>
 
                 <Space>
-                  <Button onClick={handleClear}>Hủy</Button>
+                  <Button onClick={handleClear}>{t("Hủy", lang)}</Button>
                   <Button
                     type="primary"
                     icon={<ShoppingCartOutlined />}
@@ -750,7 +753,7 @@ export default function QuickOrderImportPage() {
                     loading={importing}
                     disabled={stats.valid === 0 || stats.invalid > 0}
                   >
-                    Tạo đơn ({stats.valid})
+                    {t("Tạo đơn", lang)} ({stats.valid})
                   </Button>
                 </Space>
               </div>

@@ -11,6 +11,8 @@ import { Switch, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { CategoryListItem } from "@/hooks/useCategories";
 
 interface CategoryTableProps {
@@ -28,6 +30,7 @@ export default function CategoryTable({
   onDelete,
   onToggleActive,
 }: CategoryTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const handleToggleActive = useCallback(
     (item: CategoryListItem) => {
       onToggleActive?.(item);
@@ -38,31 +41,31 @@ export default function CategoryTable({
   const columns: Column[] = [
     {
       key: "code",
-      title: "Mã",
+      title: t("Mã", lang),
       dataIndex: "code",
       width: 120,
     },
     {
       key: "name",
-      title: "Tên",
+      title: t("Tên", lang),
       dataIndex: "name",
     },
     {
       key: "description",
-      title: "Mô tả",
+      title: t("Mô tả", lang),
       dataIndex: "description",
       width: 200,
     },
     {
       key: "sortOrder",
-      title: "Thứ tự",
+      title: t("Thứ tự", lang),
       dataIndex: "sortOrder",
       width: 80,
       align: "center",
     },
     {
       key: "isActive",
-      title: "Kích hoạt",
+      title: t("Kích hoạt", lang),
       dataIndex: "isActive",
       width: 100,
       align: "center",
@@ -79,7 +82,7 @@ export default function CategoryTable({
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 120,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -91,11 +94,11 @@ export default function CategoryTable({
               onClick={() => onEdit(item)}
             />
             <Popconfirm
-              title="Xóa danh mục?"
-              description="Danh mục sẽ bị vô hiệu hóa."
+              title={t("Xóa danh mục?", lang)}
+              description={t("Danh mục sẽ bị vô hiệu hóa.", lang)}
               onConfirm={() => onDelete(item)}
-              okText="Xóa"
-              cancelText="Hủy"
+              okText={t("Xóa", lang)}
+              cancelText={t("Hủy", lang)}
               okButtonProps={{ danger: true }}
             >
               <DeleteOutlined
@@ -115,7 +118,7 @@ export default function CategoryTable({
       loading={loading}
       rowKey="_id"
       pagination={false}
-      emptyText="Chưa có danh mục nào"
+      emptyText={t("Chưa có danh mục nào", lang)}
       scroll={{ y: 400 }}
     />
   );

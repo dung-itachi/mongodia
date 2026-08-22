@@ -20,6 +20,8 @@ import {
 } from "@ant-design/icons";
 import type { CallLogItem } from "@/hooks/useLeadCallLog";
 import { LEAD_CALL_STATUS_LABELS, LeadCallStatus } from "@/constants/leadCallStatus";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./call-log-timeline.module.css";
 
 const { Text, Paragraph } = Typography;
@@ -91,6 +93,7 @@ function CallLogTimelineInner({
   showSaleName = true,
   maxItems,
 }: CallLogTimelineProps) {
+  const lang = useLanguageStore((s) => s.language);
   // Limit items nếu được chỉ định
   const displayItems = useMemo(() => {
     if (maxItems && callHistory.length > maxItems) {
@@ -129,14 +132,14 @@ function CallLogTimelineInner({
             {call.note && (
               <Paragraph
                 className={styles.note}
-                ellipsis={{ rows: 2, expandable: true, symbol: "thêm" }}
+                ellipsis={{ rows: 2, expandable: true, symbol: t("thêm", lang) }}
               >
                 {call.note}
               </Paragraph>
             )}
 
             {call.duration && (
-              <Tooltip title="Thời lượng cuộc gọi">
+              <Tooltip title={t("Thời lượng cuộc gọi", lang)}>
                 <Text type="secondary" className={styles.duration}>
                   <ClockCircleOutlined /> {Math.floor(call.duration / 60)}p {call.duration % 60}s
                 </Text>
@@ -145,7 +148,7 @@ function CallLogTimelineInner({
           </div>
         ),
       })),
-    [displayItems, showSaleName]
+    [displayItems, showSaleName, lang]
   );
 
   if (!loading && callHistory.length === 0) {
@@ -153,7 +156,7 @@ function CallLogTimelineInner({
       <Card size="small" className={styles.emptyCard}>
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Chưa có cuộc gọi nào"
+          description={t("Chưa có cuộc gọi nào", lang)}
         />
       </Card>
     );
@@ -163,7 +166,7 @@ function CallLogTimelineInner({
     <div className={styles.container}>
       {hasMore && (
         <Text type="secondary" className={styles.showMore}>
-          Hiển thị {maxItems} / {callHistory.length} cuộc gọi
+          {t("Hiển thị ${max} / ${total} cuộc gọi", lang).replace("${max}", String(maxItems ?? 0)).replace("${total}", String(callHistory.length))}
         </Text>
       )}
       <Timeline

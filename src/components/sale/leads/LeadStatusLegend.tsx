@@ -7,11 +7,6 @@ import { LeadStatus } from "@/constants/leadStatus";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 
-function getTranslated(key: string): string {
-  const language = useLanguageStore.getState().language;
-  return t(key, language);
-}
-
 interface StatusInfo {
   status: LeadStatus;
   labelKey: string;
@@ -99,9 +94,10 @@ interface LeadStatusLegendProps {
 }
 
 export default function LeadStatusLegend({ open, onClose }: LeadStatusLegendProps) {
+  const lang = useLanguageStore((s) => s.language);
   return (
     <Modal
-      title={getTranslated("📖 Ý nghĩa các trạng thái")}
+      title={t("📖 Ý nghĩa các trạng thái", lang)}
       open={open}
       onCancel={onClose}
       footer={null}
@@ -123,10 +119,10 @@ export default function LeadStatusLegend({ open, onClose }: LeadStatusLegendProp
             <span style={{ fontSize: 20 }}>{info.emoji}</span>
             <div style={{ flex: 1 }}>
               <Tag color={info.color} style={{ fontWeight: 600 }}>
-                {getTranslated(info.labelKey)}
+                {t(info.labelKey, lang)}
               </Tag>
               <div style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
-                {getTranslated(info.descriptionKey)}
+                {t(info.descriptionKey, lang)}
               </div>
             </div>
           </div>

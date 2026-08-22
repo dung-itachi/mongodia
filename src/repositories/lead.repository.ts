@@ -279,6 +279,51 @@ export class LeadRepository {
         updateData.productId = new mongoose.Types.ObjectId(prodId);
       }
     }
+    // Sprint 8.7 — normalize variantDetails & giftSelections để lưu được vào Mongo
+    if ("variantDetails" in updateData && Array.isArray(updateData.variantDetails)) {
+      updateData.variantDetails = (
+        updateData.variantDetails as Array<{
+          quantity?: number;
+          attributes?: Array<{
+            optionId?: unknown;
+            valueId?: unknown;
+            optionName?: string;
+            valueName?: string;
+          }>;
+          variantId?: unknown;
+        }>
+      ).map((vd) => ({
+        quantity: typeof vd.quantity === "number" ? vd.quantity : 0,
+        attributes: (vd.attributes ?? []).map((a) => ({
+          optionId: (a.optionId as { toString?: () => string } | string | undefined)?.toString
+            ? ((a.optionId as { toString: () => string }).toString())
+            : (a.optionId as string) ?? "",
+          valueId: (a.valueId as { toString?: () => string } | string | undefined)?.toString
+            ? ((a.valueId as { toString: () => string }).toString())
+            : (a.valueId as string) ?? "",
+          optionName: a.optionName,
+          valueName: a.valueName,
+        })),
+        variantId: typeof vd.variantId === "string"
+          ? vd.variantId
+          : (vd.variantId as { toString?: () => string } | undefined)?.toString?.() ?? undefined,
+      }));
+    }
+    if ("giftSelections" in updateData && Array.isArray(updateData.giftSelections)) {
+      updateData.giftSelections = (
+        updateData.giftSelections as Array<{
+          giftProductId?: unknown;
+          giftProductName?: string;
+          quantity?: number;
+        }>
+      ).map((g) => ({
+        giftProductId: (g.giftProductId as { toString?: () => string } | string | undefined)?.toString
+          ? ((g.giftProductId as { toString: () => string }).toString())
+          : (g.giftProductId as string) ?? "",
+        giftProductName: g.giftProductName,
+        quantity: typeof g.quantity === "number" ? g.quantity : 0,
+      }));
+    }
     updateData.updatedAt = new Date();
 
     const doc = await Lead.findByIdAndUpdate(id, updateData, { new: true })

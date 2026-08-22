@@ -29,12 +29,15 @@ import {
 } from "@/hooks/useLoginHistory";
 import { PageContainer, PageHeader } from "@/components/common";
 import SuspiciousLoginConfirmModal from "@/components/notifications/SuspiciousLoginConfirmModal";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 dayjs.extend(relativeTime);
 
 type Option = { value: string; label: string };
 
 export default function LoginHistoryPage() {
+  const lang = useLanguageStore((s) => s.language);
   const user = useAuthStore((state) => state.user);
   const isAdmin =
     user?.role?.code === "ADMIN" || user?.permissions.includes("*");
@@ -296,8 +299,7 @@ export default function LoginHistoryPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Lịch sử đăng nhập"
+      <PageHeader title={t("Lịch sử đăng nhập", lang)}
         subtitle={
           <span style={{ fontSize: 13, color: "#595959" }}>
             <span style={{ fontWeight: 700, color: "#1890ff", fontSize: 16 }}>

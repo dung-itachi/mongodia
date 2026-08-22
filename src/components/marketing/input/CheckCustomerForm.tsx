@@ -40,11 +40,6 @@ import { t } from "@/lib/i18n";
 
 import styles from "./CheckCustomerForm.module.css";
 
-function getTranslated(key: string): string {
-  const language = useLanguageStore.getState().language;
-  return t(key, language);
-}
-
 const ORDER_LIMIT = 5;
 
 export type CheckCustomerFormProps = {
@@ -105,6 +100,7 @@ export default function CheckCustomerForm({
   showPickButton = false,
   buttonLabel,
 }: CheckCustomerFormProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [input, setInput] = useState(initialValue ?? "");
   const [query, setQuery] = useState(initialValue ?? "");
   /** Modal hiển thị kết quả. */
@@ -150,8 +146,8 @@ export default function CheckCustomerForm({
     setDetailOrderId(null);
   }, []);
 
-  const defaultPlaceholder = placeholder ?? getTranslated("Nhập SĐT hoặc tên khách hàng để tra cứu...");
-  const defaultButtonLabel = buttonLabel ?? getTranslated("Check khách");
+  const defaultPlaceholder = placeholder ?? t("Nhập SĐT hoặc tên khách hàng để tra cứu...", lang);
+  const defaultButtonLabel = buttonLabel ?? t("Check khách", lang);
 
   return (
     <>
@@ -159,9 +155,9 @@ export default function CheckCustomerForm({
       <div className={styles.container}>
         <div className={styles.header}>
           <SearchOutlined className={styles.headerIcon} />
-          <span>{getTranslated("Check khách hàng")}</span>
+          <span>{t("Check khách hàng", lang)}</span>
           <span className={styles.headerHint}>
-            {getTranslated("Tra cứu SĐT / tên khách — xem lịch sử đơn trước khi paste số")}
+            {t("Tra cứu SĐT / tên khách — xem lịch sử đơn trước khi paste số", lang)}
           </span>
         </div>
 
@@ -190,7 +186,7 @@ export default function CheckCustomerForm({
           </Button>
           {query && (
             <Button size="large" onClick={handleClear} disabled={loading}>
-              {getTranslated("Xóa")}
+              {t("Xóa", lang)}
             </Button>
           )}
         </div>
@@ -207,24 +203,24 @@ export default function CheckCustomerForm({
         title={
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <ShoppingOutlined />
-            <span>{getTranslated("Check khách — ${query}").replace("${query}", query)}</span>
+            <span>{t("Check khách", lang)} — {query}</span>
           </span>
         }
-      >        <div className={styles.modalBody}>
+      >
+        <div className={styles.modalBody}>
           {!result && loading ? (
             <div style={{ textAlign: "center", padding: 36, color: "#8c8c8c" }}>
-              <Spin /> &nbsp; {getTranslated("Đang tra cứu...")}
+              <Spin /> &nbsp; {t("Đang tra cứu...", lang)}
             </div>
           ) : !result ? (
-            <Empty description={getTranslated("Có lỗi xảy ra khi tra cứu")} />
+            <Empty description={t("Có lỗi xảy ra khi tra cứu", lang)} />
           ) : !result.customer ? (
             <div className={styles.notFound}>
               <div className={styles.notFoundTitle}>
-                {getTranslated("✓ Khách mới — chưa có trong hệ thống")}
+                {t("✓ Khách mới — chưa có trong hệ thống", lang)}
               </div>
               <div className={styles.notFoundHint}>
-                Không tìm thấy khách với từ khoá <strong>"{query}"</strong>. Có thể
-                tạo mới lead / đơn hàng.
+                {t("Không tìm thấy khách với từ khoá", lang)} <strong>"{query}"</strong>. {t("Có thể tạo mới lead / đơn hàng.", lang)}
               </div>
             </div>
           ) : (
@@ -283,6 +279,7 @@ function CheckCustomerResult({
   onPickCustomer,
   onOpenOrder,
 }: ResultProps) {
+  const lang = useLanguageStore((s) => s.language);
   return (
     <>
       {/* Customer header */}
@@ -295,7 +292,7 @@ function CheckCustomerResult({
               {customer.statusLabel}
             </Tag>
             <span className={styles.customerMetaItem}>
-              <strong>Mã KH:</strong>&nbsp;{customer.customerCode}
+              <strong>{t("Mã KH:", lang)}</strong>&nbsp;{customer.customerCode}
             </span>
           </div>
           <div className={styles.customerMeta}>
@@ -349,7 +346,7 @@ function CheckCustomerResult({
             icon={<CheckCircleOutlined />}
             onClick={() => onPickCustomer(customer)}
           >
-            Chọn khách này
+            {t("Chọn khách này", lang)}
           </Button>
         )}
       </div>
@@ -358,36 +355,36 @@ function CheckCustomerResult({
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <div className={styles.statValue}>{statistics.totalOrders}</div>
-          <div className={styles.statLabel}>Tổng đơn</div>
+          <div className={styles.statLabel}>{t("Tổng đơn", lang)}</div>
         </div>
         <div className={styles.statCard}>
           <div className={`${styles.statValue} ${styles.success}`}>
             {formatCurrency(statistics.totalRevenue, "VND")}
           </div>
-          <div className={styles.statLabel}>Doanh thu</div>
+          <div className={styles.statLabel}>{t("Doanh thu", lang)}</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statValue}>
             {formatCurrency(statistics.averageOrderValue, "VND")}
           </div>
-          <div className={styles.statLabel}>GTBĐH</div>
+          <div className={styles.statLabel}>{t("GTBĐH", lang)}</div>
         </div>
         <div className={styles.statCard}>
           <div className={`${styles.statValue} ${styles.warning}`}>
             {formatDate(statistics.lastOrderDate)}
           </div>
-          <div className={styles.statLabel}>Đơn gần nhất</div>
+          <div className={styles.statLabel}>{t("Đơn gần nhất", lang)}</div>
         </div>
       </div>
 
       {/* Order history */}
       <div className={styles.sectionTitle}>
-        <CalendarOutlined /> &nbsp;Lịch sử đơn hàng ({orders.total})
+        <CalendarOutlined /> &nbsp;{t("Lịch sử đơn hàng", lang)} ({orders.total})
       </div>
       {orders.items.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Khách chưa có đơn hàng nào"
+          description={t("Khách chưa có đơn hàng nào", lang)}
         />
       ) : (
         <div className={styles.orderList}>
@@ -448,7 +445,7 @@ function CheckCustomerResult({
       {orders.total > orders.items.length && (
         <div className={styles.orderFooter}>
           <span className={styles.orderFooterText}>
-            Hiển thị {orders.items.length}/{orders.total} đơn gần nhất
+            {t("Hiển thị", lang)} {orders.items.length}/{orders.total} {t("đơn gần nhất", lang)}
           </span>
           <Button
             type="link"
@@ -457,7 +454,7 @@ function CheckCustomerResult({
             target="_blank"
             icon={<RightOutlined />}
           >
-            Xem tất cả đơn
+            {t("Xem tất cả đơn", lang)}
           </Button>
         </div>
       )}

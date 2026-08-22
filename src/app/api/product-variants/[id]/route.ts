@@ -52,10 +52,14 @@ export async function GET(
       id
     )
       .populate("productId", "_id code name")
-      .populate(
-        "variantValues",
-        "_id code name variantOptionId"
-      )
+      .populate({
+        path: "variantValues",
+        select: "_id code name variantOptionId",
+        populate: {
+          path: "variantOptionId",
+          select: "_id code name",
+        },
+      })
       .lean();
 
     if (!productVariant) {
@@ -234,10 +238,14 @@ export async function PUT(
     const updatedProductVariant =
       await ProductVariant.findById(id)
         .populate("productId", "_id code name")
-        .populate(
-          "variantValues",
-          "_id code name variantOptionId"
-        )
+        .populate({
+          path: "variantValues",
+          select: "_id code name variantOptionId",
+          populate: {
+            path: "variantOptionId",
+            select: "_id code name",
+          },
+        })
         .lean();
 
     return success(

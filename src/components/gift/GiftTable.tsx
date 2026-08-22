@@ -11,6 +11,8 @@ import {
 } from "@ant-design/icons";
 import DataTable from "@/components/common/table/DataTable";
 import type { Column } from "@/components/common/table/DataTable";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { GiftListItem } from "@/hooks/useGifts";
 
 interface GiftTableProps {
@@ -34,6 +36,7 @@ export default function GiftTable({
   onAdjust,
   onHistory,
 }: GiftTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const handleToggleActive = useCallback(
     (item: GiftListItem) => onToggleActive?.(item),
     [onToggleActive]
@@ -42,15 +45,15 @@ export default function GiftTable({
   const columns: Column[] = [
     {
       key: "stt",
-      title: "STT",
+      title: t("STT", lang),
       width: 60,
       align: "center",
       render: (_: unknown, __: Record<string, unknown>, index: number = 0) => <span>{index + 1}</span>,
     },
-    { key: "name", title: "Tên quà", dataIndex: "name" },
+    { key: "name", title: t("Tên quà", lang), dataIndex: "name" },
     {
       key: "stockQuantity",
-      title: "Tồn kho",
+      title: t("Tồn kho", lang),
       dataIndex: "stockQuantity",
       width: 120,
       align: "right",
@@ -62,7 +65,7 @@ export default function GiftTable({
     },
     {
       key: "isActive",
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "isActive",
       width: 120,
       align: "center",
@@ -73,31 +76,31 @@ export default function GiftTable({
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 230,
       align: "center",
       render: (_: unknown, record: Record<string, unknown>) => {
         const item = record as unknown as GiftListItem;
         return (
           <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
-            <Tooltip title="Nhập tồn">
+            <Tooltip title={t("Nhập tồn", lang)}>
               <Button type="text" icon={<PlusOutlined />} onClick={() => onImport(item)} />
             </Tooltip>
-            <Tooltip title="Điều chỉnh tồn">
+            <Tooltip title={t("Điều chỉnh tồn", lang)}>
               <Button type="text" icon={<SettingOutlined />} onClick={() => onAdjust(item)} />
             </Tooltip>
-            <Tooltip title="Lịch sử tồn">
+            <Tooltip title={t("Lịch sử tồn", lang)}>
               <Button type="text" icon={<HistoryOutlined />} onClick={() => onHistory(item)} />
             </Tooltip>
-            <Tooltip title="Sửa thông tin">
+            <Tooltip title={t("Sửa thông tin", lang)}>
               <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(item)} />
             </Tooltip>
             <Popconfirm
-              title="Xóa quà tặng?"
-              description="Quà tặng sẽ bị vô hiệu hóa."
+              title={t("Xóa quà tặng?", lang)}
+              description={t("Quà tặng sẽ bị vô hiệu hóa.", lang)}
               onConfirm={() => onDelete(item)}
-              okText="Xóa"
-              cancelText="Hủy"
+              okText={t("Xóa", lang)}
+              cancelText={t("Hủy", lang)}
               okButtonProps={{ danger: true }}
             >
               <Button type="text" danger icon={<DeleteOutlined />} />
@@ -115,7 +118,7 @@ export default function GiftTable({
       loading={loading}
       rowKey="_id"
       pagination={false}
-      emptyText="Chưa có quà tặng nào"
+      emptyText={t("Chưa có quà tặng nào", lang)}
       scroll={{ x: 850, y: 500 }}
     />
   );

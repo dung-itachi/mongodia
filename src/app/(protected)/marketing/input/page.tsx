@@ -37,10 +37,13 @@ import LeadDrawer, { type LeadFormData } from "./LeadDrawer";
 import MarketingInputSection from "@/components/marketing/input/MarketingInputSection";
 import type { MarketingLead } from "@/types/marketing-lead";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export default function MarketingInputPage() {
   const router = useRouter();
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
   const [filters, setFilters] = useState<MarketingLeadFilters>({
     page: 1,
     limit: 20,
@@ -83,15 +86,15 @@ export default function MarketingInputPage() {
     (data: LeadFormData) => {
       createMutation.mutate(data as unknown as Record<string, unknown>, {
         onSuccess: () => {
-          void message.success("Tạo lead thành công");
+          void message.success(t("Tạo lead thành công", lang));
           setDrawerOpen(false);
         },
         onError: (err) => {
-          void message.error(`Lỗi: ${err.message}`);
+          void message.error(`${t("Lỗi:", lang)} ${err.message}`);
         },
       });
     },
-    [createMutation]
+    [createMutation, lang]
   );
 
   const handleEditLead = useCallback((lead: MarketingLead) => {
@@ -125,17 +128,17 @@ export default function MarketingInputPage() {
         { id: editingLead._id, data: cleanedData },
         {
           onSuccess: () => {
-            void message.success("Cập nhật lead thành công");
+            void message.success(t("Cập nhật lead thành công", lang));
             setDrawerOpen(false);
             setEditingLead(null);
           },
           onError: (err) => {
-            void message.error(`Lỗi: ${err.message}`);
+            void message.error(`${t("Lỗi:", lang)} ${err.message}`);
           },
         }
       );
     },
-    [editingLead, updateMutation]
+    [editingLead, updateMutation, lang]
   );
 
   const handleDeleteClick = useCallback((lead: MarketingLead) => {
@@ -148,15 +151,15 @@ export default function MarketingInputPage() {
 
     deleteMutation.mutate(deletingLead._id, {
       onSuccess: () => {
-        void message.success("Xóa lead thành công");
+        void message.success(t("Xóa lead thành công", lang));
         setDeleteConfirmOpen(false);
         setDeletingLead(null);
       },
       onError: (err) => {
-        void message.error(`Lỗi: ${err.message}`);
+        void message.error(`${t("Lỗi:", lang)} ${err.message}`);
       },
     });
-  }, [deletingLead, deleteMutation]);
+  }, [deletingLead, deleteMutation, lang]);
 
   const handleDrawerClose = useCallback(() => {
     setDrawerOpen(false);
@@ -177,28 +180,28 @@ export default function MarketingInputPage() {
 
   const handlePushToSale = useCallback(() => {
     if (selectedRowKeys.length === 0) {
-      void message.warning("Vui lòng chọn ít nhất một lead để đẩy");
+      void message.warning(t("Vui lòng chọn ít nhất một lead để đẩy", lang));
       return;
     }
     setPushConfirmOpen(true);
-  }, [selectedRowKeys]);
+  }, [selectedRowKeys, lang]);
 
   const handleConfirmPush = useCallback(() => {
     pushToSaleMutation.mutate(
       { leadIds: selectedRowKeys },
       {
         onSuccess: (result) => {
-          void message.success(`Đã đẩy ${result.pushedCount} lead sang Sale`);
+          void message.success(`${t("Đã đẩy", lang)} ${result.pushedCount} ${t("lead sang Sale", lang)}`);
           setPushConfirmOpen(false);
           setSelectedRowKeys([]);
         },
         onError: (err) => {
-          void message.error(`Lỗi: ${err.message}`);
+          void message.error(`${t("Lỗi:", lang)} ${err.message}`);
           setPushConfirmOpen(false);
         },
       }
     );
-  }, [selectedRowKeys, pushToSaleMutation]);
+  }, [selectedRowKeys, pushToSaleMutation, lang]);
 
   // Handle leads created from input section
   const handleLeadsCreated = useCallback(() => {
@@ -208,8 +211,8 @@ export default function MarketingInputPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Nhập số"
-        subtitle="Quản lý leads cho marketing"
+        title={t("Nhập số", lang)}
+        subtitle={t("Quản lý leads cho marketing", lang)}
       />
 
       {/* Sprint 8.5 Extension: Marketing Input Section */}
@@ -236,18 +239,18 @@ export default function MarketingInputPage() {
           <SkeletonTable rows={5} columns={10} />
         ) : error ? (
           <EmptyState
-            title="Lỗi tải dữ liệu"
+            title={t("Lỗi tải dữ liệu", lang)}
             description={error ?? undefined}
             action={
-              <button onClick={() => { void refetch(); }}>Thử lại</button>
+              <button onClick={() => { void refetch(); }}>{t("Thử lại", lang)}</button>
             }
           />
         ) : leads.length === 0 ? (
           <EmptyState
-            title="Chưa có lead nào"
-            description="Bắt đầu bằng cách tạo lead mới"
+            title={t("Chưa có lead nào", lang)}
+            description={t("Bắt đầu bằng cách tạo lead mới", lang)}
             action={
-              <button onClick={() => setDrawerOpen(true)}>Tạo Lead</button>
+              <button onClick={() => setDrawerOpen(true)}>{t("Tạo Lead", lang)}</button>
             }
           />
         ) : (
@@ -268,7 +271,7 @@ export default function MarketingInputPage() {
                 pageSize={filters.limit ?? 20}
                 total={total}
                 onChange={handlePageChange}
-                showTotal={(t) => `Tổng: ${t} leads`}
+                showTotal={(total) => `${t("Tổng:", lang)} ${total} ${t("leads", lang)}`}
               />
             )}
           </>
@@ -286,11 +289,11 @@ export default function MarketingInputPage() {
 
       <ConfirmDialog
         open={deleteConfirmOpen}
-        title="Xác nhận xóa"
-        content={`Bạn có chắc muốn xóa lead "${deletingLead?.customerName}" không?`}
+        title={t("Xác nhận xóa", lang)}
+        content={`${t("Bạn có chắc muốn xóa lead", lang)} "${deletingLead?.customerName}"?`}
         type="delete"
-        confirmText="Xóa"
-        cancelText="Hủy"
+        confirmText={t("Xóa", lang)}
+        cancelText={t("Hủy", lang)}
         loading={deleteMutation.isPending}
         onConfirm={handleDeleteConfirm}
         onCancel={() => {
@@ -301,21 +304,21 @@ export default function MarketingInputPage() {
 
       {/* Sprint 8.5: Push to Sale confirmation modal */}
       <Modal
-        title="Xác nhận đẩy sang Sale"
+        title={t("Xác nhận đẩy sang Sale", lang)}
         open={pushConfirmOpen}
         onOk={handleConfirmPush}
         onCancel={() => setPushConfirmOpen(false)}
-        okText="Đẩy sang Sale"
-        cancelText="Hủy"
+        okText={t("Đẩy sang Sale", lang)}
+        cancelText={t("Hủy", lang)}
         okButtonProps={{
           loading: pushToSaleMutation.isPending,
         }}
       >
         <p>
-          Bạn có chắc muốn đẩy <strong>{selectedRowKeys.length}</strong> lead sang Sale?
+          {t("Bạn có chắc muốn đẩy", lang)} <strong>{selectedRowKeys.length}</strong> {t("lead sang Sale?", lang)}
         </p>
         <p style={{ color: "#8c8c8c", marginTop: 8 }}>
-          Các lead đã được gán Sale sẽ không được chọn.
+          {t("Các lead đã được gán Sale sẽ không được chọn.", lang)}
         </p>
       </Modal>
     </PageContainer>

@@ -8,6 +8,8 @@
 
 import { Form, Input, InputNumber, Switch } from "antd";
 import DrawerForm from "@/components/common/forms/DrawerForm";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import type { CategoryListItem, CreateCategoryInput, UpdateCategoryInput } from "@/hooks/useCategories";
 
 const { TextArea } = Input;
@@ -28,6 +30,7 @@ export default function CategoryForm({
   onSubmit,
 }: CategoryFormProps) {
   const [form] = Form.useForm();
+  const lang = useLanguageStore((s) => s.language);
   const isEditing = !!editingItem;
 
   const handleSubmit = () => {
@@ -39,11 +42,11 @@ export default function CategoryForm({
   return (
     <DrawerForm
       open={open}
-      title={isEditing ? "Sửa danh mục" : "Thêm danh mục"}
+      title={isEditing ? t("Sửa danh mục", lang) : t("Thêm danh mục", lang)}
       loading={loading}
       onClose={onClose}
       onSubmit={handleSubmit}
-      submitText={isEditing ? "Cập nhật" : "Tạo mới"}
+      submitText={isEditing ? t("Cập nhật", lang) : t("Tạo mới", lang)}
       width={500}
     >
       <Form
@@ -66,44 +69,44 @@ export default function CategoryForm({
       >
         <Form.Item
           name="code"
-          label="Mã danh mục"
+          label={t("Mã danh mục", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập mã danh mục" },
-            { min: 2, message: "Mã tối thiểu 2 ký tự" },
-            { max: 20, message: "Mã tối đa 20 ký tự" },
+            { required: true, message: t("Vui lòng nhập mã danh mục", lang) },
+            { min: 2, message: t("Mã tối thiểu 2 ký tự", lang) },
+            { max: 20, message: t("Mã tối đa 20 ký tự", lang) },
           ]}
         >
-          <Input placeholder="VD: FOOD, DRINK" disabled={isEditing} />
+          <Input placeholder={t("VD: FOOD, DRINK", lang)} disabled={isEditing} />
         </Form.Item>
 
         <Form.Item
           name="name"
-          label="Tên danh mục"
+          label={t("Tên danh mục", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập tên danh mục" },
-            { min: 2, message: "Tên tối thiểu 2 ký tự" },
-            { max: 100, message: "Tên tối đa 100 ký tự" },
+            { required: true, message: t("Vui lòng nhập tên danh mục", lang) },
+            { min: 2, message: t("Tên tối thiểu 2 ký tự", lang) },
+            { max: 100, message: t("Tên tối đa 100 ký tự", lang) },
           ]}
         >
-          <Input placeholder="VD: Đồ ăn, Nước uống" />
+          <Input placeholder={t("VD: Đồ ăn, Nước uống", lang)} />
         </Form.Item>
 
         <Form.Item
           name="description"
-          label="Mô tả"
-          rules={[{ max: 500, message: "Mô tả tối đa 500 ký tự" }]}
+          label={t("Mô tả", lang)}
+          rules={[{ max: 500, message: t("Mô tả tối đa 500 ký tự", lang) }]}
         >
-          <TextArea rows={3} placeholder="Mô tả danh mục (tùy chọn)" />
+          <TextArea rows={3} placeholder={t("Mô tả danh mục (tùy chọn)", lang)} />
         </Form.Item>
 
-        <Form.Item name="sortOrder" label="Thứ tự hiển thị">
+        <Form.Item name="sortOrder" label={t("Thứ tự hiển thị", lang)}>
           <InputNumber min={0} style={{ width: "100%" }} />
         </Form.Item>
 
         {isEditing && (
           <Form.Item
             name="isActive"
-            label="Kích hoạt"
+            label={t("Kích hoạt", lang)}
             valuePropName="checked"
           >
             <Switch />

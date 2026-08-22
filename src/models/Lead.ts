@@ -63,6 +63,28 @@ export interface ILead extends Document {
   orderDate?: Date;
   /** Thời gian nhận đơn (Sprint 8.x) - thời gian Marketing nhận được đơn. */
   receivedDate?: Date;
+  /**
+   * Sprint 8.7: Variant details snapshot (từ Marketing nhập hoặc Sale chốt).
+   * Cho phép /leads → chốt đơn prefill sẵn giá trị biến thể.
+   */
+  variantDetails?: Array<{
+    quantity: number;
+    attributes: Array<{
+      optionId: mongoose.Types.ObjectId | string;
+      valueId: mongoose.Types.ObjectId | string;
+      optionName?: string;
+      valueName?: string;
+    }>;
+    variantId?: mongoose.Types.ObjectId | string;
+  }>;
+  /** Sprint 8.7: Chế độ quà tặng liên kết variant details. */
+  giftMode?: "RANDOM" | "CUSTOMER_SELECTED";
+  /** Sprint 8.7: Gift selections từ Marketing điền. */
+  giftSelections?: Array<{
+    giftProductId: mongoose.Types.ObjectId | string;
+    giftProductName?: string;
+    quantity: number;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -122,6 +144,32 @@ quantity: { type: Number, min: 1 },
     orderDate: { type: Date },
     // Sprint 8.x — receivedDate: thời gian nhận đơn (Marketing nhận được)
     receivedDate: { type: Date },
+    // Sprint 8.7 — variant details snapshot (phục vụ prefill khi Sale chốt đơn)
+    variantDetails: [
+      {
+        _id: false,
+        quantity: { type: Number, min: 0 },
+        attributes: [
+          {
+            _id: false,
+            optionId: { type: Schema.Types.Mixed, required: true },
+            valueId: { type: Schema.Types.Mixed, required: true },
+            optionName: { type: String },
+            valueName: { type: String },
+          },
+        ],
+        variantId: { type: Schema.Types.Mixed },
+      },
+    ],
+    giftMode: { type: String, enum: ["RANDOM", "CUSTOMER_SELECTED"] },
+    giftSelections: [
+      {
+        _id: false,
+        giftProductId: { type: Schema.Types.Mixed, required: true },
+        giftProductName: { type: String },
+        quantity: { type: Number, min: 0 },
+      },
+    ],
   },
   {
     timestamps: true,

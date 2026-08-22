@@ -46,6 +46,8 @@ import {
 } from "@/hooks/useCustomers";
 import { CustomerStatus } from "@/types/customer";
 import { useMessage } from "@/contexts/MessageContext";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -67,6 +69,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
 
   // Fetch customer
   const { customer, loading, error, refetch } = useCustomer(id);
@@ -82,14 +85,14 @@ export default function CustomerDetailPage({ params }: PageProps) {
     setDeleteLoading(true);
     try {
       await deleteMutation.mutateAsync(id);
-      message.success("Xóa khách hàng thành công");
+      message.success(t("Xóa khách hàng thành công", lang));
       router.push("/customers");
     } catch (err) {
-      message.error(err instanceof Error ? err.message : "Xóa khách hàng thất bại");
+      message.error(err instanceof Error ? err.message : t("Xóa khách hàng thất bại", lang));
     } finally {
       setDeleteLoading(false);
     }
-  }, [id, deleteMutation, router]);
+  }, [id, deleteMutation, router, lang, message]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -111,7 +114,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
   if (loading) {
     return (
       <PageContainer>
-        <PageHeader title="Đang tải..." />
+        <PageHeader title={t("Đang tải...", lang)} />
         <SkeletonCard />
       </PageContainer>
     );
@@ -120,10 +123,10 @@ export default function CustomerDetailPage({ params }: PageProps) {
   if (error || !customer) {
     return (
       <PageContainer>
-        <PageHeader title="Không tìm thấy khách hàng" />
+        <PageHeader title={t("Không tìm thấy khách hàng", lang)} />
         <EmptyState
-          title="Không tìm thấy khách hàng"
-          description="Khách hàng này có thể đã bị xóa hoặc không tồn tại"
+          title={t("Không tìm thấy khách hàng", lang)}
+          description={t("Khách hàng này có thể đã bị xóa hoặc không tồn tại", lang)}
         />
       </PageContainer>
     );
@@ -136,7 +139,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
     <PageContainer>
       <PageHeader
         title={customer.fullName}
-        subtitle={`Mã khách hàng: ${customer.customerCode}`}
+        subtitle={`${t("Mã khách hàng:", lang)} ${customer.customerCode}`}
         actions={
           <div className="flex gap-2">
             <PermissionGate permission="customer.update">
@@ -145,7 +148,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                 icon={<EditOutlined />}
                 onClick={() => router.push(`/customers/${id}/edit`)}
               >
-                Chỉnh sửa
+                {t("Chỉnh sửa", lang)}
               </Button>
             </PermissionGate>
             <PermissionGate permission="customer.delete">
@@ -154,7 +157,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                 onClick={handleDelete}
                 loading={deleteLoading}
               >
-                Xóa
+                {t("Xóa", lang)}
               </Button>
             </PermissionGate>
           </div>
@@ -163,10 +166,10 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
       <div className="space-y-4">
         {/* Status and basic info */}
-        <CardSection title="Trạng thái">
+        <CardSection title={t("Trạng thái", lang)}>
           <div className="flex items-center gap-4">
             <Tag color={statusColor} className="text-base px-3 py-1">
-              {statusLabel}
+              {t(statusLabel, lang)}
             </Tag>
           </div>
         </CardSection>
@@ -177,24 +180,24 @@ export default function CustomerDetailPage({ params }: PageProps) {
           items={[
             {
               key: "info",
-              label: "Thông tin chung",
+              label: t("Thông tin chung", lang),
               children: (
                 <Row gutter={24}>
                   {/* Contact Information */}
                   <Col span={12}>
-                    <CardSection title="Thông tin liên hệ">
+                    <CardSection title={t("Thông tin liên hệ", lang)}>
                       <div className="space-y-3">
                         <div className="flex items-center gap-3">
                           <UserOutlined className="text-gray-400" />
                           <span className="font-medium">{customer.fullName}</span>
                           {customer.gender && (
-                            <Tag>{customer.gender === "male" ? "Nam" : customer.gender === "female" ? "Nữ" : "Khác"}</Tag>
+                            <Tag>{customer.gender === "male" ? t("Nam", lang) : customer.gender === "female" ? t("Nữ", lang) : t("Khác", lang)}</Tag>
                           )}
                         </div>
                         {customer.birthday && (
                           <div className="flex items-center gap-3">
                             <CalendarOutlined className="text-gray-400" />
-                            <span>Sinh nhật: {formatDate(customer.birthday)}</span>
+                            <span>{t("Sinh nhật:", lang)} {formatDate(customer.birthday)}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-3">
@@ -227,13 +230,13 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
                   {/* Address */}
                   <Col span={12}>
-                    <CardSection title="Địa chỉ">
+                    <CardSection title={t("Địa chỉ", lang)}>
                       {customer.address ? (
                         <div className="space-y-1">
                           {customer.address.street && <p>{customer.address.street}</p>}
                         </div>
                       ) : (
-                        <p className="text-gray-500">Chưa có địa chỉ</p>
+                        <p className="text-gray-500">{t("Chưa có địa chỉ", lang)}</p>
                       )}
                     </CardSection>
                   </Col>
@@ -241,7 +244,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                   {/* Note */}
                   {customer.note && (
                     <Col span={24}>
-                      <CardSection title="Ghi chú">
+                      <CardSection title={t("Ghi chú", lang)}>
                         <p className="whitespace-pre-wrap">{customer.note}</p>
                       </CardSection>
                     </Col>
@@ -251,11 +254,11 @@ export default function CustomerDetailPage({ params }: PageProps) {
             },
             {
               key: "source",
-              label: "Nguồn Lead",
+              label: t("Nguồn Lead", lang),
               children: (
                 <Row gutter={24}>
                   <Col span={12}>
-                    <CardSection title="Nguồn">
+                    <CardSection title={t("Nguồn", lang)}>
                       <div className="space-y-3">
                         {customer.facebookPage ? (
                           <div>
@@ -263,7 +266,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                             <span>{customer.facebookPage.name}</span>
                           </div>
                         ) : (
-                          <p className="text-gray-500">Chưa có Facebook Page</p>
+                          <p className="text-gray-500">{t("Chưa có Facebook Page", lang)}</p>
                         )}
                         {customer.campaign ? (
                           <div>
@@ -271,7 +274,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                             <span>{customer.campaign.name}</span>
                           </div>
                         ) : (
-                          <p className="text-gray-500">Chưa có Campaign</p>
+                          <p className="text-gray-500">{t("Chưa có Campaign", lang)}</p>
                         )}
                         {customer.lead ? (
                           <div>
@@ -281,22 +284,22 @@ export default function CustomerDetailPage({ params }: PageProps) {
                             </a>
                           </div>
                         ) : (
-                          <p className="text-gray-500">Chưa có Lead</p>
+                          <p className="text-gray-500">{t("Chưa có Lead", lang)}</p>
                         )}
                       </div>
                     </CardSection>
                   </Col>
                   <Col span={12}>
-                    <CardSection title="Marketing">
+                    <CardSection title={t("Marketing", lang)}>
                       {customer.marketingEmployee ? (
                         <div>
-                          <span className="text-gray-500">Nhân viên MKT: </span>
+                          <span className="text-gray-500">{t("Nhân viên MKT:", lang)} </span>
                           <span>
                             {customer.marketingEmployee.employeeCode} - {customer.marketingEmployee.fullName}
                           </span>
                         </div>
                       ) : (
-                        <p className="text-gray-500">Chưa có nhân viên Marketing</p>
+                        <p className="text-gray-500">{t("Chưa có nhân viên Marketing", lang)}</p>
                       )}
                     </CardSection>
                   </Col>
@@ -305,13 +308,13 @@ export default function CustomerDetailPage({ params }: PageProps) {
             },
             {
               key: "sale",
-              label: "Sale",
+              label: t("Sale", lang),
               children: (
-                <CardSection title="Thông tin Sale">
+                <CardSection title={t("Thông tin Sale", lang)}>
                   {customer.saleEmployee ? (
                     <div className="space-y-3">
                       <div>
-                        <span className="text-gray-500">Nhân viên Sale: </span>
+                        <span className="text-gray-500">{t("Nhân viên Sale:", lang)} </span>
                         <span>
                           {customer.saleEmployee.employeeCode} - {customer.saleEmployee.fullName}
                         </span>
@@ -319,10 +322,10 @@ export default function CustomerDetailPage({ params }: PageProps) {
                     </div>
                   ) : (
                     <div className="flex justify-between items-center">
-                      <p className="text-gray-500">Chưa có nhân viên Sale phụ trách</p>
+                      <p className="text-gray-500">{t("Chưa có nhân viên Sale phụ trách", lang)}</p>
                       <PermissionGate permission="customer.update">
                         <Button onClick={() => router.push(`/customers/${id}/assign-sale`)}>
-                          Gán Sale
+                          {t("Gán Sale", lang)}
                         </Button>
                       </PermissionGate>
                     </div>
@@ -332,54 +335,54 @@ export default function CustomerDetailPage({ params }: PageProps) {
             },
             {
               key: "orders",
-              label: "Đơn hàng",
+              label: t("Đơn hàng", lang),
               children: (
-                <CardSection title="Đơn hàng">
+                <CardSection title={t("Đơn hàng", lang)}>
                   <p className="text-gray-500 mb-4">
-                    Xem danh sách đơn hàng của khách hàng này
+                    {t("Xem danh sách đơn hàng của khách hàng này", lang)}
                   </p>
                   <Button onClick={() => router.push(`/orders?customerId=${id}`)}>
                     <ShoppingOutlined />
-                    Xem đơn hàng
+                    {t("Xem đơn hàng", lang)}
                   </Button>
                 </CardSection>
               ),
             },
             {
               key: "revenue",
-              label: "Doanh thu",
+              label: t("Doanh thu", lang),
               children: (
                 <Row gutter={24}>
                   <Col span={6}>
-                    <CardSection title="Tổng đơn hàng">
+                    <CardSection title={t("Tổng đơn hàng", lang)}>
                       <div className="text-2xl font-bold">
                         {statistics?.totalOrders ?? 0}
                       </div>
                     </CardSection>
                   </Col>
                   <Col span={6}>
-                    <CardSection title="Tổng doanh thu">
+                    <CardSection title={t("Tổng doanh thu", lang)}>
                       <div className="text-2xl font-bold text-green-600">
                         {formatCurrency(statistics?.totalRevenue ?? 0)}
                       </div>
                     </CardSection>
                   </Col>
                   <Col span={6}>
-                    <CardSection title="GTBĐH">
+                    <CardSection title={t("GTBĐH", lang)}>
                       <div className="text-2xl font-bold text-blue-600">
                         {formatCurrency(statistics?.averageOrderValue ?? 0)}
                       </div>
                     </CardSection>
                   </Col>
                   <Col span={6}>
-                    <CardSection title="Đơn gần nhất">
+                    <CardSection title={t("Đơn gần nhất", lang)}>
                       <div className="text-sm">
                         {statistics?.lastOrderDate ? (
                           <>
                             <p>{formatDate(statistics.lastOrderDate)}</p>
                           </>
                         ) : (
-                          <p className="text-gray-500">Chưa có đơn hàng</p>
+                          <p className="text-gray-500">{t("Chưa có đơn hàng", lang)}</p>
                         )}
                       </div>
                     </CardSection>
@@ -389,9 +392,9 @@ export default function CustomerDetailPage({ params }: PageProps) {
             },
             {
               key: "timeline",
-              label: "Lịch sử",
+              label: t("Lịch sử", lang),
               children: (
-                <CardSection title="Lịch sử hoạt động">
+                <CardSection title={t("Lịch sử hoạt động", lang)}>
                   <CustomerTimeline customerId={id} />
                 </CardSection>
               ),
@@ -401,8 +404,8 @@ export default function CustomerDetailPage({ params }: PageProps) {
 
         {/* Created/Updated info */}
         <div className="text-sm text-gray-500">
-          <p>Ngày tạo: {formatDate(customer.createdAt)}</p>
-          <p>Cập nhật: {formatDate(customer.updatedAt)}</p>
+          <p>{t("Ngày tạo:", lang)} {formatDate(customer.createdAt)}</p>
+          <p>{t("Cập nhật:", lang)} {formatDate(customer.updatedAt)}</p>
         </div>
       </div>
     </PageContainer>
