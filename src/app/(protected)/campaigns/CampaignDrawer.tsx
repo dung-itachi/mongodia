@@ -2,7 +2,7 @@
  * Campaign Drawer Component (Sprint 7.4)
  */
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,30 +12,38 @@ import dayjs from "dayjs";
 import { useCampaign, useCreateCampaign, useUpdateCampaign } from "@/hooks/useCampaigns";
 import AsyncSelect from "@/components/common/inputs/AsyncSelect";
 import type { SelectOption } from "@/components/common/inputs/AsyncSelect";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { TextArea } = Input;
 
-const STATUS_OPTIONS = [
-  { value: "ACTIVE", label: "Hoạt động" },
-  { value: "PAUSED", label: "Tạm dừng" },
-  { value: "COMPLETED", label: "Hoàn thành" },
-  { value: "ARCHIVED", label: "Lưu trữ" },
-];
+function buildFormSchema(lang: ReturnType<typeof useLanguageStore.getState>["language"]) {
+  return z.object({
+    code: z.string().min(1, t("Mã campaign là bắt buộc", lang)),
+    name: z.string().min(1, t("Tên campaign là bắt buộc", lang)),
+    facebookPageId: z.string().min(1, t("Facebook Page là bắt buộc", lang)),
+    objective: z.string().optional(),
+    startDate: z.string().min(1, t("Ngày bắt đầu là bắt buộc", lang)),
+    endDate: z.string().optional().nullable(),
+    dailyBudget: z.number().optional(),
+    lifetimeBudget: z.number().optional(),
+    status: z.enum(["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"]).optional(),
+    note: z.string().optional(),
+  });
+}
 
-const formSchema = z.object({
-  code: z.string().min(1, "Mã campaign là bắt buộc"),
-  name: z.string().min(1, "Tên campaign là bắt buộc"),
-  facebookPageId: z.string().min(1, "Facebook Page là bắt buộc"),
-  objective: z.string().optional(),
-  startDate: z.string().min(1, "Ngày bắt đầu là bắt buộc"),
-  endDate: z.string().optional().nullable(),
-  dailyBudget: z.number().optional(),
-  lifetimeBudget: z.number().optional(),
-  status: z.enum(["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"]).optional(),
-  note: z.string().optional(),
-});
-
-type FormData = z.infer<typeof formSchema>;
+type FormData = {
+  code: string;
+  name: string;
+  facebookPageId: string;
+  objective?: string;
+  startDate: string;
+  endDate?: string | null;
+  dailyBudget?: number;
+  lifetimeBudget?: number;
+  status?: "ACTIVE" | "PAUSED" | "COMPLETED" | "ARCHIVED";
+  note?: string;
+};
 
 export interface CampaignDrawerProps {
   mode: "create" | "edit";
@@ -53,6 +61,7 @@ function CampaignDrawerInner({
   onSuccess,
 }: CampaignDrawerProps) {
   const message = useMessage();
+  const lang = useLanguageStore((s) => s.language);
   const isEdit = mode === "edit";
 
   const { data: recordData, isLoading: isLoadingRecord } = useCampaign(
@@ -67,12 +76,12 @@ function CampaignDrawerInner({
   const [facebookPageOptions, setFacebookPageOptions] = useState<SelectOption[]>([]);
   const [loadingPages, setLoadingPages] = useState(false);
 
+  const formSchema = useMemo(() => buildFormSchema(lang), [lang]);
+
   const {
     control,
     handleSubmit,
     reset,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -90,6 +99,16 @@ function CampaignDrawerInner({
     },
   });
 
+  const statusOptions = useMemo(
+    () => [
+      { value: "ACTIVE", label: t("Hoạt động", lang) },
+      { value: "PAUSED", label: t("Tạm dừng", lang) },
+      { value: "COMPLETED", label: t("Hoàn thành", lang) },
+      { value: "ARCHIVED", label: t("Lưu trữ", lang) },
+    ],
+    [lang]
+  );
+
   const loadFacebookPages = async (keyword: string) => {
     setLoadingPages(true);
     try {
@@ -97,7 +116,7 @@ function CampaignDrawerInner({
       if (keyword) params.set("keyword", keyword);
       const res = await fetch(`/api/facebook-pages?${params.toString()}`);
       const json = await res.json();
-      
+
       if (json.success && json.data?.items) {
         setFacebookPageOptions(
           json.data.items.map((p: { _id: string; name: string }) => ({
@@ -107,7 +126,7 @@ function CampaignDrawerInner({
         );
       }
     } catch {
-      message.error("Lỗi khi tải danh sách Facebook Pages");
+      message.error(t("Lỗi khi tải danh sách Facebook Pages", lang));
     } finally {
       setLoadingPages(false);
     }
@@ -138,10 +157,10 @@ function CampaignDrawerInner({
     }
 
     if (isEdit && recordData) {
-      const facebookPageIdValue = typeof recordData.facebookPageId === "object" 
-        ? recordData.facebookPageId._id 
-        : recordData.facebookPageId;
-      
+      const facebookPageIdValue = typeof recordData.facebookPageId === "object"
+        ? (recordData.facebookPageId as { _id: string })._id
+        : (recordData.facebookPageId as string);
+
       reset({
         code: recordData.code,
         name: recordData.name,
@@ -163,24 +182,24 @@ function CampaignDrawerInner({
         { id: recordId, data },
         {
           onSuccess: () => {
-            message.success("Cập nhật thành công");
+            message.success(t("Cập nhật thành công", lang));
             onSuccess?.();
             onClose();
           },
           onError: (err: Error) => {
-            message.error(err.message || "Lỗi khi cập nhật");
+            message.error(err.message || t("Lỗi khi cập nhật", lang));
           },
         }
       );
     } else {
       createMutation.mutate(data, {
         onSuccess: () => {
-          message.success("Tạo thành công");
+          message.success(t("Tạo thành công", lang));
           onSuccess?.();
           onClose();
         },
         onError: (err: Error) => {
-          message.error(err.message || "Lỗi khi tạo");
+          message.error(err.message || t("Lỗi khi tạo", lang));
         },
       });
     }
@@ -188,52 +207,52 @@ function CampaignDrawerInner({
 
   return (
     <Drawer
-      title={isEdit ? "Sửa Campaign" : "Tạo Campaign"}
+      title={isEdit ? t("Sửa Campaign", lang) : t("Tạo Campaign", lang)}
       placement="right"
       styles={{ wrapper: { width: 500 } }}
       open={open}
       onClose={onClose}
       footer={
         <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-          <Button onClick={onClose}>Hủy</Button>
+          <Button onClick={onClose}>{t("Hủy", lang)}</Button>
           <Button
             type="primary"
             onClick={handleSubmit(onSubmit)}
             loading={isSubmitting}
           >
-            {isSubmitting ? "Đang lưu..." : isEdit ? "Cập nhật" : "Tạo mới"}
+            {isSubmitting ? t("Đang lưu...", lang) : isEdit ? t("Cập nhật", lang) : t("Tạo mới", lang)}
           </Button>
         </Space>
       }
     >
       <Form layout="vertical">
         <Form.Item
-          label="Mã Campaign"
+          label={t("Mã Campaign", lang)}
           required
           validateStatus={errors.code ? "error" : ""}
           help={errors.code?.message}
         >
           <Input
-            placeholder="Nhập mã campaign (VD: CAMP_001)"
+            placeholder={t("Nhập mã campaign (VD: CAMP_001)", lang)}
             {...control.register("code")}
             disabled={isEdit}
           />
         </Form.Item>
 
         <Form.Item
-          label="Tên Campaign"
+          label={t("Tên Campaign", lang)}
           required
           validateStatus={errors.name ? "error" : ""}
           help={errors.name?.message}
         >
           <Input
-            placeholder="Nhập tên campaign"
+            placeholder={t("Nhập tên campaign", lang)}
             {...control.register("name")}
           />
         </Form.Item>
 
         <Form.Item
-          label="Facebook Page"
+          label={t("Facebook Page", lang)}
           required
           validateStatus={errors.facebookPageId ? "error" : ""}
           help={errors.facebookPageId?.message}
@@ -246,7 +265,7 @@ function CampaignDrawerInner({
                 value={field.value}
                 onChange={(val) => field.onChange(val as string)}
                 options={facebookPageOptions}
-                placeholder="Chọn Facebook Page"
+                placeholder={t("Chọn Facebook Page", lang)}
                 allowClear
                 searchable
                 onSearch={loadFacebookPages}
@@ -257,16 +276,16 @@ function CampaignDrawerInner({
           />
         </Form.Item>
 
-        <Form.Item label="Objective">
+        <Form.Item label={t("Objective", lang)}>
           <Input
-            placeholder="VD: CONVERSIONS, TRAFFIC, LEAD_GENERATION"
+            placeholder={t("VD: CONVERSIONS, TRAFFIC, LEAD_GENERATION", lang)}
             {...control.register("objective")}
           />
         </Form.Item>
 
         <Space style={{ width: "100%" }} size={16}>
           <Form.Item
-            label="Ngày bắt đầu"
+            label={t("Ngày bắt đầu", lang)}
             required
             style={{ width: "calc(50% - 8px)" }}
           >
@@ -280,7 +299,7 @@ function CampaignDrawerInner({
                     value={field.value ? dayjs(field.value) : null}
                     onChange={(date) => field.onChange(date?.toISOString() ?? "")}
                     format="DD/MM/YYYY"
-                    placeholder="Chọn ngày"
+                    placeholder={t("Chọn ngày", lang)}
                     getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
                   />
                 </div>
@@ -289,7 +308,7 @@ function CampaignDrawerInner({
           </Form.Item>
 
           <Form.Item
-            label="Ngày kết thúc"
+            label={t("Ngày kết thúc", lang)}
             style={{ width: "calc(50% - 8px)" }}
           >
             <Controller
@@ -302,7 +321,7 @@ function CampaignDrawerInner({
                     value={field.value ? dayjs(field.value) : null}
                     onChange={(date) => field.onChange(date?.toISOString() ?? null)}
                     format="DD/MM/YYYY"
-                    placeholder="Chọn ngày (tùy chọn)"
+                    placeholder={t("Chọn ngày (tùy chọn)", lang)}
                     allowClear
                     getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
                   />
@@ -313,7 +332,7 @@ function CampaignDrawerInner({
         </Space>
 
         <Space style={{ width: "100%" }} size={16}>
-          <Form.Item label="Daily Budget" style={{ width: "calc(50% - 8px)" }}>
+          <Form.Item label={t("Daily Budget", lang)} style={{ width: "calc(50% - 8px)" }}>
             <Input
               type="number"
               placeholder="0"
@@ -321,7 +340,7 @@ function CampaignDrawerInner({
             />
           </Form.Item>
 
-          <Form.Item label="Lifetime Budget" style={{ width: "calc(50% - 8px)" }}>
+          <Form.Item label={t("Lifetime Budget", lang)} style={{ width: "calc(50% - 8px)" }}>
             <Input
               type="number"
               placeholder="0"
@@ -330,7 +349,7 @@ function CampaignDrawerInner({
           </Form.Item>
         </Space>
 
-        <Form.Item label="Trạng thái">
+        <Form.Item label={t("Trạng thái", lang)}>
           <Controller
             name="status"
             control={control}
@@ -338,17 +357,17 @@ function CampaignDrawerInner({
               <Select
                 value={field.value}
                 onChange={field.onChange}
-                options={STATUS_OPTIONS}
+                options={statusOptions}
                 style={{ width: "100%" }}
               />
             )}
           />
         </Form.Item>
 
-        <Form.Item label="Ghi chú">
+        <Form.Item label={t("Ghi chú", lang)}>
           <TextArea
             rows={3}
-            placeholder="Ghi chú..."
+            placeholder={t("Ghi chú...", lang)}
             {...control.register("note")}
           />
         </Form.Item>

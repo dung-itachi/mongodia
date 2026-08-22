@@ -11,28 +11,31 @@ import { CardSection, DataTable, StatusBadge } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import type { RecentOrder } from "@/types/dashboard-activity";
 import { formatCurrency } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type RecentOrdersProps = {
   data: RecentOrder[];
 };
 
 function RecentOrdersInner({ data }: RecentOrdersProps) {
+  const lang = useLanguageStore((s) => s.language);
   const columns: Column[] = useMemo(
     () => [
       {
         key: "code",
-        title: "Mã đơn",
+        title: t("Mã đơn", lang),
         dataIndex: "code",
         width: 130,
       },
       {
         key: "customer",
-        title: "Khách hàng",
+        title: t("Khách hàng", lang),
         dataIndex: "customer",
       },
       {
         key: "status",
-        title: "Trạng thái",
+        title: t("Trạng thái", lang),
         dataIndex: "status",
         width: 130,
         render: (value: unknown) => (
@@ -41,14 +44,14 @@ function RecentOrdersInner({ data }: RecentOrdersProps) {
       },
       {
         key: "total",
-        title: "Tổng tiền",
+        title: t("Tổng tiền", lang),
         dataIndex: "total",
         width: 140,
         align: "right",
         render: (value: unknown) => formatCurrency(Number(value)),
       },
     ],
-    []
+    [lang]
   );
 
   const tableData = useMemo(
@@ -64,7 +67,7 @@ function RecentOrdersInner({ data }: RecentOrdersProps) {
   );
 
   return (
-    <CardSection title="Đơn hàng mới nhất">
+    <CardSection title={t("Đơn hàng mới nhất", lang)}>
       <DataTable
         columns={columns}
         data={tableData}

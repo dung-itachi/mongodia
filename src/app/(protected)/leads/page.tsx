@@ -71,6 +71,7 @@ function getTranslated(key: string): string {
 export default function SaleLeadsPage() {
   // Get user role from auth store
   const user = useAuthStore((state) => state.user);
+  const lang = useLanguageStore((s) => s.language);
   const { message } = App.useApp();
   const roleCode = user?.role;
   const isAdminOrManager = roleCode === "ADMIN" || roleCode === "MANAGER";
@@ -374,11 +375,11 @@ export default function SaleLeadsPage() {
         {/* Table */}
         {loading && leads.length === 0 ? (
           <div className={styles.emptyContainer}>
-            <p className={styles.emptyText}>Đang tải dữ liệu...</p>
+            <p className={styles.emptyText}>{t("Đang tải dữ liệu...", lang)}</p>
           </div>
         ) : leads.length === 0 ? (
           <div className={styles.emptyContainer}>
-            <p className={styles.emptyText}>Không có khách hàng nào cần xử lý</p>
+            <p className={styles.emptyText}>{t("Không có khách hàng nào cần xử lý", lang)}</p>
           </div>
         ) : (
           <>
@@ -409,7 +410,7 @@ export default function SaleLeadsPage() {
                 pageSize={limit}
                 total={total}
                 onChange={handlePageChange}
-                showTotal={(t) => `Tổng: ${t} khách hàng`}
+                showTotal={(total) => `${t("Tổng:", lang)} ${total} ${t("khách hàng", lang)}`}
               />
             )}
           </>
@@ -491,7 +492,7 @@ export default function SaleLeadsPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <UserOutlined style={{ fontSize: 18, color: "#1890ff" }} />
                 <span style={{ fontSize: 18, fontWeight: 600 }}>
-                  Chi tiết Khách hàng
+                  {t("Chi tiết Khách hàng", lang)}
                 </span>
                 <span
                   style={{
@@ -513,7 +514,7 @@ export default function SaleLeadsPage() {
                   cursor: "pointer",
                   color: "#8c8c8c",
                 }}
-                aria-label="Đóng"
+                aria-label={t("Đóng", lang)}
               >
                 ✕
               </button>
@@ -551,8 +552,8 @@ export default function SaleLeadsPage() {
         <div style={{ marginTop: 16 }}>
           <CheckCustomerForm
             initialValue={checkCustomerQuery ?? undefined}
-            placeholder="Nhập SĐT hoặc tên khách hàng để tra cứu..."
-            buttonLabel="Tra cứu"
+            placeholder={t("Nhập SĐT hoặc tên khách hàng để tra cứu...", lang)}
+            buttonLabel={t("Tra cứu", lang)}
           />
         </div>
       )}

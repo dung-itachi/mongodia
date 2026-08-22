@@ -26,9 +26,12 @@ import RevenueChart from "./RevenueChart";
 import LeadSourceChart from "./LeadSourceChart";
 import TopSaleChart from "./TopSaleChart";
 import TopMarketingChart from "./TopMarketingChart";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../dashboard.module.css";
 
 function DashboardChartsInner() {
+  const lang = useLanguageStore((s) => s.language);
   const [range, setRange] = useState<TopMarketingRange>("month");
   const { data, loading, error, refetch } = useDashboardCharts({ range });
 
@@ -45,7 +48,7 @@ function DashboardChartsInner() {
           <SkeletonCard rows={5} />
           <SkeletonCard rows={5} />
         </div>
-        <CardSection title="Top Marketing">
+        <CardSection title={t("Top Marketing", lang)}>
           <SkeletonTable rows={5} columns={3} />
         </CardSection>
       </div>
@@ -55,10 +58,10 @@ function DashboardChartsInner() {
   if (error || !data) {
     return (
       <DashboardErrorState
-        cardTitle="Charts"
+        cardTitle={t("Charts", lang)}
         icon={<BarChartOutlined />}
-        title="Không thể tải biểu đồ"
-        message={error || "Đã xảy ra lỗi khi tải dữ liệu"}
+        title={t("Không thể tải biểu đồ", lang)}
+        message={error || t("Đã xảy ra lỗi khi tải dữ liệu", lang)}
         onRetry={() => {
           void refetch();
         }}
@@ -67,7 +70,7 @@ function DashboardChartsInner() {
   }
 
   return (
-    <div className={styles["d4-section"]} aria-label="Dashboard charts">
+    <div className={styles["d4-section"]} aria-label={t("Dashboard charts", lang)}>
       <div className={styles["d4-grid-2"]}>
         <PipelineChart data={data.pipeline} />
         <RevenueChart data={data.revenue} />

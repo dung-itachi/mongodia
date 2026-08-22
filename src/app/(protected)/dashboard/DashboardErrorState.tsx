@@ -8,6 +8,8 @@
 import { CardSection, EmptyState, ActionButton } from "@/components/common";
 import { ReloadOutlined } from "@ant-design/icons";
 import { ReactNode } from "react";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type DashboardErrorStateProps = {
   title?: string;
@@ -18,22 +20,26 @@ export type DashboardErrorStateProps = {
 };
 
 export default function DashboardErrorState({
-  title = "Không thể tải dữ liệu",
+  title,
   message,
   icon,
   onRetry,
   cardTitle,
 }: DashboardErrorStateProps) {
+  const lang = useLanguageStore((s) => s.language);
+  const resolvedTitle = title ?? t("Không thể tải dữ liệu", lang);
+  const resolvedMessage = message ?? t("Đã xảy ra lỗi khi tải dữ liệu", lang);
+
   const body = (
     <EmptyState
       icon={icon}
-      title={title}
-      description={message || "Đã xảy ra lỗi khi tải dữ liệu"}
+      title={resolvedTitle}
+      description={resolvedMessage}
       action={
         onRetry ? (
           <ActionButton
             type="primary"
-            label="Thử lại"
+            label={t("Thử lại", lang)}
             icon={<ReloadOutlined />}
             onClick={onRetry}
           />

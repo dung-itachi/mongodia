@@ -31,6 +31,8 @@ import {
 } from "@/configs/marketing-expense-actions.config";
 import { marketingExpenseStatusConfig } from "@/configs/marketing-expense-status.config";
 import { sumBudgetAllocation } from "@/utils/MarketingExpenseCalculator";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 import styles from "@/app/(protected)/marketing/expense/marketing-expense.module.css";
 
@@ -110,12 +112,13 @@ function buildColumns(
   _onSortChange: (field: string, order: "asc" | "desc" | undefined) => void,
   sortField?: string,
   sortOrder?: "asc" | "desc",
-  onAction?: ActionHandler
+  onAction?: ActionHandler,
+  lang: ReturnType<typeof useLanguageStore.getState>["language"] = "vi"
 ): ColumnType<MarketingExpenseResponse>[] {
   return [
     {
       key: "reportDate",
-      title: "Ngày báo cáo",
+      title: t("Ngày báo cáo", lang),
       dataIndex: "reportDate",
       width: 120,
       sorter: true,
@@ -129,7 +132,7 @@ function buildColumns(
 
     {
       key: "facebookPage",
-      title: "Facebook Page",
+      title: t("Facebook Page", lang),
       width: 160,
       render: (_: unknown, record) => {
         const page = record.facebookPage;
@@ -144,7 +147,7 @@ function buildColumns(
 
     {
       key: "marketingEmployee",
-      title: "Nhân viên Marketing",
+      title: t("Nhân viên Marketing", lang),
       width: 160,
       render: (_: unknown, record) => {
         const emp = record.marketingEmployee;
@@ -165,7 +168,7 @@ function buildColumns(
 
     {
       key: "requestedBudget",
-      title: "Ngân sách yêu cầu",
+      title: t("Ngân sách yêu cầu", lang),
       dataIndex: "requestedBudget",
       width: 140,
       align: "right" as const,
@@ -183,7 +186,7 @@ function buildColumns(
 
     {
       key: "approvedBudget",
-      title: "Ngân sách duyệt",
+      title: t("Ngân sách duyệt", lang),
       dataIndex: "approvedBudget",
       width: 140,
       align: "right" as const,
@@ -202,7 +205,7 @@ function buildColumns(
 
     {
       key: "spentBudget",
-      title: "Ngân sách thực chi",
+      title: t("Ngân sách thực chi", lang),
       dataIndex: "spentBudget",
       width: 140,
       align: "right" as const,
@@ -220,7 +223,7 @@ function buildColumns(
 
     {
       key: "remainingBudget",
-      title: "Ngân sách còn lại",
+      title: t("Ngân sách còn lại", lang),
       dataIndex: "remainingBudget",
       width: 140,
       align: "right" as const,
@@ -273,7 +276,7 @@ function buildColumns(
 
     {
       key: "conversionRate",
-      title: "Tỷ lệ chuyển đổi",
+      title: t("Tỷ lệ chuyển đổi", lang),
       dataIndex: "conversionRate",
       width: 120,
       align: "right" as const,
@@ -290,7 +293,7 @@ function buildColumns(
 
     {
       key: "status",
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "status",
       width: 130,
       render: (_: unknown, record) => (
@@ -303,7 +306,7 @@ function buildColumns(
 
     {
       key: "createdAt",
-      title: "Ngày tạo",
+      title: t("Ngày tạo", lang),
       dataIndex: "createdAt",
       width: 120,
       sorter: true,
@@ -317,7 +320,7 @@ function buildColumns(
 
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 120,
       align: "center" as const,
       render: (_: unknown, record) => {
@@ -377,6 +380,7 @@ export default function MarketingExpenseTable({
   onChange,
   onEdit,
 }: MarketingExpenseTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const handleAction: ActionHandler = (actionId, recordId) => {
     if (actionId === "view" || actionId === "edit") {
       onEdit?.(recordId);
@@ -387,7 +391,8 @@ export default function MarketingExpenseTable({
     (field, order) => onSortChange?.(field, order),
     sortField,
     sortOrder,
-    handleAction
+    handleAction,
+    lang
   );
 
   return (
@@ -397,7 +402,7 @@ export default function MarketingExpenseTable({
       loading={loading}
       rowKey="_id"
       onChange={onChange as unknown as undefined}
-      emptyText="Chưa có báo cáo"
+      emptyText={t("Chưa có báo cáo", lang)}
       scroll={{ x: 1400 }}
       size="middle"
     />

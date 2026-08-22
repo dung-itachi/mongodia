@@ -221,8 +221,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                         {customer.zalo && (
                           <div className="flex items-center gap-3">
                             <MessageOutlined className="text-gray-400" />
-                            <span>Zalo: {customer.zalo}</span>
-                          </div>
+                            <span>Zalo: {customer.zalo}</span>                          </div>
                         )}
                       </div>
                     </CardSection>
@@ -262,7 +261,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                       <div className="space-y-3">
                         {customer.facebookPage ? (
                           <div>
-                            <span className="text-gray-500">Facebook Page: </span>
+                            <span className="text-gray-500">{t("Facebook Page:", lang)} </span>
                             <span>{customer.facebookPage.name}</span>
                           </div>
                         ) : (
@@ -270,7 +269,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                         )}
                         {customer.campaign ? (
                           <div>
-                            <span className="text-gray-500">Campaign: </span>
+                            <span className="text-gray-500">{t("Campaign:", lang)} </span>
                             <span>{customer.campaign.name}</span>
                           </div>
                         ) : (
@@ -278,7 +277,7 @@ export default function CustomerDetailPage({ params }: PageProps) {
                         )}
                         {customer.lead ? (
                           <div>
-                            <span className="text-gray-500">Lead: </span>
+                            <span className="text-gray-500">{t("Lead:", lang)} </span>
                             <a onClick={() => router.push(`/leads/${customer.lead?._id}`)}>
                               {customer.lead.code} - {customer.lead.fullName}
                             </a>

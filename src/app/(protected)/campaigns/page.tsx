@@ -101,8 +101,8 @@ export default function CampaignsListPage() {
 
   const errorMsg = useMemo(() => {
     if (!error) return null;
-    return error.message || "Đã xảy ra lỗi";
-  }, [error]);
+    return error.message || t("Đã xảy ra lỗi", lang);
+  }, [error, lang]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleToolbarFiltersChange = useCallback(
@@ -162,7 +162,7 @@ export default function CampaignsListPage() {
   return (
     <PageContainer>
       <PageHeader title={t("Campaigns", lang)}
-        subtitle={`${total} campaigns cho Marketing`}
+        subtitle={`${total} ${t("campaigns cho Marketing", lang)}`}
       />
 
       {/* Stats Banner */}
@@ -171,35 +171,35 @@ export default function CampaignsListPage() {
           {
             key: "total",
             value: campaignStats.total,
-            label: "Tổng Campaigns",
+            label: t("Tổng Campaigns", lang),
             icon: <RocketOutlined style={{ color: "#1890ff" }} />,
             color: "blue",
           },
           {
             key: "active",
             value: campaignStats.active,
-            label: "Đang chạy",
+            label: t("Đang chạy", lang),
             icon: <PlayCircleOutlined style={{ color: "#52c41a" }} />,
             color: "green",
           },
           {
             key: "paused",
             value: campaignStats.paused,
-            label: "Tạm dừng",
+            label: t("Tạm dừng", lang),
             icon: <PauseCircleOutlined style={{ color: "#fa8c16" }} />,
             color: "orange",
           },
           {
             key: "completed",
             value: campaignStats.completed,
-            label: "Hoàn thành",
+            label: t("Hoàn thành", lang),
             icon: <CheckCircleOutlined style={{ color: "#722ed1" }} />,
             color: "purple",
           },
           {
             key: "archived",
             value: campaignStats.archived,
-            label: "Đã lưu trữ",
+            label: t("Đã lưu trữ", lang),
             icon: <FolderOutlined style={{ color: "#8c8c8c" }} />,
             color: "gold",
           },
@@ -222,25 +222,25 @@ export default function CampaignsListPage() {
           <SkeletonTable columns={7} rows={10} />
         ) : errorMsg ? (
           <EmptyState
-            title="Không thể tải dữ liệu"
+            title={t("Không thể tải dữ liệu", lang)}
             description={errorMsg}
             action={
               <Button onClick={() => { void refetch(); }}>
-                Thử lại
+                {t("Thử lại", lang)}
               </Button>
             }
           />
         ) : items.length === 0 ? (
           <EmptyState
-            title="Chưa có Campaign"
-            description="Tạo Campaign đầu tiên để bắt đầu"
+            title={t("Chưa có Campaign", lang)}
+            description={t("Tạo Campaign đầu tiên để bắt đầu", lang)}
             action={
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleCreate}
               >
-                Tạo Campaign
+                {t("Tạo Campaign", lang)}
               </Button>
             }
           />

@@ -46,12 +46,11 @@ import { CustomerStatus } from "@/types/customer";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 
-const STATUS_OPTIONS = [
-  { label: "Tất cả trạng thái", value: "" },
-  { label: "Hoạt động", value: CustomerStatus.ACTIVE },
-  { label: "Không hoạt động", value: CustomerStatus.INACTIVE },
-  { label: "Bị chặn", value: CustomerStatus.BLOCKED },
-];
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  [CustomerStatus.ACTIVE]: "Hoạt động",
+  [CustomerStatus.INACTIVE]: "Không hoạt động",
+  [CustomerStatus.BLOCKED]: "Bị chặn",
+};
 
 function CustomerStatusLabel({ value }: { value: string }) {
   const lang = useLanguageStore((s) => s.language);
@@ -61,14 +60,9 @@ function CustomerStatusLabel({ value }: { value: string }) {
     [CustomerStatus.INACTIVE]: "default",
     [CustomerStatus.BLOCKED]: "red",
   };
-  const labelMap: Record<string, string> = {
-    [CustomerStatus.ACTIVE]: "Hoạt động",
-    [CustomerStatus.INACTIVE]: "Không hoạt động",
-    [CustomerStatus.BLOCKED]: "Bị chặn",
-  };
   return (
     <Tag color={colorMap[statusValue]}>
-      {t(labelMap[statusValue] || statusValue, lang)}
+      {t(STATUS_LABEL_KEYS[statusValue] || statusValue, lang)}
     </Tag>
   );
 }
@@ -77,6 +71,16 @@ export default function CustomersPage() {
   const router = useRouter();
   const message = useMessage();
   const lang = useLanguageStore((s) => s.language);
+
+  const statusOptions = useMemo(
+    () => [
+      { label: t("Tất cả trạng thái", lang), value: "" },
+      { label: t("Hoạt động", lang), value: CustomerStatus.ACTIVE },
+      { label: t("Không hoạt động", lang), value: CustomerStatus.INACTIVE },
+      { label: t("Bị chặn", lang), value: CustomerStatus.BLOCKED },
+    ],
+    [lang]
+  );
 
   // Search and filter state
   const [keyword, setKeyword] = useState("");
@@ -311,7 +315,7 @@ export default function CustomersPage() {
           <Select
             value={status}
             onChange={(value) => handleFilterChange(value, "status")}
-            options={STATUS_OPTIONS.map((opt) => ({ ...opt, label: t(opt.label, lang) }))}
+            options={statusOptions}
             style={{ width: 180 }}
             placeholder={t("Chọn trạng thái", lang)}
           />

@@ -6,11 +6,13 @@
  * Uses CardSection, DataTable from UI Kit and CSS module for status pill.
  */
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { CardSection, DataTable } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import type { RecentInventory } from "@/types/dashboard-activity";
 import { formatRelativeTime } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../dashboard.module.css";
 
 export type RecentInventoryProps = {
@@ -18,47 +20,51 @@ export type RecentInventoryProps = {
 };
 
 function RecentInventoryInner({ data }: RecentInventoryProps) {
-  const columns: Column[] = [
-    {
-      key: "product",
-      title: "Sản phẩm",
-      dataIndex: "product",
-    },
-    {
-      key: "type",
-      title: "Loại",
-      dataIndex: "type",
-      width: 90,
-      render: (value: unknown) => {
-        const type = String(value);
-        const isIn = type === "IN";
-        const label = isIn ? "Nhập" : "Xuất";
-        const cls = isIn ? styles["d4-pill-in"] : styles["d4-pill-out"];
-        return (
-          <span
-            className={`${styles["d4-pill"]} ${cls}`}
-            aria-label={`Loại: ${label}`}
-          >
-            {label}
-          </span>
-        );
+  const lang = useLanguageStore((s) => s.language);
+  const columns: Column[] = useMemo(
+    () => [
+      {
+        key: "product",
+        title: t("Sản phẩm", lang),
+        dataIndex: "product",
       },
-    },
-    {
-      key: "quantity",
-      title: "Số lượng",
-      dataIndex: "quantity",
-      width: 90,
-      align: "right",
-    },
-    {
-      key: "createdAt",
-      title: "Thời gian",
-      dataIndex: "createdAt",
-      width: 130,
-      render: (value: unknown) => formatRelativeTime(String(value)),
-    },
-  ];
+      {
+        key: "type",
+        title: t("Loại", lang),
+        dataIndex: "type",
+        width: 90,
+        render: (value: unknown) => {
+          const type = String(value);
+          const isIn = type === "IN";
+          const label = isIn ? t("Nhập", lang) : t("Xuất", lang);
+          const cls = isIn ? styles["d4-pill-in"] : styles["d4-pill-out"];
+          return (
+            <span
+              className={`${styles["d4-pill"]} ${cls}`}
+              aria-label={`${t("Loại:", lang)} ${label}`}
+            >
+              {label}
+            </span>
+          );
+        },
+      },
+      {
+        key: "quantity",
+        title: t("Số lượng", lang),
+        dataIndex: "quantity",
+        width: 90,
+        align: "right",
+      },
+      {
+        key: "createdAt",
+        title: t("Thời gian", lang),
+        dataIndex: "createdAt",
+        width: 130,
+        render: (value: unknown) => formatRelativeTime(String(value)),
+      },
+    ],
+    [lang]
+  );
 
   const tableData = data.map((item) => ({
     id: item.id,
@@ -69,7 +75,7 @@ function RecentInventoryInner({ data }: RecentInventoryProps) {
   }));
 
   return (
-    <CardSection title="Thay đổi kho">
+    <CardSection title={t("Thay đổi kho", lang)}>
       <DataTable
         columns={columns}
         data={tableData}

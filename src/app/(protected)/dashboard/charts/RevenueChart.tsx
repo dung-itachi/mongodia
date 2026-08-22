@@ -12,6 +12,8 @@ import { Button, Space, Tooltip } from "antd";
 import { BarChartOutlined, LineChartOutlined } from "@ant-design/icons";
 import type { RevenueChartItem } from "@/types/dashboard-chart";
 import { formatCurrency, formatCompact } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../dashboard.module.css";
 
 export type RevenueChartProps = {
@@ -22,6 +24,7 @@ export type RevenueChartProps = {
 type ChartViewType = "bar" | "line";
 
 export default function RevenueChart({ data, loading }: RevenueChartProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [chartType, setChartType] = useState<ChartViewType>("bar");
 
   const maxRevenue = data.reduce(
@@ -233,13 +236,13 @@ export default function RevenueChart({ data, loading }: RevenueChartProps) {
 
   return (
     <ChartContainer
-      title="Doanh thu"
-      subtitle="Doanh thu theo tháng"
+      title={t("Doanh thu", lang)}
+      subtitle={t("Doanh thu theo tháng", lang)}
       loading={loading}
       height={280}
       actions={
         <Space.Compact size="small">
-          <Tooltip title="Biểu đồ cột">
+          <Tooltip title={t("Biểu đồ cột", lang)}>
             <Button
               icon={<BarChartOutlined />}
               type={chartType === "bar" ? "primary" : "default"}
@@ -247,7 +250,7 @@ export default function RevenueChart({ data, loading }: RevenueChartProps) {
               size="small"
             />
           </Tooltip>
-          <Tooltip title="Biểu đồ đường">
+          <Tooltip title={t("Biểu đồ đường", lang)}>
             <Button
               icon={<LineChartOutlined />}
               type={chartType === "line" ? "primary" : "default"}

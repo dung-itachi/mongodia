@@ -9,6 +9,8 @@ import type { ColumnsType } from "antd/es/table";
 import { EditOutlined } from "@ant-design/icons";
 import type { Campaign } from "@/hooks/useCampaigns";
 import { formatNumber } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./campaigns.module.css";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -18,7 +20,7 @@ const STATUS_COLORS: Record<string, string> = {
   ARCHIVED: "default",
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABEL_KEYS: Record<string, string> = {
   ACTIVE: "Hoạt động",
   PAUSED: "Tạm dừng",
   COMPLETED: "Hoàn thành",
@@ -61,6 +63,7 @@ function CampaignsTableInner({
   onSortChange,
   onEdit,
 }: CampaignsTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleTableChange = (pagination: TablePaginationConfig, _filters: any, sorter: any) => {
     onPageChange(pagination.current ?? 1, pagination.pageSize ?? 20);
@@ -74,7 +77,7 @@ function CampaignsTableInner({
 
   const columns: ColumnsType<Campaign> = [
     {
-      title: "Mã",
+      title: t("Mã", lang),
       dataIndex: "code",
       key: "code",
       width: 120,
@@ -82,7 +85,7 @@ function CampaignsTableInner({
       sortOrder: sortField === "code" ? (sortOrder === "asc" ? "ascend" : "descend") as "ascend" | "descend" : undefined,
     },
     {
-      title: "Tên Campaign",
+      title: t("Tên Campaign", lang),
       dataIndex: "name",
       key: "name",
       width: 200,
@@ -91,33 +94,33 @@ function CampaignsTableInner({
       render: (name: string) => <span style={{ fontWeight: 500 }}>{name}</span>,
     },
     {
-      title: "Facebook Page",
+      title: t("Facebook Page", lang),
       key: "facebookPageId",
       width: 150,
       render: (_: unknown, record: Campaign) => getPageName(record.facebookPageId),
     },
     {
-      title: "Objective",
+      title: t("Objective", lang),
       dataIndex: "objective",
       key: "objective",
       width: 120,
     },
     {
-      title: "Ngày bắt đầu",
+      title: t("Ngày bắt đầu", lang),
       dataIndex: "startDate",
       key: "startDate",
       width: 120,
       render: (date: string) => formatDate(date),
     },
     {
-      title: "Ngày kết thúc",
+      title: t("Ngày kết thúc", lang),
       dataIndex: "endDate",
       key: "endDate",
       width: 120,
       render: (date: string | null) => formatDate(date),
     },
     {
-      title: "Daily Budget",
+      title: t("Daily Budget", lang),
       dataIndex: "dailyBudget",
       key: "dailyBudget",
       width: 120,
@@ -125,13 +128,13 @@ function CampaignsTableInner({
       render: (val: number) => formatNumber(val),
     },
     {
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "status",
       key: "status",
       width: 120,
       render: (status: "ACTIVE" | "PAUSED" | "COMPLETED" | "ARCHIVED") => (
         <Tag color={STATUS_COLORS[status]}>
-          {STATUS_LABELS[status]}
+          {t(STATUS_LABEL_KEYS[status], lang)}
         </Tag>
       ),
     },
@@ -165,7 +168,7 @@ function CampaignsTableInner({
         total: total,
         showSizeChanger: true,
         showQuickJumper: true,
-        showTotal: (t: number) => `Tổng: ${t}`,
+        showTotal: (total: number) => `${t("Tổng:", lang)} ${total}`,
       }}
       scroll={{ x: 1200 }}
       size="middle"

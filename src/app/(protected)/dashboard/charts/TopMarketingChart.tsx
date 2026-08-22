@@ -22,6 +22,8 @@ import { Button, Segmented, Space, Tooltip } from "antd";
 import { BarChartOutlined, LineChartOutlined } from "@ant-design/icons";
 import type { TopMarketingItem, TopMarketingRange } from "@/types/dashboard-chart";
 import { formatCompact, formatNumber } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../dashboard.module.css";
 
 export type TopMarketingChartProps = {
@@ -35,19 +37,23 @@ export type TopMarketingChartProps = {
 
 type ChartViewType = "bar" | "line";
 
-const RANGE_OPTIONS: { label: string; value: TopMarketingRange }[] = [
-  { label: "Ngày", value: "day" },
-  { label: "Tuần", value: "week" },
-  { label: "Tháng", value: "month" },
-];
-
 export default function TopMarketingChart({
   data,
   loading,
   range = "month",
   onRangeChange,
 }: TopMarketingChartProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [chartType, setChartType] = useState<ChartViewType>("bar");
+
+  const rangeOptions = useMemo(
+    () => [
+      { label: t("Ngày", lang), value: "day" as const },
+      { label: t("Tuần", lang), value: "week" as const },
+      { label: t("Tháng", lang), value: "month" as const },
+    ],
+    [lang]
+  );
 
   const handleRangeChange = (value: string | number) => {
     onRangeChange?.(value as TopMarketingRange);
@@ -94,13 +100,13 @@ export default function TopMarketingChart({
           }}
         >
           <span>
-            Tổng{" "}
+            {t("Tổng", lang)}{" "}
             <strong style={{ color: "#722ed1" }}>
               {formatCompact(totalRevenue)} ₫
             </strong>
           </span>
           <span>
-            Tổng đơn: <strong>{formatNumber(totalOrders)}</strong>
+            {t("Tổng đơn:", lang)} <strong>{formatNumber(totalOrders)}</strong>
           </span>
         </div>
       )}
@@ -114,7 +120,7 @@ export default function TopMarketingChart({
             fontSize: 13,
           }}
         >
-          Chưa có dữ liệu doanh thu trong kỳ này
+          {t("Chưa có dữ liệu doanh thu trong kỳ này", lang)}
         </div>
       ) : (
         data.map((item, index) => {
@@ -223,10 +229,10 @@ export default function TopMarketingChart({
                     color: "#8c8c8c",
                   }}
                 >
-                  <span>{item.orders} đơn</span>
+                  <span>{item.orders} {t("đơn", lang)}</span>
                   <span>
                     {totalRevenue > 0
-                      ? `${((item.revenue / totalRevenue) * 100).toFixed(1)}% tổng`
+                      ? `${((item.revenue / totalRevenue) * 100).toFixed(1)}% ${t("tổng", lang)}`
                       : ""}
                   </span>
                 </div>
@@ -289,13 +295,13 @@ export default function TopMarketingChart({
             }}
           >
             <span>
-              Tổng{" "}
+              {t("Tổng", lang)}{" "}
               <strong style={{ color: "#722ed1" }}>
                 {formatCompact(totalRevenue)} ₫
               </strong>
             </span>
             <span>
-              Tổng đơn: <strong>{formatNumber(totalOrders)}</strong>
+              {t("Tổng đơn:", lang)} <strong>{formatNumber(totalOrders)}</strong>
             </span>
           </div>
         )}
@@ -410,13 +416,13 @@ export default function TopMarketingChart({
 
   return (
     <ChartContainer
-      title="Top Marketing"
-      subtitle="Top 5 nhân viên marketing theo doanh thu từ đơn hàng"
+      title={t("Top Marketing", lang)}
+      subtitle={t("Top 5 nhân viên marketing theo doanh thu từ đơn hàng", lang)}
       loading={loading}
       height={320}
       actions={
         <Space size={8}>
-          <Tooltip title="Biểu đồ cột">
+          <Tooltip title={t("Biểu đồ cột", lang)}>
             <Button
               icon={<BarChartOutlined />}
               type={chartType === "bar" ? "primary" : "default"}
@@ -424,7 +430,7 @@ export default function TopMarketingChart({
               size="small"
             />
           </Tooltip>
-          <Tooltip title="Biểu đồ đường">
+          <Tooltip title={t("Biểu đồ đường", lang)}>
             <Button
               icon={<LineChartOutlined />}
               type={chartType === "line" ? "primary" : "default"}
@@ -433,7 +439,7 @@ export default function TopMarketingChart({
             />
           </Tooltip>
           <Segmented
-            options={RANGE_OPTIONS}
+            options={rangeOptions}
             value={range}
             onChange={handleRangeChange}
             size="small"

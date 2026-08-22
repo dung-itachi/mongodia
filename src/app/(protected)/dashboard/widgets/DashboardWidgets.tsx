@@ -20,9 +20,12 @@ import RecentLeads from "./RecentLeads";
 import RecentInventory from "./RecentInventory";
 import NotificationPanel from "./NotificationPanel";
 import QuickActions from "./QuickActions";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../dashboard.module.css";
 
 function DashboardWidgetsInner() {
+  const lang = useLanguageStore((s) => s.language);
   const {
     data: activityData,
     loading: activityLoading,
@@ -40,7 +43,7 @@ function DashboardWidgetsInner() {
   if (isLoading) {
     return (
       <div className={styles["d4-section"]} aria-busy="true">
-        <CardSection title="Thao tác nhanh">
+        <CardSection title={t("Thao tác nhanh", lang)}>
           <SkeletonCard rows={1} title={false} avatar={false} />
         </CardSection>
         <div className={styles["d4-grid-2"]}>
@@ -56,10 +59,10 @@ function DashboardWidgetsInner() {
   if (activityError || !activityData) {
     return (
       <DashboardErrorState
-        cardTitle="Hoạt động gần đây"
+        cardTitle={t("Hoạt động gần đây", lang)}
         icon={<NotificationOutlined />}
-        title="Không thể tải hoạt động"
-        message={activityError || "Đã xảy ra lỗi khi tải dữ liệu"}
+        title={t("Không thể tải hoạt động", lang)}
+        message={activityError || t("Đã xảy ra lỗi khi tải dữ liệu", lang)}
         onRetry={() => {
           void refetchActivities();
           void refetchQuickActions();
@@ -71,7 +74,7 @@ function DashboardWidgetsInner() {
   return (
     <div
       className={styles["d4-section"]}
-      aria-label="Dashboard widgets"
+      aria-label={t("Dashboard widgets", lang)}
     >
       <QuickActions data={quickActions} />
 
@@ -83,14 +86,14 @@ function DashboardWidgetsInner() {
       </div>
 
       <CardSection
-        title="Tổng quan"
-        actions={<ThunderboltOutlined aria-label="Tổng quan" />}
+        title={t("Tổng quan", lang)}
+        actions={<ThunderboltOutlined aria-label={t("Tổng quan", lang)} />}
       >
         <span
           style={{ color: "#8c8c8c", fontSize: 13 }}
-          aria-label="Cập nhật trạng thái"
+          aria-label={t("Cập nhật trạng thái", lang)}
         >
-          Dashboard đang hiển thị các hoạt động gần nhất. Cập nhật lần cuối vừa xong.
+          {t("Dashboard đang hiển thị các hoạt động gần nhất. Cập nhật lần cuối vừa xong.", lang)}
         </span>
       </CardSection>
     </div>

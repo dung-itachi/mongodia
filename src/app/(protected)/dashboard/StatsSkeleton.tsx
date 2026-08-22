@@ -8,6 +8,8 @@
 import { Skeleton } from "antd";
 import { memo } from "react";
 import { StatGrid } from "@/components/common";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./dashboard.module.css";
 
 const SKELETON_STYLE = {
@@ -48,8 +50,13 @@ function StatCardSkeleton() {
 }
 
 function StatsSkeletonInner() {
+  const lang = useLanguageStore((s) => s.language);
   return (
-    <div className={styles["d4-fill"]} aria-label="Đang tải thống kê" aria-busy="true">
+    <div
+      className={styles["d4-fill"]}
+      aria-label={t("Đang tải thống kê", lang)}
+      aria-busy="true"
+    >
       <StatGrid columns={3}>
         {[...Array(6)].map((_, i) => (
           <StatCardSkeleton key={i} />

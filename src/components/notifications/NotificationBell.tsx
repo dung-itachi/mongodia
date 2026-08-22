@@ -13,6 +13,8 @@ import {
 } from "@/hooks/useNotifications";
 import type { NotificationItem } from "@/types/notification";
 import NotificationItemRow from "./NotificationItemRow";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import "./notification.css";
 
 const POPUP_LIMIT = 10;
@@ -42,6 +44,7 @@ function getTodayLabel(): string {
 }
 
 export default function NotificationBell() {
+  const lang = useLanguageStore((s) => s.language);
   const canView = useCan("notification.view");
   const [open, setOpen] = useState(false);
 
@@ -98,17 +101,17 @@ export default function NotificationBell() {
     <div
       className="nb-popup"
       role="dialog"
-      aria-label="Danh sách thông báo"
+      aria-label={t("Danh sách thông báo", lang)}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="nb-popup-header">
-        <span>Thông báo hôm nay ({getTodayLabel()})</span>
+        <span>{t("Thông báo hôm nay", lang)} ({getTodayLabel()})</span>
         <button
           type="button"
           onClick={handleMarkAll}
           disabled={todayUnreadCount === 0 || markAllRead.isPending}
         >
-          Đánh dấu đã đọc tất cả
+          {t("Đánh dấu đã đọc tất cả", lang)}
         </button>
       </div>
       <div className="nb-popup-body">
@@ -129,7 +132,7 @@ export default function NotificationBell() {
           </>
         ) : isError ? (
           <div className="np-error">
-            Không thể tải thông báo.
+            {t("Không thể tải thông báo.", lang)}
             <div>
               <button
                 type="button"
@@ -137,7 +140,7 @@ export default function NotificationBell() {
                   refetch();
                 }}
               >
-                Thử lại
+                {t("Thử lại", lang)}
               </button>
             </div>
           </div>
@@ -145,7 +148,7 @@ export default function NotificationBell() {
           <div className="nb-empty">
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="Hôm nay không có thông báo nào"
+              description={t("Hôm nay không có thông báo nào", lang)}
             />
           </div>
         ) : (
@@ -165,14 +168,14 @@ export default function NotificationBell() {
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
             >
-              {isFetchingNextPage ? "Đang tải..." : "Tải thêm"}
+              {isFetchingNextPage ? t("Đang tải...", lang) : t("Tải thêm", lang)}
             </button>
           </div>
         )}
       </div>
       <div className="nb-popup-footer">
         <Link href="/notifications" onClick={() => setOpen(false)}>
-          Xem tất cả thông báo
+          {t("Xem tất cả thông báo", lang)}
         </Link>
       </div>
     </div>
@@ -194,8 +197,8 @@ export default function NotificationBell() {
         className={`nb-bell ${hasUnread ? "has-unread" : ""}`}
         aria-label={
           hasUnread
-            ? `Thông báo, ${todayUnreadCount} chưa đọc hôm nay`
-            : "Thông báo"
+            ? `${t("Thông báo", lang)}, ${todayUnreadCount} ${t("chưa đọc hôm nay", lang)}`
+            : t("Thông báo", lang)
         }
         aria-haspopup="dialog"
         aria-expanded={open}

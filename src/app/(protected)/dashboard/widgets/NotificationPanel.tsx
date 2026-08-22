@@ -10,6 +10,8 @@ import { memo } from "react";
 import { CardSection } from "@/components/common";
 import type { NotificationItem } from "@/types/dashboard-activity";
 import { formatRelativeTime } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../dashboard.module.css";
 
 export type NotificationPanelProps = {
@@ -30,7 +32,7 @@ const TYPE_GLYPH: Record<NotificationItem["type"], string> = {
   error: "×",
 };
 
-const TYPE_LABEL: Record<NotificationItem["type"], string> = {
+const TYPE_LABEL_KEYS: Record<NotificationItem["type"], string> = {
   info: "Thông tin",
   success: "Thành công",
   warning: "Cảnh báo",
@@ -38,9 +40,10 @@ const TYPE_LABEL: Record<NotificationItem["type"], string> = {
 };
 
 function NotificationPanelInner({ data }: NotificationPanelProps) {
+  const lang = useLanguageStore((s) => s.language);
   return (
-    <CardSection title="Thông báo">
-      <div className={styles["d4-stack"]} role="list" aria-label="Danh sách thông báo">
+    <CardSection title={t("Thông báo", lang)}>
+      <div className={styles["d4-stack"]} role="list" aria-label={t("Danh sách thông báo", lang)}>
         {data.map((item) => {
           const color = TYPE_COLOR[item.type];
           return (
@@ -48,7 +51,7 @@ function NotificationPanelInner({ data }: NotificationPanelProps) {
               key={item.id}
               role="listitem"
               className={styles["d4-notif"]}
-              aria-label={`${TYPE_LABEL[item.type]}: ${item.title}`}
+              aria-label={`${t(TYPE_LABEL_KEYS[item.type], lang)}: ${item.title}`}
             >
               <div
                 className={styles["d4-notif-icon"]}

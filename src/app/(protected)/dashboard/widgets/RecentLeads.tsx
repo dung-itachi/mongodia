@@ -10,34 +10,37 @@ import { memo, useMemo } from "react";
 import { CardSection, DataTable, StatusBadge } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import type { RecentLead } from "@/types/dashboard-activity";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type RecentLeadsProps = {
   data: RecentLead[];
 };
 
 function RecentLeadsInner({ data }: RecentLeadsProps) {
+  const lang = useLanguageStore((s) => s.language);
   const columns: Column[] = useMemo(
     () => [
       {
         key: "name",
-        title: "Tên",
+        title: t("Tên", lang),
         dataIndex: "name",
       },
       {
         key: "source",
-        title: "Nguồn",
+        title: t("Nguồn", lang),
         dataIndex: "source",
         width: 110,
       },
       {
         key: "sale",
-        title: "Sale",
+        title: t("Sale", lang),
         dataIndex: "sale",
         width: 150,
       },
       {
         key: "status",
-        title: "Trạng thái",
+        title: t("Trạng thái", lang),
         dataIndex: "status",
         width: 130,
         render: (value: unknown) => (
@@ -45,7 +48,7 @@ function RecentLeadsInner({ data }: RecentLeadsProps) {
         ),
       },
     ],
-    []
+    [lang]
   );
 
   const tableData = useMemo(
@@ -61,7 +64,7 @@ function RecentLeadsInner({ data }: RecentLeadsProps) {
   );
 
   return (
-    <CardSection title="Khách hàng mới">
+    <CardSection title={t("Khách hàng mới", lang)}>
       <DataTable
         columns={columns}
         data={tableData}

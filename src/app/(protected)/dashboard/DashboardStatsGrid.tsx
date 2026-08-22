@@ -9,6 +9,8 @@
 import { memo } from "react";
 import { StatGrid, StatCard } from "@/components/common";
 import type { DashboardStatItem } from "./dashboard.config";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./dashboard.module.css";
 
 export type DashboardStatsGridProps = {
@@ -16,8 +18,9 @@ export type DashboardStatsGridProps = {
 };
 
 function DashboardStatsGridInner({ stats }: DashboardStatsGridProps) {
+  const lang = useLanguageStore((s) => s.language);
   return (
-    <div className={styles["d4-fill"]} aria-label="Thống kê tổng quan">
+    <div className={styles["d4-fill"]} aria-label={t("Thống kê tổng quan", lang)}>
       <StatGrid columns={3}>
         {stats.map((stat) => (
           <StatCard

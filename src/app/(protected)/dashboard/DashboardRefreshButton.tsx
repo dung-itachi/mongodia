@@ -8,21 +8,25 @@
 import { ActionButton } from "@/components/common";
 import { ReloadOutlined } from "@ant-design/icons";
 import { useDashboardRefresh } from "@/hooks/useDashboardRefresh";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type DashboardRefreshButtonProps = {
   label?: string;
 };
 
 export default function DashboardRefreshButton({
-  label = "Refresh Dashboard",
+  label,
 }: DashboardRefreshButtonProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { refresh, isFetching } = useDashboardRefresh();
+  const resolvedLabel = label ?? t("Refresh Dashboard", lang);
 
   return (
     <ActionButton
       type="secondary"
       icon={<ReloadOutlined spin={isFetching} />}
-      label={isFetching ? "Đang tải..." : label}
+      label={isFetching ? t("Đang tải...", lang) : resolvedLabel}
       loading={isFetching}
       onClick={refresh}
     />

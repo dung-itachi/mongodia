@@ -20,24 +20,6 @@ type ReadFilter = "all" | "unread";
 type DateFilter = "1" | "3" | "7" | "all";
 type ActiveFilter = "all" | "active" | "inactive";
 
-const READ_TABS: { key: ReadFilter; label: string }[] = [
-  { key: "all", label: "Tất cả" },
-  { key: "unread", label: "Chưa đọc" },
-];
-
-const DATE_FILTERS: { key: DateFilter; label: string }[] = [
-  { key: "1", label: "1 ngày" },
-  { key: "3", label: "3 ngày" },
-  { key: "7", label: "7 ngày" },
-  { key: "all", label: "Tất cả" },
-];
-
-const ACTIVE_FILTERS: { key: ActiveFilter; label: string }[] = [
-  { key: "all", label: "Tất cả" },
-  { key: "active", label: "Hoạt động" },
-  { key: "inactive", label: "Không hoạt động" },
-];
-
 export default function NotificationsPage() {
   const lang = useLanguageStore((s) => s.language);
   const canView = useCan("notification.view");
@@ -45,7 +27,6 @@ export default function NotificationsPage() {
   const [readFilter, setReadFilter] = useState<ReadFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("active");
-
   const {
     data,
     fetchNextPage,
@@ -111,15 +92,41 @@ export default function NotificationsPage() {
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const READ_TABS_T = useMemo(
+    () => [
+      { key: "all" as ReadFilter, label: t("Tất cả", lang) },
+      { key: "unread" as ReadFilter, label: t("Chưa đọc", lang) },
+    ],
+    [lang]
+  );
+
+  const DATE_FILTERS_T = useMemo(
+    () => [
+      { key: "1" as DateFilter, label: t("1 ngày", lang) },
+      { key: "3" as DateFilter, label: t("3 ngày", lang) },
+      { key: "7" as DateFilter, label: t("7 ngày", lang) },
+      { key: "all" as DateFilter, label: t("Tất cả", lang) },
+    ],
+    [lang]
+  );
+
+  const ACTIVE_FILTERS_T = useMemo(
+    () => [
+      { key: "all" as ActiveFilter, label: t("Tất cả", lang) },
+      { key: "active" as ActiveFilter, label: t("Hoạt động", lang) },
+      { key: "inactive" as ActiveFilter, label: t("Không hoạt động", lang) },
+    ],
+    [lang]
+  );
+
   if (!canView) {
     return (
       <div className="np-page">
         <div className="np-empty">
           <div className="np-empty-icon">🔒</div>
-          <div className="np-empty-title">Không có quyền truy cập</div>
+          <div className="np-empty-title">{t("Không có quyền truy cập", lang)}</div>
           <div className="np-empty-message">
-            Bạn không có quyền xem thông báo. Liên hệ quản trị viên nếu
-            bạn cho rằng đây là nhầm lẫn.
+            {t("Bạn không có quyền xem thông báo. Liên hệ quản trị viên nếu bạn cho rằng đây là nhầm lẫn.", lang)}
           </div>
         </div>
       </div>
@@ -129,10 +136,10 @@ export default function NotificationsPage() {
   return (
     <div className="np-page">
       <div className="np-header">
-        <h1 className="np-title">Thông báo</h1>
+        <h1 className="np-title">{t("Thông báo", lang)}</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div className="np-date-filters" role="group" aria-label="Lọc theo ngày">
-            {DATE_FILTERS.map((d) => (
+          <div className="np-date-filters" role="group" aria-label={t("Lọc theo ngày", lang)}>
+            {DATE_FILTERS_T.map((d) => (
               <button
                 key={d.key}
                 type="button"
@@ -143,8 +150,8 @@ export default function NotificationsPage() {
               </button>
             ))}
           </div>
-          <div className="np-tabs" role="tablist" aria-label="Lọc theo trạng thái hoạt động">
-            {ACTIVE_FILTERS.map((f) => (
+          <div className="np-tabs" role="tablist" aria-label={t("Lọc theo trạng thái hoạt động", lang)}>
+            {ACTIVE_FILTERS_T.map((f) => (
               <button
                 key={f.key}
                 type="button"
@@ -157,8 +164,8 @@ export default function NotificationsPage() {
               </button>
             ))}
           </div>
-          <div className="np-tabs" role="tablist" aria-label="Lọc theo trạng thái đọc">
-            {READ_TABS.map((tab) => (
+          <div className="np-tabs" role="tablist" aria-label={t("Lọc theo trạng thái đọc", lang)}>
+            {READ_TABS_T.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
@@ -187,12 +194,12 @@ export default function NotificationsPage() {
             onClick={() => markAllRead.mutate()}
             disabled={unreadCount === 0 || markAllRead.isPending}
           >
-            Đọc tất cả
+            {t("Đọc tất cả", lang)}
           </button>
         </div>
       </div>
 
-      <div className="np-list" role="list" aria-label="Danh sách thông báo">
+      <div className="np-list" role="list" aria-label={t("Danh sách thông báo", lang)}>
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="np-skeleton" aria-hidden="true">
@@ -208,9 +215,9 @@ export default function NotificationsPage() {
           ))
         ) : isError ? (
           <div className="np-error">
-            <div>{error?.message ?? "Không thể tải thông báo"}</div>
+            <div>{error?.message ?? t("Không thể tải thông báo", lang)}</div>
             <button type="button" onClick={() => refetch()}>
-              Thử lại
+              {t("Thử lại", lang)}
             </button>
           </div>
         ) : filteredItems.length === 0 ? (
@@ -219,8 +226,8 @@ export default function NotificationsPage() {
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={
                 readFilter === "unread"
-                  ? "Bạn đã đọc hết thông báo"
-                  : "Bạn chưa có thông báo nào"
+                  ? t("Bạn đã đọc hết thông báo", lang)
+                  : t("Bạn chưa có thông báo nào", lang)
               }
             />
           </div>
@@ -243,13 +250,13 @@ export default function NotificationsPage() {
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
                 >
-                  {isFetchingNextPage ? "Đang tải..." : "Tải thêm"}
+                  {isFetchingNextPage ? t("Đang tải...", lang) : t("Tải thêm", lang)}
                 </button>
               </div>
             )}
             {!hasNextPage && filteredItems.length >= 20 && (
               <div className="np-load-more" style={{ color: "var(--muted)" }}>
-                Đã hiển thị tất cả thông báo
+                {t("Đã hiển thị tất cả thông báo", lang)}
               </div>
             )}
           </>

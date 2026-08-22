@@ -16,6 +16,8 @@ import {
 import type { StatCardProps } from "@/components/common/cards/StatCard";
 import type { DashboardSummary, DashboardTrend } from "@/types/dashboard";
 import { formatCurrency, formatNumber, formatVND, convertMNTtoVND } from "@/lib/format";
+import { t } from "@/lib/i18n";
+import type { Language } from "@/store/language.store";
 
 export type DashboardStatItem = {
   title: string;
@@ -42,12 +44,14 @@ function trendToStatTrend(trend: DashboardTrend): NonNullable<StatCardProps["tre
  * @param displayCurrency - "MNT" | "VND" — currency to display for the revenue card
  * @param exchangeRate    - VND per 1 MNT (from /api/settings/exchange-rate)
  * @param onCurrencyToggle - Called when the user clicks the currency toggle button
+ * @param lang            - Language for translating stat titles
  */
 export function buildDashboardStats(
   summary: DashboardSummary,
   displayCurrency: "MNT" | "VND" = "MNT",
   exchangeRate: number = 7,
   onCurrencyToggle?: () => void,
+  lang: Language = "vi",
 ): DashboardStatItem[] {
   const trend = trendToStatTrend(summary.trend);
 
@@ -59,42 +63,42 @@ export function buildDashboardStats(
 
   return [
     {
-      title: "Tổng số khách hàng",
+      title: t("Tổng số khách hàng", lang),
       value: formatNumber(summary.totalLeads),
       icon: <TeamOutlined />,
       color: "blue",
       trend,
     },
     {
-      title: "Chốt",
+      title: t("Chốt", lang),
       value: formatNumber(summary.closedLeads),
       icon: <CheckCircleOutlined />,
       color: "purple",
       trend,
     },
     {
-      title: "Đang giao",
+      title: t("Đang giao", lang),
       value: formatNumber(summary.shippingOrders),
       icon: <CarOutlined />,
       color: "orange",
       trend,
     },
     {
-      title: "Giao TC",
+      title: t("Giao TC", lang),
       value: formatNumber(summary.deliveredOrders),
       icon: <SmileOutlined />,
       color: "green",
       trend,
     },
     {
-      title: "Hoàn hàng",
+      title: t("Hoàn hàng", lang),
       value: formatNumber(summary.returnedOrders),
       icon: <RollbackOutlined />,
       color: "red",
       trend,
     },
     {
-      title: "Doanh thu",
+      title: t("Doanh thu", lang),
       value: revenueDisplay,
       icon: <DollarOutlined />,
       color: "green",

@@ -21,6 +21,8 @@ import {
   NOTIFICATION_PRIORITY_VALUES,
 } from "@/constants/notification";
 import type { NotificationType, NotificationCategory, NotificationPriority } from "@/constants/notification";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 type Variant = "popup" | "page";
 
@@ -58,8 +60,9 @@ const PRIORITY_TAG_COLOR: Record<NotificationPriority, string> = {
   low: "default",
 };
 
-function formatFullDateTime(isoString: string): string {
-  return new Date(isoString).toLocaleString("vi-VN", {
+function formatFullDateTime(isoString: string, lang: string): string {
+  const locale = lang === "vi" ? "vi-VN" : lang === "mn" ? "mn-MN" : "en-US";
+  return new Date(isoString).toLocaleString(locale, {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -71,6 +74,7 @@ function formatFullDateTime(isoString: string): string {
 }
 
 function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRowProps) {
+  const lang = useLanguageStore((s) => s.language);
   const color = TYPE_COLOR[item.type];
   const className = variant === "popup" ? "nb-item" : "np-item";
   const iconClass = variant === "popup" ? "nb-item-icon" : "np-item-icon";
@@ -90,21 +94,18 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
     }
   };
 
-  const typeLabel =
-    NOTIFICATION_TYPE_LABELS[item.type as NotificationType] ??
-    NOTIFICATION_TYPE_VALUES.includes(item.type as NotificationType)
-      ? item.type
-      : "info";
-  const categoryLabel =
-    NOTIFICATION_CATEGORY_LABELS[item.category as NotificationCategory] ??
-    NOTIFICATION_CATEGORY_VALUES.includes(item.category as NotificationCategory)
-      ? item.category
-      : "general";
-  const priorityLabel =
-    NOTIFICATION_PRIORITY_LABELS[item.priority as NotificationPriority] ??
-    NOTIFICATION_PRIORITY_VALUES.includes(item.priority as NotificationPriority)
-      ? item.priority
-      : "normal";
+  const typeLabel = t(
+    NOTIFICATION_TYPE_LABELS[item.type as NotificationType] ?? item.type,
+    lang
+  );
+  const categoryLabel = t(
+    NOTIFICATION_CATEGORY_LABELS[item.category as NotificationCategory] ?? item.category,
+    lang
+  );
+  const priorityLabel = t(
+    NOTIFICATION_PRIORITY_LABELS[item.priority as NotificationPriority] ?? item.priority,
+    lang
+  );
 
   return (
     <>
@@ -127,14 +128,14 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
           <div className={variant === "popup" ? "nb-item-title" : "np-item-title"}>
             <span>{item.title}</span>
             <span className={variant === "popup" ? "nb-item-time" : "np-item-time"}>
-              {formatRelativeTime(item.createdAt)}
+              {formatRelativeTime(item.createdAt, lang)}
             </span>
           </div>
           <div className={variant === "popup" ? "nb-item-message" : "np-item-message"}>
             {item.message}
           </div>
           {variant === "page" && item.link && (
-            <div className="np-item-link">Mở liên kết →</div>
+            <div className="np-item-link">{t("Mở liên kết →", lang)}</div>
           )}
         </div>
       </div>
@@ -173,7 +174,7 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
             <UserOutlined style={{ color: "#8c8c8c", marginTop: 3, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>Người gửi</div>
+              <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>{t("Người gửi", lang)}</div>
               <div style={{ fontSize: 14 }}>{item.senderName}</div>
             </div>
           </div>
@@ -184,11 +185,11 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
             <CalendarOutlined style={{ color: "#8c8c8c", marginTop: 3, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>Ngày giờ gửi</div>
-              <div style={{ fontSize: 14 }}>{formatFullDateTime(item.createdAt)}</div>
+              <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>{t("Ngày giờ gửi", lang)}</div>
+              <div style={{ fontSize: 14 }}>{formatFullDateTime(item.createdAt, lang)}</div>
               {item.readAt && (
                 <div style={{ fontSize: 12, color: "#52c41a", marginTop: 2 }}>
-                  Đã đọc lúc: {formatFullDateTime(item.readAt)}
+                  {t("Đã đọc lúc:", lang)} {formatFullDateTime(item.readAt, lang)}
                 </div>
               )}
             </div>
@@ -201,7 +202,7 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
               <AlertOutlined style={{ color: "#8c8c8c", marginTop: 3, flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>Loại</div>
+                <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>{t("Loại", lang)}</div>
                 <Tag color={TYPE_TAG_COLOR[item.type as NotificationType] ?? "default"}>
                   {typeLabel}
                 </Tag>
@@ -210,7 +211,7 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
               <FolderOutlined style={{ color: "#8c8c8c", marginTop: 3, flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>Danh mục</div>
+                <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>{t("Danh mục", lang)}</div>
                 <Tag color="geekblue">{categoryLabel}</Tag>
               </div>
             </div>
@@ -220,7 +221,7 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 16 }} />
             <div>
-              <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>Mức ưu tiên</div>
+              <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 2 }}>{t("Mức ưu tiên", lang)}</div>
               <Tag color={PRIORITY_TAG_COLOR[item.priority as NotificationPriority] ?? "default"}>
                 {priorityLabel}
               </Tag>
@@ -231,7 +232,7 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
 
           {/* Message */}
           <div>
-            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Nội dung</div>
+            <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>{t("Nội dung", lang)}</div>
             <div
               style={{
                 fontSize: 14,
@@ -249,7 +250,7 @@ function NotificationItemRowInner({ item, variant, onClick }: NotificationItemRo
           {/* Link */}
           {item.link && (
             <div>
-              <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>Liên kết</div>
+              <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>{t("Liên kết", lang)}</div>
               <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14 }}>
                 {item.link}
               </a>

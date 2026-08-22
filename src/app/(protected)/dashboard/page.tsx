@@ -41,9 +41,10 @@ export default function DashboardPage() {
             exchangeRateData?.rate ?? 7,
             () =>
               setDisplayCurrency((prev) => (prev === "MNT" ? "VND" : "MNT")),
+            lang,
           )
         : [],
-    [data, displayCurrency, exchangeRateData]
+    [data, displayCurrency, exchangeRateData, lang]
   );
 
   return (

@@ -7,6 +7,8 @@
 
 import type { DashboardPipeline } from "@/types/dashboard";
 import { formatNumber } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type PipelineItem = {
   label: string;
@@ -28,7 +30,7 @@ const STAGE_COLORS: Record<keyof DashboardPipeline, string> = {
   cancelled: "#8c8c8c",
 };
 
-const STAGE_LABELS: Record<keyof DashboardPipeline, string> = {
+const STAGE_LABEL_KEYS: Record<keyof DashboardPipeline, string> = {
   new: "Mới",
   contacted: "KNM",
   closed: "Chốt",
@@ -39,12 +41,13 @@ const STAGE_LABELS: Record<keyof DashboardPipeline, string> = {
 };
 
 export default function PipelineCard({ pipeline }: PipelineCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const total = Object.values(pipeline).reduce((sum, val) => sum + val, 0);
 
   const items: PipelineItem[] = (
     Object.keys(pipeline) as (keyof DashboardPipeline)[]
   ).map((key) => ({
-    label: STAGE_LABELS[key],
+    label: t(STAGE_LABEL_KEYS[key], lang),
     value: pipeline[key],
     color: STAGE_COLORS[key],
   }));
@@ -67,7 +70,7 @@ export default function PipelineCard({ pipeline }: PipelineCardProps) {
             color: "#262626",
           }}
         >
-          Quy trình
+          {t("Quy trình", lang)}
         </h3>
         <span
           style={{
@@ -75,7 +78,7 @@ export default function PipelineCard({ pipeline }: PipelineCardProps) {
             color: "#8c8c8c",
           }}
         >
-          Tổng: {formatNumber(total)}
+          {t("Tổng:", lang)} {formatNumber(total)}
         </span>
       </div>
 

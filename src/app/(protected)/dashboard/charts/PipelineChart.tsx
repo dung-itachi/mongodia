@@ -12,6 +12,8 @@ import { Button, Space, Tooltip } from "antd";
 import { BarChartOutlined, PieChartOutlined } from "@ant-design/icons";
 import type { PipelineChartItem } from "@/types/dashboard-chart";
 import { formatNumber } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../dashboard.module.css";
 
 export type PipelineChartProps = {
@@ -33,6 +35,7 @@ const STAGE_COLORS: Record<string, string> = {
 const DEFAULT_COLOR = "#8c8c8c";
 
 export default function PipelineChart({ data, loading }: PipelineChartProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [chartType, setChartType] = useState<ChartViewType>("bar");
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
@@ -103,7 +106,7 @@ export default function PipelineChart({ data, loading }: PipelineChartProps) {
     if (total === 0) {
       return (
         <div style={{ textAlign: "center", color: "#bfbfbf", padding: 32 }}>
-          Không có dữ liệu
+          {t("Không có dữ liệu", lang)}
         </div>
       );
     }
@@ -163,7 +166,7 @@ export default function PipelineChart({ data, loading }: PipelineChartProps) {
             {formatNumber(total)}
           </text>
           <text x={CX} y={CY + 12} textAnchor="middle" fontSize={11} fill="#8c8c8c">
-            Tổng
+            {t("Tổng", lang)}
           </text>
         </svg>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -191,13 +194,13 @@ export default function PipelineChart({ data, loading }: PipelineChartProps) {
 
   return (
     <ChartContainer
-      title="Quy trình"
-      subtitle="Phân bố theo giai đoạn"
+      title={t("Quy trình", lang)}
+      subtitle={t("Phân bổ theo giai đoạn", lang)}
       loading={loading}
       height={280}
       actions={
         <Space.Compact size="small">
-          <Tooltip title="Biểu đồ cột">
+          <Tooltip title={t("Biểu đồ cột", lang)}>
             <Button
               icon={<BarChartOutlined />}
               type={chartType === "bar" ? "primary" : "default"}
@@ -205,7 +208,7 @@ export default function PipelineChart({ data, loading }: PipelineChartProps) {
               size="small"
             />
           </Tooltip>
-          <Tooltip title="Biểu đồ tròn">
+          <Tooltip title={t("Biểu đồ tròn", lang)}>
             <Button
               icon={<PieChartOutlined />}
               type={chartType === "pie" ? "primary" : "default"}

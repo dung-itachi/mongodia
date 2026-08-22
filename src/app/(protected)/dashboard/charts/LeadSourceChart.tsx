@@ -12,6 +12,8 @@ import { Button, Space, Tooltip } from "antd";
 import { BarChartOutlined, PieChartOutlined } from "@ant-design/icons";
 import type { LeadSourceChartItem } from "@/types/dashboard-chart";
 import { formatNumber } from "@/lib/format";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "../dashboard.module.css";
 
 export type LeadSourceChartProps = {
@@ -31,6 +33,7 @@ const SOURCE_COLORS = [
 ];
 
 export default function LeadSourceChart({ data, loading }: LeadSourceChartProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [chartType, setChartType] = useState<ChartViewType>("bar");
   const total = data.reduce((sum, item) => sum + item.count, 0);
 
@@ -118,7 +121,7 @@ export default function LeadSourceChart({ data, loading }: LeadSourceChartProps)
     if (total === 0) {
       return (
         <div style={{ textAlign: "center", color: "#bfbfbf", padding: 32 }}>
-          Không có dữ liệu
+          {t("Không có dữ liệu", lang)}
         </div>
       );
     }
@@ -178,7 +181,7 @@ export default function LeadSourceChart({ data, loading }: LeadSourceChartProps)
             {formatNumber(total)}
           </text>
           <text x={CX} y={CY + 12} textAnchor="middle" fontSize={11} fill="#8c8c8c">
-            Tổng
+            {t("Tổng", lang)}
           </text>
         </svg>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -206,13 +209,13 @@ export default function LeadSourceChart({ data, loading }: LeadSourceChartProps)
 
   return (
     <ChartContainer
-      title="Nguồn đơn hàng"
-      subtitle="Phân bố nguồn đơn hàng"
+      title={t("Nguồn đơn hàng", lang)}
+      subtitle={t("Phân bố nguồn đơn hàng", lang)}
       loading={loading}
       height={280}
       actions={
         <Space.Compact size="small">
-          <Tooltip title="Biểu đồ cột">
+          <Tooltip title={t("Biểu đồ cột", lang)}>
             <Button
               icon={<BarChartOutlined />}
               type={chartType === "bar" ? "primary" : "default"}
@@ -220,7 +223,7 @@ export default function LeadSourceChart({ data, loading }: LeadSourceChartProps)
               size="small"
             />
           </Tooltip>
-          <Tooltip title="Biểu đồ tròn">
+          <Tooltip title={t("Biểu đồ tròn", lang)}>
             <Button
               icon={<PieChartOutlined />}
               type={chartType === "pie" ? "primary" : "default"}

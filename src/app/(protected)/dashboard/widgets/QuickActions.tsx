@@ -18,6 +18,8 @@ import {
   DatabaseOutlined,
 } from "@ant-design/icons";
 import type { QuickAction } from "@/types/dashboard-activity";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type QuickActionsProps = {
   data: QuickAction[];
@@ -33,20 +35,21 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 };
 
 function QuickActionsInner({ data }: QuickActionsProps) {
+  const lang = useLanguageStore((s) => s.language);
   return (
-    <CardSection title="Thao tác nhanh">
+    <CardSection title={t("Thao tác nhanh", lang)}>
       <Space
         wrap
         size={[12, 12]}
         role="group"
-        aria-label="Các thao tác nhanh"
+        aria-label={t("Các thao tác nhanh", lang)}
       >
         {data.map((action) => (
           <Button
             key={action.id}
             icon={ICON_MAP[action.icon] ?? null}
             size="large"
-            aria-label={`Tạo mới ${action.label}`}
+            aria-label={`${t("Tạo mới", lang)} ${action.label}`}
           >
             {action.label}
           </Button>

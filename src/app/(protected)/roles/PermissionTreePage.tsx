@@ -26,6 +26,8 @@ import {
   type TriState,
 } from "@/lib/permission-modules";
 import { NAV_GROUPS as SIDEBAR_NAV_GROUPS } from "@/config/nav.config";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 type Props = {
   /** Current user's permission list (from auth context). */
@@ -82,6 +84,7 @@ function buildBucket(g: PermissionGroup, codes: string[], wildcard: boolean): Bu
 
 export default function PermissionTreePage({ currentUserPermissions }: Props) {
   const { message } = useAntApp();
+  const lang = useLanguageStore((s) => s.language);
 
   const hasManagePerm =
     currentUserPermissions.includes("*") ||
@@ -247,9 +250,9 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
     updateMut.mutate(
       { roleId: rolePermsQ.data.role._id, codes: draft },
       {
-        onSuccess: () => message.success("Cập nhật phân quyền thành công"),
+        onSuccess: () => message.success(t("Cập nhật phân quyền thành công", lang)),
         onError: (err: Error) =>
-          message.error(err.message || "Cập nhật phân quyền thất bại"),
+          message.error(err.message || t("Cập nhật phân quyền thất bại", lang)),
       },
     );
   }
@@ -277,11 +280,11 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
       },
       {
         onSuccess: () => {
-          message.success("Cập nhật nhóm hiển thị thành công");
+          message.success(t("Cập nhật nhóm hiển thị thành công", lang));
           setVisibleGroupsDraft(null);
         },
         onError: (err: Error) =>
-          message.error(err.message || "Cập nhật nhóm hiển thị thất bại"),
+          message.error(err.message || t("Cập nhật nhóm hiển thị thất bại", lang)),
       },
     );
   }
@@ -314,14 +317,14 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
     return (
       <div>
         <PageHeader
-          title="Vai trò & Phân quyền"
-          subtitle="Quản lý role → module → permission"
+          title={t("Vai trò & Phân quyền", lang)}
+          subtitle={t("Quản lý role → module → permission", lang)}
         />
         <Alert
           type="error"
           showIcon
-          message="Bạn không có quyền quản lý phân quyền"
-          description="Trang này yêu cầu quyền role.permission.manage."
+          message={t("Bạn không có quyền quản lý phân quyền", lang)}
+          description={t("Trang này yêu cầu quyền role.permission.manage.", lang)}
         />
       </div>
     );
@@ -345,11 +348,11 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
   return (
     <div>
       <PageHeader
-        title="Vai trò & Phân quyền"
-        subtitle="Quản lý role → module → permission"
+        title={t("Vai trò & Phân quyền", lang)}
+        subtitle={t("Quản lý role → module → permission", lang)}
         breadcrumb={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Vai trò & Phân quyền" },
+          { label: t("Vai trò & Phân quyền", lang) },
         ]}
       />
 
@@ -364,13 +367,13 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
           {/* ----------- Sidebar (roles) ----------- */}
           <div className="card rpt-sidebar">
             <div className="card-h">
-              <h2>Vai trò</h2>
-              <small>{rolesQ.data?.total ?? 0} roles</small>
+              <h2>{t("Vai trò", lang)}</h2>
+              <small>{rolesQ.data?.total ?? 0} {t("roles", lang)}</small>
             </div>
             <div className="card-body">
               <div className="rpt-sidebar-search">
                 <Input.Search
-                  placeholder="Tìm role..."
+                  placeholder={t("Tìm role...", lang)}
                   value={roleSearch}
                   onChange={(e) => setRoleSearch(e.target.value)}
                   allowClear
@@ -379,7 +382,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
               </div>
               <div className="rpt-role-list">
                 {filteredRoles.length === 0 && (
-                  <div className="rpt-filter-empty">Không có role phù hợp</div>
+                  <div className="rpt-filter-empty">{t("Không có role phù hợp", lang)}</div>
                 )}
                 {filteredRoles.map((r) => (
                   <RoleSidebarItem
@@ -574,7 +577,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                   <div className="rpt-toolbar" style={{ marginTop: 10 }}>
                     <div className="rpt-search">
                       <Input.Search
-                        placeholder="Tìm module hoặc permission..."
+                        placeholder={t("Tìm module hoặc permission...", lang)}
                         value={permSearch}
                         onChange={(e) => setPermSearch(e.target.value)}
                         allowClear
@@ -726,10 +729,10 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Xác nhận cập nhật phân quyền"
+        title={t("Xác nhận cập nhật phân quyền", lang)}
         type="warning"
-        confirmText="Cập nhật"
-        cancelText="Hủy"
+        confirmText={t("Cập nhật", lang)}
+        cancelText={t("Hủy", lang)}
         loading={updateMut.isPending}
         onConfirm={() => {
           setConfirmOpen(false);
@@ -739,13 +742,13 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
         content={
           <div>
             {added.length === 0 && removed.length === 0 ? (
-              <p>Không có thay đổi.</p>
+              <p>{t("Không có thay đổi.", lang)}</p>
             ) : (
               <>
                 {added.length > 0 && (
                   <div style={{ marginBottom: 8 }}>
                     <strong style={{ color: "#14a06b" }}>
-                      + Thêm ({added.length}):
+                      + {t("Thêm", lang)} ({added.length}):
                     </strong>
                     <div
                       style={{

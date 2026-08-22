@@ -6,6 +6,7 @@
  * và nút "Tạo mới" (mở Drawer).
  */
 
+import { useMemo } from "react";
 import { Button, Space } from "antd";
 import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { FilterItem } from "@/components/common/types";
@@ -16,6 +17,8 @@ import PermissionGate from "@/components/common/PermissionGate";
 
 import type { MarketingExpenseFilter } from "@/hooks/useMarketingExpenses";
 import { useFacebookPages, useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface MarketingExpenseToolbarProps {
   keyword: string;
@@ -36,6 +39,7 @@ export default function MarketingExpenseToolbar({
   onRefresh,
   onCreate,
 }: MarketingExpenseToolbarProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { pages } = useFacebookPages();
   const { employees } = useMarketingEmployees();
 
@@ -59,45 +63,48 @@ export default function MarketingExpenseToolbar({
     });
   };
 
-  const filterItems: FilterItem[] = [
-    {
-      type: "select",
-      key: "status",
-      label: "Trạng thái",
-      options: [
-        { label: "Tất cả", value: "" },
-        { label: "Nháp", value: "DRAFT" },
-        { label: "Đã khóa", value: "LOCKED" },
-        { label: "Đã mở lại", value: "REOPENED" },
-      ],
-      placeholder: "Chọn trạng thái",
-    },
-    {
-      type: "select",
-      key: "facebookPage",
-      label: "Facebook Page",
-      options: [
-        { label: "Tất cả", value: "" },
-        ...pages.map((p) => ({ label: p.label, value: p.value })),
-      ],
-      placeholder: "Chọn Facebook Page",
-    },
-    {
-      type: "select",
-      key: "marketingEmployee",
-      label: "Nhân viên Marketing",
-      options: [
-        { label: "Tất cả", value: "" },
-        ...employees.map((e) => ({ label: e.label, value: e.value })),
-      ],
-      placeholder: "Chọn nhân viên",
-    },
-    {
-      type: "dateRange",
-      key: "dateRange",
-      label: "Ngày báo cáo",
-    },
-  ];
+  const filterItems: FilterItem[] = useMemo(
+    () => [
+      {
+        type: "select",
+        key: "status",
+        label: t("Trạng thái", lang),
+        options: [
+          { label: t("Tất cả", lang), value: "" },
+          { label: t("Nháp", lang), value: "DRAFT" },
+          { label: t("Đã khóa", lang), value: "LOCKED" },
+          { label: t("Đã mở lại", lang), value: "REOPENED" },
+        ],
+        placeholder: t("Chọn trạng thái", lang),
+      },
+      {
+        type: "select",
+        key: "facebookPage",
+        label: t("Facebook Page", lang),
+        options: [
+          { label: t("Tất cả", lang), value: "" },
+          ...pages.map((p) => ({ label: p.label, value: p.value })),
+        ],
+        placeholder: t("Chọn Facebook Page", lang),
+      },
+      {
+        type: "select",
+        key: "marketingEmployee",
+        label: t("Nhân viên Marketing", lang),
+        options: [
+          { label: t("Tất cả", lang), value: "" },
+          ...employees.map((e) => ({ label: e.label, value: e.value })),
+        ],
+        placeholder: t("Chọn nhân viên", lang),
+      },
+      {
+        type: "dateRange",
+        key: "dateRange",
+        label: t("Ngày báo cáo", lang),
+      },
+    ],
+    [lang, pages, employees]
+  );
 
   return (
     <div className="me-toolbar">
@@ -105,7 +112,7 @@ export default function MarketingExpenseToolbar({
         <SearchInput
           value={keyword}
           onChange={handleKeywordChange}
-          placeholder="Tìm kiếm ghi chú..."
+          placeholder={t("Tìm kiếm ghi chú...", lang)}
           allowClear
         />
         <FilterBar
@@ -131,7 +138,7 @@ export default function MarketingExpenseToolbar({
               onClick={onRefresh}
               disabled={loading}
             >
-              Làm mới
+              {t("Làm mới", lang)}
             </Button>
           )}
           <PermissionGate permission="marketing-expense.create">
@@ -140,7 +147,7 @@ export default function MarketingExpenseToolbar({
               icon={<PlusOutlined />}
               onClick={onCreate}
             >
-              Tạo mới
+              {t("Tạo mới", lang)}
             </Button>
           </PermissionGate>
         </Space>
