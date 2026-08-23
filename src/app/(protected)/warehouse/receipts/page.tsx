@@ -81,15 +81,15 @@ export default function WarehouseReceiptsPage() {
   };
 
   const columns = useMemo(() => [
-    { key: "code", title: "Mã phiếu", dataIndex: "receiptCode", width: 160 },
-    { key: "warehouse", title: "Kho", dataIndex: "warehouseId", width: 160, render: (value: unknown) => readWarehouseName(value) },
-    { key: "items", title: "Số mặt hàng", width: 130, render: (_: unknown, row: Record<string, unknown>) => Array.isArray(row.items) ? row.items.length : 0 },
-    { key: "ordered", title: "SL đặt", width: 120, align: "right" as const, render: (_: unknown, row: Record<string, unknown>) => sumQuantity(row.items as { orderedQuantity?: number }[] | undefined, "orderedQuantity") },
-    { key: "received", title: "SL thực nhận", width: 130, align: "right" as const, render: (_: unknown, row: Record<string, unknown>) => sumQuantity(row.items as { receivedQuantity?: number }[] | undefined, "receivedQuantity") },
-    { key: "diff", title: "Chênh lệch", width: 130, align: "right" as const, render: (_: unknown, row: Record<string, unknown>) => sumQuantity(row.items as { difference?: number }[] | undefined, "difference") },
-    { key: "creator", title: "Người tạo", dataIndex: "createdBy", width: 160, render: (value: unknown) => ((value as { fullName?: string } | null)?.fullName ?? "-") },
-    { key: "createdAt", title: "Ngày tạo", dataIndex: "createdAt", width: 160, render: (value: unknown) => new Date(String(value)).toLocaleString("vi-VN") },
-  ], []);
+    { key: "code", title: t("Mã phiếu", lang), dataIndex: "receiptCode", width: 160 },
+    { key: "warehouse", title: t("Kho", lang), dataIndex: "warehouseId", width: 160, render: (value: unknown) => readWarehouseName(value) },
+    { key: "items", title: t("Số mặt hàng", lang), width: 130, render: (_: unknown, row: Record<string, unknown>) => Array.isArray(row.items) ? row.items.length : 0 },
+    { key: "ordered", title: t("SL đặt", lang), width: 120, align: "right" as const, render: (_: unknown, row: Record<string, unknown>) => sumQuantity(row.items as { orderedQuantity?: number }[] | undefined, "orderedQuantity") },
+    { key: "received", title: t("SL thực nhận", lang), width: 130, align: "right" as const, render: (_: unknown, row: Record<string, unknown>) => sumQuantity(row.items as { receivedQuantity?: number }[] | undefined, "receivedQuantity") },
+    { key: "diff", title: t("Chênh lệch", lang), width: 130, align: "right" as const, render: (_: unknown, row: Record<string, unknown>) => sumQuantity(row.items as { difference?: number }[] | undefined, "difference") },
+    { key: "creator", title: t("Người tạo", lang), dataIndex: "createdBy", width: 160, render: (value: unknown) => ((value as { fullName?: string } | null)?.fullName ?? "-") },
+    { key: "createdAt", title: t("Ngày tạo", lang), dataIndex: "createdAt", width: 160, render: (value: unknown) => new Date(String(value)).toLocaleString("vi-VN") },
+  ], [lang]);
 
   function sumQuantity(items: { [k: string]: number }[] | undefined, key: string) {
     if (!items) return 0;
@@ -125,9 +125,9 @@ export default function WarehouseReceiptsPage() {
   return (
     <PageContainer>
       <PageHeader title={t("Nhập kho", lang)}
-        subtitle={`${data?.total ?? 0} phiếu`}
-        breadcrumb={[{ label: "Trang chủ", href: "/" }, { label: "Kho", href: "/warehouses" }, { label: "Nhập kho" }]}
-        actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>Tạo phiếu nhập</Button>}
+        subtitle={`${data?.total ?? 0} ${t("phiếu", lang)}`}
+        breadcrumb={[{ label: t("Trang chủ", lang), href: "/" }, { label: t("Kho", lang), href: "/warehouses" }, { label: t("Nhập kho", lang) }]}
+        actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>{t("Tạo phiếu nhập", lang)}</Button>}
       />
       <div className="card">
         <WarehouseQuickPick
@@ -140,7 +140,7 @@ export default function WarehouseReceiptsPage() {
         />
         <div style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Input
-            placeholder="Tìm theo mã phiếu hoặc sản phẩm"
+            placeholder={t("Tìm theo mã phiếu hoặc sản phẩm", lang)}
             allowClear
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
@@ -148,10 +148,10 @@ export default function WarehouseReceiptsPage() {
             style={{ width: 360 }}
           />
           <Button type="primary" icon={<SearchOutlined />} onClick={triggerSearch}>
-            Tìm kiếm
+            {t("Tìm kiếm", lang)}
           </Button>
           {searchTerm ? (
-            <Button onClick={() => { setSearchInput(""); setSearchTerm(""); setPage(1); }}>Xóa tìm kiếm</Button>
+            <Button onClick={() => { setSearchInput(""); setSearchTerm(""); setPage(1); }}>{t("Xóa tìm kiếm", lang)}</Button>
           ) : null}
         </div>
         <Space style={{ marginBottom: 16 }} size="middle" wrap>
@@ -174,7 +174,7 @@ export default function WarehouseReceiptsPage() {
           />
           <Select
             allowClear
-            placeholder="Lọc theo sản phẩm"
+            placeholder={t("Lọc theo sản phẩm", lang)}
             style={{ width: 240 }}
             value={productId}
             onChange={(value) => {
@@ -187,7 +187,7 @@ export default function WarehouseReceiptsPage() {
           />
           <Select
             allowClear
-            placeholder="Lọc theo người tạo"
+            placeholder={t("Lọc theo người tạo", lang)}
             style={{ width: 240 }}
             value={createdBy}
             onChange={(value) => {
@@ -199,7 +199,7 @@ export default function WarehouseReceiptsPage() {
             optionFilterProp="label"
           />
           {hasActiveFilters ? (
-            <Button onClick={resetFilters}>Xóa bộ lọc</Button>
+            <Button onClick={resetFilters}>{t("Xóa bộ lọc", lang)}</Button>
           ) : null}
         </Space>
         <Table
@@ -211,21 +211,21 @@ export default function WarehouseReceiptsPage() {
         />
       </div>
 
-      <Modal title="Tạo phiếu nhập kho" open={open} onCancel={() => { setOpen(false); reset(); }} onOk={submit} confirmLoading={createReceipt.isPending} width={760} okText="Lưu phiếu" cancelText="Hủy" destroyOnHidden>
+      <Modal title={t("Tạo phiếu nhập kho", lang)} open={open} onCancel={() => { setOpen(false); reset(); }} onOk={submit} confirmLoading={createReceipt.isPending} width={760} okText={t("Lưu phiếu", lang)} cancelText={t("Hủy", lang)} destroyOnHidden>
         <Form form={form} layout="vertical">
-          <Form.Item label="Kho nhập" name="warehouseId" rules={[{ required: true, message: "Vui lòng chọn kho" }]}>
-            <Select options={(warehouses ?? []).map((w: { _id: string; name: string }) => ({ value: w._id, label: w.name }))} placeholder="Chọn kho" />
+          <Form.Item label={t("Kho nhập", lang)} name="warehouseId" rules={[{ required: true, message: t("Vui lòng chọn kho", lang) }]}>
+            <Select options={(warehouses ?? []).map((w: { _id: string; name: string }) => ({ value: w._id, label: w.name }))} placeholder={t("Chọn kho", lang)} />
           </Form.Item>
-          <Form.Item label="Ghi chú" name="note"><Input.TextArea maxLength={500} rows={2} /></Form.Item>
-          <CardSection title="Danh sách mặt hàng">
+          <Form.Item label={t("Ghi chú", lang)} name="note"><Input.TextArea maxLength={500} rows={2} /></Form.Item>
+          <CardSection title={t("Danh sách mặt hàng", lang)}>
             <Button onClick={() => setItems((current) => [...current, { itemType: "PRODUCT", orderedQuantity: 1, receivedQuantity: 1 }])} icon={<PlusOutlined />} type="dashed" block>
-              Thêm dòng
+              {t("Thêm dòng", lang)}
             </Button>
             <div className="receipt-item-headers" style={{ display: "flex", gap: 8, marginTop: 12, marginBottom: 4, fontSize: 12, fontWeight: 600, color: "#475569" }}>
-              <div style={{ width: 120 }}>Loại</div>
-              <div style={{ width: 220 }}>Sản phẩm / Quà tặng</div>
-              <div style={{ width: 120 }}>SL đặt</div>
-              <div style={{ width: 130 }}>SL thực nhận</div>
+              <div style={{ width: 120 }}>{t("Loại", lang)}</div>
+              <div style={{ width: 220 }}>{t("Sản phẩm / Quà tặng", lang)}</div>
+              <div style={{ width: 120 }}>{t("SL đặt", lang)}</div>
+              <div style={{ width: 130 }}>{t("SL thực nhận", lang)}</div>
               <div style={{ width: 32 }} aria-hidden="true"></div>
             </div>
             <Space orientation="vertical" style={{ width: "100%" }} size={8}>
@@ -234,13 +234,13 @@ export default function WarehouseReceiptsPage() {
                   <Select
                     style={{ width: 120 }}
                     value={row.itemType}
-                    options={[{ value: "PRODUCT", label: "Sản phẩm" }, { value: "GIFT", label: "Quà tặng" }]}
+                    options={[{ value: "PRODUCT", label: t("Sản phẩm", lang) }, { value: "GIFT", label: t("Quà tặng", lang) }]}
                     onChange={(value) => setItems((current) => current.map((item, idx) => idx === index ? { ...item, itemType: value } : item))}
                   />
                   {row.itemType === "PRODUCT" ? (
                     <Select
                       style={{ width: 220 }}
-                      placeholder="Sản phẩm"
+                      placeholder={t("Sản phẩm", lang)}
                       value={row.productId}
                       options={productOptions}
                       onChange={(value) => setItems((current) => current.map((item, idx) => idx === index ? { ...item, productId: value, variantId: undefined } : item))}
@@ -248,14 +248,14 @@ export default function WarehouseReceiptsPage() {
                   ) : (
                     <Select
                       style={{ width: 220 }}
-                      placeholder="Quà tặng"
+                      placeholder={t("Quà tặng", lang)}
                       value={row.giftId}
                       options={giftOptions}
                       onChange={(value) => setItems((current) => current.map((item, idx) => idx === index ? { ...item, giftId: value } : item))}
                     />
                   )}
-                  <InputNumber style={{ width: 120 }} placeholder="SL đặt" min={0} value={row.orderedQuantity} onChange={(value) => setItems((current) => current.map((item, idx) => idx === index ? { ...item, orderedQuantity: value ?? 0 } : item))} />
-                  <InputNumber style={{ width: 130 }} placeholder="SL thực nhận" min={0} value={row.receivedQuantity} onChange={(value) => setItems((current) => current.map((item, idx) => idx === index ? { ...item, receivedQuantity: value ?? 0 } : item))} />
+                  <InputNumber style={{ width: 120 }} placeholder={t("SL đặt", lang)} min={0} value={row.orderedQuantity} onChange={(value) => setItems((current) => current.map((item, idx) => idx === index ? { ...item, orderedQuantity: value ?? 0 } : item))} />
+                  <InputNumber style={{ width: 130 }} placeholder={t("SL thực nhận", lang)} min={0} value={row.receivedQuantity} onChange={(value) => setItems((current) => current.map((item, idx) => idx === index ? { ...item, receivedQuantity: value ?? 0 } : item))} />
                   <Button danger icon={<MinusCircleOutlined />} onClick={() => setItems((current) => current.filter((_, idx) => idx !== index))} />
                 </Space.Compact>
               ))}

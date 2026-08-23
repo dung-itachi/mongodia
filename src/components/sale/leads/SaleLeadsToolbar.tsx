@@ -72,7 +72,7 @@ export default function SaleLeadsToolbar({
               onClick={() => onStatusChange(option.value)}
               className={statusFilter === option.value ? styles.activeFilter : ""}
             >
-              {t(option.labelKey)}
+              {t(option.labelKey, lang)}
             </Button>
           ))}
         </div>

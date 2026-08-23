@@ -88,12 +88,12 @@ export default function ProfilePage() {
   return (
     <div style={{ maxWidth: 1100, padding: 24 }}>
       {contextHolder}
-      <Typography.Title level={3}>Tài khoản của tôi</Typography.Title>
+      <Typography.Title level={3}>{t("Tài khoản của tôi", lang)}</Typography.Title>
       <Card loading={isLoading}>
         <div className={styles.profileLayout}>
           <div>
             <Typography.Text type="secondary">
-              Bạn chỉ có thể cập nhật các thông tin cá nhân. Role, phòng ban, team, leader được quản lý bởi cấp trên.
+              {t("Bạn chỉ có thể cập nhật các thông tin cá nhân. Role, phòng ban, team, leader được quản lý bởi cấp trên.", lang)}
             </Typography.Text>
             <Form<ProfileFields>
               form={profileForm}
@@ -118,10 +118,10 @@ export default function ProfilePage() {
                         await deleteCloudinaryImage(oldPublicId);
                       }
                     })();
-                    messageApi?.success("Lưu thông tin thành công");
+                    messageApi?.success(t("Lưu thông tin thành công", lang));
                   },
                   onError: () => {
-                    messageApi?.error("Lưu thông tin thất bại");
+                    messageApi?.error(t("Lưu thông tin thất bại", lang));
                   }
                 });
               }}
@@ -129,21 +129,21 @@ export default function ProfilePage() {
             >
               <Form.Item name="avatar" hidden><Input /></Form.Item>
 
-              <Form.Item label="Avatar">
+              <Form.Item label={t("Avatar", lang)}>
                 <div className={styles.avatarUpload}>
                   <div className={styles.avatarPreview}>
                     {displayAvatarUrl ? (
                       <img src={displayAvatarUrl} alt="Avatar" />
                     ) : (
                       <div className={styles.avatarPlaceholder}>
-                        <span>Chưa có avatar</span>
+                        <span>{t("Chưa có avatar", lang)}</span>
                       </div>
                     )}
                   </div>
                   {isUploading && (
                     <div className={styles.uploadProgress}>
                       <Progress percent={uploadProgress} size="small" status="active" />
-                      <span>Đang tải lên...</span>
+                      <span>{t("Đang tải lên...", lang)}</span>
                     </div>
                   )}
                   {canEditProfile && (
@@ -152,29 +152,29 @@ export default function ProfilePage() {
                       onClick={handleUploadClick}
                       loading={isUploading}
                     >
-                      {displayAvatarUrl && !previewUrl ? "Chọn ảnh mới" : "Tải lên avatar"}
+                      {displayAvatarUrl && !previewUrl ? t("Chọn ảnh mới", lang) : t("Tải lên avatar", lang)}
                     </Button>
                   )}
                   <Typography.Text type="secondary" className={styles.uploadHint}>
-                    JPG / PNG / WebP - Tối đa 5MB
+                    JPG / PNG / WebP - {t("Tối đa 5MB", lang)}
                   </Typography.Text>
                 </div>
               </Form.Item>
 
               <Typography.Text type="secondary">
-                Bạn chỉ có thể cập nhật các thông tin cá nhân. Role, phòng ban, team, leader được quản lý bởi cấp trên.
+                {t("Bạn chỉ có thể cập nhật các thông tin cá nhân. Role, phòng ban, team, leader được quản lý bởi cấp trên.", lang)}
               </Typography.Text>
 
-              <Form.Item label="Mã nhân viên"><Input value={profile?.employeeCode} disabled /></Form.Item>
-              <Form.Item label="Username"><Input value={profile?.username} disabled /></Form.Item>
-              <Form.Item label="Role"><Input value={profile?.role?.code ?? ""} disabled /></Form.Item>
-              <Form.Item name="fullName" label="Họ tên" rules={[{ required: true, min: 2, max: 100 }]}><Input /></Form.Item>
-              <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}><Input /></Form.Item>
-              <Form.Item name="phone" label="Điện thoại"><Input /></Form.Item>
+              <Form.Item label={t("Mã nhân viên", lang)}><Input value={profile?.employeeCode} disabled /></Form.Item>
+              <Form.Item label={t("Username", lang)}><Input value={profile?.username} disabled /></Form.Item>
+              <Form.Item label={t("Role", lang)}><Input value={profile?.role?.code ?? ""} disabled /></Form.Item>
+              <Form.Item name="fullName" label={t("Họ tên", lang)} rules={[{ required: true, min: 2, max: 100 }]}><Input /></Form.Item>
+              <Form.Item name="email" label={t("Email", lang)} rules={[{ required: true, type: "email" }]}><Input /></Form.Item>
+              <Form.Item name="phone" label={t("Điện thoại", lang)}><Input /></Form.Item>
 
               {canEditProfile && (
                 <Space>
-                  <Button type="primary" htmlType="submit" loading={update.isPending}>Lưu thông tin</Button>
+                  <Button type="primary" htmlType="submit" loading={update.isPending}>{t("Lưu thông tin", lang)}</Button>
                   {canChangePassword && (
                     <Button onClick={() => setPasswordModalOpen(true)}>{t("Đổi mật khẩu", lang)}</Button>
                   )}
@@ -190,8 +190,8 @@ export default function ProfilePage() {
                 layout="vertical"
                 onFinish={(values) => changePassword.mutate(values, { onSuccess: () => passwordForm.resetFields() })}
               >
-                <Form.Item name="currentPassword" label="Mật khẩu hiện tại" rules={[{ required: true }]}><Input.Password /></Form.Item>
-                <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
+                <Form.Item name="currentPassword" label={t("Mật khẩu hiện tại", lang)} rules={[{ required: true }]}><Input.Password /></Form.Item>
+                <Form.Item name="newPassword" label={t("Mật khẩu mới", lang)} rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
                 <Space>
                   <Button type="primary" htmlType="submit" loading={changePassword.isPending}>{t("Đổi mật khẩu", lang)}</Button>
                 </Space>
@@ -221,11 +221,11 @@ export default function ProfilePage() {
           }}
           style={{ marginTop: 16 }}
         >
-          <Form.Item name="currentPassword" label="Mật khẩu hiện tại" rules={[{ required: true }]}><Input.Password /></Form.Item>
-          <Form.Item name="newPassword" label="Mật khẩu mới" rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
+          <Form.Item name="currentPassword" label={t("Mật khẩu hiện tại", lang)} rules={[{ required: true }]}><Input.Password /></Form.Item>
+          <Form.Item name="newPassword" label={t("Mật khẩu mới", lang)} rules={[{ required: true, min: 6 }]}><Input.Password /></Form.Item>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-            <Button onClick={() => setPasswordModalOpen(false)}>Hủy</Button>
-            <Button type="primary" htmlType="submit" loading={changePassword.isPending}>Đổi mật kh�u</Button>
+            <Button onClick={() => setPasswordModalOpen(false)}>{t("Hủy", lang)}</Button>
+            <Button type="primary" htmlType="submit" loading={changePassword.isPending}>{t("Đổi mật khẩu", lang)}</Button>
           </Space>
         </Form>
       </Modal>

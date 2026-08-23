@@ -579,6 +579,7 @@ function OrdersPageInner() {
                   ) : (
                     <CheckCircleOutlined />
                   );
+                const actionLabel = t(action.label, lang);
                 const button = (
                   <Button
                     key={action.targetStatus}
@@ -586,7 +587,7 @@ function OrdersPageInner() {
                     danger={isDanger}
                     icon={icon}
                     size="small"
-                    aria-label={action.label}
+                    aria-label={actionLabel}
                     disabled={gatingBlock}
                     onClick={(e) => {
                       if (gatingBlock) {
@@ -597,10 +598,10 @@ function OrdersPageInner() {
                         return;
                       }
                       e.stopPropagation();
-                      handleQuickAction(order, action.targetStatus, action.label);
+                      handleQuickAction(order, action.targetStatus, actionLabel);
                     }}
                   >
-                    {action.label}
+                    {actionLabel}
                   </Button>
                 );
                 return gatingBlock ? (
@@ -738,7 +739,7 @@ function OrdersPageInner() {
         { value: "", label: t("Tất cả trạng thái", lang) },
         ...Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({
           value,
-          label,
+          label: t(label, lang),
         })),
       ],
     },
@@ -759,7 +760,7 @@ function OrdersPageInner() {
     if (!status) return t("Đơn hàng", lang);
     if (isReconciliationView(status)) return t("Đối soát đơn hàng", lang);
     const label = ORDER_STATUS_LABELS[status as OrderStatus];
-    return label ? `${t("Đơn hàng", lang)} · ${label}` : t("Đơn hàng", lang);
+    return label ? `${t("Đơn hàng", lang)} · ${t(label, lang)}` : t("Đơn hàng", lang);
   }, [status, lang]);
 
   const titleTooltip = useMemo(() => {

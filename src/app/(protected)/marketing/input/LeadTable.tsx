@@ -273,7 +273,7 @@ function MarketingLeadTableInner({
         title: t("Nguồn", lang),
         dataIndex: "source",
         width: 100,
-        render: (value: unknown) => LEAD_SOURCE_LABELS[value as LeadSource] ?? String(value),
+        render: (value: unknown) => t(LEAD_SOURCE_LABELS[value as LeadSource] ?? String(value), lang),
       },
       {
         key: "status",
@@ -346,11 +346,11 @@ function MarketingLeadTableInner({
           const canEdit = lead.status === LeadStatus.NEW;
           return (
             <div className={styles["mi-action-group"]}>
-              <ActionButton type="ghost" size="small" icon={<EyeOutlined />} label={MARKETING_LEAD_ACTION_LABELS.view} onClick={() => onView?.(lead)} disabled={!onView} />
+              <ActionButton type="ghost" size="small" icon={<EyeOutlined />} label={t(MARKETING_LEAD_ACTION_LABELS.view, lang)} onClick={() => onView?.(lead)} disabled={!onView} />
               {canEdit && (
-                <ActionButton type="ghost" size="small" icon={<EditOutlined />} label={MARKETING_LEAD_ACTION_LABELS.edit} onClick={() => onEdit(lead)} />
+                <ActionButton type="ghost" size="small" icon={<EditOutlined />} label={t(MARKETING_LEAD_ACTION_LABELS.edit, lang)} onClick={() => onEdit(lead)} />
               )}
-              <ActionButton type="danger" size="small" icon={<DeleteOutlined />} label={MARKETING_LEAD_ACTION_LABELS.delete} onClick={() => onDelete(lead)} />
+              <ActionButton type="danger" size="small" icon={<DeleteOutlined />} label={t(MARKETING_LEAD_ACTION_LABELS.delete, lang)} onClick={() => onDelete(lead)} />
             </div>
           );
         },

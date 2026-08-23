@@ -88,14 +88,14 @@ export default function WarehouseAdjustmentsPage() {
   const submit = async () => {
     const values = await form.validateFields();
     if (!items.length) {
-      message.warning("Vui lòng thêm ít nhất 1 mặt hàng");
+      message.warning(t("Vui lòng thêm ít nhất 1 mặt hàng", lang));
       return;
     }
 
     // Validate each item has reason
     const invalidItem = items.find((item) => !item.reason?.trim());
     if (invalidItem) {
-      message.warning("Vui lòng nhập lý do điều chỉnh cho tất cả các mặt hàng");
+      message.warning(t("Vui lòng nhập lý do điều chỉnh cho tất cả các mặt hàng", lang));
       return;
     }
 
@@ -111,57 +111,57 @@ export default function WarehouseAdjustmentsPage() {
         })),
         note: values.note,
       });
-      message.success("Điều chỉnh tồn kho thành công");
+      message.success(t("Điều chỉnh tồn kho thành công", lang));
       setOpen(false);
       reset();
       void refetch();
     } catch (err) {
-      message.error(err instanceof Error ? err.message : "Điều chỉnh thất bại");
+      message.error(err instanceof Error ? err.message : t("Điều chỉnh thất bại", lang));
     }
   };
 
   const columns = useMemo(
     () => [
       {
-        title: "Thời gian",
+        title: t("Thời gian", lang),
         dataIndex: "createdAt",
         width: 160,
         key: "createdAt",
         render: (value: unknown) => new Date(String(value)).toLocaleString("vi-VN"),
       },
       {
-        title: "Loại",
+        title: t("Loại", lang),
         dataIndex: "type",
         width: 130,
         key: "type",
         render: (value: string) => (
           <Tag color={MOVEMENT_TYPE_LABELS[value as WarehouseStockMovementType]?.color}>
-            {MOVEMENT_TYPE_LABELS[value as WarehouseStockMovementType]?.label ?? value}
+            {t(MOVEMENT_TYPE_LABELS[value as WarehouseStockMovementType]?.label ?? value, lang)}
           </Tag>
         ),
       },
       {
-        title: "Kho",
+        title: t("Kho", lang),
         dataIndex: "warehouseId",
         width: 160,
         key: "warehouse",
         render: (value: unknown) => readWarehouseName(value),
       },
       {
-        title: "Mặt hàng",
+        title: t("Mặt hàng", lang),
         key: "item",
         width: 220,
         render: (_: unknown, row: Record<string, unknown>) => {
           if (row.itemType === "GIFT") {
-            return (row.giftId as { name?: string } | null)?.name ?? "Quà tặng";
+            return (row.giftId as { name?: string } | null)?.name ?? t("Quà tặng", lang);
           }
           const variant = row.variantId as { sku?: string } | null;
           const product = row.productId as { name?: string; code?: string } | null;
-          return `${product?.name ?? product?.code ?? "Sản phẩm"} • ${variant?.sku ?? "N/A"}`;
+          return `${product?.name ?? product?.code ?? t("Sản phẩm", lang)} • ${variant?.sku ?? "N/A"}`;
         },
       },
       {
-        title: "Số lượng",
+        title: t("Số lượng", lang),
         dataIndex: "quantity",
         key: "quantity",
         width: 120,
@@ -178,14 +178,14 @@ export default function WarehouseAdjustmentsPage() {
         },
       },
       {
-        title: "Mã tham chiếu",
+        title: t("Mã tham chiếu", lang),
         dataIndex: "referenceCode",
         width: 160,
         key: "referenceCode",
         render: (value: string) => value || "-",
       },
       {
-        title: "Người thực hiện",
+        title: t("Người thực hiện", lang),
         dataIndex: "createdBy",
         width: 180,
         key: "creator",
@@ -193,7 +193,7 @@ export default function WarehouseAdjustmentsPage() {
           ((value as { fullName?: string } | null)?.fullName ?? "-"),
       },
     ],
-    []
+    [lang]
   );
 
   function readWarehouseName(value: unknown) {
@@ -227,9 +227,9 @@ export default function WarehouseAdjustmentsPage() {
       <PageHeader title={t("Lịch sử tồn kho", lang)}
         subtitle={`${data?.total ?? 0} movement`}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Kho", href: "/warehouses" },
-          { label: "Lịch sử tồn kho" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Kho", lang), href: "/warehouses" },
+          { label: t("Lịch sử tồn kho", lang) },
         ]}
         actions={
           <Button
@@ -237,7 +237,7 @@ export default function WarehouseAdjustmentsPage() {
             icon={<PlusOutlined />}
             onClick={() => setOpen(true)}
           >
-            Tạo điều chỉnh
+            {t("Tạo điều chỉnh", lang)}
           </Button>
         }
       />
@@ -254,7 +254,7 @@ export default function WarehouseAdjustmentsPage() {
         <Space style={{ marginBottom: 12 }}>
           <Select
             allowClear
-            placeholder="Kho"
+            placeholder={t("Kho", lang)}
             style={{ width: 200 }}
             value={warehouseId}
             onChange={(value) => {
@@ -262,7 +262,7 @@ export default function WarehouseAdjustmentsPage() {
               setPage(1);
             }}
             options={[
-              { value: "", label: "Tất cả kho" },
+              { value: "", label: t("Tất cả kho", lang) },
               ...(warehouses ?? []).map((w: { _id: string; name: string }) => ({
                 value: w._id,
                 label: w.name,
@@ -271,7 +271,7 @@ export default function WarehouseAdjustmentsPage() {
           />
           <Select
             allowClear
-            placeholder="Loại"
+            placeholder={t("Loại", lang)}
             style={{ width: 160 }}
             value={movementType}
             onChange={(value) => {
@@ -280,7 +280,7 @@ export default function WarehouseAdjustmentsPage() {
             }}
             options={Object.entries(MOVEMENT_TYPE_LABELS).map(([value, info]) => ({
               value,
-              label: info.label,
+              label: t(info.label, lang),
             }))}
           />
         </Space>
@@ -303,7 +303,7 @@ export default function WarehouseAdjustmentsPage() {
       </div>
 
       <Modal
-        title="Điều chỉnh tồn kho"
+        title={t("Điều chỉnh tồn kho", lang)}
         open={open}
         onCancel={() => {
           setOpen(false);
@@ -312,30 +312,30 @@ export default function WarehouseAdjustmentsPage() {
         onOk={submit}
         confirmLoading={createAdjustment.isPending}
         width={800}
-        okText="Lưu điều chỉnh"
-        cancelText="Hủy"
+        okText={t("Lưu điều chỉnh", lang)}
+        cancelText={t("Hủy", lang)}
         destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            label="Kho"
+            label={t("Kho", lang)}
             name="warehouseId"
-            rules={[{ required: true, message: "Vui lòng chọn kho" }]}
+            rules={[{ required: true, message: t("Vui lòng chọn kho", lang) }]}
           >
             <Select
               options={(warehouses ?? []).map((w: { _id: string; name: string }) => ({
                 value: w._id,
                 label: w.name,
               }))}
-              placeholder="Chọn kho"
+              placeholder={t("Chọn kho", lang)}
             />
           </Form.Item>
 
-          <Form.Item label="Ghi chú chung" name="note">
-            <Input.TextArea maxLength={500} rows={2} placeholder="Ghi chú (tùy chọn)" />
+          <Form.Item label={t("Ghi chú chung", lang)} name="note">
+            <Input.TextArea maxLength={500} rows={2} placeholder={t("Ghi chú (tùy chọn)", lang)} />
           </Form.Item>
 
-          <CardSection title="Danh sách mặt hàng điều chỉnh">
+          <CardSection title={t("Danh sách mặt hàng điều chỉnh", lang)}>
             <Button
               onClick={() =>
                 setItems((current) => [
@@ -347,7 +347,7 @@ export default function WarehouseAdjustmentsPage() {
               type="dashed"
               block
             >
-              Thêm dòng
+              {t("Thêm dòng", lang)}
             </Button>
 
             <Space orientation="vertical" style={{ width: "100%", marginTop: 12 }} size={8}>
@@ -357,8 +357,8 @@ export default function WarehouseAdjustmentsPage() {
                     style={{ width: 120 }}
                     value={row.itemType}
                     options={[
-                      { value: "PRODUCT", label: "Sản phẩm" },
-                      { value: "GIFT", label: "Quà tặng" },
+                      { value: "PRODUCT", label: t("Sản phẩm", lang) },
+                      { value: "GIFT", label: t("Quà tặng", lang) },
                     ]}
                     onChange={(value) =>
                       setItems((current) =>
@@ -372,7 +372,7 @@ export default function WarehouseAdjustmentsPage() {
                   {row.itemType === "PRODUCT" ? (
                     <Select
                       style={{ width: 200 }}
-                      placeholder="Sản phẩm"
+                      placeholder={t("Sản phẩm", lang)}
                       value={row.productId}
                       options={productOptions}
                       onChange={(value) =>
@@ -394,7 +394,7 @@ export default function WarehouseAdjustmentsPage() {
                   ) : (
                     <Select
                       style={{ width: 200 }}
-                      placeholder="Quà tặng"
+                      placeholder={t("Quà tặng", lang)}
                       value={row.giftId}
                       options={giftOptions}
                       onChange={(value) =>
@@ -417,7 +417,7 @@ export default function WarehouseAdjustmentsPage() {
 
                   <InputNumber
                     style={{ width: 100 }}
-                    placeholder="SL mới"
+                    placeholder={t("SL mới", lang)}
                     min={0}
                     value={row.newQuantity}
                     onChange={(value) =>
@@ -433,7 +433,7 @@ export default function WarehouseAdjustmentsPage() {
 
                   <Input
                     style={{ width: 180 }}
-                    placeholder="Lý do"
+                    placeholder={t("Lý do", lang)}
                     value={row.reason}
                     onChange={(e) =>
                       setItems((current) =>

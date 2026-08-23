@@ -197,7 +197,7 @@ export default function ProductForm({
             placeholder={getTranslated("Chọn danh mục")}
             showSearch
             optionFilterProp="label"
-            dropdownRender={(menu) => (
+            popupRender={(menu) => (
               <>
                 {menu}
                 <Divider style={{ margin: "8px 0" }} />

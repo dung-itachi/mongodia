@@ -124,7 +124,7 @@ export default function WarehouseShipmentsPage() {
   const columns = useMemo(() => [
     {
       key: "orderCode",
-      title: "Mã đơn",
+      title: t("Mã đơn", lang),
       dataIndex: "orderCode",
       width: 150,
       render: (value: string) => (
@@ -135,7 +135,7 @@ export default function WarehouseShipmentsPage() {
     },
     {
       key: "customer",
-      title: "Khách hàng",
+      title: t("Khách hàng", lang),
       width: 200,
       render: (_: unknown, record: Record<string, unknown>) => {
         const customerName = record.customerName as string | undefined;
@@ -152,7 +152,7 @@ export default function WarehouseShipmentsPage() {
     },
     {
       key: "combo",
-      title: "Combo",
+      title: t("Combo", lang),
       width: 200,
       render: (_: unknown, record: Record<string, unknown>) => {
         const totals = getOrderItemTotals(record as unknown as OrderListItem);
@@ -168,7 +168,7 @@ export default function WarehouseShipmentsPage() {
     },
     {
       key: "quantity",
-      title: "Số lượng",
+      title: t("Số lượng", lang),
       width: 120,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -190,7 +190,7 @@ export default function WarehouseShipmentsPage() {
     },
     {
       key: "giftMode",
-      title: "Quà tặng",
+      title: t("Quà tặng", lang),
       width: 130,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -202,10 +202,10 @@ export default function WarehouseShipmentsPage() {
         return (
           <Space orientation="vertical" size={2}>
             {totals.hasRANDOMGift && (
-              <Tag color="orange" style={{ fontSize: 11 }}>Ngẫu nhiên</Tag>
+              <Tag color="orange" style={{ fontSize: 11 }}>{t("Ngẫu nhiên", lang)}</Tag>
             )}
             {totals.hasCUSTOMERGift && (
-              <Tag color="purple" style={{ fontSize: 11 }}>Khách chọn</Tag>
+              <Tag color="purple" style={{ fontSize: 11 }}>{t("Khách chọn", lang)}</Tag>
             )}
           </Space>
         );
@@ -213,7 +213,7 @@ export default function WarehouseShipmentsPage() {
     },
     {
       key: "warehouse",
-      title: "Kho",
+      title: t("Kho", lang),
       width: 150,
       render: (_: unknown, record: Record<string, unknown>) => {
         const order = record as unknown as OrderListItem;
@@ -223,14 +223,14 @@ export default function WarehouseShipmentsPage() {
     },
     {
       key: "status",
-      title: "Trạng thái",
+      title: t("Trạng thái", lang),
       dataIndex: "status",
       width: 140,
       render: (value: unknown) => <StatusBadge status={String(value)} />,
     },
     {
       key: "actions",
-      title: "Thao tác",
+      title: t("Thao tác", lang),
       width: 100,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
@@ -244,13 +244,13 @@ export default function WarehouseShipmentsPage() {
                 {
                   key: "view",
                   icon: <EyeOutlined />,
-                  label: "Xem chi tiết",
+                  label: t("Xem chi tiết", lang),
                   onClick: () => router.push(`/orders/${order._id}`),
                 },
                 {
                   key: "ship",
                   icon: <CheckOutlined />,
-                  label: "Xuất kho",
+                  label: t("Xuất kho", lang),
                   onClick: () => {
                     setSelectedOrderId(order._id);
                     setShipDrawerOpen(true);
@@ -264,7 +264,7 @@ export default function WarehouseShipmentsPage() {
         );
       },
     },
-  ], [router, orders, getOrderItemTotals]);
+  ], [router, orders, getOrderItemTotals, lang]);
 
   // Handle ship success
   const handleShipSuccess = useCallback(() => {
@@ -279,12 +279,12 @@ export default function WarehouseShipmentsPage() {
 
   // Warehouse filter options
   const warehouseOptions = useMemo(() => [
-    { value: "", label: "Tất cả kho" },
+    { value: "", label: t("Tất cả kho", lang) },
     ...(warehouses ?? []).map((w: { _id: string; name: string }) => ({
       value: w._id,
       label: w.name,
     })),
-  ], [warehouses]);
+  ], [warehouses, lang]);
 
   // Pagination
   const pagination = useMemo(() => ({
@@ -294,21 +294,21 @@ export default function WarehouseShipmentsPage() {
     showSizeChanger: true,
     showQuickJumper: true,
     pageSizeOptions: ["10", "20", "50", "100"],
-    showTotal: (totalCount: number) => `Tổng: ${totalCount}`,
+    showTotal: (totalCount: number) => `${t("Tổng:", lang)} ${totalCount}`,
     onChange: (newPage: number, newPageSize: number) => {
       setPage(newPage);
       setPageSize(newPageSize);
     },
-  }), [page, pageSize, total]);
+  }), [page, pageSize, total, lang]);
 
   return (
     <PageContainer>
       <PageHeader title={t("Xuất kho", lang)}
-        subtitle={`${total} đơn cần xử lý`}
+        subtitle={`${total} ${t("đơn cần xử lý", lang)}`}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Kho", href: "/warehouses" },
-          { label: "Xuất kho" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Kho", lang), href: "/warehouses" },
+          { label: t("Xuất kho", lang) },
         ]}
       />
 
@@ -317,7 +317,7 @@ export default function WarehouseShipmentsPage() {
         <Col xs={12} md={6}>
           <Card size="small">
             <Statistic
-              title="Chờ đóng gói"
+              title={t("Chờ đóng gói", lang)}
               value={stats.confirmed}
               prefix={<CheckOutlined style={{ color: "#1890ff" }} />}
               styles={{ content: { color: "#1890ff" } }}
@@ -327,7 +327,7 @@ export default function WarehouseShipmentsPage() {
         <Col xs={12} md={6}>
           <Card size="small">
             <Statistic
-              title="Đang đóng gói"
+              title={t("Đang đóng gói", lang)}
               value={stats.packing}
               prefix={<ShoppingOutlined style={{ color: "#fa8c16" }} />}
               styles={{ content: { color: "#fa8c16" } }}
@@ -341,7 +341,7 @@ export default function WarehouseShipmentsPage() {
         <TableToolbar
           searchValue={keyword}
           onSearchChange={setKeyword}
-          searchPlaceholder="Tìm mã đơn, tên khách hàng..."
+          searchPlaceholder={t("Tìm mã đơn, tên khách hàng...", lang)}
           onRefresh={() => void refetch()}
           loading={loading}
           actions={
@@ -358,7 +358,7 @@ export default function WarehouseShipmentsPage() {
                   }}
                   disabled={orders.length === 0}
                 >
-                  Xuất kho
+                  {t("Xuất kho", lang)}
                 </Button>
               </PermissionGate>
             </Space>
@@ -401,11 +401,11 @@ export default function WarehouseShipmentsPage() {
           <SkeletonTable rows={10} columns={7} />
         ) : orders.length === 0 ? (
           <EmptyState
-            title="Không có đơn hàng"
+            title={t("Không có đơn hàng", lang)}
             description={
               debouncedKeyword || warehouseId
-                ? "Không tìm thấy đơn hàng nào phù hợp"
-                : "Không có đơn hàng nào cần xuất kho"
+                ? t("Không tìm thấy đơn hàng nào phù hợp", lang)
+                : t("Không có đơn hàng nào cần xuất kho", lang)
             }
           />
         ) : (

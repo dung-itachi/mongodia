@@ -74,7 +74,7 @@ export default function ShippingFeeSettingsPage() {
         fee: values.fee,
         currency: values.currency,
       });
-      toast.success("Đã cập nhật phí ship. Order mới sẽ sử dụng giá trị này.");
+      toast.success(t("Đã cập nhật phí ship. Order mới sẽ sử dụng giá trị này.", lang));
     } catch (err) {
       if (err instanceof Error) {
         toast.error(err.message);
@@ -92,9 +92,9 @@ export default function ShippingFeeSettingsPage() {
     <PageContainer>
       <PageHeader title={t("Phí ship", lang)} subtitle={t("Phí ship cố định cộng vào tổng giá trị combo để tính doanh số đơn hàng", lang)}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Cài đặt hệ thống", href: "/settings" },
-          { label: "Phí ship" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Cài đặt hệ thống", lang), href: "/settings" },
+          { label: t("Phí ship", lang) },
         ]}
         actions={
           <Button
@@ -102,7 +102,7 @@ export default function ShippingFeeSettingsPage() {
             onClick={() => void refetch()}
             loading={isLoading}
           >
-            Tải lại
+            {t("Tải lại", lang)}
           </Button>
         }
       />
@@ -114,9 +114,9 @@ export default function ShippingFeeSettingsPage() {
               title={
                 <Space>
                   <Title level={5} style={{ margin: 0 }}>
-                    Cập nhật phí ship
+                    {t("Cập nhật phí ship", lang)}
                   </Title>
-                  <Tag color="blue">Admin only</Tag>
+                  <Tag color="blue">{t("Admin only", lang)}</Tag>
                 </Space>
               }
               style={{ marginBottom: 16 }}
@@ -124,13 +124,12 @@ export default function ShippingFeeSettingsPage() {
               <Alert
                 type="warning"
                 showIcon
-                title="Thay đổi phí ship KHÔNG ảnh hưởng đến đơn hàng đã tạo."
+                title={t("Thay đổi phí ship KHÔNG ảnh hưởng đến đơn hàng đã tạo.", lang)}
                 description={
                   <>
-                    Mỗi đơn hàng đã snapshot phí ship tại thời điểm tạo (lưu trong
-                    <code> Order.summary.shippingFee</code> và
-                    <code> Order.shipping.shippingFee</code>). Chỉ những đơn tạo
-                    sau khi cập nhật mới sử dụng giá trị mới.
+                    {t("Mỗi đơn hàng đã snapshot phí ship tại thời điểm tạo (lưu trong", lang)}
+                    <code> Order.summary.shippingFee</code> {t("và", lang)}
+                    <code> Order.shipping.shippingFee</code>). {t("Chỉ những đơn tạo sau khi cập nhật mới sử dụng giá trị mới.", lang)}
                   </>
                 }
                 style={{ marginBottom: 16 }}
@@ -147,20 +146,20 @@ export default function ShippingFeeSettingsPage() {
                 >
                   <Form.Item
                     name="fee"
-                    label="Phí ship"
+                    label={t("Phí ship", lang)}
                     rules={[
-                      { required: true, message: "Vui lòng nhật phí ship" },
+                      { required: true, message: t("Vui lòng nhật phí ship", lang) },
                       {
                         type: "number",
                         min: 0,
-                        message: "Phí ship phải là số không âm",
+                        message: t("Phí ship phải là số không âm", lang),
                       },
                     ]}
-                    extra="Phí ship sẽ được cộng vào tổng giá trị combo để ra doanh số đơn hàng."
+                    extra={t("Phí ship sẽ được cộng vào tổng giá trị combo để ra doanh số đơn hàng.", lang)}
                   >
                     <InputNumber
                       style={{ width: "100%" }}
-                      placeholder="VD: 30000"
+                      placeholder={t("VD: 30000", lang)}
                       min={0}
                       step={1000}
                     />
@@ -168,8 +167,8 @@ export default function ShippingFeeSettingsPage() {
 
                   <Form.Item
                     name="currency"
-                    label="Loại tiền tệ"
-                    extra="Mặc định là MNT (đơn vị tiền hệ thống)."
+                    label={t("Loại tiền tệ", lang)}
+                    extra={t("Mặc định là MNT (đơn vị tiền hệ thống).", lang)}
                   >
                     <Select
                       options={[
@@ -188,13 +187,13 @@ export default function ShippingFeeSettingsPage() {
                       loading={updateMutation.isPending}
                       disabled={!hasChanges}
                     >
-                      Lưu phí ship
+                      {t("Lưu phí ship", lang)}
                     </Button>
                     <Button
                       onClick={handleReset}
                       disabled={!hasChanges || updateMutation.isPending}
                     >
-                      Hủy
+                      {t("Hủy", lang)}
                     </Button>
                   </Space>
                 </Form>
@@ -204,68 +203,66 @@ export default function ShippingFeeSettingsPage() {
         </Col>
 
         <Col xs={24} lg={10}>
-          <Card title="Thông tin hiện tại" style={{ marginBottom: 16 }}>
+          <Card title={t("Thông tin hiện tại", lang)} style={{ marginBottom: 16 }}>
             {isLoading && !data ? (
               <Skeleton active />
             ) : data ? (
               <Descriptions column={1} bordered size="small">
-                <Descriptions.Item label="Phí ship hiện tại">
+                <Descriptions.Item label={t("Phí ship hiện tại", lang)}>
                   <Statistic
                     value={data.fee}
                     suffix={data.currency}
                     styles={{ content: { color: "#1890ff", fontSize: 20 } }}
                   />
                 </Descriptions.Item>
-                <Descriptions.Item label="Loại tiền tệ">
+                <Descriptions.Item label={t("Loại tiền tệ", lang)}>
                   <Tag color="green">{data.currency}</Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="Cập nhật lúc">
+                <Descriptions.Item label={t("Cập nhật lúc", lang)}>
                   {data.updatedAt
                     ? new Date(data.updatedAt).toLocaleString("vi-VN")
                     : "-"}
                 </Descriptions.Item>
-                <Descriptions.Item label="Người cập nhật">
+                <Descriptions.Item label={t("Người cập nhật", lang)}>
                   {data.updatedBy ?? (
-                    <Text type="secondary">Mặc định từ seed</Text>
+                    <Text type="secondary">{t("Mặc định từ seed", lang)}</Text>
                   )}
                 </Descriptions.Item>
               </Descriptions>
             ) : (
-              <Text type="secondary">Không có dữ liệu</Text>
+              <Text type="secondary">{t("Không có dữ liệu", lang)}</Text>
             )}
           </Card>
 
-          <Card title="Quy tắc snapshot">
+          <Card title={t("Quy tắc snapshot", lang)}>
             <ul style={{ paddingLeft: 18, marginBottom: 0 }}>
               <li>
-                Mỗi <strong>đơn hàng mới</strong> sẽ snapshot phí ship hiện tại
-                vào <code>Order.summary.shippingFee</code>.
+                {t("Mỗi", lang)} <strong>{t("đơn hàng mới", lang)}</strong> {t("sẽ snapshot phí ship hiện tại vào", lang)} <code>Order.summary.shippingFee</code>.
               </li>
               <li>
-                Snapshot <strong>không bao giờ</strong> thay đổi kể cả khi Admin cập nhật phí ship sau đó.
+                {t("Snapshot", lang)} <strong>{t("không bao giờ", lang)}</strong> {t("thay đổi kể cả khi Admin cập nhật phí ship sau đó.", lang)}
               </li>
               <li>
-                Phí ship sẽ được <strong>cộng vào tổng giá trị combo</strong> khi
-                tính doanh số đơn hàng.
+                {t("Phí ship sẽ được", lang)} <strong>{t("cộng vào tổng giá trị combo", lang)}</strong> {t("khi tính doanh số đơn hàng.", lang)}
               </li>
               <li>
-                Doanh số = <code>subtotal_combo + shipping_fee</code>.
+                {t("Doanh số =", lang)} <code>subtotal_combo + shipping_fee</code>.
               </li>
             </ul>
           </Card>
 
           <Card
-            title="Ví dụ"
+            title={t("Ví dụ", lang)}
             style={{ marginTop: 16 }}
             styles={{ body: { paddingTop: 0 } }}
           >
             {data ? (
               <Text type="secondary">
-                Với phí ship <strong>{formatNumber(data.fee)} {data.currency}</strong>:
+                {t("Với phí ship", lang)} <strong>{formatNumber(data.fee)} {data.currency}</strong>:
               </Text>
             ) : (
               <Text type="secondary">
-                Với phí ship mặc định <strong>0 MNT</strong>:
+                {t("Với phí ship mặc định", lang)} <strong>0 MNT</strong>:
               </Text>
             )}
             <div style={{ marginTop: 8 }}>

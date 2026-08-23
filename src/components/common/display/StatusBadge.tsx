@@ -156,13 +156,14 @@ export default function StatusBadge({
   iconMapping,
   tooltip,
 }: StatusBadgeProps) {
+  const lang = useLanguageStore((s) => s.language);
   const config = mapping[status] || {
     color: "#8c8c8c",
     backgroundColor: "#fafafa",
     label: status,
   };
 
-  const tooltipText = tooltip ?? config.tooltip;
+  const tooltipText = tooltip ?? (config.tooltip ? t(config.tooltip, lang) : undefined);
   let icon: ReactNode | undefined = config.icon;
   if (iconMapping && iconMapping[status]) {
     icon = iconMapping[status];
@@ -182,7 +183,7 @@ export default function StatusBadge({
       {showIcon && icon && (
         <span style={{ marginRight: 6 }}>{icon}</span>
       )}
-      {getTranslatedLabel(config.label)}
+      {t(config.label, lang)}
     </Tag>
   );
 

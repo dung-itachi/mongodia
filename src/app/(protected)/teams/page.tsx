@@ -102,7 +102,7 @@ export default function TeamsPage() {
   }, [data, search]);
 
   const columns = useMemo(() => [
-    { title: "STT", render: (_: unknown, __: Team, index: number) => index + 1, width: 60 },
+    { title: t("STT", lang), render: (_: unknown, __: Team, index: number) => index + 1, width: 60 },
     { title: t("Mã Team", lang), dataIndex: "code", width: 120 },
     { title: t("Tên Team", lang), dataIndex: "name" },
     { title: t("Phòng ban", lang), render: (_: unknown, item: Team) => item.departmentId?.name ?? "-" },

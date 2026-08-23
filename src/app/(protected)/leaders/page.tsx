@@ -65,7 +65,7 @@ export default function LeadersPage() {
   }, [leaders, search]);
 
   const columns = useMemo(() => [
-    { title: "STT", render: (_: unknown, __: EmployeeListItem, index: number) => index + 1, width: 60 },
+    { title: t("STT", lang), render: (_: unknown, __: EmployeeListItem, index: number) => index + 1, width: 60 },
     {
       title: t("Avatar", lang),
       render: (_: unknown, item: EmployeeListItem) => (

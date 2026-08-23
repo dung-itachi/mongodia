@@ -41,18 +41,6 @@ function ReconciliationStatsInner({
 }: ReconciliationStatsProps) {
   const lang = useLanguageStore((s) => s.language);
 
-  if (loading) {
-    return (
-      <div className={styles["recon-stats-grid"]}>
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className={styles["recon-stat-card"]}>
-            <Skeleton active paragraph={{ rows: 1 }} title={false} />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   const cards = useMemo(() => [
     {
       key: "delivered",
@@ -84,6 +72,18 @@ function ReconciliationStatsInner({
       isRevenue: true,
     },
   ], [deliveredCount, returnedCount, reconciledCount, deliveredRevenue, lang]);
+
+  if (loading) {
+    return (
+      <div className={styles["recon-stats-grid"]}>
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className={styles["recon-stat-card"]}>
+            <Skeleton active paragraph={{ rows: 1 }} title={false} />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={styles["recon-stats-grid"]}>

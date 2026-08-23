@@ -14,6 +14,8 @@ import type { MarketingLeadFilters } from "@/hooks/useMarketingLeads";
 import { LEAD_SOURCE_OPTIONS, LEAD_STATUS_OPTIONS } from "@/constants/marketing";
 import { useTeamsForMarketingDashboard, useMarketingEmployeesByTeam } from "@/hooks/useMarketingExpenseLookups";
 import { useAreas } from "@/hooks/useAreas";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./marketing-input.module.css";
 
 export type MarketingLeadToolbarProps = {
@@ -44,6 +46,7 @@ function MarketingLeadToolbarInner({
   showTeamFilters = true,
   showAreaFilter = true,
 }: MarketingLeadToolbarProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [searchValue, setSearchValue] = useState(filters.keyword ?? "");
 
   // Sprint 8.x: Team, MKT, and Area filter hooks
@@ -51,7 +54,8 @@ function MarketingLeadToolbarInner({
   const { employees: mktEmployees, loading: mktLoading } = useMarketingEmployeesByTeam(
     showTeamFilters ? filters.teamId : undefined
   );
-  const { areas, loading: areasLoading } = useAreas();
+  const { data: areasData, isLoading: areasLoading } = useAreas();
+  const areas = areasData;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -71,25 +75,31 @@ function MarketingLeadToolbarInner({
     areaId: filters.areaId ?? "",
   };
 
-  const filterItems = [
+  const filterItems: Array<{
+    type: "select";
+    key: string;
+    label: string;
+    placeholder?: string;
+    options: Array<{ value: string; label: string }>;
+  }> = [
     {
       type: "select",
       key: "status",
-      label: "Trạng thái",
-      placeholder: "Trạng thái",
+      label: t("Trạng thái", lang),
+      placeholder: t("Trạng thái", lang),
       options: [
-        { value: "", label: "Tất cả trạng thái" },
-        ...LEAD_STATUS_OPTIONS,
+        { value: "", label: t("Tất cả trạng thái", lang) },
+        ...LEAD_STATUS_OPTIONS.map((o) => ({ value: String(o.value), label: t(o.label, lang) })),
       ],
     },
     {
       type: "select",
       key: "source",
-      label: "Nguồn",
-      placeholder: "Nguồn",
+      label: t("Nguồn", lang),
+      placeholder: t("Nguồn", lang),
       options: [
-        { value: "", label: "Tất cả nguồn" },
-        ...LEAD_SOURCE_OPTIONS,
+        { value: "", label: t("Tất cả nguồn", lang) },
+        ...LEAD_SOURCE_OPTIONS.map((o) => ({ value: String(o.value), label: t(o.label, lang) })),
       ],
     },
   ];
@@ -100,31 +110,31 @@ function MarketingLeadToolbarInner({
       {
         type: "select",
         key: "areaId",
-        label: "Khu vực",
-        placeholder: "Khu vực",
+        label: t("Khu vực", lang),
+        placeholder: t("Khu vực", lang),
         options: [
-          { value: "", label: "Tất cả khu vực" },
+          { value: "", label: t("Tất cả khu vực", lang) },
           ...(areas ?? []).map((area) => ({ value: area._id, label: area.name })),
         ],
       },
       {
         type: "select",
         key: "teamId",
-        label: "Team",
-        placeholder: "Team",
+        label: t("Team", lang),
+        placeholder: t("Team", lang),
         options: [
-          { value: "", label: "Tất cả team" },
-          ...teams,
+          { value: "", label: t("Tất cả team", lang) },
+          ...teams.map((team) => ({ value: team.value, label: team.label })),
         ],
       },
       {
         type: "select",
         key: "marketingEmployeeId",
-        label: "MKT",
-        placeholder: "MKT",
+        label: t("MKT", lang),
+        placeholder: t("MKT", lang),
         options: [
-          { value: "", label: "Tất cả MKT" },
-          ...mktEmployees,
+          { value: "", label: t("Tất cả MKT", lang) },
+          ...mktEmployees.map((emp) => ({ value: emp.value, label: emp.label })),
         ],
       }
     );
@@ -136,7 +146,7 @@ function MarketingLeadToolbarInner({
         <SearchInput
           value={searchValue}
           onChange={(event) => setSearchValue(event.target.value)}
-          placeholder="Tìm kiếm tên, SĐT..."
+          placeholder={t("Tìm kiếm tên, SĐT...", lang)}
           allowClear
           style={{ width: 240 }}
         />
@@ -168,11 +178,11 @@ function MarketingLeadToolbarInner({
         <ActionButton
           type="secondary"
           icon={<ReloadOutlined spin={loading} />}
-          label="Làm mới"
+          label={t("Làm mới", lang)}
           onClick={onRefresh}
           disabled={loading}
         />
-        
+
         {/* Sprint 8.5: Push to Sale button */}
         {selectedCount > 0 && (
           <Button
@@ -182,10 +192,10 @@ function MarketingLeadToolbarInner({
             loading={loading}
             style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
           >
-            Đẩy sang Sale ({selectedCount})
+            {t("Đẩy sang Sale", lang)} ({selectedCount})
           </Button>
         )}
-        
+
         <ActionButton
           type="primary"
           icon={<PlusOutlined />}

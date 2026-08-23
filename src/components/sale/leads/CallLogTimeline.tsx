@@ -111,8 +111,8 @@ function CallLogTimelineInner({
       displayItems.map((call) => ({
         key: call.id,
         color: getCallStatusColor(call.status),
-        dot: getCallStatusIcon(call.status),
-        children: (
+        icon: getCallStatusIcon(call.status),
+        content: (
           <div className={styles.timelineItem}>
             <div className={styles.itemHeader}>
               <Tag color={getCallStatusColor(call.status)} className={styles.statusTag}>

@@ -75,8 +75,8 @@ export default function MarketingExpenseTimeline({
     return {
       key: item._id,
       color: config?.color ?? "gray",
-      dot: config?.icon,
-      children: (
+      icon: config?.icon,
+      content: (
         <div className={styles.timelineItem}>
           <div className={styles.timelineHeader}>
             <span className={styles.timelineAction}>

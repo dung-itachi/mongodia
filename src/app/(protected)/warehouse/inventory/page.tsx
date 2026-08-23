@@ -81,9 +81,9 @@ export default function WarehouseInventoryPage() {
     <PageContainer>
       <PageHeader title={t("Tồn kho", lang)}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Kho", href: "/warehouses" },
-          { label: "Tồn kho" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Kho", lang), href: "/warehouses" },
+          { label: t("Tồn kho", lang) },
         ]}
       />
 
@@ -93,17 +93,17 @@ export default function WarehouseInventoryPage() {
           <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ borderRadius: 10 }}>
               <Statistic
-                title={<Text type="secondary" style={{ fontSize: 13 }}>Tổng mặt hàng</Text>}
+                title={<Text type="secondary" style={{ fontSize: 13 }}>{t("Tổng mặt hàng", lang)}</Text>}
                 value={stats.totalItems}
                 styles={{ content: { color: "#1890ff", fontSize: 22, fontWeight: 600 } }}
-                suffix={<Text type="secondary" style={{ fontSize: 12 }}>dòng</Text>}
+                suffix={<Text type="secondary" style={{ fontSize: 12 }}>{t("dòng", lang)}</Text>}
               />
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ borderRadius: 10 }}>
               <Statistic
-                title={<Text type="secondary" style={{ fontSize: 13 }}>Tổng tồn kho</Text>}
+                title={<Text type="secondary" style={{ fontSize: 13 }}>{t("Tổng tồn kho", lang)}</Text>}
                 value={stats.totalQuantity}
                 styles={{ content: { color: "#52c41a", fontSize: 22, fontWeight: 600 } }}
                 formatter={(value) => Number(value).toLocaleString("vi-VN")}
@@ -113,7 +113,7 @@ export default function WarehouseInventoryPage() {
           <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ borderRadius: 10 }}>
               <Statistic
-                title={<Text type="secondary" style={{ fontSize: 13 }}>Hết hàng</Text>}
+                title={<Text type="secondary" style={{ fontSize: 13 }}>{t("Hết hàng", lang)}</Text>}
                 value={stats.outOfStock}
                 styles={{ content: {
                   color: stats.outOfStock > 0 ? "#ff4d4f" : "#52c41a",
@@ -127,7 +127,7 @@ export default function WarehouseInventoryPage() {
           <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ borderRadius: 10 }}>
               <Statistic
-                title={<Text type="secondary" style={{ fontSize: 13 }}>Sắp hết</Text>}
+                title={<Text type="secondary" style={{ fontSize: 13 }}>{t("Sắp hết", lang)}</Text>}
                 value={stats.lowStock}
                 styles={{ content: {
                   color: stats.lowStock > 0 ? "#faad14" : "#52c41a",
@@ -146,7 +146,7 @@ export default function WarehouseInventoryPage() {
               <Space>
                 <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
                 <Text>
-                  Có <strong>{stats.outOfStock}</strong> mặt hàng <strong>hết hàng</strong> cần được bổ sung
+                  {t("Có", lang)} <strong>{stats.outOfStock}</strong> {t("mặt hàng", lang)} <strong>{t("hết hàng", lang)}</strong> {t("cần được bổ sung", lang)}
                 </Text>
               </Space>
             }
@@ -161,7 +161,7 @@ export default function WarehouseInventoryPage() {
               <Space>
                 <ExclamationCircleOutlined style={{ color: "#faad14" }} />
                 <Text>
-                  Có <strong>{stats.lowStock}</strong> mặt hàng <strong>sắp hết hàng</strong> (dưới 10 cái)
+                  {t("Có", lang)} <strong>{stats.lowStock}</strong> {t("mặt hàng", lang)} <strong>{t("sắp hết hàng", lang)}</strong> (dưới 10 {t("cái", lang)})
                 </Text>
               </Space>
             }
@@ -179,16 +179,16 @@ export default function WarehouseInventoryPage() {
           <TableToolbar
             searchValue={filters.search}
             onSearchChange={(value) => handleFilterChange({ ...filters, search: value || undefined })}
-            searchPlaceholder="Tìm kiếm sản phẩm, SKU, quà tặng..."
+            searchPlaceholder={t("Tìm kiếm sản phẩm, SKU, quà tặng...", lang)}
             onRefresh={handleRefresh}
             loading={fetching}
             actions={
               <Space>
                 {hasActiveFilters && (
-                  <Button onClick={handleResetFilters}>Xóa lọc</Button>
+                  <Button onClick={handleResetFilters}>{t("Xóa lọc", lang)}</Button>
                 )}
                 <Button icon={<ReloadOutlined spin={fetching} />} onClick={handleRefresh}>
-                  Làm mới
+                  {t("Làm mới", lang)}
                 </Button>
               </Space>
             }
@@ -221,18 +221,18 @@ export default function WarehouseInventoryPage() {
             <Space size={4}>
               <InboxOutlined style={{ color: "#1890ff" }} />
               <Text type="secondary" style={{ fontSize: 13 }}>
-                <strong>{items.filter((i) => i.itemType === "PRODUCT").length}</strong> sản phẩm
+                <strong>{items.filter((i) => i.itemType === "PRODUCT").length}</strong> {t("sản phẩm", lang)}
               </Text>
             </Space>
             <Space size={4}>
               <GiftOutlined style={{ color: "#722ed1" }} />
               <Text type="secondary" style={{ fontSize: 13 }}>
-                <strong>{stats.gifts}</strong> quà tặng
+                <strong>{stats.gifts}</strong> {t("quà tặng", lang)}
               </Text>
             </Space>
             {hasActiveFilters && (
               <Text type="secondary" style={{ fontSize: 13 }}>
-                · Lọc: <strong>{items.length.toLocaleString("vi-VN")}</strong> / {total?.toLocaleString("vi-VN") ?? 0} kết quả
+                · {t("Lọc", lang)}: <strong>{items.length.toLocaleString("vi-VN")}</strong> / {total?.toLocaleString("vi-VN") ?? 0} {t("kết quả", lang)}
               </Text>
             )}
           </div>

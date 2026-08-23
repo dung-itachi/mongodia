@@ -82,9 +82,9 @@ export default function ExchangeRateSettingsPage() {
     <PageContainer>
       <PageHeader title={t("Tỷ giá tiền tệ", lang)} subtitle={t("Quản lý tỷ giá quy đổi MNT sang VND", lang)}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Cài đặt hệ thống", href: "/settings" },
-          { label: "Tỷ giá tiền tệ" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Cài đặt hệ thống", lang), href: "/settings" },
+          { label: t("Tỷ giá tiền tệ", lang) },
         ]}
         actions={
           <Button
@@ -92,7 +92,7 @@ export default function ExchangeRateSettingsPage() {
             onClick={() => void refetch()}
             loading={isLoading}
           >
-            Tải lại
+            {t("Tải lại", lang)}
           </Button>
         }
       />
@@ -104,9 +104,9 @@ export default function ExchangeRateSettingsPage() {
               title={
                 <Space>
                   <Title level={5} style={{ margin: 0 }}>
-                    Cập nhật tỷ giá
+                    {t("Cập nhật tỷ giá", lang)}
                   </Title>
-                  <Tag color="blue">Admin only</Tag>
+                  <Tag color="blue">{t("Admin only", lang)}</Tag>
                 </Space>
               }
               style={{ marginBottom: 16 }}
@@ -114,11 +114,10 @@ export default function ExchangeRateSettingsPage() {
               <Alert
                 type="warning"
                 showIcon
-                title="Thay đổi tỷ giá KHÔNG ảnh hưởng đến đơn hàng đã tạo."
+                title={t("Thay đổi tỷ giá KHÔNG ảnh hưởng đến đơn hàng đã tạo.", lang)}
                 description={
                   <>
-                    Mỗi đơn hàng đã snapshot tỷ giá tại thời điểm tạo (lưu trong <code>exchangeRate</code> + <code>exchangeRateDate</code>).
-                    Chỉ những đơn tạo sau khi cập nhật mới sử dụng tỷ giá mới.
+                    {t("Mỗi đơn hàng đã snapshot tỷ giá tại thời điểm tạo (lưu trong", lang)} <code>exchangeRate</code> + <code>exchangeRateDate</code>). {t("Chỉ những đơn tạo sau khi cập nhật mới sử dụng tỷ giá mới.", lang)}
                   </>
                 }
                 style={{ marginBottom: 16 }}
@@ -135,20 +134,20 @@ export default function ExchangeRateSettingsPage() {
                 >
                   <Form.Item
                     name="rate"
-                    label="Tỷ giá (1 MNT sang VND)"
+                    label={t("Tỷ giá (1 MNT sang VND)", lang)}
                     rules={[
-                      { required: true, message: "Vui lòng nhập tỷ giá" },
+                      { required: true, message: t("Vui lòng nhập tỷ giá", lang) },
                       {
                         type: "number",
                         min: 0.01,
-                        message: "Tỷ giá phải lớn hơn 0",
+                        message: t("Tỷ giá phải lớn hơn 0", lang),
                       },
                     ]}
-                    extra="Nhập số VND tương ứng với 1 MNT. Ví dụ: 7.00"
+                    extra={t("Nhập số VND tương ứng với 1 MNT. Ví dụ: 7.00", lang)}
                   >
                     <InputNumber
                       style={{ width: "100%" }}
-                      placeholder="VD: 7.00"
+                      placeholder={t("VD: 7.00", lang)}
                       min={0.01}
                       step={0.5}
                     />
@@ -162,13 +161,13 @@ export default function ExchangeRateSettingsPage() {
                       loading={updateMutation.isPending}
                       disabled={!hasChanges}
                     >
-                      Lưu tỷ giá
+                      {t("Lưu tỷ giá", lang)}
                     </Button>
                     <Button
                       onClick={handleReset}
                       disabled={!hasChanges || updateMutation.isPending}
                     >
-                      Hủy
+                      {t("Hủy", lang)}
                     </Button>
                   </Space>
                 </Form>
@@ -178,12 +177,12 @@ export default function ExchangeRateSettingsPage() {
         </Col>
 
         <Col xs={24} lg={10}>
-          <Card title="Thông tin hiện tại" style={{ marginBottom: 16 }}>
+          <Card title={t("Thông tin hiện tại", lang)} style={{ marginBottom: 16 }}>
             {isLoading && !data ? (
               <Skeleton active />
             ) : data ? (
               <Descriptions column={1} bordered size="small">
-                <Descriptions.Item label="Tỷ giá hiện tại">
+                <Descriptions.Item label={t("Tỷ giá hiện tại", lang)}>
                   <Statistic
                     value={data.rate}
                     suffix="VND/MNT"
@@ -191,55 +190,54 @@ export default function ExchangeRateSettingsPage() {
                     styles={{ content: { color: "#1890ff", fontSize: 20 } }}
                   />
                 </Descriptions.Item>
-                <Descriptions.Item label="Đơn vị tiền tệ gốc">
+                <Descriptions.Item label={t("Đơn vị tiền tệ gốc", lang)}>
                   <Tag color="green">MNT - Mongolian Tugrik</Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="Đơn vị quy đổi">
+                <Descriptions.Item label={t("Đơn vị quy đổi", lang)}>
                   <Tag color="orange">VND - Vietnamese Dong</Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="Cập nhật lúc">
+                <Descriptions.Item label={t("Cập nhật lúc", lang)}>
                   {data.updatedAt
                     ? new Date(data.updatedAt).toLocaleString("vi-VN")
                     : "-"}
                 </Descriptions.Item>
-                <Descriptions.Item label="Người cập nhật">
+                <Descriptions.Item label={t("Người cập nhật", lang)}>
                   {data.updatedBy ?? (
-                    <Text type="secondary">Mặc định từ seed</Text>
+                    <Text type="secondary">{t("Mặc định từ seed", lang)}</Text>
                   )}
                 </Descriptions.Item>
               </Descriptions>
             ) : (
-              <Text type="secondary">Không có dữ liệu</Text>
+              <Text type="secondary">{t("Không có dữ liệu", lang)}</Text>
             )}
           </Card>
 
-          <Card title="Quy tắc snapshot">
+          <Card title={t("Quy tắc snapshot", lang)}>
             <ul style={{ paddingLeft: 18, marginBottom: 0 }}>
               <li>
-                Mỗi <strong>đơn hàng mới</strong> sẽ snapshot tỷ giá hiện tại
-                vào <code>Order.exchangeRate</code>.
+                {t("Mỗi", lang)} <strong>{t("đơn hàng mới", lang)}</strong> {t("sẽ snapshot tỷ giá hiện tại vào", lang)} <code>Order.exchangeRate</code>.
               </li>
               <li>
-                Snapshot <strong>không bao giờ</strong> thay đổi kể cả khi Admin cập nhật tỷ giá sau đó.
+                {t("Snapshot", lang)} <strong>{t("không bao giờ", lang)}</strong> {t("thay đổi kể cả khi Admin cập nhật tỷ giá sau đó.", lang)}
               </li>
               <li>
-                Đơn vị tiền hiển thị trên UI là <strong>MNT</strong> cho tất cả các màn hình bán hàng.
+                {t("Đơn vị tiền hiển thị trên UI là", lang)} <strong>MNT</strong> {t("cho tất cả các màn hình bán hàng.", lang)}
               </li>
               <li>
-                Tỷ giá dùng để quy đổi <strong>doanh thu MNT sang VND</strong> trên các báo cáo.
+                {t("Tỷ giá dùng để quy đổi", lang)} <strong>{t("doanh thu MNT sang VND", lang)}</strong> {t("trên các báo cáo.", lang)}
               </li>
             </ul>
           </Card>
 
           <Card
-            title="Ví dụ"
+            title={t("Ví dụ", lang)}
             style={{ marginTop: 16 }}
             styles={{ body: { paddingTop: 0 } }}
           >
             {data ? (
               <>
                 <Text type="secondary">
-                  Với tỷ giá <strong>1 MNT = {formatNumber(data.rate)} VND</strong>:
+                  {t("Với tỷ giá", lang)} <strong>1 MNT = {formatNumber(data.rate)} VND</strong>:
                 </Text>
                 <div style={{ marginTop: 8 }}>
                   <code>100,000 MNT = {formatVND(convertMNTtoVND(100000, data.rate))}</code>
@@ -248,7 +246,7 @@ export default function ExchangeRateSettingsPage() {
             ) : (
               <>
                 <Text type="secondary">
-                  Với tỷ giá mặc định <strong>1 MNT = 7.00 VND</strong>:
+                  {t("Với tỷ giá mặc định", lang)} <strong>1 MNT = 7.00 VND</strong>:
                 </Text>
                 <div style={{ marginTop: 8 }}>
                   <code>100,000 MNT = 700,000 VND</code>

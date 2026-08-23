@@ -261,7 +261,8 @@ function SaleLeadTableInner({
         width: 130,
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
-          return LEAD_SOURCE_LABELS[lead.sourceType as LeadSource] ?? lead.sourceType;
+          const label = LEAD_SOURCE_LABELS[lead.sourceType as LeadSource] ?? lead.sourceType;
+          return t(String(label), lang);
         },
       },
       {

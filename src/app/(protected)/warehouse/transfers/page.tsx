@@ -87,15 +87,6 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: "Đã hủy", color: "red" },
 };
 
-const STATUS_FILTER_OPTIONS = [
-  { value: "", label: "Tất cả trạng thái" },
-  { value: "DRAFT", label: "Nháp" },
-  { value: "SENT", label: "Đang chuyển" },
-  { value: "RECEIVED", label: "Đã nhận" },
-  { value: "COMPLETED", label: "Hoàn tất" },
-  { value: "CANCELLED", label: "Đã hủy" },
-];
-
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function readWarehouseName(value: unknown): string {
@@ -255,29 +246,29 @@ export default function WarehouseTransfersPage() {
     const src = values.sourceWarehouseId;
 
     if (src === dest) {
-      message.error("Kho nguồn và kho đích phải khác nhau");
+      message.error(t("Kho nguồn và kho đích phải khác nhau", lang));
       return;
     }
 
     if (!items.length) {
-      message.warning("Vui lòng thêm ít nhất 1 mặt hàng");
+      message.warning(t("Vui lòng thêm ít nhất 1 mặt hàng", lang));
       return;
     }
 
     for (const row of items) {
       if (!row.productId && !row.variantId && !row.giftId) {
-        message.warning("Vui lòng chọn mặt hàng cho tất cả các dòng");
+        message.warning(t("Vui lòng chọn mặt hàng cho tất cả các dòng", lang));
         return;
       }
       if (!row.quantity || row.quantity <= 0) {
-        message.warning("Số lượng phải lớn hơn 0");
+        message.warning(t("Số lượng phải lớn hơn 0", lang));
         return;
       }
       const key = invItemKey(row as unknown as InventoryItem);
       const available = availableQuantityMap[key] ?? 0;
       if (row.quantity > available) {
         message.error(
-          `Số lượng vượt quá tồn kho khả dụng (${available}) của mặt hàng này`
+          `${t("Số lượng vượt quá tồn kho khả dụng ({available}) của mặt hàng này", lang).replace("{available}", String(available))}`
         );
         return;
       }
@@ -299,14 +290,14 @@ export default function WarehouseTransfersPage() {
         status: "SENT",
       });
 
-      message.success("Tạo phiếu chuyển kho thành công");
+      message.success(t("Tạo phiếu chuyển kho thành công", lang));
       setOpen(false);
       form.resetFields();
       setItems([]);
       setSourceWarehouseId(undefined);
       void refetch();
     } catch (err) {
-      message.error(err instanceof Error ? err.message : "Tạo phiếu chuyển kho thất bại");
+      message.error(err instanceof Error ? err.message : t("Tạo phiếu chuyển kho thất bại", lang));
     }
   };
 
@@ -323,7 +314,7 @@ export default function WarehouseTransfersPage() {
     if (!activeRecord) return;
     for (let i = 0; i < receiveQuantities.length; i++) {
       if (receiveQuantities[i] < 0) {
-        message.error("Số lượng nhận không được âm");
+        message.error(t("Số lượng nhận không được âm", lang));
         return;
       }
     }
@@ -335,11 +326,11 @@ export default function WarehouseTransfersPage() {
           note: receiveNote,
         },
       });
-      message.success("Nhận kho thành công");
+      message.success(t("Nhận kho thành công", lang));
       setReceiveOpen(false);
       void refetch();
     } catch (err) {
-      message.error(err instanceof Error ? err.message : "Nhận kho thất bại");
+      message.error(err instanceof Error ? err.message : t("Nhận kho thất bại", lang));
     }
   };
 
@@ -398,7 +389,7 @@ export default function WarehouseTransfersPage() {
   function getItemDisplay(row: TransferRow): string {
     if (row.giftId) {
       const gift = gifts.find((g) => g._id === row.giftId);
-      return gift?.name ?? "Quà tặng";
+      return gift?.name ?? t("Quà tặng", lang);
     }
     if (row.variantId) {
       for (const pid of Object.keys(variantsMap)) {
@@ -411,42 +402,54 @@ export default function WarehouseTransfersPage() {
       return row.variantId;
     }
     const prod = products.find((p) => p._id === row.productId);
-    return prod ? `${prod.code} • ${prod.name}` : "Sản phẩm";
+    return prod ? `${prod.code} • ${prod.name}` : t("Sản phẩm", lang);
   }
+
+  // ─── Status filter options ────────────────────────────────────────────────
+  const statusFilterOptions = useMemo(
+    () => [
+      { value: "", label: t("Tất cả trạng thái", lang) },
+      ...Object.entries(STATUS_LABELS).map(([value, info]) => ({
+        value,
+        label: t(info.label, lang),
+      })),
+    ],
+    [lang]
+  );
 
   // ─── Table columns ────────────────────────────────────────────────────────
   const columns = useMemo(
     () => [
       {
         key: "code",
-        title: "Mã phiếu",
+        title: t("Mã phiếu", lang),
         dataIndex: "transferCode",
         width: 180,
       },
       {
         key: "source",
-        title: "Kho nguồn",
+        title: t("Kho nguồn", lang),
         dataIndex: "sourceWarehouseId",
         width: 180,
         render: (value: unknown) => readWarehouseName(value),
       },
       {
         key: "dest",
-        title: "Kho đích",
+        title: t("Kho đích", lang),
         dataIndex: "destinationWarehouseId",
         width: 180,
         render: (value: unknown) => readWarehouseName(value),
       },
       {
         key: "items",
-        title: "Số mặt hàng",
+        title: t("Số mặt hàng", lang),
         width: 130,
         render: (_: unknown, row: Record<string, unknown>) =>
           Array.isArray(row.items) ? row.items.length : 0,
       },
       {
         key: "quantity",
-        title: "Tổng SL",
+        title: t("Tổng SL", lang),
         align: "right" as const,
         width: 120,
         render: (_: unknown, row: Record<string, unknown>) =>
@@ -454,7 +457,7 @@ export default function WarehouseTransfersPage() {
       },
       {
         key: "creator",
-        title: "Người tạo",
+        title: t("Người tạo", lang),
         dataIndex: "createdBy",
         width: 160,
         render: (value: unknown) =>
@@ -462,18 +465,18 @@ export default function WarehouseTransfersPage() {
       },
       {
         key: "status",
-        title: "Trạng thái",
+        title: t("Trạng thái", lang),
         dataIndex: "status",
         width: 140,
         render: (value: unknown) => (
           <Tag color={STATUS_LABELS[String(value)]?.color}>
-            {STATUS_LABELS[String(value)]?.label ?? String(value)}
+            {t(STATUS_LABELS[String(value)]?.label ?? String(value), lang)}
           </Tag>
         ),
       },
       {
         key: "actions",
-        title: "Thao tác",
+        title: t("Thao tác", lang),
         width: 140,
         render: (_: unknown, row: Record<string, unknown>) => {
           const status = String(row.status);
@@ -490,25 +493,25 @@ export default function WarehouseTransfersPage() {
                 startReceive(row as unknown as TransferRecord)
               }
             >
-              Nhận hàng
+              {t("Nhận hàng", lang)}
             </Button>
           );
         },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [lang]
   );
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <PageContainer>
       <PageHeader title={t("Chuyển kho", lang)}
-        subtitle={`${data?.total ?? 0} phiếu chuyển`}
+        subtitle={`${data?.total ?? 0} ${t("phiếu chuyển", lang)}`}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Kho", href: "/warehouses" },
-          { label: "Chuyển kho" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Kho", lang), href: "/warehouses" },
+          { label: t("Chuyển kho", lang) },
         ]}
         actions={
           <Button
@@ -516,7 +519,7 @@ export default function WarehouseTransfersPage() {
             icon={<PlusOutlined />}
             onClick={() => setOpen(true)}
           >
-            Tạo phiếu chuyển
+            {t("Tạo phiếu chuyển", lang)}
           </Button>
         }
       />
@@ -525,14 +528,14 @@ export default function WarehouseTransfersPage() {
         <Space style={{ marginBottom: 12 }}>
           <Select
             allowClear
-            placeholder="Trạng thái"
+            placeholder={t("Trạng thái", lang)}
             style={{ width: 180 }}
             value={statusFilter || undefined}
             onChange={(value) => {
               setStatusFilter(value ?? "");
               setPage(1);
             }}
-            options={STATUS_FILTER_OPTIONS}
+            options={statusFilterOptions}
           />
         </Space>
 
@@ -555,7 +558,7 @@ export default function WarehouseTransfersPage() {
 
       {/* ── Create Transfer Modal ─────────────────────────────────────────── */}
       <Modal
-        title="Tạo phiếu chuyển kho"
+        title={t("Tạo phiếu chuyển kho", lang)}
         open={open}
         onCancel={() => {
           setOpen(false);
@@ -564,20 +567,20 @@ export default function WarehouseTransfersPage() {
         onOk={submitTransfer}
         confirmLoading={createTransfer.isPending}
         width={820}
-        okText="Tạo phiếu"
-        cancelText="Hủy"
+        okText={t("Tạo phiếu", lang)}
+        cancelText={t("Hủy", lang)}
         destroyOnHidden
       >
         <Form form={form} layout="vertical">
           <Row gutter={12}>
             <Col span={12}>
               <Form.Item
-                label="Kho nguồn"
+                label={t("Kho nguồn", lang)}
                 name="sourceWarehouseId"
-                rules={[{ required: true, message: "Chọn kho nguồn" }]}
+                rules={[{ required: true, message: t("Chọn kho nguồn", lang) }]}
               >
                 <Select
-                  placeholder="Kho nguồn"
+                  placeholder={t("Kho nguồn", lang)}
                   options={warehouseOptions}
                   value={sourceWarehouseId}
                   onChange={handleSourceWarehouseChange}
@@ -587,15 +590,15 @@ export default function WarehouseTransfersPage() {
             </Col>
             <Col span={12}>
               <Form.Item
-                label="Kho đích"
+                label={t("Kho đích", lang)}
                 name="destinationWarehouseId"
                 rules={[
-                  { required: true, message: "Chọn kho đích" },
+                  { required: true, message: t("Chọn kho đích", lang) },
                   {
                     validator: (_rule, value) => {
                       if (value && value === sourceWarehouseId) {
                         return Promise.reject(
-                          "Kho đích phải khác kho nguồn"
+                          t("Kho đích phải khác kho nguồn", lang)
                         );
                       }
                       return Promise.resolve();
@@ -604,7 +607,7 @@ export default function WarehouseTransfersPage() {
                 ]}
               >
                 <Select
-                  placeholder="Kho đích"
+                  placeholder={t("Kho đích", lang)}
                   options={warehouseOptions.filter(
                     (w) => w.value !== sourceWarehouseId
                   )}
@@ -613,14 +616,14 @@ export default function WarehouseTransfersPage() {
             </Col>
           </Row>
 
-          <Form.Item label="Ghi chú" name="note">
-            <Input.TextArea maxLength={500} rows={2} placeholder="Ghi chú (tùy chọn)" />
+          <Form.Item label={t("Ghi chú", lang)} name="note">
+            <Input.TextArea maxLength={500} rows={2} placeholder={t("Ghi chú (tùy chọn)", lang)} />
           </Form.Item>
 
-          <CardSection title="Danh sách mặt hàng">
+          <CardSection title={t("Danh sách mặt hàng", lang)}>
             <Space orientation="vertical" style={{ width: "100%" }} size={8}>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                Chỉ hiển thị mặt hàng có tồn kho tại kho nguồn
+                {t("Chỉ hiển thị mặt hàng có tồn kho tại kho nguồn", lang)}
               </Text>
 
               <Button
@@ -630,19 +633,19 @@ export default function WarehouseTransfersPage() {
                 block
                 disabled={!sourceWarehouseId}
               >
-                Thêm dòng
+                {t("Thêm dòng", lang)}
               </Button>
 
               {inventoryLoading && (
                 <div style={{ textAlign: "center", padding: 12 }}>
                   <Spin size="small" />{" "}
-                  <Text type="secondary">Đang tải tồn kho...</Text>
+                  <Text type="secondary">{t("Đang tải tồn kho...", lang)}</Text>
                 </div>
               )}
 
               {!sourceWarehouseId && !inventoryLoading && (
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  Vui lòng chọn kho nguồn để hiển thị mặt hàng
+                  {t("Vui lòng chọn kho nguồn để hiển thị mặt hàng", lang)}
                 </Text>
               )}
 
@@ -669,9 +672,9 @@ export default function WarehouseTransfersPage() {
                       style={{ width: 110, flexShrink: 0 }}
                       value={row.itemType}
                       options={[
-                        { value: "PRODUCT", label: "Sản phẩm" },
-                        { value: "VARIANT", label: "Phân loại" },
-                        { value: "GIFT", label: "Quà tặng" },
+                        { value: "PRODUCT", label: t("Sản phẩm", lang) },
+                        { value: "VARIANT", label: t("Phân loại", lang) },
+                        { value: "GIFT", label: t("Quà tặng", lang) },
                       ]}
                       onChange={(value) => {
                         setItems((current) =>
@@ -695,7 +698,7 @@ export default function WarehouseTransfersPage() {
                     {row.itemType === "PRODUCT" && (
                       <Select
                         style={{ width: 220, flex: "1 1 220px" }}
-                        placeholder="Sản phẩm"
+                        placeholder={t("Sản phẩm", lang)}
                         value={row.productId}
                         options={productOptionsInStock}
                         onChange={(value) => {
@@ -725,7 +728,7 @@ export default function WarehouseTransfersPage() {
                       <>
                         <Select
                           style={{ width: 160, flex: "1 1 160px" }}
-                          placeholder="Sản phẩm cha"
+                          placeholder={t("Sản phẩm cha", lang)}
                           value={row.productId}
                           options={productOptionsInStock}
                           onChange={(value) => {
@@ -750,7 +753,7 @@ export default function WarehouseTransfersPage() {
                         />
                         <Select
                           style={{ width: 140, flex: "1 1 140px" }}
-                          placeholder="Phân loại"
+                          placeholder={t("Phân loại", lang)}
                           value={row.variantId}
                           options={variants.map((v) => ({
                             value: v._id,
@@ -775,7 +778,7 @@ export default function WarehouseTransfersPage() {
                     {row.itemType === "GIFT" && (
                       <Select
                         style={{ width: 220, flex: "1 1 220px" }}
-                        placeholder="Quà tặng"
+                        placeholder={t("Quà tặng", lang)}
                         value={row.giftId}
                         options={giftOptionsInStock}
                         onChange={(value) => {
@@ -803,7 +806,7 @@ export default function WarehouseTransfersPage() {
                     <Space.Compact style={{ flex: "0 0 auto" }}>
                       <InputNumber
                         style={{ width: 80 }}
-                        placeholder="SL"
+                        placeholder={t("SL", lang)}
                         min={1}
                         max={available > 0 ? available : undefined}
                         value={row.quantity}
@@ -831,7 +834,7 @@ export default function WarehouseTransfersPage() {
                           fontWeight: 600,
                           textAlign: "center",
                         }}
-                        value={`Còn: ${available}`}
+                        value={`${t("Còn:", lang)} ${available}`}
                         readOnly
                         disabled={!sourceWarehouseId}
                       />
@@ -858,18 +861,18 @@ export default function WarehouseTransfersPage() {
 
       {/* ── Receive Transfer Modal ───────────────────────────────────────── */}
       <Modal
-        title={`Nhận chuyển kho — ${activeRecord?.transferCode ?? ""}`}
+        title={`${t("Nhận chuyển kho —", lang)} ${activeRecord?.transferCode ?? ""}`}
         open={receiveOpen}
         onCancel={() => setReceiveOpen(false)}
         onOk={submitReceive}
         confirmLoading={receiveTransfer.isPending}
         width={640}
-        okText="Xác nhận nhận"
-        cancelText="Hủy"
+        okText={t("Xác nhận nhận", lang)}
+        cancelText={t("Hủy", lang)}
       >
         <Space orientation="vertical" style={{ width: "100%" }} size={12}>
           <Text>
-            <strong>Kho đích:</strong>{" "}
+            <strong>{t("Kho đích:", lang)}</strong>{" "}
             {activeRecord
               ? readWarehouseName(activeRecord.destinationWarehouseId)
               : "-"}
@@ -887,7 +890,7 @@ export default function WarehouseTransfersPage() {
             size="small"
             columns={[
               {
-                title: "Mặt hàng",
+                title: t("Mặt hàng", lang),
                 render: (_: unknown, row: Record<string, unknown>) => {
                   const variant = row.variantId as {
                     sku?: string;
@@ -897,20 +900,20 @@ export default function WarehouseTransfersPage() {
                     code?: string;
                   } | null;
                   const gift = row.giftId as { name?: string } | null;
-                  if (gift) return gift.name ?? "Quà tặng";
-                  return `${product?.name ?? product?.code ?? "Sản phẩm"} ${
+                  if (gift) return gift.name ?? t("Quà tặng", lang);
+                  return `${product?.name ?? product?.code ?? t("Sản phẩm", lang)} ${
                     variant?.sku ? `• ${variant.sku}` : ""
                   }`;
                 },
               },
               {
-                title: "SL gửi",
+                title: t("SL gửi", lang),
                 dataIndex: "sentQuantity",
                 width: 100,
                 align: "right" as const,
               },
               {
-                title: "SL nhận",
+                title: t("SL nhận", lang),
                 width: 150,
                 render: (_: unknown, row: Record<string, unknown>) => {
                   const idx = Number(row.idx);
@@ -939,12 +942,12 @@ export default function WarehouseTransfersPage() {
           />
 
           <div>
-            <Text strong>Ghi chú nhận kho:</Text>
+            <Text strong>{t("Ghi chú nhận kho:", lang)}</Text>
             <Input.TextArea
               rows={2}
               value={receiveNote}
               onChange={(e) => setReceiveNote(e.target.value)}
-              placeholder="Ghi chú (tùy chọn)"
+              placeholder={t("Ghi chú (tùy chọn)", lang)}
               style={{ marginTop: 6 }}
               maxLength={500}
             />

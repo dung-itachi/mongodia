@@ -90,7 +90,8 @@ function getStatusTag(lead: MarketingLead) {
 }
 
 function getSourceTag(source: LeadSource | string) {
-  const label = LEAD_SOURCE_LABELS[source as LeadSource] ?? source;
+  const lang = useLanguageStore.getState().language;
+  const label = t(LEAD_SOURCE_LABELS[source as LeadSource] ?? String(source), lang);
   const color = LEAD_SOURCE_COLOR_MAP[source] ?? "#8c8c8c";
   return <Tag style={{ color, borderColor: color }}>{label}</Tag>;
 }

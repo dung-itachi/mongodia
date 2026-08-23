@@ -147,7 +147,7 @@ function FacebookPagesTableInner({
       render: (name: string) => <span style={{ fontWeight: 500 }}>{name}</span>,
     },
     {
-      title: "URL",
+      title: t("URL", lang),
       dataIndex: "pageUrl",
       key: "pageUrl",
       width: 200,
@@ -157,7 +157,7 @@ function FacebookPagesTableInner({
       ) : "-",
     },
     {
-      title: "Facebook ID",
+      title: t("Facebook ID", lang),
       dataIndex: "facebookPageId",
       key: "facebookPageId",
       width: 150,

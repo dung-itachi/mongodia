@@ -80,7 +80,7 @@ export default function WarehouseMovementsPage() {
 
   const columns: TableColumnsType<WarehouseStockMovementItem> = useMemo(() => [
     {
-      title: "Thời gian",
+      title: t("Thời gian", lang),
       dataIndex: "createdAt",
       key: "createdAt",
       width: 160,
@@ -89,32 +89,32 @@ export default function WarehouseMovementsPage() {
       defaultSortOrder: "descend",
     },
     {
-      title: "Kho",
+      title: t("Kho", lang),
       dataIndex: ["warehouseId", "name"],
       key: "warehouse",
       width: 150,
       render: (_, record) => record.warehouseId?.name ?? "-",
     },
     {
-      title: "Loại",
+      title: t("Loại", lang),
       dataIndex: "type",
       key: "type",
       width: 130,
       render: (value: string) => (
         <Tag color={TYPE_LABELS[value as WarehouseStockMovementType]?.color}>
-          {TYPE_LABELS[value as WarehouseStockMovementType]?.label ?? value}
+          {t(TYPE_LABELS[value as WarehouseStockMovementType]?.label ?? value, lang)}
         </Tag>
       ),
     },
     {
-      title: "Sản phẩm / Quà tặng",
+      title: t("Sản phẩm / Quà tặng", lang),
       key: "item",
       width: 220,
       render: (_, record) => {
         if (record.itemType === "GIFT") {
           return (
             <div>
-              <div style={{ fontWeight: 500 }}>🎁 {record.giftId?.name ?? "Quà tặng"}</div>
+              <div style={{ fontWeight: 500 }}>🎁 {record.giftId?.name ?? t("Quà tặng", lang)}</div>
             </div>
           );
         }
@@ -122,16 +122,16 @@ export default function WarehouseMovementsPage() {
         const variant = record.variantId;
         return (
           <div>
-            <div style={{ fontWeight: 500 }}>{product?.name ?? product?.code ?? "Sản phẩm"}</div>
+            <div style={{ fontWeight: 500 }}>{product?.name ?? product?.code ?? t("Sản phẩm", lang)}</div>
             <div style={{ fontSize: 12, color: "#888" }}>
-              SKU: {variant?.sku ?? "Không có"}
+              SKU: {variant?.sku ?? t("Không có", lang)}
             </div>
           </div>
         );
       },
     },
     {
-      title: "Số lượng",
+      title: t("Số lượng", lang),
       dataIndex: "quantity",
       key: "quantity",
       width: 100,
@@ -142,7 +142,7 @@ export default function WarehouseMovementsPage() {
       },
     },
     {
-      title: "Mã tham chiếu",
+      title: t("Mã tham chiếu", lang),
       dataIndex: "referenceCode",
       key: "referenceCode",
       width: 180,
@@ -150,13 +150,13 @@ export default function WarehouseMovementsPage() {
         <div>
           <div className="font-mono" style={{ fontSize: 13 }}>{value || "-"}</div>
           <div style={{ fontSize: 11, color: "#888" }}>
-            {record.referenceType && REFERENCE_TYPE_LABELS[record.referenceType]}
+            {record.referenceType && t(REFERENCE_TYPE_LABELS[record.referenceType] ?? "", lang)}
           </div>
         </div>
       ),
     },
     {
-      title: "Người thực hiện",
+      title: t("Người thực hiện", lang),
       dataIndex: ["createdBy", "fullName"],
       key: "createdBy",
       width: 150,
@@ -169,16 +169,16 @@ export default function WarehouseMovementsPage() {
         </div>
       ),
     },
-  ], []);
+  ], [lang]);
 
   return (
     <PageContainer>
       <PageHeader title={t("Lịch sử kho", lang)}
         subtitle={`${data?.total ?? 0} movement`}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Kho", href: "/warehouses" },
-          { label: "Lịch sử kho" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Kho", lang), href: "/warehouses" },
+          { label: t("Lịch sử kho", lang) },
         ]}
       />
       <div className="card">
@@ -192,7 +192,7 @@ export default function WarehouseMovementsPage() {
         />
         <Space style={{ marginBottom: 16 }} size="middle" wrap>
           <Input.Search
-            placeholder="Tìm sản phẩm, SKU, mã tham chiếu..."
+            placeholder={t("Tìm sản phẩm, SKU, mã tham chiếu...", lang)}
             allowClear
             style={{ width: 280 }}
             value={searchInput}
@@ -202,7 +202,7 @@ export default function WarehouseMovementsPage() {
           />
           <Select
             allowClear
-            placeholder="Kho"
+            placeholder={t("Kho", lang)}
             style={{ width: 180 }}
             value={warehouseId}
             onChange={(value) => {
@@ -210,7 +210,7 @@ export default function WarehouseMovementsPage() {
               setPage(1);
             }}
             options={[
-              { value: "", label: "Tất cả kho" },
+              { value: "", label: t("Tất cả kho", lang) },
               ...(warehouses ?? []).map((w: { _id: string; name: string }) => ({
                 value: w._id,
                 label: w.name,
@@ -219,7 +219,7 @@ export default function WarehouseMovementsPage() {
           />
           <Select
             allowClear
-            placeholder="Loại movement"
+            placeholder={t("Loại movement", lang)}
             style={{ width: 160 }}
             value={type}
             onChange={(value) => {
@@ -228,7 +228,7 @@ export default function WarehouseMovementsPage() {
             }}
             options={Object.entries(TYPE_LABELS).map(([value, info]) => ({
               value,
-              label: info.label,
+              label: t(info.label, lang),
             }))}
           />
           <RangePicker
@@ -239,7 +239,7 @@ export default function WarehouseMovementsPage() {
               setPage(1);
             }}
             format="DD/MM/YYYY"
-            placeholder={["Từ ngày", "Đến ngày"]}
+            placeholder={[t("Từ ngày", lang), t("Đến ngày", lang)]}
             allowClear
           />
         </Space>
@@ -254,7 +254,7 @@ export default function WarehouseMovementsPage() {
             pageSize,
             total: data?.total ?? 0,
             showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} movement`,
+            showTotal: (total, range) => `${range[0]}-${range[1]} ${t("của", lang)} ${total} movement`,
             onChange: (p, s) => {
               setPage(p);
               setPageSize(s);

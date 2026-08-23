@@ -527,7 +527,7 @@ export default function OrderDetailPage({ params }: PageProps) {
     label: (
       <Space>
         <CheckOutlined style={{ color: action.color === "red" ? "#ff4d4f" : "#52c41a" }} />
-        <span>{action.label}</span>
+        <span>{t(action.label, lang)}</span>
       </Space>
     ),
     onClick: () => setStatusTarget(action.targetStatus),
@@ -616,11 +616,11 @@ export default function OrderDetailPage({ params }: PageProps) {
                 </Col>
                 <Col xs={24} sm={8}>
                   <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Loại đơn", lang)}</div>
-                  <div>{ORDER_TYPE_LABELS[order.orderType as keyof typeof ORDER_TYPE_LABELS] || order.orderType}</div>
+                  <div>{t(ORDER_TYPE_LABELS[order.orderType as keyof typeof ORDER_TYPE_LABELS] || order.orderType, lang)}</div>
                 </Col>
                 <Col xs={24} sm={8}>
                   <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Nguồn đơn", lang)}</div>
-                  <div>{ORDER_SOURCE_LABELS[order.orderSource as keyof typeof ORDER_SOURCE_LABELS] || order.orderSource}</div>
+                  <div>{t(ORDER_SOURCE_LABELS[order.orderSource as keyof typeof ORDER_SOURCE_LABELS] || order.orderSource, lang)}</div>
                 </Col>
                 <Col xs={24} sm={8}>
                   <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Số lượng", lang)}</div>
@@ -1113,7 +1113,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                   allowClear
                   options={Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({
                     value,
-                    label,
+                    label: t(label, lang),
                   }))}
                 />
               </Form.Item>
@@ -1125,7 +1125,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                   allowClear
                   options={Object.entries(ORDER_TYPE_LABELS).map(([value, label]) => ({
                     value,
-                    label,
+                    label: t(label, lang),
                   }))}
                 />
               </Form.Item>
@@ -1137,7 +1137,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                   allowClear
                   options={Object.entries(ORDER_SOURCE_LABELS).map(([value, label]) => ({
                     value,
-                    label,
+                    label: t(label, lang),
                   }))}
                 />
               </Form.Item>
@@ -1292,7 +1292,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       <ConfirmDialog
         open={!!statusTarget}
         title={t("Xác nhận đổi trạng thái", lang)}
-        content={`${t("Bạn có chắc chắn muốn chuyển đơn hàng sang trạng thái", lang)} "${statusTarget ? ORDER_STATUS_LABELS[statusTarget as keyof typeof ORDER_STATUS_LABELS] || statusTarget : ""}"?`}
+        content={`${t("Bạn có chắc chắn muốn chuyển đơn hàng sang trạng thái", lang)} "${statusTarget ? t(ORDER_STATUS_LABELS[statusTarget as keyof typeof ORDER_STATUS_LABELS] || statusTarget, lang) : ""}"?`}
         type="warning"
         confirmText={t("Xác nhận", lang)}
         loading={statusLoading}

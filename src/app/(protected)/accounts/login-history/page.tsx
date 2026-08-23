@@ -125,7 +125,7 @@ export default function LoginHistoryPage() {
       void queryClient.invalidateQueries({ queryKey: ["login-history"] });
     },
     onError: () => {
-      message.error("Không thể xác nhận");
+      message.error(t("Không thể xác nhận", lang));
     },
   });
 
@@ -142,13 +142,13 @@ export default function LoginHistoryPage() {
   const columns = useMemo(
     () => [
       {
-        title: "STT",
+        title: t("STT", lang),
         render: (_: unknown, __: LoginHistoryItem, index: number) =>
           index + 1,
         width: 60,
       },
       {
-        title: "Trạng thái",
+        title: t("Trạng thái", lang),
         render: (_: unknown, item: LoginHistoryItem) => {
           const status = getItemStatus(item);
           switch (status) {
@@ -160,25 +160,25 @@ export default function LoginHistoryPage() {
                   style={{ cursor: "pointer" }}
                   onClick={() => setConfirmModal({ visible: true, item })}
                 >
-                  Cảnh báo
+                  {t("Cảnh báo", lang)}
                 </Tag>
               );
             case "trusted":
               return (
                 <Tag color="cyan" icon={<CheckCircleOutlined />}>
-                  Tin cậy
+                  {t("Tin cậy", lang)}
                 </Tag>
               );
             case "failed":
-              return <Tag color="red">Thất bại</Tag>;
+              return <Tag color="red">{t("Thất bại", lang)}</Tag>;
             default:
-              return <Tag color="green">Bình thường</Tag>;
+              return <Tag color="green">{t("Bình thường", lang)}</Tag>;
           }
         },
         width: 110,
       },
       {
-        title: "Người dùng",
+        title: t("Người dùng", lang),
         render: (_: unknown, item: LoginHistoryItem) => (
           <Space>
             <Avatar src={item.avatar || undefined} size="small">
@@ -197,13 +197,13 @@ export default function LoginHistoryPage() {
       ...(canViewAll
         ? [
             {
-              title: "Khu vực",
+              title: t("Khu vực", lang),
               render: (_: unknown, item: LoginHistoryItem) =>
                 item.area?.name || "-",
               width: 120,
             },
             {
-              title: "Team",
+              title: t("Team", lang),
               render: (_: unknown, item: LoginHistoryItem) =>
                 item.team?.name || "-",
               width: 120,
@@ -211,14 +211,14 @@ export default function LoginHistoryPage() {
           ]
         : []),
       {
-        title: "Mã NV",
+        title: t("Mã NV", lang),
         render: (_: unknown, item: LoginHistoryItem) => item.employeeCode || "-",
         width: 100,
       },
       ...(canViewAll
         ? [
             {
-              title: "Vai trò",
+              title: t("Vai trò", lang),
               render: (_: unknown, item: LoginHistoryItem) =>
                 item.role ? (
                   <Tag color="blue">{item.role.code}</Tag>
@@ -230,7 +230,7 @@ export default function LoginHistoryPage() {
           ]
         : []),
       {
-        title: "Địa chỉ IP",
+        title: t("Địa chỉ IP", lang),
         render: (_: unknown, item: LoginHistoryItem) => (
           <Space>
             {item.ip || "-"}
@@ -242,7 +242,7 @@ export default function LoginHistoryPage() {
         width: 150,
       },
       {
-        title: "Thiết bị",
+        title: t("Thiết bị", lang),
         render: (_: unknown, item: LoginHistoryItem) => {
           if (!item.userAgent) return "-";
           const browser = parseUserAgent(item.userAgent);
@@ -263,7 +263,7 @@ export default function LoginHistoryPage() {
         width: 170,
       },
       {
-        title: "Thời gian",
+        title: t("Thời gian", lang),
         render: (_: unknown, item: LoginHistoryItem) => {
           const date = dayjs(item.loginAt);
           return (
@@ -277,7 +277,7 @@ export default function LoginHistoryPage() {
         },
       },
     ],
-    [canViewAll]
+    [canViewAll, lang]
   );
 
   const successCount = items.filter((i) => i.success).length;
@@ -305,24 +305,24 @@ export default function LoginHistoryPage() {
             <span style={{ fontWeight: 700, color: "#1890ff", fontSize: 16 }}>
               {data?.total ?? 0}
             </span>{" "}
-            lượt đăng nhập
+            {t("lượt đăng nhập", lang)}
             <span style={{ color: "#d9d9d9", margin: "0 8px" }}>|</span>
             <span style={{ fontWeight: 600, color: "#52c41a" }}>
               {successCount}
             </span>{" "}
-            thành công
+            {t("thành công", lang)}
             <span style={{ color: "#d9d9d9", margin: "0 8px" }}>|</span>
             <span style={{ fontWeight: 600, color: "#ff4d4f" }}>
               {failedCount}
             </span>{" "}
-            thất bại
+            {t("thất bại", lang)}
             {warningCount > 0 && (
               <>
                 <span style={{ color: "#d9d9d9", margin: "0 8px" }}>|</span>
                 <span style={{ fontWeight: 600, color: "#faad14" }}>
                   {warningCount}
                 </span>{" "}
-                cảnh báo
+                {t("cảnh báo", lang)}
               </>
             )}
           </span>
@@ -332,8 +332,8 @@ export default function LoginHistoryPage() {
             <Input.Search
               placeholder={
                 canViewAll
-                  ? "Tìm theo tên, username, mã NV"
-                  : "Tìm kiếm"
+                  ? t("Tìm theo tên, username, mã NV", lang)
+                  : t("Tìm kiếm", lang)
               }
               allowClear
               onSearch={setSearch}
@@ -345,7 +345,7 @@ export default function LoginHistoryPage() {
               onClick={() => setShowFilters((v) => !v)}
               type={showFilters ? "primary" : "default"}
             >
-              Lọc
+              {t("Lọc", lang)}
             </Button>
             <Button icon={<ReloadOutlined />} onClick={() => void refetch()} />
           </Space>
@@ -357,7 +357,7 @@ export default function LoginHistoryPage() {
           type="danger"
           style={{ marginBottom: 16, display: "block" }}
         >
-          Lỗi tải dữ liệu: {(error as Error).message}
+          {t("Lỗi tải dữ liệu", lang)}: {(error as Error).message}
         </Typography.Text>
       )}
 
@@ -377,23 +377,23 @@ export default function LoginHistoryPage() {
         >
           <div>
             <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>
-              Kết quả
+              {t("Kết quả", lang)}
             </div>
             <Select
               allowClear
-              placeholder="Tất cả"
+              placeholder={t("Tất cả", lang)}
               style={{ width: 140 }}
               value={filterSuccess}
               onChange={(v) => setFilterSuccess(v ?? null)}
               options={[
-                { value: true, label: "Thành công" },
-                { value: false, label: "Thất bại" },
+                { value: true, label: t("Thành công", lang) },
+                { value: false, label: t("Thất bại", lang) },
               ]}
             />
           </div>
           <div>
             <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>
-              Khoảng thời gian
+              {t("Khoảng thời gian", lang)}
             </div>
             <DatePicker.RangePicker
               value={filterDate}
@@ -410,11 +410,11 @@ export default function LoginHistoryPage() {
             <>
               <div>
                 <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>
-                  Khu vực
+                  {t("Khu vực", lang)}
                 </div>
                 <Select
                   allowClear
-                  placeholder="Chọn khu vực"
+                  placeholder={t("Chọn khu vực", lang)}
                   style={{ width: 160 }}
                   value={filterArea}
                   onChange={handleAreaChange}
@@ -429,11 +429,11 @@ export default function LoginHistoryPage() {
               </div>
               <div>
                 <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>
-                  Team
+                  {t("Team", lang)}
                 </div>
                 <Select
                   allowClear
-                  placeholder="Chọn team"
+                  placeholder={t("Chọn team", lang)}
                   style={{ width: 160 }}
                   value={filterTeam}
                   onChange={(v) => setFilterTeam(v ?? null)}
@@ -449,11 +449,11 @@ export default function LoginHistoryPage() {
               </div>
               <div>
                 <div style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}>
-                  Nhân viên
+                  {t("Nhân viên", lang)}
                 </div>
                 <Select
                   allowClear
-                  placeholder="Chọn nhân viên"
+                  placeholder={t("Chọn nhân viên", lang)}
                   style={{ width: 200 }}
                   value={filterEmployee}
                   onChange={(v) => setFilterEmployee(v ?? null)}
@@ -468,7 +468,7 @@ export default function LoginHistoryPage() {
               </div>
             </>
           )}
-          <Button onClick={handleResetFilters}>Đặt lại</Button>
+          <Button onClick={handleResetFilters}>{t("Đặt lại", lang)}</Button>
         </div>
       )}
 
@@ -477,7 +477,7 @@ export default function LoginHistoryPage() {
           type="secondary"
           style={{ fontSize: 12, marginBottom: 8, display: "block" }}
         >
-          Bạn chỉ có thể xem lịch sử đăng nhập của bản thân.
+          {t("Bạn chỉ có thể xem lịch sử đăng nhập của bản thân.", lang)}
         </Typography.Text>
       )}
 
@@ -491,10 +491,10 @@ export default function LoginHistoryPage() {
       >
         <Space orientation="vertical" style={{ width: "100%" }} size="middle">
           {isLoading ? (
-            <Typography.Text type="secondary">Đang tải...</Typography.Text>
+            <Typography.Text type="secondary">{t("Đang tải...", lang)}</Typography.Text>
           ) : items.length === 0 ? (
             <Typography.Text type="secondary">
-              Không có lịch sử đăng nhập nào.
+              {t("Không có lịch sử đăng nhập nào.", lang)}
             </Typography.Text>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -555,7 +555,7 @@ export default function LoginHistoryPage() {
       {data && data.totalPages > 1 && (
         <div style={{ marginTop: 12, textAlign: "right" }}>
           <Typography.Text type="secondary">
-            Trang {data.page} / {data.totalPages} — Tổng {data.total} bản ghi
+            {t("Trang", lang)} {data.page} / {data.totalPages} — {t("Tổng", lang)} {data.total} {t("bản ghi", lang)}
           </Typography.Text>
         </div>
       )}

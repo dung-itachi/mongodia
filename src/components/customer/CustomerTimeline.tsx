@@ -205,7 +205,7 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
         <>
           <Timeline
             items={activities.map((activity) => ({
-              dot: (
+              icon: (
                 <div
                   style={{
                     width: 32,
@@ -221,7 +221,7 @@ export default function CustomerTimeline({ customerId }: CustomerTimelineProps) 
                   {ACTIVITY_ICONS[activity.activityType]}
                 </div>
               ),
-              children: (
+              content: (
                 <Card
                   size="small"
                   style={{ marginBottom: 8 }}
