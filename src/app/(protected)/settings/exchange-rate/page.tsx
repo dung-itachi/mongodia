@@ -62,7 +62,7 @@ export default function ExchangeRateSettingsPage() {
     try {
       const values = await form.validateFields();
       await updateMutation.mutateAsync({ rate: values.rate });
-      toast.success("Đã cập nhật tỷ giá. Order mới sẽ sử dụng tỷ giá này.");
+      toast.success(t("Đã cập nhật tỷ giá. Order mới sẽ sử dụng tỷ giá này.", lang));
       setHasChanges(false);
     } catch (err) {
       if (err instanceof Error) {

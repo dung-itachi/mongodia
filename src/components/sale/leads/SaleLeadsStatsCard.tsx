@@ -200,7 +200,7 @@ function SaleLeadsStatsCardInner({
           }}
         >
           {stats.statusCounts.map((s) => (
-            <StatusChip key={s.status} item={s} loading={loading} lang={lang} />
+            <StatusChip key={s.status} item={s} loading={loading} lang={lang} statusLabels={STATUS_LABELS_I18N} />
           ))}
         </div>
       </div>
@@ -208,10 +208,22 @@ function SaleLeadsStatsCardInner({
   );
 }
 
-function StatusChip({ item, loading, lang }: { item: SaleLeadStatusCountItem; loading: boolean; lang: ReturnType<typeof useLanguageStore.getState>["language"] }) {
+function StatusChip({
+  item,
+  loading,
+  lang,
+  statusLabels,
+}: {
+  item: SaleLeadStatusCountItem;
+  loading: boolean;
+  lang: ReturnType<typeof useLanguageStore.getState>["language"];
+  statusLabels: Record<string, string>;
+}) {
   const tooltipText =
     (lang === "en" ? STATUS_TOOLTIP_EN[item.status] : STATUS_TOOLTIP[item.status]) ??
     `Số khách đang ở trạng thái "${item.label}".`;
+
+  const labelKey = statusLabels[item.status] ?? item.label;
 
   return (
     <Tooltip title={tooltipText} mouseEnterDelay={0.2}>
@@ -227,11 +239,26 @@ function StatusChip({ item, loading, lang }: { item: SaleLeadStatusCountItem; lo
         bordered
       >
         <span style={{ fontWeight: 600 }}>{loading ? "…" : item.count}</span>
-        <span style={{ marginLeft: 4, opacity: 0.85 }}>{item.label}</span>
+        <span style={{ marginLeft: 4, opacity: 0.85 }}>{t(labelKey, lang)}</span>
       </Tag>
     </Tooltip>
   );
 }
+
+const STATUS_LABELS_I18N: Record<string, string> = {
+  [LeadStatus.NEW]: "Mới",
+  [LeadStatus.CONTACTED]: "Đã liên hệ",
+  [LeadStatus.QUALIFIED]: "Đủ điều kiện",
+  [LeadStatus.ASSIGNED]: "Đã phân công",
+  [LeadStatus.PROCESSING]: "Đang xử lý",
+  [LeadStatus.NO_ANSWER]: "Không nghe máy",
+  [LeadStatus.POTENTIAL]: "Tiềm năng",
+  [LeadStatus.CLOSED]: "Đã chốt",
+  [LeadStatus.LOST]: "Không mua",
+  [LeadStatus.ORDER_CREATED]: "Đã tạo đơn",
+  [LeadStatus.REJECTED]: "Từ chối",
+  [LeadStatus.CANCELLED]: "Hủy",
+};
 
 const SaleLeadsStatsCard = memo(SaleLeadsStatsCardInner);
 export default SaleLeadsStatsCard;

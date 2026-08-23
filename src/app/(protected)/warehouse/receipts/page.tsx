@@ -69,14 +69,14 @@ export default function WarehouseReceiptsPage() {
 
   const submit = async () => {
     const values = await form.validateFields();
-    if (!items.length) { message.warning("Vui lòng thêm ít nhất 1 mặt hàng"); return; }
+    if (!items.length) { message.warning(t("Vui lòng thêm ít nhất 1 mặt hàng", lang)); return; }
     try {
       await createReceipt.mutateAsync({ warehouseId: values.warehouseId, items, note: values.note });
-      message.success("Tạo phiếu nhập kho thành công");
+      message.success(t("Tạo phiếu nhập kho thành công", lang));
       setOpen(false);
       reset();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "Tạo phiếu nhập thất bại");
+      message.error(error instanceof Error ? error.message : t("Tạo phiếu nhập thất bại", lang));
     }
   };
 
@@ -108,17 +108,17 @@ export default function WarehouseReceiptsPage() {
   const giftOptions = useMemo(() => (gifts ?? []).map((gift: { _id: string; name: string }) => ({ value: gift._id, label: gift.name })), [gifts]);
   const productFilterOptions = useMemo(
     () => [
-      { value: "", label: "Tất cả sản phẩm" },
+      { value: "", label: t("Tất cả sản phẩm", lang) },
       ...(productsFromApi ?? []).map((p: { _id: string; code: string; name: string }) => ({ value: p._id, label: `${p.code} • ${p.name}` })),
     ],
-    [productsFromApi]
+    [productsFromApi, lang]
   );
   const creatorFilterOptions = useMemo(
     () => [
-      { value: "", label: "Tất cả người tạo" },
+      { value: "", label: t("Tất cả người tạo", lang) },
       ...(employees ?? []).map((e: { _id: string; employeeCode: string; fullName: string }) => ({ value: e._id, label: `${e.employeeCode} • ${e.fullName}` })),
     ],
-    [employees]
+    [employees, lang]
   );
   const hasActiveFilters = Boolean(warehouseId || productId || createdBy || searchTerm);
 
@@ -157,7 +157,7 @@ export default function WarehouseReceiptsPage() {
         <Space style={{ marginBottom: 16 }} size="middle" wrap>
           <Select
             allowClear
-            placeholder="Lọc theo kho"
+            placeholder={t("Lọc theo kho", lang)}
             style={{ width: 220 }}
             value={warehouseId}
             onChange={(value) => {
@@ -165,7 +165,7 @@ export default function WarehouseReceiptsPage() {
               setPage(1);
             }}
             options={[
-              { value: "", label: "Tất cả kho" },
+              { value: "", label: t("Tất cả kho", lang) },
               ...(warehouses ?? []).map((w: { _id: string; name: string }) => ({
                 value: w._id,
                 label: w.name,

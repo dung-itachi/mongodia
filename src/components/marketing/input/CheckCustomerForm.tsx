@@ -289,7 +289,7 @@ function CheckCustomerResult({
           <div className={styles.customerNameRow}>
             <span className={styles.customerName}>{customer.fullName}</span>
             <Tag color={customer.status === "ACTIVE" ? "green" : "default"}>
-              {customer.statusLabel}
+              {t(customer.statusLabel, lang)}
             </Tag>
             <span className={styles.customerMetaItem}>
               <strong>{t("Mã KH:", lang)}</strong>&nbsp;{customer.customerCode}
@@ -327,14 +327,14 @@ function CheckCustomerResult({
             {customer.saleEmployee && (
               <span className={styles.customerMetaItem}>
                 <UserOutlined />
-                Sale: <strong>{customer.saleEmployee.fullName}</strong>
+                {t("Sale", lang)}: <strong>{customer.saleEmployee.fullName}</strong>
                 &nbsp;({customer.saleEmployee.employeeCode})
               </span>
             )}
             {customer.marketingEmployee && (
               <span className={styles.customerMetaItem}>
                 <UserOutlined />
-                MKT: <strong>{customer.marketingEmployee.fullName}</strong>
+                {t("MKT", lang)}: <strong>{customer.marketingEmployee.fullName}</strong>
                 &nbsp;({customer.marketingEmployee.employeeCode})
               </span>
             )}
@@ -420,7 +420,7 @@ function CheckCustomerResult({
                     <span className={styles.orderCode}>{o.orderCode}</span>
                     &nbsp;
                     <Tag color={statusColor} style={{ marginLeft: 4 }}>
-                      {statusLabel}
+                      {t(statusLabel, lang)}
                     </Tag>
                   </div>
                   <div className={styles.orderCombo}>

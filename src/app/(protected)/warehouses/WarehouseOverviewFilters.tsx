@@ -13,6 +13,8 @@ import {
   SearchOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type WarehouseOverviewStockFilter =
   | "all"
@@ -34,16 +36,6 @@ export type WarehouseOverviewFiltersProps = {
   warehouses: Array<{ _id: string; code: string; name: string }>;
 };
 
-const STOCK_OPTIONS: Array<{
-  value: WarehouseOverviewStockFilter;
-  label: string;
-}> = [
-  { value: "all", label: "Tất cả tồn kho" },
-  { value: "in_stock", label: "Còn hàng (>0)" },
-  { value: "out_of_stock", label: "Hết hàng (=0)" },
-  { value: "low_stock", label: "Tồn thấp (≤10)" },
-];
-
 export default function WarehouseOverviewFilters({
   value,
   onChange,
@@ -51,8 +43,17 @@ export default function WarehouseOverviewFilters({
   refreshing,
   warehouses,
 }: WarehouseOverviewFiltersProps) {
+  const lang = useLanguageStore((s) => s.language);
+
+  const stockOptions = [
+    { value: "all", label: t("Tất cả tồn kho", lang) },
+    { value: "in_stock", label: t("Còn hàng (>0)", lang) },
+    { value: "out_of_stock", label: t("Hết hàng (=0)", lang) },
+    { value: "low_stock", label: t("Tồn thấp (≤10)", lang) },
+  ] as Array<{ value: WarehouseOverviewStockFilter; label: string }>;
+
   const warehouseOptions = [
-    { value: "", label: "Tất cả kho" },
+    { value: "", label: t("Tất cả kho", lang) },
     ...warehouses.map((w) => ({
       value: w._id,
       label: `${w.code} · ${w.name}`,
@@ -63,7 +64,7 @@ export default function WarehouseOverviewFilters({
     <Space size="middle" wrap style={{ marginBottom: 12, width: "100%" }}>
       <Input
         allowClear
-        placeholder="Tìm theo mã hoặc tên SP"
+        placeholder={t("Tìm theo mã hoặc tên SP", lang)}
         prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
         value={value.search}
         onChange={(e) =>
@@ -80,7 +81,7 @@ export default function WarehouseOverviewFilters({
           })
         }
         options={warehouseOptions}
-        placeholder="Chọn kho"
+        placeholder={t("Chọn kho", lang)}
         style={{ minWidth: 200 }}
         showSearch
         optionFilterProp="label"
@@ -90,7 +91,7 @@ export default function WarehouseOverviewFilters({
         onChange={(v: WarehouseOverviewStockFilter) =>
           onChange({ ...value, stock: v })
         }
-        options={STOCK_OPTIONS}
+        options={stockOptions}
         style={{ minWidth: 160 }}
       />
       {onRefresh && (
@@ -99,7 +100,7 @@ export default function WarehouseOverviewFilters({
           onClick={onRefresh}
           loading={refreshing}
         >
-          Làm mới
+          {t("Làm mới", lang)}
         </Button>
       )}
     </Space>

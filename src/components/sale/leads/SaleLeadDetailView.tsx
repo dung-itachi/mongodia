@@ -85,7 +85,7 @@ function getStatusTag(lead: SaleLead) {
       />
       {lead.noAnswerCount !== undefined && lead.noAnswerCount > 0 && (
         <Tag color={lead.noAnswerCount >= 3 ? "red" : "gold"}>
-          📵 K nghe: {lead.noAnswerCount}
+          📵 {t("K nghe", lang)}: {lead.noAnswerCount}
         </Tag>
       )}
       {lead.isConverted && <Tag color="success">{t("Đã chốt đơn", lang)}</Tag>}
@@ -155,7 +155,7 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
 
       <CardSection>
         <DescriptionList
-          title="Thông tin liên hệ"
+          title={t("Thông tin liên hệ", lang)}
           columns={2}
           size="small"
           items={[
@@ -196,12 +196,12 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
 
       <CardSection>
         <DescriptionList
-          title="Sản phẩm & Combo"
+          title={t("Sản phẩm & Combo", lang)}
           columns={2}
           size="small"
           items={[
             {
-              label: "Sản phẩm",
+              label: t("Sản phẩm", lang),
               value: lead.product ? (
                 <span className={styles["primary-text"]}>{lead.product.name}</span>
               ) : (
@@ -209,7 +209,7 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
               ),
             },
             {
-              label: "Combo",
+              label: t("Combo", lang),
               value: lead.combo ? (
                 <span className={styles["combo-text"]}>{lead.combo.name}</span>
               ) : (
@@ -221,15 +221,15 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
               value: lead.combo?.code ?? "-",
             },
             {
-              label: "Số lượng",
+              label: t("Số lượng", lang),
               value: lead.quantity ?? "-",
             },
             {
-              label: "Đơn giá (MNT)",
+              label: t("Đơn giá (MNT)", lang),
               value: lead.unitPriceMNT ? lead.unitPriceMNT.toLocaleString("vi-VN") + " ₮" : "-",
             },
             {
-              label: "Tỷ giá (1 ₮ = ? VND)",
+              label: t("Tỷ giá (1 ₮ = ? VND)", lang),
               value: lead.exchangeRate ? lead.exchangeRate.toLocaleString("vi-VN") : "-",
             },
           ]}
@@ -253,7 +253,7 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
             {
               label: t("Nhân viên Sale", lang),
               value: lead.saleEmployeeId?.name ?? (
-                <span style={{ color: "#bfbfbf" }}>Chưa phân công</span>
+                <span style={{ color: "#bfbfbf" }}>{t("Chưa phân công", lang)}</span>
               ),
             },
             {
@@ -261,7 +261,7 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
               value: lead.saleEmployeeId?.employeeCode ?? "-",
             },
             {
-              label: "Ngày phân công",
+              label: t("Ngày phân công", lang),
               value: formatDateTime(lead.assignedAt),
               span: 2,
             },
@@ -271,32 +271,32 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
 
       <CardSection>
         <DescriptionList
-          title="Thời gian đơn hàng (Sprint 8.x)"
+          title={t("Thời gian đơn hàng (Sprint 8.x)", lang)}
           columns={3}
           size="small"
           items={[
             {
-              label: "TG từ Landing Page",
+              label: t("TG từ Landing Page", lang),
               value: formatDateTime(lead.leadDate),
             },
             {
-              label: "TG đơn hàng (khách đặt)",
+              label: t("TG đơn hàng (khách đặt)", lang),
               value: formatDateTime(lead.orderDate),
             },
             {
-              label: "TG nhận đơn (MKT nhận)",
+              label: t("TG nhận đơn (MKT nhận)", lang),
               value: formatDateTime(lead.receivedDate),
             },
             {
-              label: "Đã chuyển đổi",
-              value: lead.isConverted ? "Có" : "Chưa",
+              label: t("Đã chuyển đổi", lang),
+              value: lead.isConverted ? t("Có", lang) : t("Chưa", lang),
             },
             {
-              label: "TG chuyển đổi",
+              label: t("TG chuyển đổi", lang),
               value: formatDateTime(lead.convertedAt),
             },
             {
-              label: "Mã đơn hàng",
+              label: t("Mã đơn hàng", lang),
               value: lead.convertedOrderId ? (
                 <span className={styles["lead-code"]}>{lead.convertedOrderId}</span>
               ) : (
@@ -316,7 +316,7 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
             {
               label: t("Nội dung", lang),
               value: lead.note || (
-                <span style={{ color: "#bfbfbf" }}>Không có ghi chú</span>
+                <span style={{ color: "#bfbfbf" }}>{t("Không có ghi chú", lang)}</span>
               ),
               span: 1,
             },
@@ -337,12 +337,12 @@ function HistoryTab({ lead }: { lead: SaleLead }) {
     <div className={styles["tab-content"]}>
       <CardSection>
         <DescriptionList
-          title="Lịch sử thay đổi trạng thái"
+          title={t("Lịch sử thay đổi trạng thái", lang)}
           columns={2}
           size="small"
           items={[
             {
-              label: "Trạng thái hiện tại",
+              label: t("Trạng thái hiện tại", lang),
               value: getStatusTag(lead),
               span: 2,
             },
@@ -351,15 +351,15 @@ function HistoryTab({ lead }: { lead: SaleLead }) {
               value: formatDateTime(lead.createdAt),
             },
             {
-              label: "Cập nhật cuối",
+              label: t("Cập nhật cuối", lang),
               value: formatDateTime(lead.updatedAt),
             },
             {
-              label: "Ngày phân công",
+              label: t("Ngày phân công", lang),
               value: formatDateTime(lead.assignedAt),
             },
             {
-              label: "Số lần không nghe",
+              label: t("Số lần không nghe", lang),
               value: lead.noAnswerCount ?? 0,
             },
           ]}
@@ -368,7 +368,7 @@ function HistoryTab({ lead }: { lead: SaleLead }) {
 
       <CardSection>
         <p className={styles["coming-soon"]}>
-          Lịch sử chi tiết từng thay đổi trạng thái đang được phát triển.
+          {t("Lịch sử chi tiết từng thay đổi trạng thái đang được phát triển.", lang)}
         </p>
       </CardSection>
     </div>
@@ -398,7 +398,7 @@ function TimelineTab({ leadId }: { leadId: string }) {
       <div className={styles["tab-content"]}>
         <CardSection>
           <EmptyState
-            title="Không thể tải Timeline"
+            title={t("Không thể tải Timeline", lang)}
             description={error}
           />
         </CardSection>
@@ -411,8 +411,8 @@ function TimelineTab({ leadId }: { leadId: string }) {
       <div className={styles["tab-content"]}>
         <CardSection>
           <EmptyState
-            title="Chưa có lịch sử Timeline"
-            description="Các thay đổi của Khách hàng sẽ hiển thị tại đây."
+            title={t("Chưa có lịch sử Timeline", lang)}
+            description={t("Các thay đổi của Khách hàng sẽ hiển thị tại đây.", lang)}
           />
         </CardSection>
       </div>
@@ -452,18 +452,19 @@ function TimelineTab({ leadId }: { leadId: string }) {
 }
 
 function getActionLabel(action: string): string {
+  const lang = useLanguageStore.getState().language;
   const labels: Record<string, string> = {
-    CREATED: "Khách hàng được tạo",
-    UPDATED: "Khách hàng được cập nhật",
-    ASSIGNED: "Sale được gán",
-    UNASSIGNED: "Sale bị hủy gán",
-    STATUS_CHANGED: "Trạng thái thay đổi",
-    ORDER_CREATED: "Đơn hàng được tạo",
-    ORDER_CANCELLED: "Đơn hàng bị hủy",
-    SALE_CHANGED: "Sale phụ trách thay đổi",
-    MARKETING_CHANGED: "Marketing phụ trách thay đổi",
-    NOTE_UPDATED: "Ghi chú được cập nhật",
-    DELETED: "Khách hàng bị xóa",
+    CREATED: t("Khách hàng được tạo", lang),
+    UPDATED: t("Khách hàng được cập nhật", lang),
+    ASSIGNED: t("Sale được gán", lang),
+    UNASSIGNED: t("Sale bị hủy gán", lang),
+    STATUS_CHANGED: t("Trạng thái thay đổi", lang),
+    ORDER_CREATED: t("Đơn hàng được tạo", lang),
+    ORDER_CANCELLED: t("Đơn hàng bị hủy", lang),
+    SALE_CHANGED: t("Sale phụ trách thay đổi", lang),
+    MARKETING_CHANGED: t("Marketing phụ trách thay đổi", lang),
+    NOTE_UPDATED: t("Ghi chú được cập nhật", lang),
+    DELETED: t("Khách hàng bị xóa", lang),
   };
   return labels[action] ?? action;
 }
@@ -542,7 +543,7 @@ function CallLogTab({ leadId }: { leadId: string }) {
       <div className={styles["tab-content"]}>
         <CardSection>
           <EmptyState
-            title="Không thể tải lịch sử cuộc gọi"
+            title={t("Không thể tải lịch sử cuộc gọi", lang)}
             description={error}
           />
         </CardSection>
@@ -599,12 +600,12 @@ export function SaleLeadDetailView({
   const handleConvertConfirm = () => {
     convertMutation.mutate(lead._id, {
       onSuccess: (result) => {
-        void message.success(t(t(t("Chuyển đổi Khách hàng thành công", lang), lang), lang));
+        void message.success(t("Chuyển đổi Khách hàng thành công", lang));
         setConvertModalOpen(false);
         void router.push(`/orders/${result.orderId}`);
       },
       onError: (err) => {
-        void message.error(`Lỗi: ${err.message}`);
+        void message.error(`${t("Lỗi:", lang)} ${err.message}`);
         setConvertModalOpen(false);
       },
     });
@@ -616,7 +617,7 @@ export function SaleLeadDetailView({
       label: (
         <span className={styles["tab-label"]}>
           <InfoCircleOutlined />
-          Thông tin
+          {t("Thông tin", lang)}
         </span>
       ),
       children: <LeadInfoTab lead={lead} />,
@@ -626,14 +627,14 @@ export function SaleLeadDetailView({
       label: (
         <span className={styles["tab-label"]}>
           <HistoryOutlined />
-          Lịch sử
+          {t("Lịch sử", lang)}
         </span>
       ),
       children: <HistoryTab lead={lead} />,
     },
     {
       key: "timeline",
-      label: <span className={styles["tab-label"]}>Timeline</span>,
+      label: <span className={styles["tab-label"]}>{t("Timeline", lang)}</span>,
       children: <TimelineTab leadId={lead._id} />,
     },
     {
@@ -641,7 +642,7 @@ export function SaleLeadDetailView({
       label: (
         <span className={styles["tab-label"]}>
           <PhoneOutlined />
-          Cuộc gọi
+          {t("Cuộc gọi", lang)}
         </span>
       ),
       children: <CallLogTab leadId={lead._id} />,
@@ -655,13 +656,13 @@ export function SaleLeadDetailView({
         <div className={styles["action-bar"]}>
           {onEdit && !lead.isConverted && (
             <Button icon={<EditOutlined />} onClick={onEdit}>
-              Sửa
+              {t("Sửa", lang)}
             </Button>
           )}
 
           {onReassign && (
             <Button icon={<UserSwitchOutlined />} onClick={onReassign}>
-              Phân công lại
+              {t("Phân công lại", lang)}
             </Button>
           )}
 
@@ -671,7 +672,7 @@ export function SaleLeadDetailView({
               icon={<PhoneOutlined />}
               onClick={onLogCall}
             >
-              Gọi khách
+              {t("Gọi khách", lang)}
             </Button>
           )}
 
@@ -682,13 +683,13 @@ export function SaleLeadDetailView({
               onClick={handleConvert}
               style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
             >
-              Chuyển đổi
+              {t("Chuyển đổi", lang)}
             </Button>
           )}
 
           {onClose && (
             <Button icon={<ArrowLeftOutlined />} onClick={onClose}>
-              Quay lại
+              {t("Quay lại", lang)}
             </Button>
           )}
         </div>
@@ -736,11 +737,11 @@ function ConvertConfirmModal({
       okButtonProps={{ loading }}
     >
       <p>
-        Bạn có chắc muốn chuyển đổi khách hàng <strong>{lead.leadCode}</strong> —{" "}
-        <strong>{lead.customerName}</strong> thành đơn hàng?
+        {t("Bạn có chắc muốn chuyển đổi khách hàng", lang)} <strong>{lead.leadCode}</strong> —{" "}
+        <strong>{lead.customerName}</strong> {t("thành đơn hàng?", lang)}
       </p>
       <p style={{ color: "#8c8c8c", fontSize: 13 }}>
-        Hành động này sẽ tạo Order mới và không thể hoàn tác.
+        {t("Hành động này sẽ tạo Order mới và không thể hoàn tác.", lang)}
       </p>
     </Modal>
   );

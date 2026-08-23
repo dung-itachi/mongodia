@@ -309,19 +309,19 @@ export default function AccountCreateDrawer({
             <b>{t("Mã NV", lang)}:</b> {selected.employeeCode}
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Username:</b> {selected.username}
+            <b>{t("Username", lang)}:</b> {selected.username}
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>{t("Họ tên", lang)}:</b> {selected.fullName}
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Email:</b> {selected.email || "-"}
+            <b>{t("Email", lang)}:</b> {selected.email || "-"}
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>{t("Điện thoại", lang)}:</b> {selected.phone || "-"}
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Role:</b>{" "}
+            <b>{t("Role", lang)}:</b>{" "}
             <Tag color="blue">{selected.role?.code ?? "-"}</Tag> (
             {selected.role?.name ?? "-"})
           </Typography.Paragraph>
@@ -330,15 +330,15 @@ export default function AccountCreateDrawer({
             <Tag color="purple">{selected.department?.name ?? selected.departmentId?.name ?? "-"}</Tag>
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Team:</b> {selected.team?.code ?? "-"} {" "}
-            {selected.team?.name ? `(${selected.team.name})` : ""}
+            <b>{t("Team", lang)}:</b> {selected.team?.code ?? "-"} {" "}
+            {selected.team?.name ? `(${t(selected.team.name, lang)})` : ""}
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>{t("Khu vực", lang)}:</b>{" "}
             <Tag color="green">{selected.area?.code ?? selected.area?.name ?? "-"}</Tag>
           </Typography.Paragraph>
           <Typography.Paragraph>
-            <b>Leader:</b> {selected.leader?.fullName ?? "-"}
+            <b>{t("Leader", lang)}:</b> {selected.leader?.fullName ?? "-"}
           </Typography.Paragraph>
           <Typography.Paragraph>
             <b>{t("Trạng thái", lang)}:</b>{" "}
@@ -378,7 +378,7 @@ export default function AccountCreateDrawer({
         >
           <Form.Item
             name="username"
-            label="Username"
+            label={t("Username", lang)}
             rules={[{ required: mode === "create" }]}
           >
             <Input autoComplete="new-username" disabled={mode === "edit"} />
@@ -398,7 +398,7 @@ export default function AccountCreateDrawer({
             <Input />
           </Form.Item>
 
-          <Form.Item name="email" label="Email" rules={[{ type: "email" }]}>
+          <Form.Item name="email" label={t("Email", lang)} rules={[{ type: "email" }]}>
             <Input />
           </Form.Item>
 
@@ -406,7 +406,7 @@ export default function AccountCreateDrawer({
             <Input />
           </Form.Item>
 
-          <Form.Item label="Avatar">
+          <Form.Item label={t("Avatar", lang)}>
             <div className={styles.avatarRow}>
               <div className={styles.avatarPreview}>
                 {displayAvatarUrl ? (
@@ -440,7 +440,7 @@ export default function AccountCreateDrawer({
 
           <Form.Item name="avatar" hidden><Input /></Form.Item>
 
-          <Form.Item name="roleCode" label="Role">
+          <Form.Item name="roleCode" label={t("Role", lang)}>
             <Select
               options={roleOptions}
               placeholder={t("Chọn role", lang)}
@@ -448,7 +448,7 @@ export default function AccountCreateDrawer({
             />
           </Form.Item>
 
-          <Form.Item name="teamId" label="Team">
+          <Form.Item name="teamId" label={t("Team", lang)}>
             <Select
               options={teamOptions}
               allowClear
@@ -473,7 +473,7 @@ export default function AccountCreateDrawer({
             />
           </Form.Item>
 
-          <Form.Item name="leaderId" label="Leader">
+          <Form.Item name="leaderId" label={t("Leader", lang)}>
             <Select
               options={leaderOptions}
               allowClear

@@ -49,7 +49,7 @@ export default function ReassignModal({
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/api/employees?role=SALE&isActive=true&limit=100", lang);
+      const response = await api.get("/api/employees?role=SALE&isActive=true&limit=100");
       setEmployees(response.data.data.items || []);
     } catch (err) {
       console.error("Failed to fetch employees:", err);

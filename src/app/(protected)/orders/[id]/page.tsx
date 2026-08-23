@@ -456,9 +456,11 @@ export default function OrderDetailPage({ params }: PageProps) {
   const timelineColumns = [
     {
       title: t("Thao tác", lang),
-      dataIndex: "actionLabel",
-      key: "actionLabel",
+      key: "action",
       width: 150,
+      render: (_: unknown, record: OrderHistoryItem) => (
+        <span>{record.actionLabel ? t(record.actionLabel, lang) : t("Hành động", lang)}</span>
+      ),
     },
     {
       title: t("Chi tiết", lang),
@@ -1015,7 +1017,13 @@ export default function OrderDetailPage({ params }: PageProps) {
                 </Col>
                 <Col xs={24}>
                   <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("Lý do", lang)}</div>
-                  <div>{order.revenueLockReasonLabel || order.revenueLockReason}</div>
+                  <div>
+                    {order.revenueLockReasonLabel
+                      ? t(order.revenueLockReasonLabel, lang)
+                      : order.revenueLockReason
+                        ? t(order.revenueLockReason, lang)
+                        : "-"}
+                  </div>
                 </Col>
                 <Col xs={24}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>

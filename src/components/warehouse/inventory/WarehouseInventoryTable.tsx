@@ -8,6 +8,8 @@ import AdjustInventoryModal from "@/components/warehouse/inventory/AdjustInvento
 import { useAuthStore } from "@/store/auth.store";
 import { hasPermission } from "@/lib/permission";
 import type { NormalizedInventoryItem } from "@/hooks/useWarehouseInventory";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export interface WarehouseInventoryTableProps {
   data: NormalizedInventoryItem[];
@@ -51,45 +53,46 @@ function getStockStatus(quantity: number | undefined | null): StockStatus {
   return "ok";
 }
 
-const STATUS_CONFIG = {
-  ok: {
-    color: "#52c41a",
-    bg: "#f6ffed",
-    border: "#b7eb8f",
-    label: "Tốt",
-    icon: null,
-  },
-  low: {
-    color: "#faad14",
-    bg: "#fffbe6",
-    border: "#ffe58f",
-    label: "Sắp hết",
-    icon: <WarningOutlined style={{ color: "#faad14" }} />,
-  },
-  out: {
-    color: "#ff4d4f",
-    bg: "#fff2f0",
-    border: "#ffccc7",
-    label: "Hết hàng",
-    icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
-  },
-};
-
 export default function WarehouseInventoryTable({
   data,
   loading,
   pagination,
   onAdjusted,
 }: WarehouseInventoryTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [editingItem, setEditingItem] = useState<NormalizedInventoryItem | null>(null);
   const permissions = useAuthStore((state) => state.user?.permissions) ?? [];
   const canAdjust = hasPermission(permissions, "warehouse.adjust") ||
     hasPermission(permissions, "inventory-adjustment.create");
 
+  const statusConfig = {
+    ok: {
+      color: "#52c41a",
+      bg: "#f6ffed",
+      border: "#b7eb8f",
+      label: t("Tốt", lang),
+      icon: null,
+    },
+    low: {
+      color: "#faad14",
+      bg: "#fffbe6",
+      border: "#ffe58f",
+      label: t("Sắp hết", lang),
+      icon: <WarningOutlined style={{ color: "#faad14" }} />,
+    },
+    out: {
+      color: "#ff4d4f",
+      bg: "#fff2f0",
+      border: "#ffccc7",
+      label: t("Hết hàng", lang),
+      icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
+    },
+  };
+
   const columns: Column[] = [
     {
       key: "warehouse",
-      title: "Kho",
+      title: t("Kho", lang),
       dataIndex: "warehouseName",
       width: 150,
       fixed: "left" as const,
@@ -99,7 +102,7 @@ export default function WarehouseInventoryTable({
     },
     {
       key: "itemType",
-      title: "Loại",
+      title: t("Loại", lang),
       width: 110,
       render: (_: unknown, record: TableRecord) => {
         const itemType = record.itemType as string;
@@ -108,14 +111,14 @@ export default function WarehouseInventoryTable({
             color={itemType === "GIFT" ? "purple" : "blue"}
             style={{ borderRadius: 6 }}
           >
-            {itemType === "GIFT" ? "Quà tặng" : "Sản phẩm"}
+            {itemType === "GIFT" ? t("Quà tặng", lang) : t("Sản phẩm", lang)}
           </Tag>
         );
       },
     },
     {
       key: "product",
-      title: "Sản phẩm / Quà",
+      title: t("Sản phẩm / Quà", lang),
       width: 280,
       render: (_: unknown, record: TableRecord) => (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -130,13 +133,13 @@ export default function WarehouseInventoryTable({
     },
     {
       key: "stockStatus",
-      title: "Tồn kho",
+      title: t("Tồn kho", lang),
       width: 130,
       align: "center" as const,
       render: (_: unknown, record: TableRecord) => {
         const quantity = record.quantity as number | undefined | null;
         const status = getStockStatus(quantity);
-        const cfg = STATUS_CONFIG[status];
+        const cfg = statusConfig[status];
         const qty = Number(quantity ?? 0);
 
         return (
@@ -161,7 +164,7 @@ export default function WarehouseInventoryTable({
     },
     {
       key: "availableQuantity",
-      title: "Khả dụng",
+      title: t("Khả dụng", lang),
       dataIndex: "availableQuantity",
       width: 120,
       align: "right" as const,
@@ -180,7 +183,7 @@ export default function WarehouseInventoryTable({
             {(reservedQty > 0 || inTransitQty > 0) && (
               <div style={{ display: "flex", gap: 8 }}>
                 {reservedQty > 0 && (
-                  <Tooltip title="Đã giữ (chờ xử lý)">
+                  <Tooltip title={t("Đã giữ (chờ xử lý)", lang)}>
                     <span style={{ fontSize: 11, color: "#faad14" }}>
                       <ClockCircleOutlined style={{ marginRight: 2 }} />
                       {formatNumber(reservedQty)}
@@ -188,7 +191,7 @@ export default function WarehouseInventoryTable({
                   </Tooltip>
                 )}
                 {inTransitQty > 0 && (
-                  <Tooltip title="Đang chuyển kho">
+                  <Tooltip title={t("Đang chuyển kho", lang)}>
                     <span style={{ fontSize: 11, color: "#1890ff" }}>
                       <CarOutlined style={{ marginRight: 2 }} />
                       {formatNumber(inTransitQty)}
@@ -203,7 +206,7 @@ export default function WarehouseInventoryTable({
     },
     {
       key: "shippedQuantity",
-      title: "Đã xuất",
+      title: t("Đã xuất", lang),
       dataIndex: "shippedQuantity",
       width: 100,
       align: "right" as const,
@@ -213,7 +216,7 @@ export default function WarehouseInventoryTable({
     },
     {
       key: "updatedAt",
-      title: "Cập nhật",
+      title: t("Cập nhật", lang),
       dataIndex: "updatedAt",
       width: 150,
       render: (value: unknown) => (
@@ -224,7 +227,7 @@ export default function WarehouseInventoryTable({
     },
     {
       key: "actions",
-      title: "Hành động",
+      title: t("Hành động", lang),
       width: 100,
       fixed: "right" as const,
       align: "center" as const,
@@ -239,7 +242,7 @@ export default function WarehouseInventoryTable({
             onClick={() => setEditingItem(item)}
             style={{ borderRadius: 6 }}
           >
-            Sửa
+            {t("Sửa", lang)}
           </Button>
         );
       },
@@ -258,7 +261,7 @@ export default function WarehouseInventoryTable({
         pagination={pagination}
         scroll={{ x: 1200 }}
         size="middle"
-        emptyText="Không có dữ liệu tồn kho"
+        emptyText={t("Không có dữ liệu tồn kho", lang)}
       />
       <AdjustInventoryModal
         open={Boolean(editingItem)}

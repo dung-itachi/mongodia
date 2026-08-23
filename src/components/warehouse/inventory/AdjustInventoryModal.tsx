@@ -9,11 +9,6 @@ import { useMessage } from "@/contexts/MessageContext";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 
-function getTranslated(key: string): string {
-  const language = useLanguageStore.getState().language;
-  return t(key, language);
-}
-
 export interface AdjustInventoryModalProps {
   open: boolean;
   item: NormalizedInventoryItem | null;
@@ -79,6 +74,7 @@ export default function AdjustInventoryModal({
   onClose,
   onSuccess,
 }: AdjustInventoryModalProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm<FormValues>();
   const createAdjustment = useCreateAdjustment();
   const message = useMessage();
@@ -101,7 +97,7 @@ export default function AdjustInventoryModal({
     if (!item) return;
     const warehouseId = item.warehouseId;
     if (!warehouseId) {
-      message.error(getTranslated("Không xác định được kho của dòng tồn kho này"));
+      message.error(t("Không xác định được kho của dòng tồn kho này", lang));
       return;
     }
     try {
@@ -123,8 +119,8 @@ export default function AdjustInventoryModal({
       const result = await createAdjustment.mutateAsync(payload);
       const code = (result as { adjustmentCode?: string })?.adjustmentCode;
       const successMsg = code
-        ? getTranslated("Điều chỉnh tồn kho thành công. Mã: ${code}").replace("${code}", code)
-        : getTranslated("Điều chỉnh tồn kho thành công");
+        ? `${t("Điều chỉnh tồn kho thành công. Mã:", lang)} ${code}`
+        : t("Điều chỉnh tồn kho thành công", lang);
       message.success(successMsg);
       form.resetFields();
       onClose();
@@ -157,15 +153,15 @@ export default function AdjustInventoryModal({
       title={
         <Space>
           <InboxOutlined style={{ color: "#1890ff" }} />
-          <span>Điều chỉnh tồn kho</span>
+          <span>{t("Điều chỉnh tồn kho", lang)}</span>
         </Space>
       }
       open={open}
       onCancel={handleCancel}
       onOk={handleOk}
       confirmLoading={createAdjustment.isPending}
-      okText={getTranslated("Lưu điều chỉnh")}
-      cancelText={getTranslated("Hủy")}
+      okText={t("Lưu điều chỉnh", lang)}
+      cancelText={t("Hủy", lang)}
       width={680}
       destroyOnHidden
     >
@@ -185,7 +181,7 @@ export default function AdjustInventoryModal({
               >
                 <Space size={4}>
                   {item.itemType === "GIFT" ? <GiftOutlined /> : <InboxOutlined />}
-                  {item.itemType === "GIFT" ? "Quà tặng" : "Sản phẩm"}
+                  {item.itemType === "GIFT" ? t("Quà tặng", lang) : t("Sản phẩm", lang)}
                 </Space>
               </Tag>
               <Space size={4}>
@@ -200,19 +196,19 @@ export default function AdjustInventoryModal({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
             <ReadonlyBadge
               value={currentQty}
-              label="Tồn kho hiện tại"
+              label={t("Tồn kho hiện tại", lang)}
               color="#1890ff"
               icon={<InboxOutlined />}
             />
             <ReadonlyBadge
               value={availableQty}
-              label="Khả dụng"
+              label={t("Khả dụng", lang)}
               color="#52c41a"
               icon={<CheckCircleOutlined />}
             />
             <ReadonlyBadge
               value={shippedQty}
-              label="Đã xuất"
+              label={t("Đã xuất", lang)}
               color="#8c8c8c"
               icon={<HistoryOutlined />}
             />
@@ -222,13 +218,13 @@ export default function AdjustInventoryModal({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
             <ReadonlyBadge
               value={reservedQty}
-              label="Đã giữ"
+              label={t("Đã giữ", lang)}
               color="#faad14"
               icon={<ClockCircleOutlined />}
             />
             <ReadonlyBadge
               value={inTransitQty}
-              label="Đang chuyển"
+              label={t("Đang chuyển", lang)}
               color="#1890ff"
               icon={<CarOutlined />}
             />
@@ -240,8 +236,8 @@ export default function AdjustInventoryModal({
               message={
                 <Space>
                   <span>
-                    Thay đổi: <strong>{qtyDiff > 0 ? `+${formatNumber(qtyDiff)}` : formatNumber(qtyDiff)}</strong>
-                    {qtyDiff > 0 ? " (tăng)" : " (giảm)"}
+                    {t("Thay đổi:", lang)} <strong>{qtyDiff > 0 ? `+${formatNumber(qtyDiff)}` : formatNumber(qtyDiff)}</strong>
+                    {qtyDiff > 0 ? ` (${t("tăng", lang)})` : ` (${t("giảm", lang)})`}
                   </span>
                 </Space>
               }
@@ -258,19 +254,19 @@ export default function AdjustInventoryModal({
       <Form form={form} layout="vertical" requiredMark="optional">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
           <Form.Item
-            label="Số lượng mới"
+            label={t("Số lượng mới", lang)}
             name="newQuantity"
             required
-            help={`Hiện tại: ${formatNumber(currentQty)}`}
+            help={`${t("Hiện tại:", lang)} ${formatNumber(currentQty)}`}
             rules={[
-              { required: true, message: "Vui lòng nhập số lượng mới" },
-              { type: "number", min: 0, message: "Số lượng phải ≥ 0" },
+              { required: true, message: t("Vui lòng nhập số lượng mới", lang) },
+              { type: "number", min: 0, message: t("Số lượng phải ≥ 0", lang) },
             ]}
           >
             <InputNumber
               style={{ width: "100%" }}
               min={0}
-              placeholder="Nhập số lượng mới"
+              placeholder={t("Nhập số lượng mới", lang)}
               size="large"
               formatter={(value) =>
                 value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""
@@ -299,7 +295,7 @@ export default function AdjustInventoryModal({
                 border: `1px solid ${qtyDiff > 0 ? "#b7eb8f" : "#ffccc7"}`,
               }}>
                 <span style={{ fontSize: 13, color: qtyDiff > 0 ? "#52c41a" : "#ff4d4f" }}>
-                  → Tồn kho mới: <strong>{formatNumber(newQty)}</strong>
+                  → {t("Tồn kho mới:", lang)} <strong>{formatNumber(newQty)}</strong>
                 </span>
               </div>
             )}
@@ -307,24 +303,24 @@ export default function AdjustInventoryModal({
         </div>
 
         <Form.Item
-          label="Lý do điều chỉnh"
+          label={t("Lý do điều chỉnh", lang)}
           name="reason"
           rules={[
-            { required: true, message: "Vui lòng nhập lý do" },
-            { min: 3, message: "Lý do phải có ít nhất 3 ký tự" },
-            { max: 500, message: "Lý do tối đa 500 ký tự" },
+            { required: true, message: t("Vui lòng nhập lý do", lang) },
+            { min: 3, message: t("Lý do phải có ít nhất 3 ký tự", lang) },
+            { max: 500, message: t("Lý do tối đa 500 ký tự", lang) },
           ]}
         >
           <Input.TextArea
             rows={2}
             maxLength={500}
             showCount
-            placeholder="Ví dụ: Kiểm kê thực tế, hàng hỏng, đếm nhầm..."
+            placeholder={t("Ví dụ: Kiểm kê thực tế, hàng hỏng, đếm nhầm...", lang)}
           />
         </Form.Item>
 
-        <Form.Item label="Ghi chú (tùy chọn)" name="note">
-          <Input.TextArea rows={2} maxLength={500} showCount placeholder="Ghi chú thêm" />
+        <Form.Item label={t("Ghi chú (tùy chọn)", lang)} name="note">
+          <Input.TextArea rows={2} maxLength={500} showCount placeholder={t("Ghi chú thêm", lang)} />
         </Form.Item>
       </Form>
     </Modal>

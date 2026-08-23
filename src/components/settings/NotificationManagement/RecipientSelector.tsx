@@ -59,6 +59,13 @@ const ROLE_OPTIONS = [
   { code: "MANAGER", label: "Quản lý (Manager)" },
 ];
 
+function translateRoleOptions(lang: ReturnType<typeof useLanguageStore.getState>["language"]) {
+  return ROLE_OPTIONS.map((r) => ({
+    ...r,
+    label: t(r.label, lang),
+  }));
+}
+
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: "red",
   MANAGER: "purple",
@@ -450,10 +457,11 @@ function RecipientSelectorComponent({
     }
 
     const employees = recipientData?.employees ?? [];
+    const translatedRoleOptions = translateRoleOptions(lang);
 
     return (
       <div style={{ maxHeight: 300, overflow: "auto" }}>
-        {ROLE_OPTIONS.map((role) => {
+        {translatedRoleOptions.map((role) => {
           const roleEmployees = employees.filter((e) => e.role === role.code);
           const isSelected = selectedRoles.includes(role.code);
 

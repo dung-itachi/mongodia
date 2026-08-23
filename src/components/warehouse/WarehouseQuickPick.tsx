@@ -1,6 +1,8 @@
 "use client";
 
 import { Button, Space } from "antd";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type WarehouseQuickPickItem = {
   _id: string;
@@ -29,6 +31,7 @@ type Props = {
  * button is disabled so the UI never references a non-existent warehouse.
  */
 export default function WarehouseQuickPick({ value, onChange, warehouses, children }: Props) {
+  const lang = useLanguageStore((s) => s.language);
   const kho1 = warehouses.find((w) => w.code === "KHO1");
   const kho2 = warehouses.find((w) => w.code === "KHO2");
 
@@ -43,17 +46,17 @@ export default function WarehouseQuickPick({ value, onChange, warehouses, childr
         disabled={!kho1}
         onClick={() => kho1 && onChange(kho1._id)}
       >
-        Kho 1
+        {t("Kho 1", lang)}
       </Button>
       <Button
         type={isKho2 ? "primary" : "default"}
         disabled={!kho2}
         onClick={() => kho2 && onChange(kho2._id)}
       >
-        Kho 2
+        {t("Kho 2", lang)}
       </Button>
       <Button type={isAll ? "primary" : "default"} onClick={() => onChange(undefined)}>
-        Tất cả
+        {t("Tất cả", lang)}
       </Button>
       {children}
     </Space>

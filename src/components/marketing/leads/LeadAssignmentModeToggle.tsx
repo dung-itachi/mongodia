@@ -27,6 +27,8 @@ import {
   type LeadAssignmentMode,
 } from "@/hooks/useAssignmentMode";
 import { useAuthStore } from "@/store/auth.store";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { Text } = Typography;
 
@@ -38,30 +40,47 @@ interface LeadAssignmentModeToggleProps {
 }
 
 interface ModeInfo {
-  title: string;
-  description: string;
-  benefits: string[];
+  titleKey: string;
+  descriptionKey: string;
+  benefitsKeys: string[];
+  confirmTextKey: string;
+  successKey: string;
+  tooltipKey: string;
+  labelKey: string;
+  compactLabelKey: string;
 }
 
 const MODE_INFO: Record<LeadAssignmentMode, ModeInfo> = {
   AUTO: {
-    title: "Bật phân công tự động?",
-    description:
+    titleKey: "Bật phân công tự động?",
+    descriptionKey:
       "Mỗi khi bạn tạo Lead mới, hệ thống sẽ tự động chọn một Sale đang hoạt động để gán cho Lead đó.",
-    benefits: [
+    benefitsKeys: [
       "Chỉ có 1 Sale trong hệ thống → Lead sẽ được gán cho ngay Sale đó.",
       "Nhiều Sale → hệ thống sẽ chia đều Lead cho người đang rảnh nhất.",
       "Bạn vẫn có thể đổi Sale khác sau đó ở trang /leads.",
     ],
+    confirmTextKey: "Bật tự động",
+    successKey:
+      "Đã bật phân công tự động. Lead mới sẽ được tự động gán cho Sale.",
+    tooltipKey: "Hệ thống sẽ tự động chọn Sale cho mỗi Lead mới",
+    labelKey: "Phân công tự động",
+    compactLabelKey: "Tự động",
   },
   MANUAL: {
-    title: "Chuyển sang phân công thủ công?",
-    description:
+    titleKey: "Chuyển sang phân công thủ công?",
+    descriptionKey:
       "Khi tạo Lead mới, Lead sẽ chưa được gán cho Sale nào. Bạn sẽ tự chọn Sale phụ trách cho từng Lead ở trang /leads.",
-    benefits: [
+    benefitsKeys: [
       "Phù hợp khi bạn muốn tự quyết định Sale nào sẽ chăm sóc Lead nào.",
       "Lead mới sẽ hiển thị ở mục \"Chưa phân công\" để bạn dễ theo dõi.",
     ],
+    confirmTextKey: "Chuyển sang thủ công",
+    successKey:
+      "Đã chuyển sang phân công thủ công. Bạn sẽ tự chọn Sale cho từng Lead.",
+    tooltipKey: "Bạn sẽ tự chọn Sale cho từng Lead ở trang /leads",
+    labelKey: "Phân công thủ công",
+    compactLabelKey: "Thủ công",
   },
 };
 
@@ -69,6 +88,7 @@ export function LeadAssignmentModeToggle({
   compact = false,
   className,
 }: LeadAssignmentModeToggleProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { message, modal } = App.useApp();
   const user = useAuthStore((s) => s.user);
   const permissions = user?.permissions ?? [];
@@ -94,16 +114,12 @@ export function LeadAssignmentModeToggle({
 
   const applyMode = (target: LeadAssignmentMode) => {
     updateMutation.mutate(target, {
-      onSuccess: (saved) => {
-        void message.success(
-          saved.mode === "AUTO"
-            ? "Đã bật phân công tự động. Lead mới sẽ được tự động gán cho Sale."
-            : "Đã chuyển sang phân công thủ công. Bạn sẽ tự chọn Sale cho từng Lead."
-        );
+      onSuccess: () => {
+        void message.success(t(MODE_INFO[target].successKey, lang));
       },
       onError: (err) => {
         void message.error(
-          `Không thể thay đổi kiểu phân công: ${err.message}`
+          `${t("Không thể thay đổi kiểu phân công:", lang)} ${err.message}`
         );
       },
     });
@@ -115,26 +131,26 @@ export function LeadAssignmentModeToggle({
     const info = MODE_INFO[target];
 
     modal.confirm({
-      title: info.title,
+      title: t(info.titleKey, lang),
       icon: target === "AUTO" ? <ThunderboltOutlined /> : <EditOutlined />,
       width: 520,
       content: (
         <div style={{ marginTop: 8 }}>
-          <Text>{info.description}</Text>
+          <Text>{t(info.descriptionKey, lang)}</Text>
           <div style={{ marginTop: 12 }}>
-            <Text strong>Cách hoạt động:</Text>
+            <Text strong>{t("Cách hoạt động:", lang)}</Text>
             <ul style={{ marginTop: 8, paddingLeft: 20, marginBottom: 0 }}>
-              {info.benefits.map((line, idx) => (
+              {info.benefitsKeys.map((key, idx) => (
                 <li key={idx} style={{ marginBottom: 4 }}>
-                  <Text type="secondary">{line}</Text>
+                  <Text type="secondary">{t(key, lang)}</Text>
                 </li>
               ))}
             </ul>
           </div>
         </div>
       ),
-      okText: target === "AUTO" ? "Bật tự động" : "Chuyển sang thủ công",
-      cancelText: "Hủy",
+      okText: t(info.confirmTextKey, lang),
+      cancelText: t("Hủy", lang),
       centered: true,
       onOk: () => applyMode(target),
     });
@@ -142,7 +158,7 @@ export function LeadAssignmentModeToggle({
 
   return (
     <Space.Compact className={className} size="middle">
-      <Tooltip title="Hệ thống sẽ tự động chọn Sale cho mỗi Lead mới">
+      <Tooltip title={t(MODE_INFO.AUTO.tooltipKey, lang)}>
         <Button
           type={mode === "AUTO" ? "primary" : "default"}
           icon={
@@ -155,10 +171,10 @@ export function LeadAssignmentModeToggle({
           loading={loading || updateMutation.isPending}
           onClick={() => showConfirm("AUTO")}
         >
-          {compact ? "Tự động" : "Phân công tự động"}
+          {compact ? t(MODE_INFO.AUTO.compactLabelKey, lang) : t(MODE_INFO.AUTO.labelKey, lang)}
         </Button>
       </Tooltip>
-      <Tooltip title="Bạn sẽ tự chọn Sale cho từng Lead ở trang /leads">
+      <Tooltip title={t(MODE_INFO.MANUAL.tooltipKey, lang)}>
         <Button
           type={mode === "MANUAL" ? "primary" : "default"}
           icon={
@@ -171,7 +187,7 @@ export function LeadAssignmentModeToggle({
           loading={loading || updateMutation.isPending}
           onClick={() => showConfirm("MANUAL")}
         >
-          {compact ? "Thủ công" : "Phân công thủ công"}
+          {compact ? t(MODE_INFO.MANUAL.compactLabelKey, lang) : t(MODE_INFO.MANUAL.labelKey, lang)}
         </Button>
       </Tooltip>
     </Space.Compact>

@@ -234,7 +234,7 @@ export default function ComboForm({
         <Form.Item
           name="code"
           label={t("Mã combo", lang)}
-          extra={t("Để trống để tự sinh mã: {Mã sản phẩm}C01", lang)}
+          extra={`${t("Để trống để tự sinh mã:", lang)} {ProductCode}C01`}
           rules={[
             { min: 1, message: t("Mã tối thiểu 1 ký tự", lang) },
             { max: 50, message: t("Mã tối đa 50 ký tự", lang) },

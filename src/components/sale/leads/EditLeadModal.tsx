@@ -351,7 +351,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
               disabled={lead.isConverted}
               options={(Object.values(LeadStatus) as LeadStatus[]).map((status) => ({
                 value: status,
-                label: LEAD_STATUS_LABELS[status],
+                label: t(LEAD_STATUS_LABELS[status], lang),
               }))}
             />
           </Form.Item>

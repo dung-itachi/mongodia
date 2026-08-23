@@ -431,10 +431,10 @@ function VariantDetailRow({
             size="small"
           >
             <Radio.Button value="preset">
-              <AppstoreOutlined /> Biến thể có sẵn
+              <AppstoreOutlined /> {t("Biến thể có sẵn", lang)}
             </Radio.Button>
             <Radio.Button value="dropdown">
-              <UnorderedListOutlined /> Chọn riêng
+              <UnorderedListOutlined /> {t("Chọn riêng", lang)}
             </Radio.Button>
           </Radio.Group>
         )}
@@ -527,7 +527,7 @@ function VariantDetailRow({
       {/* Variant Resolved Indicator */}
       {detail.variantId && (
         <Tag color="green" style={{ fontSize: 10, alignSelf: "flex-start" }}>
-          ✓ Đã resolve SKU
+          ✓ {t("Đã resolve SKU", lang)}
         </Tag>
       )}
     </div>
@@ -627,7 +627,7 @@ function GiftSelectionSection({
   if (totalGiftRequired === 0) {
     return (
       <div style={{ textAlign: "center", padding: 16, color: "#999" }}>
-        Combo này không có quà tặng
+        {t("Combo này không có quà tặng", lang)}
       </div>
     );
   }
@@ -790,7 +790,7 @@ function GiftSelectionSection({
                   block
                   style={{ borderColor: "#fa8c16", color: "#fa8c16" }}
                 >
-                  Thêm yêu cầu quà
+                  {t("Thêm yêu cầu quà", lang)}
                 </Button>
               )}
             </>
@@ -1084,7 +1084,7 @@ function OrderItemRow({
       {validation.detailsError && (
         <Alert
           type="warning"
-          title={validation.detailsError}
+          title={t(validation.detailsError, lang)}
           style={{ marginBottom: 8 }}
           showIcon
         />
@@ -1100,14 +1100,14 @@ function OrderItemRow({
             color: "#999",
           }}
         >
-          Chưa có chi tiết biến thể
+          {t("Chưa có chi tiết biến thể", lang)}
           {!disabled && (
             <Button
               type="link"
               onClick={handleAddDetail}
               style={{ marginLeft: 8 }}
             >
-              Thêm chi tiết
+              {t("Thêm chi tiết", lang)}
             </Button>
           )}
         </div>
@@ -1134,7 +1134,7 @@ function OrderItemRow({
               block
               style={{ marginTop: 8 }}
             >
-              Thêm dòng biến thể
+              {t("Thêm dòng biến thể", lang)}
             </Button>
           )}
         </>

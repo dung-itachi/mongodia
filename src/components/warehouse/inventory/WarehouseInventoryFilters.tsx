@@ -4,6 +4,8 @@ import { Select, Input } from "antd";
 import type { ChangeEvent } from "react";
 import { useMemo } from "react";
 import type { WarehouseInventoryFilters } from "@/hooks/useWarehouseInventory";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 const { Search } = Input;
 
@@ -36,26 +38,28 @@ export default function WarehouseInventoryFilters({
   showVariantFilter = true,
   showGiftFilter = true,
 }: WarehouseInventoryFilterProps) {
+  const lang = useLanguageStore((s) => s.language);
+
   const warehouseOptions = useMemo(() => [
-    { value: "", label: "Tất cả kho" },
+    { value: "", label: t("Tất cả kho", lang) },
     ...warehouses.map((w) => ({ value: w._id, label: w.name })),
-  ], [warehouses]);
+  ], [warehouses, lang]);
 
   const itemTypeOptions = useMemo(() => [
-    { value: "", label: "Tất cả loại" },
-    { value: "PRODUCT", label: "Sản phẩm" },
-    { value: "GIFT", label: "Quà tặng" },
-  ], []);
+    { value: "", label: t("Tất cả loại", lang) },
+    { value: "PRODUCT", label: t("Sản phẩm", lang) },
+    { value: "GIFT", label: t("Quà tặng", lang) },
+  ], [lang]);
 
   const productOptions = useMemo(() => [
-    { value: "", label: "Tất cả sản phẩm" },
+    { value: "", label: t("Tất cả sản phẩm", lang) },
     ...products.map((p) => ({ value: p._id, label: `${p.name} (${p.code})` })),
-  ], [products]);
+  ], [products, lang]);
 
   const giftOptions = useMemo(() => [
-    { value: "", label: "Tất cả quà tặng" },
+    { value: "", label: t("Tất cả quà tặng", lang) },
     ...gifts.map((g) => ({ value: g._id, label: g.name })),
-  ], [gifts]);
+  ], [gifts, lang]);
 
   const filteredVariants = useMemo(() => {
     if (!filters.productId) return variants;
@@ -67,9 +71,9 @@ export default function WarehouseInventoryFilters({
   }, [variants, filters.productId]);
 
   const variantOptions = useMemo(() => [
-    { value: "", label: "Tất cả biến thể" },
+    { value: "", label: t("Tất cả biến thể", lang) },
     ...filteredVariants.map((v) => ({ value: v._id, label: v.sku || v._id })),
-  ], [filteredVariants]);
+  ], [filteredVariants, lang]);
 
   const handleChange = (key: keyof WarehouseInventoryFilters, value: string) => {
     const newFilters = { ...filters };
@@ -128,7 +132,7 @@ export default function WarehouseInventoryFilters({
       }}
     >
       <Search
-        placeholder="Tìm kiếm..."
+        placeholder={t("Tìm kiếm...", lang)}
         allowClear
         style={{ width: 220, marginRight: 4 }}
         value={filters.search ?? ""}
@@ -139,7 +143,7 @@ export default function WarehouseInventoryFilters({
       />
 
       <Select
-        placeholder="Loại hàng"
+        placeholder={t("Loại hàng", lang)}
         allowClear
         style={{ width: 140, ...filterItemStyle }}
         value={filters.itemType}
@@ -150,7 +154,7 @@ export default function WarehouseInventoryFilters({
 
       {showProductFilter && filters.itemType !== "GIFT" && (
         <Select
-          placeholder="Sản phẩm"
+          placeholder={t("Sản phẩm", lang)}
           allowClear
           showSearch
           filterOption={(input, option) =>
@@ -167,7 +171,7 @@ export default function WarehouseInventoryFilters({
 
       {showVariantFilter && filters.itemType !== "GIFT" && filters.productId && (
         <Select
-          placeholder="Biến thể"
+          placeholder={t("Biến thể", lang)}
           allowClear
           showSearch
           filterOption={(input, option) =>
@@ -184,7 +188,7 @@ export default function WarehouseInventoryFilters({
 
       {showGiftFilter && filters.itemType === "GIFT" && (
         <Select
-          placeholder="Quà tặng"
+          placeholder={t("Quà tặng", lang)}
           allowClear
           showSearch
           filterOption={(input, option) =>

@@ -1,7 +1,7 @@
 /**
  * WarehouseStatsGrid Component
  *
- * 📦 Stats row đầu trang `/warehouses`, thiết kế theo
+ * Stats row đầu trang `/warehouses`, thiết kế theo
  * `mongolia-crm (7).html`:
  *   Số SP | Tồn kho | Đang giao | Đang hoàn về | Đã giao TC | Đã hoàn kho
  */
@@ -17,6 +17,8 @@ import {
   DownloadOutlined,
 } from "@ant-design/icons";
 import type { WarehouseOverviewTotals } from "@/hooks/useWarehouseInventoryOverview";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./warehouses.module.css";
 
 export type WarehouseStatsGridProps = {
@@ -25,6 +27,8 @@ export type WarehouseStatsGridProps = {
 };
 
 function WarehouseStatsGridInner({ totals, loading = false }: WarehouseStatsGridProps) {
+  const lang = useLanguageStore((s) => s.language);
+
   if (loading) {
     return (
       <div className={styles["wh-stats-grid"]}>
@@ -43,42 +47,42 @@ function WarehouseStatsGridInner({ totals, loading = false }: WarehouseStatsGrid
       icon: <AppstoreOutlined />,
       tone: "blue" as const,
       value: totals.productCount,
-      label: "Số SP",
+      label: t("Số SP", lang),
     },
     {
       key: "stock",
       icon: <InboxOutlined />,
       tone: "blue" as const,
       value: totals.stock,
-      label: "Tồn kho",
+      label: t("Tồn kho", lang),
     },
     {
       key: "shipping",
       icon: <TruckOutlined />,
       tone: "amber" as const,
       value: totals.shipping,
-      label: "Đang giao",
+      label: t("Đang giao", lang),
     },
     {
       key: "returning",
       icon: <RollbackOutlined />,
       tone: "orange" as const,
       value: totals.returning,
-      label: "Đang hoàn về",
+      label: t("Đang hoàn về", lang),
     },
     {
       key: "delivered",
       icon: <CheckCircleOutlined />,
       tone: "green" as const,
       value: totals.delivered,
-      label: "Đã giao TC",
+      label: t("Đã giao TC", lang),
     },
     {
       key: "returned",
       icon: <DownloadOutlined />,
       tone: "purple" as const,
       value: totals.returned,
-      label: "Đã hoàn kho",
+      label: t("Đã hoàn kho", lang),
     },
   ];
 

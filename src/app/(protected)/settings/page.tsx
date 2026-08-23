@@ -20,6 +20,7 @@ import PageContainer from "@/components/common/layout/PageContainer";
 import PageHeader from "@/components/common/layout/PageHeader";
 import { DownOutlined, GlobalOutlined } from "@ant-design/icons";
 import { useLanguageStore, type Language } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 type TabKey = "exchange-rate" | "shipping-fee" | "language";
 
@@ -42,6 +43,7 @@ export default function SettingsHubPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { language, setLanguage } = useLanguageStore();
+  const lang = language;
 
   // Derive the active tab directly from the URL — no effect needed.
   const rawTab = searchParams.get("tab");
@@ -63,15 +65,15 @@ export default function SettingsHubPage() {
   };
 
   const languageMenu: MenuProps = {
-    items: LANGUAGES.map((lang) => ({
-      key: lang.key,
+    items: LANGUAGES.map((langItem) => ({
+      key: langItem.key,
       label: (
         <span>
-          <span style={{ marginRight: 8 }}>{lang.flag}</span>
-          {lang.label}
+          <span style={{ marginRight: 8 }}>{langItem.flag}</span>
+          {langItem.label}
         </span>
       ),
-      onClick: () => setLanguage(lang.key),
+      onClick: () => setLanguage(langItem.key),
     })),
     onClick: handleLanguageChange,
   };
@@ -81,9 +83,9 @@ export default function SettingsHubPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Cài đặt hệ thống"
-        subtitle="Tỷ giá tiền tệ, phí ship và ngôn ngữ"
-        breadcrumb={[{ label: "Trang chủ", href: "/" }, { label: "Cài đặt hệ thống" }]}
+        title={t("Cài đặt hệ thống", lang)}
+        subtitle={t("Tỷ giá tiền tệ, phí ship và ngôn ngữ", lang)}
+        breadcrumb={[{ label: t("Trang chủ", lang), href: "/" }, { label: t("Cài đặt hệ thống", lang) }]}
         actions={
           <Dropdown menu={languageMenu} trigger={["click"]}>
             <Button icon={<GlobalOutlined />}>
@@ -99,15 +101,15 @@ export default function SettingsHubPage() {
         activeKey={activeTab}
         onChange={handleTabChange}
         items={[
-          { key: "exchange-rate", label: "Tỷ giá tiền tệ" },
-          { key: "shipping-fee", label: "Phí ship" },
-          { key: "language", label: "Ngôn ngữ" },
+          { key: "exchange-rate", label: t("Tỷ giá tiền tệ", lang) },
+          { key: "shipping-fee", label: t("Phí ship", lang) },
+          { key: "language", label: t("Ngôn ngữ", lang) },
         ]}
       />
 
       {activeTab === "language" && (
         <div style={{ padding: "24px 0" }}>
-          <div style={{ marginBottom: 16, fontWeight: 500 }}>Chọn ngôn ngữ hiển thị:</div>
+          <div style={{ marginBottom: 16, fontWeight: 500 }}>{t("Chọn ngôn ngữ hiển thị:", lang)}</div>
           <Dropdown menu={languageMenu} trigger={["click"]}>
             <Button size="large" icon={<GlobalOutlined />}>
               <span style={{ marginRight: 8 }}>{currentLang.flag}</span>

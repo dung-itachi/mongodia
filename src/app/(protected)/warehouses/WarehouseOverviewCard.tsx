@@ -32,6 +32,8 @@ import {
 import type { WarehouseOverviewItem } from "@/hooks/useWarehouseInventoryOverview";
 import ImportStockModal from "./ImportStockModal";
 import WarehouseProductDetailDrawer from "./WarehouseProductDetailDrawer";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 import styles from "./warehouses.module.css";
 
 export type WarehouseOverviewCardProps = {
@@ -54,14 +56,15 @@ function WarehouseOverviewCardInner({
   loading = false,
   activeWarehouseId,
 }: WarehouseOverviewCardProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [importTarget, setImportTarget] = useState<WarehouseOverviewItem | null>(null);
   const [detailTarget, setDetailTarget] = useState<WarehouseOverviewItem | null>(null);
 
   // Badge tồn kho: giúp user nhìn nhanh SP nào hết hàng / tồn thấp
   const renderStockBadge = (stock: number) => {
-    if (stock === 0) return <Tag color="red">Hết hàng</Tag>;
-    if (stock <= 10) return <Tag color="orange">Tồn thấp</Tag>;
-    return <Tag color="green">Ổn</Tag>;
+    if (stock === 0) return <Tag color="red">{t("Hết hàng", lang)}</Tag>;
+    if (stock <= 10) return <Tag color="orange">{t("Tồn thấp", lang)}</Tag>;
+    return <Tag color="green">{t("Ổn", lang)}</Tag>;
   };
 
   if (loading) {
@@ -79,7 +82,7 @@ function WarehouseOverviewCardInner({
   if (items.length === 0) {
     return (
       <div className={styles["wh-empty-wrap"]}>
-        <Empty description="Chưa có sản phẩm nào trong kho" />
+        <Empty description={t("Chưa có sản phẩm nào trong kho", lang)} />
       </div>
     );
   }
@@ -98,28 +101,28 @@ function WarehouseOverviewCardInner({
             </h4>
             <div className={styles["wh-item-stock"]}>{item.stock}</div>
             <div className={styles["wh-item-stock-label"]}>
-              TỒN KHO
-              {activeWarehouseId ? " (KHO NÀY)" : " (TẤT CẢ KHO)"}
+              {t("TỒN KHO", lang)}
+              {activeWarehouseId ? ` (${t("KHO NÀY", lang)})` : ` (${t("TẤT CẢ KHO", lang)})`}
             </div>
 
             <div className={styles["wh-item-stats"]}>
               <span style={{ color: TONE.blue }}>
-                <InboxOutlined /> Tồn kho: <b>{item.stock}</b>
+                <InboxOutlined /> {t("Tồn kho:", lang)} <b>{item.stock}</b>
               </span>
               <span style={{ color: TONE.amber }}>
-                <TruckOutlined /> Đang giao: <b>{item.shipping}</b>
+                <TruckOutlined /> {t("Đang giao:", lang)} <b>{item.shipping}</b>
               </span>
               <span style={{ color: TONE.orange }}>
-                <RollbackOutlined /> Đang hoàn về: <b>{item.returning}</b>
+                <RollbackOutlined /> {t("Đang hoàn về:", lang)} <b>{item.returning}</b>
               </span>
               <span style={{ color: TONE.green }}>
-                <CheckCircleOutlined /> Đã giao TC: <b>{item.delivered}</b>
+                <CheckCircleOutlined /> {t("Đã giao TC:", lang)} <b>{item.delivered}</b>
               </span>
               <span style={{ color: TONE.purple }}>
-                <DownloadOutlined /> Đã hoàn kho: <b>{item.returned}</b>
+                <DownloadOutlined /> {t("Đã hoàn kho:", lang)} <b>{item.returned}</b>
               </span>
               <span style={{ color: TONE.muted }}>
-                Tổng nhập: <b>{item.imported}</b>
+                {t("Tổng nhập:", lang)} <b>{item.imported}</b>
               </span>
             </div>
 
@@ -130,7 +133,7 @@ function WarehouseOverviewCardInner({
                 icon={<PlusOutlined />}
                 onClick={() => setImportTarget(item)}
               >
-                Nhập
+                {t("Nhập", lang)}
               </Button>
               <Button
                 type="default"
@@ -138,7 +141,7 @@ function WarehouseOverviewCardInner({
                 icon={<EyeOutlined />}
                 onClick={() => setDetailTarget(item)}
               >
-                Chi tiết
+                {t("Chi tiết", lang)}
               </Button>
             </div>
           </div>
