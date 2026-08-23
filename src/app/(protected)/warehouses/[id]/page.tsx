@@ -81,12 +81,12 @@ export default function WarehouseDetailPage({ params }: PageProps) {
         id,
         data: { status: statusTarget },
       });
-      messageApi.success("Đổi trạng thái thành công");
+      messageApi.success(t("Đổi trạng thái thành công", lang));
       setConfirmVisible(false);
       setStatusTarget(null);
       await refetch();
     } catch (err) {
-      messageApi.error(err instanceof Error ? err.message : "Đổi trạng thái thất bại");
+      messageApi.error(err instanceof Error ? err.message : t("Đổi trạng thái thất bại", lang));
     } finally {
       setConfirmLoading(false);
     }
@@ -123,14 +123,14 @@ export default function WarehouseDetailPage({ params }: PageProps) {
   // Timeline columns
   const timelineColumns: TableColumnsType<WarehouseHistoryItem> = [
     {
-      title: "Thời gian",
+      title: t("Thời gian", lang),
       dataIndex: "createdAt",
       key: "createdAt",
       width: 160,
       render: (value: string) => formatDate(value),
     },
     {
-      title: "Hành động",
+      title: t("Hành động", lang),
       dataIndex: "action",
       key: "action",
       width: 180,
@@ -140,7 +140,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
       },
     },
     {
-      title: "Ghi chú",
+      title: t("Ghi chú", lang),
       dataIndex: "note",
       key: "note",
       render: (value: string | null) => value || "-",
@@ -161,8 +161,8 @@ export default function WarehouseDetailPage({ params }: PageProps) {
     return (
       <PageContainer>
         <EmptyState
-          title="Không tìm thấy task"
-          description={error?.message || "Warehouse task không tồn tại"}
+          title={t("Không tìm thấy task", lang)}
+          description={error?.message || t("Warehouse task không tồn tại", lang)}
         />
       </PageContainer>
     );
@@ -175,13 +175,13 @@ export default function WarehouseDetailPage({ params }: PageProps) {
 
   return (
     <PageContainer>
-      {loading && !task && <LoadingOverlay fullScreen text="Đang tải..." />}
+      {loading && !task && <LoadingOverlay fullScreen text={t("Đang tải...", lang)} />}
 
       <PageHeader title={t("Chi tiết Warehouse Task", lang)}
-        subtitle={`Task #${task._id.slice(-8).toUpperCase()} • Đơn ${task.orderCode ?? task.orderId.slice(-8).toUpperCase()}`}
+        subtitle={`Task #${task._id.slice(-8).toUpperCase()} • ${t("Đơn", lang)} ${task.orderCode ?? task.orderId.slice(-8).toUpperCase()}`}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Kho", href: "/warehouses" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Kho", lang), href: "/warehouses" },
           { label: `Task #${task._id.slice(-8).toUpperCase()}` },
         ]}
         actions={
@@ -200,7 +200,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
                     e.stopPropagation();
                   }}
                 >
-                  Hành động
+                  {t("Hành động", lang)}
                 </Button>
               </Dropdown>
             )}
@@ -212,12 +212,12 @@ export default function WarehouseDetailPage({ params }: PageProps) {
         {/* Left Column - Task Info */}
         <Col span={16}>
           {/* Warehouse Status Card */}
-          <CardSection title="Trạng thái">
+          <CardSection title={t("Trạng thái", lang)}>
             <Row gutter={16}>
               <Col span={12}>
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 4 }}>
-                    Trạng thái hiện tại
+                    {t("Trạng thái hiện tại", lang)}
                   </div>
                   <StatusBadge
                     status={task.warehouseStatus}
@@ -228,13 +228,13 @@ export default function WarehouseDetailPage({ params }: PageProps) {
               <Col span={12}>
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 4 }}>
-                    Nhân viên phụ trách
+                    {t("Nhân viên phụ trách", lang)}
                   </div>
                   <div>
                     {task.assignedEmployeeId ? (
                       <span>{task.assignedEmployeeId.slice(-6).toUpperCase()}</span>
                     ) : (
-                      <span style={{ color: "#8c8c8c" }}>Chưa giao</span>
+                      <span style={{ color: "#8c8c8c" }}>{t("Chưa giao", lang)}</span>
                     )}
                   </div>
                 </div>
@@ -243,12 +243,12 @@ export default function WarehouseDetailPage({ params }: PageProps) {
           </CardSection>
 
           {/* Order Info Card */}
-          <CardSection title="Thông tin đơn hàng">
+          <CardSection title={t("Thông tin đơn hàng", lang)}>
             <Row gutter={16}>
               <Col span={12}>
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 4 }}>
-                    Mã đơn hàng
+                    {t("Mã đơn hàng", lang)}
                   </div>
                   <div>
                     <a onClick={() => router.push(`/orders/${task.orderId}`)}>
@@ -260,7 +260,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
               <Col span={12}>
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 4 }}>
-                    Kho xử lý
+                    {t("Kho xử lý", lang)}
                   </div>
                   <div>
                     {task.warehouseName ? (
@@ -273,7 +273,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
                         ) : null}
                       </span>
                     ) : (
-                      <span style={{ color: "#8c8c8c" }}>Chưa gán kho</span>
+                      <span style={{ color: "#8c8c8c" }}>{t("Chưa gán kho", lang)}</span>
                     )}
                   </div>
                 </div>
@@ -283,7 +283,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
 
           {/* Note Card */}
           {task.note && (
-            <CardSection title="Ghi chú">
+            <CardSection title={t("Ghi chú", lang)}>
               <p>{task.note}</p>
             </CardSection>
           )}
@@ -291,16 +291,16 @@ export default function WarehouseDetailPage({ params }: PageProps) {
 
         {/* Right Column - Meta */}
         <Col span={8}>
-          <CardSection title="Thông tin">
+          <CardSection title={t("Thông tin", lang)}>
             <div style={{ marginBottom: 12 }}>
               <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 4 }}>
-                Ngày tạo
+                {t("Ngày tạo", lang)}
               </div>
               <div>{formatDate(task.createdAt)}</div>
             </div>
             <div style={{ marginBottom: 12 }}>
               <div style={{ color: "#8c8c8c", fontSize: 12, marginBottom: 4 }}>
-                Cập nhật cuối
+                {t("Cập nhật cuối", lang)}
               </div>
               <div>{formatDate(task.updatedAt)}</div>
             </div>
@@ -309,7 +309,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
       </Row>
 
       {/* Timeline Card */}
-      <CardSection title="Lịch sử">
+      <CardSection title={t("Lịch sử", lang)}>
         {histories && histories.length > 0 ? (
           <Table
             dataSource={histories}
@@ -321,7 +321,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
         ) : (
           <div style={{ textAlign: "center", color: "#8c8c8c", padding: 24 }}>
             <ClockCircleOutlined style={{ fontSize: 24, marginBottom: 8 }} />
-            <div>Chưa có lịch sử</div>
+            <div>{t("Chưa có lịch sử", lang)}</div>
           </div>
         )}
       </CardSection>
@@ -333,7 +333,7 @@ export default function WarehouseDetailPage({ params }: PageProps) {
 
       {/* Confirm Dialog */}
       <Modal
-        title="Xác nhận đổi trạng thái"
+        title={t("Xác nhận đổi trạng thái", lang)}
         open={confirmVisible}
         onOk={handleStatusConfirm}
         onCancel={() => {
@@ -341,11 +341,11 @@ export default function WarehouseDetailPage({ params }: PageProps) {
           setStatusTarget(null);
         }}
         confirmLoading={confirmLoading}
-        okText="Xác nhận"
-        cancelText="Hủy"
+        okText={t("Xác nhận", lang)}
+        cancelText={t("Hủy", lang)}
       >
         <p>
-          Bạn có chắc muốn chuyển trạng thái sang{" "}
+          {t("Bạn có chắc muốn chuyển trạng thái sang", lang)}{" "}
           <strong>{targetStatusLabel}</strong>?
         </p>
       </Modal>

@@ -69,19 +69,19 @@ export default function InventoryMovementsPage() {
     createdAt: string;
   }> = [
     {
-      title: "SKU",
+      title: t("SKU", lang),
       dataIndex: "sku",
       key: "sku",
       width: 140,
     },
     {
-      title: "Tên sản phẩm",
+      title: t("Tên sản phẩm", lang),
       dataIndex: "productName",
       key: "productName",
       ellipsis: true,
     },
     {
-      title: "Số lượng",
+      title: t("Số lượng", lang),
       dataIndex: "quantity",
       key: "quantity",
       width: 100,
@@ -99,7 +99,7 @@ export default function InventoryMovementsPage() {
       },
     },
     {
-      title: "Loại",
+      title: t("Loại", lang),
       dataIndex: "type",
       key: "type",
       width: 120,
@@ -115,12 +115,12 @@ export default function InventoryMovementsPage() {
             fontWeight: 500,
           }}
         >
-          {MOVEMENT_TYPE_LABELS[value] || value}
+          {t(MOVEMENT_TYPE_LABELS[value] || value, lang)}
         </span>
       ),
     },
     {
-      title: "Order",
+      title: t("Order", lang),
       dataIndex: "orderId",
       key: "orderId",
       width: 120,
@@ -129,7 +129,7 @@ export default function InventoryMovementsPage() {
       ),
     },
     {
-      title: "Warehouse Task",
+      title: t("Warehouse Task", lang),
       dataIndex: "warehouseTaskId",
       key: "warehouseTaskId",
       width: 120,
@@ -138,14 +138,14 @@ export default function InventoryMovementsPage() {
       ),
     },
     {
-      title: "Thời gian",
+      title: t("Thời gian", lang),
       dataIndex: "createdAt",
       key: "createdAt",
       width: 160,
       render: (value: string) => formatDate(value),
     },
     {
-      title: "Ghi chú",
+      title: t("Ghi chú", lang),
       dataIndex: "note",
       key: "note",
       ellipsis: true,
@@ -166,16 +166,16 @@ export default function InventoryMovementsPage() {
     <PageContainer>
       <PageHeader title={t("Inventory Movements", lang)} subtitle={t("Lịch sử xuất/nhập kho", lang)}
         breadcrumb={[
-          { label: "Trang chủ", href: "/" },
-          { label: "Inventory", href: "/inventory/movements" },
+          { label: t("Trang chủ", lang), href: "/" },
+          { label: t("Inventory", lang), href: "/inventory/movements" },
         ]}
       />
 
-      <CardSection title="Danh sách movements">
+      <CardSection title={t("Danh sách movements", lang)}>
         {/* Filters */}
         <Space style={{ marginBottom: 16 }} size="middle">
           <Input.Search
-            placeholder="Tìm SKU, tên sản phẩm..."
+            placeholder={t("Tìm SKU, tên sản phẩm...", lang)}
             allowClear
             style={{ width: 280 }}
             onSearch={(value) => {
@@ -184,7 +184,7 @@ export default function InventoryMovementsPage() {
             }}
           />
           <Select
-            placeholder="Loại movement"
+            placeholder={t("Loại movement", lang)}
             allowClear
             style={{ width: 180 }}
             onChange={(value) => {
@@ -192,16 +192,16 @@ export default function InventoryMovementsPage() {
               setPage(1);
             }}
             options={[
-              { value: "EXPORT", label: "Xuất kho" },
-              { value: "IMPORT", label: "Nhập kho" },
-              { value: "ADJUSTMENT", label: "Điều chỉnh" },
+              { value: "EXPORT", label: t("Xuất kho", lang) },
+              { value: "IMPORT", label: t("Nhập kho", lang) },
+              { value: "ADJUSTMENT", label: t("Điều chỉnh", lang) },
             ]}
           />
         </Space>
 
         {/* Table */}
         {error ? (
-          <Empty description={error.message || "Có lỗi xảy ra"} />
+          <Empty description={error.message || t("Có lỗi xảy ra", lang)} />
         ) : (
           <Table
             dataSource={movements}
@@ -213,7 +213,7 @@ export default function InventoryMovementsPage() {
               pageSize: limit,
               total,
               showSizeChanger: true,
-              showTotal: (total) => `Tổng ${total} movement`,
+              showTotal: (total) => `${t("Tổng", lang)} ${total} movement`,
               onChange: (newPage, newLimit) => {
                 setPage(newPage);
                 setLimit(newLimit);

@@ -351,7 +351,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
         title={t("Vai trò & Phân quyền", lang)}
         subtitle={t("Quản lý role → module → permission", lang)}
         breadcrumb={[
-          { label: "Dashboard", href: "/dashboard" },
+          { label: t("Dashboard", lang), href: "/dashboard" },
           { label: t("Vai trò & Phân quyền", lang) },
         ]}
       />
@@ -402,14 +402,14 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
             <div className="card-h">
               <h2>
                 {rolePermsQ.data?.role.name ??
-                  "Chọn một vai trò để xem phân quyền"}
+                  t("Chọn một vai trò để xem phân quyền", lang)}
               </h2>
               {rolePermsQ.data && <small>{rolePermsQ.data.role.code}</small>}
             </div>
             <div className="card-body">
               {!rolePermsQ.data && (
                 <div className="rpt-empty">
-                  Chọn một vai trò từ danh sách.
+                  {t("Chọn một vai trò từ danh sách.", lang)}
                 </div>
               )}
 
@@ -418,21 +418,21 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                   <div className="rpt-summary">
                     <span className="rpt-summary-count">
                       {rolePermsQ.data.isWildcard
-                        ? "FULL ACCESS"
-                        : `${stats.totalGranted} / ${stats.totalPerms} permissions`}
+                        ? t("FULL ACCESS", lang)
+                        : `${stats.totalGranted} / ${stats.totalPerms} ${t("permissions", lang)}`}
                     </span>
                     <span className="rpt-summary-stats">
                       <span>
-                        Module: <strong>{stats.modulesTotal}</strong>
+                        {t("Module:", lang)} <strong>{stats.modulesTotal}</strong>
                       </span>
                       <span>
-                        Full: <strong>{stats.modulesFull}</strong>
+                        {t("Full:", lang)} <strong>{stats.modulesFull}</strong>
                       </span>
                       <span>
-                        Partial: <strong>{stats.modulesPartial}</strong>
+                        {t("Partial:", lang)} <strong>{stats.modulesPartial}</strong>
                       </span>
                       <span>
-                        None: <strong>{stats.modulesNone}</strong>
+                        {t("None:", lang)} <strong>{stats.modulesNone}</strong>
                       </span>
                     </span>
                   </div>
@@ -444,11 +444,9 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                     >
                       <span style={{ fontSize: 18 }}>⭐</span>
                       <div>
-                        <strong>FULL ACCESS</strong>
+                        <strong>{t("FULL ACCESS", lang)}</strong>
                         <div style={{ fontSize: 11, marginTop: 4 }}>
-                          Vai trò ADMIN sử dụng wildcard <code>*</code> — tất
-                          cả module & permission đều được cấp tự động. Không
-                          thể chỉnh sửa danh sách permission cho ADMIN.
+                          {t("Vai trò ADMIN sử dụng wildcard", lang)} <code>*</code> — {t("tất cả module & permission đều được cấp tự động. Không thể chỉnh sửa danh sách permission cho ADMIN.", lang)}
                         </div>
                       </div>
                     </div>
@@ -474,18 +472,15 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                       >
                         <div>
                           <strong style={{ fontSize: 13 }}>
-                            Nhóm hiển thị trên Sidebar
+                            {t("Nhóm hiển thị trên Sidebar", lang)}
                           </strong>
                           <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
-                            Chọn các nhóm nghiệp vụ mà vai trò này được
-                            nhìn thấy trên sidebar.
+                            {t("Chọn các nhóm nghiệp vụ mà vai trò này được nhìn thấy trên sidebar.", lang)}
                             {isLeader && (
                               <>
                                 {" "}
                                 <span style={{ color: "#f59e0b" }}>
-                                  LEADER: nhóm hiển thị được tự động suy ra
-                                  từ team (MKT/SALE/WAREHOUSE) — không thể
-                                  chỉnh tại đây.
+                                  {t("LEADER: nhóm hiển thị được tự động suy ra từ team (MKT/SALE/WAREHOUSE) — không thể chỉnh tại đây.", lang)}
                                 </span>
                               </>
                             )}
@@ -500,7 +495,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                                 onClick={resetVisibleGroupsDraft}
                                 disabled={updateVisibleGroupsMut.isPending}
                               >
-                                Reset
+                                {t("Reset", lang)}
                               </button>
                               <button
                                 type="button"
@@ -508,7 +503,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                                 onClick={saveVisibleGroups}
                                 disabled={updateVisibleGroupsMut.isPending}
                               >
-                                Lưu
+                                {t("Lưu", lang)}
                               </button>
                             </>
                           )}
@@ -568,7 +563,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                             color: "#f59e0b",
                           }}
                         >
-                          ⚠ Có thay đổi nhóm hiển thị chưa lưu
+                          ⚠ {t("Có thay đổi nhóm hiển thị chưa lưu", lang)}
                         </div>
                       )}
                     </div>
@@ -595,18 +590,18 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                         )
                       }
                     >
-                      Expand all
+                      {t("Expand all", lang)}
                     </button>
                     <button
                       type="button"
                       className="btn btn-sec btn-sm"
                       onClick={() => setExpanded({})}
                     >
-                      Collapse all
+                      {t("Collapse all", lang)}
                     </button>
                     {isDirty && (
                       <span className="rpt-unsaved">
-                        ⚠ Có thay đổi chưa lưu
+                        ⚠ {t("Có thay đổi chưa lưu", lang)}
                       </span>
                     )}
                     <div
@@ -622,7 +617,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                         onClick={resetDraft}
                         disabled={!isDirty || updateMut.isPending}
                       >
-                        Reset
+                        {t("Reset", lang)}
                       </button>
                       <button
                         type="button"
@@ -634,7 +629,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                           isAdminEditingDisabled
                         }
                       >
-                        Lưu
+                        {t("Lưu", lang)}
                       </button>
                     </div>
                   </div>
@@ -642,7 +637,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                   <div className="rpt-tree" style={{ marginTop: 12 }}>
                     {filteredTree.length === 0 && (
                       <div className="rpt-filter-empty">
-                        Không tìm thấy permission nào khớp
+                        {t("Không tìm thấy permission nào khớp", lang)}
                       </div>
                     )}
                     {filteredTree.map((bucket) => {
@@ -677,7 +672,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                             </span>
                             <span className="rpt-module-count">
                               {rolePermsQ.data.isWildcard
-                                ? "ALL"
+                                ? t("ALL", lang)
                                 : `${bucket.grantedCount}/${bucket.all.length}`}
                             </span>
                           </div>
@@ -766,7 +761,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
                 {removed.length > 0 && (
                   <div>
                     <strong style={{ color: "#e0524d" }}>
-                      - Bỏ ({removed.length}):
+                      - {t("Bỏ", lang)} ({removed.length}):
                     </strong>
                     <div
                       style={{

@@ -34,6 +34,8 @@ import {
   useTeamRecipients,
   type RecipientEmployee,
 } from "@/hooks/useRecipientOptions";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 interface RecipientSelectorProps {
   value?: RecipientValue;
@@ -73,6 +75,7 @@ function RecipientSelectorComponent({
   onChange,
   disabled = false,
 }: RecipientSelectorProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [selectedMode, setSelectedMode] = useState<RecipientValue["mode"]>(
     value?.mode ?? "broadcast"
   );
@@ -160,7 +163,7 @@ function RecipientSelectorComponent({
   // Calculate selection summary for display
   const getSelectionSummary = () => {
     if (selectedMode === "broadcast") {
-      return { count: 0, label: "Tất cả nhân viên", type: "broadcast" as const };
+      return { count: 0, label: t("Tất cả nhân viên", lang), type: "broadcast" as const };
     }
 
     let count = 0;
@@ -168,16 +171,16 @@ function RecipientSelectorComponent({
 
     if (selectedMode === "individual") {
       count = selectedEmployeeIds.length;
-      label = "cá nhân";
+      label = t("cá nhân", lang);
     } else if (selectedMode === "team") {
       count = selectedTeamIds.length;
-      label = "team";
+      label = t("team", lang);
     } else if (selectedMode === "leader") {
       count = selectedLeaderIds.length;
-      label = "leader";
+      label = t("leader", lang);
     } else if (selectedMode === "role") {
       count = selectedRoles.length;
-      label = "vai trò";
+      label = t("vai trò", lang);
     }
 
     return { count, label, type: selectedMode };
@@ -288,7 +291,7 @@ function RecipientSelectorComponent({
       return (
         <div style={{ textAlign: "center", padding: 24 }}>
           <Spin />
-          <div style={{ marginTop: 8 }}>Đang tải...</div>
+          <div style={{ marginTop: 8 }}>{t("Đang tải...", lang)}</div>
         </div>
       );
     }
@@ -296,7 +299,7 @@ function RecipientSelectorComponent({
     const employees = recipientData?.employees ?? [];
 
     if (employees.length === 0) {
-      return <Empty description="Không có nhân viên" />;
+      return <Empty description={t("Không có nhân viên", lang)} />;
     }
 
     return (
@@ -338,13 +341,13 @@ function RecipientSelectorComponent({
       return (
         <div style={{ textAlign: "center", padding: 24 }}>
           <Spin />
-          <div style={{ marginTop: 8 }}>Đang tải...</div>
+          <div style={{ marginTop: 8 }}>{t("Đang tải...", lang)}</div>
         </div>
       );
     }
 
     if (!teams || teams.length === 0) {
-      return <Empty description="Không có team" />;
+      return <Empty description={t("Không có team", lang)} />;
     }
 
     return (
@@ -368,7 +371,7 @@ function RecipientSelectorComponent({
               <div style={{ fontWeight: 500 }}>{team.name}</div>
               <div style={{ fontSize: 12, color: "#888" }}>
                 <Tag>{team.code}</Tag>
-                <span>{team.memberCount} thành viên</span>
+                <span>{team.memberCount} {t("thành viên", lang)}</span>
               </div>
             </div>
           </div>
@@ -383,7 +386,7 @@ function RecipientSelectorComponent({
       return (
         <div style={{ textAlign: "center", padding: 24 }}>
           <Spin />
-          <div style={{ marginTop: 8 }}>Đang tải...</div>
+          <div style={{ marginTop: 8 }}>{t("Đang tải...", lang)}</div>
         </div>
       );
     }
@@ -391,7 +394,7 @@ function RecipientSelectorComponent({
     const leaders = (allLeaders?.employees ?? []) as RecipientEmployee[];
 
     if (leaders.length === 0) {
-      return <Empty description="Không có leader" />;
+      return <Empty description={t("Không có leader", lang)} />;
     }
 
     return (
@@ -424,8 +427,7 @@ function RecipientSelectorComponent({
                 </div>
                 {isSelected && leaderTeamMembers && (
                   <div style={{ marginTop: 4, fontSize: 11, color: "#52c41a" }}>
-                    <CheckCircleFilled /> +{leaderTeamMembers.length - 1} nhân
-                    viên được chọn
+                    <CheckCircleFilled /> +{leaderTeamMembers.length - 1} {t("nhân viên được chọn", lang)}
                   </div>
                 )}
               </div>
@@ -442,7 +444,7 @@ function RecipientSelectorComponent({
       return (
         <div style={{ textAlign: "center", padding: 24 }}>
           <Spin />
-          <div style={{ marginTop: 8 }}>Đang tải...</div>
+          <div style={{ marginTop: 8 }}>{t("Đang tải...", lang)}</div>
         </div>
       );
     }
@@ -479,7 +481,7 @@ function RecipientSelectorComponent({
                     color={ROLE_COLORS[role.code] ?? "default"}
                     style={{ marginLeft: 8 }}
                   >
-                    {roleEmployees.length} người
+                    {roleEmployees.length} {t("người", lang)}
                   </Tag>
                 </div>
                 {roleEmployees.length > 0 && (
@@ -491,7 +493,7 @@ function RecipientSelectorComponent({
                     ))}
                     {roleEmployees.length > 3 && (
                       <Tag style={{ marginTop: 2 }}>
-                        +{roleEmployees.length - 3} khác
+                        +{roleEmployees.length - 3} {t("khác", lang)}
                       </Tag>
                     )}
                   </div>
@@ -510,13 +512,13 @@ function RecipientSelectorComponent({
     if (summary.type === "broadcast") {
       return (
         <Tag color="blue" icon={<UserOutlined />}>
-          Tất cả nhân viên
+          {t("Tất cả nhân viên", lang)}
         </Tag>
       );
     }
 
     if (summary.count === 0) {
-      return <span style={{ color: "#ff4d4f" }}>Chưa chọn người nhận</span>;
+      return <span style={{ color: "#ff4d4f" }}>{t("Chưa chọn người nhận", lang)}</span>;
     }
 
     const colorMap: Record<string, string> = {
@@ -528,7 +530,7 @@ function RecipientSelectorComponent({
 
     return (
       <Tag color={colorMap[summary.type] ?? "default"}>
-        {summary.count} {summary.label} đã chọn
+        {summary.count} {summary.label} {t("đã chọn", lang)}
       </Tag>
     );
   };
@@ -543,7 +545,7 @@ function RecipientSelectorComponent({
           onClick={() => handleModeChange("broadcast")}
           disabled={disabled}
         >
-          Tất cả
+          {t("Tất cả", lang)}
         </Button>
         <Button
           type={selectedMode === "individual" ? "primary" : "default"}
@@ -551,7 +553,7 @@ function RecipientSelectorComponent({
           onClick={() => handleModeChange("individual")}
           disabled={disabled}
         >
-          Theo cá nhân
+          {t("Theo cá nhân", lang)}
         </Button>
         <Button
           type={selectedMode === "team" ? "primary" : "default"}
@@ -559,7 +561,7 @@ function RecipientSelectorComponent({
           onClick={() => handleModeChange("team")}
           disabled={disabled}
         >
-          Theo team
+          {t("Theo team", lang)}
         </Button>
         <Button
           type={selectedMode === "leader" ? "primary" : "default"}
@@ -567,7 +569,7 @@ function RecipientSelectorComponent({
           onClick={() => handleModeChange("leader")}
           disabled={disabled}
         >
-          Theo leader
+          {t("Theo leader", lang)}
         </Button>
         <Button
           type={selectedMode === "role" ? "primary" : "default"}
@@ -575,7 +577,7 @@ function RecipientSelectorComponent({
           onClick={() => handleModeChange("role")}
           disabled={disabled}
         >
-          Theo vai trò
+          {t("Theo vai trò", lang)}
         </Button>
       </Space>
 
@@ -592,7 +594,7 @@ function RecipientSelectorComponent({
           {/* Search */}
           {selectedMode === "individual" && (
             <Input.Search
-              placeholder="Tìm theo tên hoặc mã nhân viên..."
+              placeholder={t("Tìm theo tên hoặc mã nhân viên...", lang)}
               allowClear
               onSearch={(value) => setSearchKeyword(value)}
               onChange={(e) => {
@@ -615,7 +617,7 @@ function RecipientSelectorComponent({
             selectedRoles.length > 0) && (
             <div style={{ marginTop: 12, textAlign: "right" }}>
               <Button size="small" onClick={clearAll} disabled={disabled}>
-                Bỏ chọn tất cả
+                {t("Bỏ chọn tất cả", lang)}
               </Button>
             </div>
           )}
@@ -628,18 +630,17 @@ function RecipientSelectorComponent({
       {/* Help Text */}
       {selectedMode === "team" && (
         <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
-          Chọn team để gửi thông báo đến tất cả thành viên trong team đó.
+          {t("Chọn team để gửi thông báo đến tất cả thành viên trong team đó.", lang)}
         </div>
       )}
       {selectedMode === "leader" && (
         <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
-          Chọn leader để gửi thông báo đến leader và tất cả nhân viên dưới quyền.
+          {t("Chọn leader để gửi thông báo đến leader và tất cả nhân viên dưới quyền.", lang)}
         </div>
       )}
       {selectedMode === "role" && (
         <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
-          Chọn vai trò (Sale/MKT/Kho) để gửi thông báo đến tất cả nhân viên có
-          vai trò đó.
+          {t("Chọn vai trò (Sale/MKT/Kho) để gửi thông báo đến tất cả nhân viên có vai trò đó.", lang)}
         </div>
       )}
     </div>
