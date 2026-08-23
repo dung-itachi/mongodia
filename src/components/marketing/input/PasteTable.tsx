@@ -16,6 +16,8 @@ import { Button, Tooltip } from "antd";
 import { TableOutlined, EditOutlined } from "@ant-design/icons";
 import styles from "./PasteTable.module.css";
 import { COLUMN_FIELDS, type ColumnFieldKey } from "./columnLayouts";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 /** Map field key → label ngắn */
 const COLUMN_FIELD_LABELS: Record<string, string> = Object.fromEntries(
@@ -41,6 +43,7 @@ export default function PasteTable({
   value,
   onChange,
 }: PasteTableProps) {
+  const lang = useLanguageStore((s) => s.language);
   const [useTableMode, setUseTableMode] = useState(false);
   const [cells, setCells] = useState<CellData[]>([]);
   const [rowCount, setRowCount] = useState(3);
@@ -191,18 +194,18 @@ export default function PasteTable({
   const getPlaceholder = (col: number): string => {
     const fieldKey = layout[col];
     const placeholders: Record<string, string> = {
-      date: "Thời gian",
-      name: "Tên khách",
-      phone: "Số điện thoại",
-      address: "Địa chỉ",
-      combo: "Combo/Giá",
-      product: "Sản phẩm",
-      facebookPage: "FB Page",
+      date: t("Thời gian", lang),
+      name: t("Tên khách", lang),
+      phone: t("Số điện thoại", lang),
+      address: t("Địa chỉ", lang),
+      combo: t("Combo/Giá", lang),
+      product: t("Sản phẩm", lang),
+      facebookPage: t("FB Page", lang),
     };
-    return placeholders[fieldKey] ?? COLUMN_FIELD_LABELS[fieldKey] ?? "";
+    return placeholders[fieldKey] ?? t(COLUMN_FIELD_LABELS[fieldKey] ?? "", lang) ?? "";
   };
 
-  const modeLabel = inputType === "comment" ? "Comment" : "Landing";
+  const modeLabel = inputType === "comment" ? t("Comment", lang) : t("Landing", lang);
 
   return (
     <div className={styles.container}>
@@ -210,10 +213,10 @@ export default function PasteTable({
       <div className={styles.header}>
         <div className={styles.headerTitle}>
           <span className={styles.modeLabel}>{modeLabel}</span>
-          <span className={styles.headerLabel}>Cấu trúc dán số</span>
+          <span className={styles.headerLabel}>{t("Cấu trúc dán số", lang)}</span>
         </div>
         <div className={styles.toggleGroup}>
-          <Tooltip title="Chế độ bảng Excel">
+          <Tooltip title={t("Chế độ bảng Excel", lang)}>
             <Button
               type={useTableMode ? "primary" : "default"}
               size="small"
@@ -221,10 +224,10 @@ export default function PasteTable({
               onClick={() => setUseTableMode(true)}
               className={useTableMode ? styles.toggleActive : ""}
             >
-              Bảng
+              {t("Bảng", lang)}
             </Button>
           </Tooltip>
-          <Tooltip title="Chế độ văn bản">
+          <Tooltip title={t("Chế độ văn bản", lang)}>
             <Button
               type={!useTableMode ? "primary" : "default"}
               size="small"
@@ -232,7 +235,7 @@ export default function PasteTable({
               onClick={() => setUseTableMode(false)}
               className={!useTableMode ? styles.toggleActive : ""}
             >
-              Text
+              {t("Text", lang)}
             </Button>
           </Tooltip>
         </div>
@@ -255,7 +258,7 @@ export default function PasteTable({
                     <div className={styles.headerCellContent}>
                       <span className={styles.headerNum}>{idx + 1}</span>
                       <span className={styles.headerLabel}>
-                        {COLUMN_FIELD_LABELS[fieldKey] ?? fieldKey}
+                        {t(COLUMN_FIELD_LABELS[fieldKey] ?? "", lang) || fieldKey}
                       </span>
                     </div>
                   </th>
@@ -295,13 +298,13 @@ export default function PasteTable({
 
           {/* Paste hint */}
           <div className={styles.pasteHint}>
-            <span>Paste dữ liệu vào bảng hoặc nhấn Ctrl+V ở bảng này</span>
+            <span>{t("Paste dữ liệu vào bảng hoặc nhấn Ctrl+V ở bảng này", lang)}</span>
             <Button
               size="small"
               onClick={() => addRows(5)}
               className={styles.addRowBtn}
             >
-              + Thêm dòng
+              + {t("Thêm dòng", lang)}
             </Button>
           </div>
         </div>
@@ -312,19 +315,19 @@ export default function PasteTable({
           className={styles.textArea}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={`Nhập dữ liệu (TAB separated):\n${layout.map((k) => COLUMN_FIELD_LABELS[k]).join("\t")}\n\nVí dụ:\n${layout.map((k) => getPlaceholder(layout.indexOf(k))).join("\t")}`}
+          placeholder={`${t("Nhập dữ liệu (TAB separated):", lang)}\n${layout.map((k) => t(COLUMN_FIELD_LABELS[k] ?? "", lang)).join("\t")}\n\n${t("Ví dụ:", lang)}\n${layout.map((k) => getPlaceholder(layout.indexOf(k))).join("\t")}`}
           rows={4}
         />
       )}
 
       {/* Quick reference */}
       <div className={styles.reference}>
-        <span className={styles.refLabel}>Cấu hình:</span>
+        <span className={styles.refLabel}>{t("Cấu hình:", lang)}</span>
         <div className={styles.refChips}>
           {layout.map((key, idx) => (
             <span key={key} className={styles.refChip}>
               <span className={styles.refNum}>{idx + 1}</span>
-              {COLUMN_FIELD_LABELS[key]}
+              {t(COLUMN_FIELD_LABELS[key] ?? "", lang)}
             </span>
           ))}
         </div>

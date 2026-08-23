@@ -375,7 +375,7 @@ function VariantDetailRow({
         <Text type="secondary">{t("Sản phẩm không có biến thể", lang)}</Text>
         <div style={{ minWidth: 80, marginLeft: "auto" }}>
           <Text type="secondary" style={{ fontSize: 11 }}>
-            SL
+            {t("SL", lang)}
           </Text>
           <InputNumber
             min={1}
@@ -441,7 +441,7 @@ function VariantDetailRow({
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <Text type="secondary" style={{ fontSize: 11 }}>
-            SL
+            {t("SL", lang)}
           </Text>
           <InputNumber
             min={1}
@@ -483,7 +483,7 @@ function VariantDetailRow({
           />
           {detail.variantId && (
             <Tag color="green" style={{ marginTop: 4 }}>
-              SKU: {product?.variants?.find((v) => v._id === detail.variantId)?.sku || detail.variantId}
+              {t("SKU", lang)}: {product?.variants?.find((v) => v._id === detail.variantId)?.sku || detail.variantId}
             </Tag>
           )}
         </div>
@@ -570,11 +570,11 @@ function GiftSelectionSection({
   const giftOptions = useMemo(
     () =>
       gifts.map((g) => ({
-        label: `${g.name} - Tồn kho: ${g.stockQuantity}`,
+        label: `${g.name} - ${t("Tồn kho", lang)}: ${g.stockQuantity}`,
         value: g._id,
         giftName: g.name,
       })),
-    [gifts]
+    [gifts, lang]
   );
 
   const handleModeChange = useCallback(
@@ -754,7 +754,7 @@ function GiftSelectionSection({
                   />
                   <div style={{ minWidth: 70 }}>
                     <Text type="secondary" style={{ fontSize: 11 }}>
-                      SL
+                      {t("SL", lang)}
                     </Text>
                     <InputNumber
                       min={1}

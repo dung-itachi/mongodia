@@ -19,6 +19,8 @@ import { Modal, Select, Input, InputNumber, Form, Alert, App } from "antd";
 import type { WarehouseOverviewItem } from "@/hooks/useWarehouseInventoryOverview";
 import { useWarehouseProductVariantOptions } from "@/hooks/useWarehouseProductVariantOptions";
 import { useImportProductStock } from "@/hooks/useImportProductStock";
+import { useLanguageStore } from "@/store/language.store";
+import { t } from "@/lib/i18n";
 
 export type ImportStockModalProps = {
   open: boolean;
@@ -39,6 +41,7 @@ export default function ImportStockModal({
   onClose,
   onSuccess,
 }: ImportStockModalProps) {
+  const lang = useLanguageStore((s) => s.language);
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
   const { variants, loading: variantsLoading } = useWarehouseProductVariantOptions(
@@ -74,21 +77,25 @@ export default function ImportStockModal({
         note: values.note ?? "",
       });
       message.success(
-        `Đã nhập ${result.totalChange} vào ${result.updatedWarehouses} kho`
+        t("Đã nhập {qty} vào {count} kho", lang)
+          .replace("{qty}", String(result.totalChange))
+          .replace("{count}", String(result.updatedWarehouses))
       );
       onSuccess?.();
       onClose();
     } catch (err) {
       const msg =
         (err as Error)?.message ||
-        "Không thể nhập kho. Vui lòng thử lại.";
+        t("Không thể nhập kho. Vui lòng thử lại.", lang);
       setSubmitError(msg);
     }
   };
 
   const title = product
-    ? `Nhập — ${product.productCode} · ${product.productName}`
-    : "Nhập";
+    ? t("Nhập — {code} · {name}", lang)
+        .replace("{code}", product.productCode)
+        .replace("{name}", product.productName)
+    : t("Nhập", lang);
 
   return (
     <Modal
@@ -97,8 +104,8 @@ export default function ImportStockModal({
       onCancel={onClose}
       onOk={handleOk}
       confirmLoading={isPending}
-      okText="Nhập"
-      cancelText="Huỷ"
+      okText={t("Nhập", lang)}
+      cancelText={t("Hủy", lang)}
       destroyOnHidden
       mask={{ closable: !isPending }}
       okButtonProps={{ disabled: isPending }}
@@ -121,19 +128,19 @@ export default function ImportStockModal({
       >
         <Form.Item
           name="productVariantId"
-          label="Variant (SKU)"
-          rules={[{ required: true, message: "Vui lòng chọn variant" }]}
+          label={t("Variant (SKU)", lang)}
+          rules={[{ required: true, message: t("Vui lòng chọn variant", lang) }]}
           extra={
             variantsLoading
-              ? "Đang tải danh sách variant..."
+              ? t("Đang tải danh sách variant...", lang)
               : variants.length === 0
-                ? "Sản phẩm này chưa có variant nào"
+                ? t("Sản phẩm này chưa có variant nào", lang)
                 : undefined
           }
         >
           <Select
             showSearch
-            placeholder="Chọn variant cần nhập"
+            placeholder={t("Chọn variant cần nhập", lang)}
             options={variantOptions}
             loading={variantsLoading}
             disabled={isPending || variantOptions.length === 0}
@@ -146,14 +153,14 @@ export default function ImportStockModal({
         </Form.Item>
         <Form.Item
           name="quantity"
-          label="Số lượng"
+          label={t("Số lượng", lang)}
           rules={[
-            { required: true, message: "Vui lòng nhập số lượng" },
+            { required: true, message: t("Vui lòng nhập số lượng", lang) },
             {
               type: "number",
               min: 1,
               max: 100000,
-              message: "Số lượng phải trong khoảng 1–100,000",
+              message: t("Số lượng phải trong khoảng 1–100,000", lang),
             },
           ]}
         >
@@ -161,13 +168,13 @@ export default function ImportStockModal({
             min={1}
             max={100000}
             style={{ width: "100%" }}
-            placeholder="Số lượng nhập"
+            placeholder={t("Số lượng nhập", lang)}
           />
         </Form.Item>
-        <Form.Item name="note" label="Ghi chú">
+        <Form.Item name="note" label={t("Ghi chú", lang)}>
           <Input.TextArea
             rows={2}
-            placeholder="(tuỳ chọn) Lý do nhập / số PO / NCC..."
+            placeholder={t("(tuỳ chọn) Lý do nhập / số PO / NCC...", lang)}
             maxLength={200}
           />
         </Form.Item>

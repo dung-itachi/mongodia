@@ -361,21 +361,21 @@ export default function MarketingInputSection({
   const handlePasteFromClipboard = useCallback(async () => {
     try {
       if (!navigator.clipboard?.readText) {
-        toast.warning("Trình duyệt không hỗ trợ đọc clipboard. Vui lòng dùng Ctrl+V.");
+        toast.warning(t("Trình duyệt không hỗ trợ đọc clipboard. Vui lòng dùng Ctrl+V.", lang));
         return;
       }
       const text = await navigator.clipboard.readText();
       if (!text.trim()) {
-        toast.warning("Clipboard trống");
+        toast.warning(t("Clipboard trống", lang));
         return;
       }
       setInputText(text);
-      toast.success("Đã dán dữ liệu từ clipboard");
+      toast.success(t("Đã dán dữ liệu từ clipboard", lang));
     } catch (err) {
       console.error("Clipboard read error:", err);
-      toast.warning("Không thể đọc clipboard. Vui lòng dùng Ctrl+V.");
+      toast.warning(t("Không thể đọc clipboard. Vui lòng dùng Ctrl+V.", lang));
     }
-  }, []);
+  }, [lang]);
 
   // Handle manual order add
   const handleManualOrderAdd = useCallback(() => {
@@ -383,7 +383,7 @@ export default function MarketingInputSection({
       const { facebookPageId, customerName, phone, address, note, productId, comboId, orderDate: formOrderDate } = values;
 
       if (!facebookPageId) {
-        toast.warning("Vui lòng chọn trang Facebook");
+        toast.warning(t("Vui lòng chọn trang Facebook", lang));
         return;
       }
 
@@ -418,13 +418,13 @@ export default function MarketingInputSection({
       };
 
       setStagedLeads(prev => [...prev, newLead]);
-      toast.success("Đã thêm đơn hàng thủ công");
+      toast.success(t("Đã thêm đơn hàng thủ công", lang));
       manualOrderForm.resetFields();
       setManualOrderOpen(false);
     }).catch(() => {
       // Validation failed
     });
-  }, [facebookPages, comboMap, categories, manualOrderForm]);
+  }, [facebookPages, comboMap, categories, manualOrderForm, lang]);
 
   // Handle quick product created
   const handleQuickProductCreated = useCallback(
@@ -448,13 +448,13 @@ export default function MarketingInputSection({
   const handleParseLeads = useCallback(() => {
     // Chỉ cần chọn Facebook page là được điền (sản phẩm có thể nằm trong form)
     if (!selectedFacebookPageId) {
-      toast.warning("Vui lòng chọn trang Facebook trước");
+      toast.warning(t("Vui lòng chọn trang Facebook trước", lang));
       return;
     }
 
     const lines = inputText.trim().split("\n").filter((l) => l.trim());
     if (lines.length === 0) {
-      toast.warning("Vui lòng nhập thông tin lead");
+      toast.warning(t("Vui lòng nhập thông tin lead", lang));
       return;
     }
 
@@ -887,13 +887,13 @@ export default function MarketingInputSection({
         if (selectedProductName && autoProductName &&
             selectedProductName.toLowerCase() !== autoProductName.toLowerCase()) {
           warnings.push(
-            `Sản phẩm "${autoProductName}" trong dữ liệu KHÔNG khớp sản phẩm đang chọn "${selectedProductName}"`
+            `${t("Sản phẩm", lang)} "${autoProductName}" ${t("trong dữ liệu KHÔNG khớp sản phẩm đang chọn", lang)} "${selectedProductName}"`
           );
         }
         // Nếu parsed combo khác với selectedCombo → warn
         if (autoCombo && autoCombo._id !== selectedCombo._id) {
           warnings.push(
-            `Combo "${autoCombo.name}" trong dữ liệu KHÔNG khớp combo đang chọn "${selectedCombo.name}"`
+            `${t("Combo", lang)} "${autoCombo.name}" ${t("trong dữ liệu KHÔNG khớp combo đang chọn", lang)} "${selectedCombo.name}"`
           );
         }
       } else if (selectedProductId && selectedProductName) {
@@ -913,8 +913,8 @@ export default function MarketingInputSection({
                    autoCombo.productId !== selectedProductId) {
           // autoCombo thuộc product khác → warn, KHÔNG fallback về combo đầu tiên
           warnings.push(
-            `Combo "${autoCombo.name}" thuộc sản phẩm "${autoCombo.productName || "?"}" ` +
-            `KHÔNG khớp sản phẩm đang chọn "${selectedProductName}"`
+            `${t("Combo", lang)} "${autoCombo.name}" ${t("thuộc sản phẩm", lang)} "${autoCombo.productName || "?"}" ` +
+            `${t("KHÔNG khớp sản phẩm đang chọn", lang)} "${selectedProductName}"`
           );
           // KHÔNG gán combo → giữ trống để user tự chọn
         }
@@ -923,7 +923,7 @@ export default function MarketingInputSection({
         // Nếu parsed product khác → warn
         if (autoProductName && autoProductName.toLowerCase() !== selectedProductName.toLowerCase()) {
           warnings.push(
-            `Sản phẩm "${autoProductName}" trong dữ liệu KHÔNG khớp sản phẩm đang chọn "${selectedProductName}"`
+            `${t("Sản phẩm", lang)} "${autoProductName}" ${t("trong dữ liệu KHÔNG khớp sản phẩm đang chọn", lang)} "${selectedProductName}"`
           );
         }
       } else {
@@ -1004,7 +1004,7 @@ export default function MarketingInputSection({
         if (combo) {
           newLeads.push({
             id: `staged-${leadIdCounter++}`,
-            customerName: name || "Khách hàng",
+            customerName: name || t("Khách hàng", lang),
             phone,
             address: address || undefined,
             source: LeadSource.FACEBOOK_COMMENT,
@@ -1025,7 +1025,7 @@ export default function MarketingInputSection({
           // Vẫn push lead với error để user thấy trong staging
           newLeads.push({
             id: `staged-${leadIdCounter++}`,
-            customerName: name || "Khách hàng",
+            customerName: name || t("Khách hàng", lang),
             phone,
             address: address || undefined,
             source: LeadSource.FACEBOOK_COMMENT,
@@ -1159,11 +1159,9 @@ export default function MarketingInputSection({
       // Báo cụ thể dòng bị skip + gợi ý lý do để user tự debug
       const sampleText = skippedSamples.join("\n• ");
       toast.warning(
-        `Đã thêm ${newLeads.length} lead, BỎ QUA ${skippedCount} dòng thiếu phone.\n` +
-          `Mẫu:\n• ${sampleText}\n` +
-          `💡 Phone phải là 6-11 chữ số liên tục (vd "96621013"). ` +
-          `Nếu paste từ nguồn không có tab, hệ thống sẽ tự tìm phone bằng regex — ` +
-          `đảm bảo có ít nhất 1 chuỗi số điện thoại rõ ràng trong dòng.`,
+        `${t("Đã thêm", lang)} ${newLeads.length} ${t("lead, BỎ QUA", lang)} ${skippedCount} ${t("dòng thiếu phone.", lang)}\n` +
+          `${t("Mẫu:", lang)}\n• ${sampleText}\n` +
+          `💡 ${t("Phone phải là 6-11 chữ số liên tục", lang)} (vd "96621013"). ${t("Nếu paste từ nguồn không có tab, hệ thống sẽ tự tìm phone bằng regex — đảm bảo có ít nhất 1 chuỗi số điện thoại rõ ràng trong dòng.", lang)}`,
         8
       );
     } else if (errorCount > 0) {
@@ -1195,7 +1193,7 @@ export default function MarketingInputSection({
           : "");
       toast.warning(warningText, 8);
     }
-  }, [inputText, inputType, selectedCombo, selectedProductId, selectedProductName, comboByNameMap, selectedFacebookPageId, facebookPages]);
+  }, [inputText, inputType, selectedCombo, selectedProductId, selectedProductName, comboByNameMap, selectedFacebookPageId, facebookPages, lang]);
 
   // Handle remove staged lead
   const handleRemoveStagedLead = useCallback((id: string) => {
@@ -1205,8 +1203,8 @@ export default function MarketingInputSection({
   // Handle clear all staged leads
   const handleClearAll = useCallback(() => {
     setStagedLeads([]);
-    toast.success("Đã xóa tất cả leads trong staging");
-  }, []);
+    toast.success(t("Đã xóa tất cả leads trong staging", lang));
+  }, [lang]);
 
   // Sprint 8.x: Mở modal sửa lead
   const handleOpenEditLead = useCallback((lead: StagedLead) => {
@@ -1259,36 +1257,36 @@ export default function MarketingInputSection({
             : l
         )
       );
-      toast.success("Đã cập nhật đơn hàng");
+      toast.success(t("Đã cập nhật đơn hàng", lang));
       setEditLeadModalOpen(false);
       setEditingLead(null);
       editLeadForm.resetFields();
     });
-  }, [editingLead, editLeadForm, categories, comboMap]);
+  }, [editingLead, editLeadForm, categories, comboMap, lang]);
 
   // Handle push to Sale - SPRINT 8.5.2 ENHANCED
   const handlePushToSale = useCallback(async () => {
     if (stagedLeads.length === 0) {
-      toast.warning("Không có lead nào để đẩy");
+      toast.warning(t("Không có lead nào để đẩy", lang));
       return;
     }
 
     const leadsWithoutFacebookPage = stagedLeads.filter((lead) => !lead.facebookPageId);
     if (leadsWithoutFacebookPage.length > 0) {
-      toast.error("Vui lòng chọn trang Facebook cho tất cả lead trước khi đẩy");
+      toast.error(t("Vui lòng chọn trang Facebook cho tất cả lead trước khi đẩy", lang));
       return;
     }
 
     // Filter out leads with errors
     const validLeads = stagedLeads.filter((l) => !l.error);
     if (validLeads.length === 0) {
-      toast.error("Tất cả leads đều có lỗi, không thể đẩy");
+      toast.error(t("Tất cả leads đều có lỗi, không thể đẩy", lang));
       return;
     }
 
     if (validLeads.length < stagedLeads.length) {
       toast.warning(
-        `Bỏ qua ${stagedLeads.length - validLeads.length} leads có lỗi`
+        `${t("Bỏ qua", lang)} ${stagedLeads.length - validLeads.length} ${t("leads có lỗi", lang)}`
       );
     }
 
@@ -1320,7 +1318,7 @@ export default function MarketingInputSection({
     }
 
     if (leadIds.length === 0) {
-      toast.error("Không thể tạo leads");
+      toast.error(t("Không thể tạo leads", lang));
       return;
     }
 
@@ -1328,17 +1326,17 @@ export default function MarketingInputSection({
     try {
       const result = await pushToSaleMutation.mutateAsync({ leadIds });
       setStagedLeads([]);
-      toast.success(`Đã đẩy ${result?.pushedCount ?? leadIds.length} lead sang Sale`);
+      toast.success(`${t("Đã đẩy", lang)} ${result?.pushedCount ?? leadIds.length} ${t("lead sang Sale", lang)}`);
       onLeadsCreated?.();
       refetchLeadsCount();
     } catch (err) {
       // Log chi tiết lỗi để debug
       console.error("Push to sale error:", err);
       const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error).message;
-      toast.error(`Lỗi khi đẩy sang Sale: ${errorMessage}`);
+      toast.error(`${t("Lỗi khi đẩy sang Sale:", lang)} ${errorMessage}`);
       // Giữ stagedLeads để user có thể thử lại
     }
-  }, [stagedLeads, createLeadMutation, pushToSaleMutation, onLeadsCreated, refetchLeadsCount]);
+  }, [stagedLeads, createLeadMutation, pushToSaleMutation, onLeadsCreated, refetchLeadsCount, lang]);
 
   // ============================================================
   // RENDER
@@ -1355,7 +1353,7 @@ export default function MarketingInputSection({
       <div className={styles.statsRow}>
         <div className={styles.statCard}>
           <div className={styles.statValue}>{stats.leadCount}</div>
-          <div className={styles.statLabel}>Đã đẩy</div>
+          <div className={styles.statLabel}>{t("Đã đẩy", lang)}</div>
         </div>
         <div className={styles.statCard}>
           <div
@@ -1364,14 +1362,14 @@ export default function MarketingInputSection({
           >
             {stats.stagingCount}
           </div>
-          <div className={styles.statLabel}>Staging ⬆</div>
+          <div className={styles.statLabel}>{t("Staging", lang)} ⬆</div>
         </div>
         {stats.errorCount > 0 && (
           <div className={styles.statCard}>
             <div className={styles.statValue} style={{ color: "#ff4d4f" }}>
               {stats.errorCount}
             </div>
-            <div className={styles.statLabel}>Lỗi ⚠</div>
+            <div className={styles.statLabel}>{t("Lỗi", lang)} ⚠</div>
           </div>
         )}
       </div>
@@ -1403,7 +1401,7 @@ export default function MarketingInputSection({
               optionFilterProp="label"
               disabled={pagesLoading || facebookPages.length === 0}
               notFoundContent={
-                pagesLoading ? null : "Không có trang nào đang hoạt động"
+                pagesLoading ? null : t("Không có trang nào đang hoạt động", lang)
               }
             >
               {facebookPages.map((page) => (
@@ -1447,16 +1445,15 @@ export default function MarketingInputSection({
             <Button
               icon={<PlusOutlined />}
               onClick={() => setFacebookPageDrawerOpen(true)}
-              aria-label="Tạo Facebook Page"
+              aria-label={t("Tạo Facebook Page", lang)}
               title={t("Tạo Facebook Page", lang)}
             >
-              Tạo mới
+              {t("Tạo mới", lang)}
             </Button>
           </div>
           {selectedFacebookPageId && (
             <div className={styles.facebookPageHint}>
-              Tất cả lead paste phía dưới sẽ được gắn với trang đã chọn cho đến
-              khi bạn đổi trang khác.
+              {t("Tất cả lead paste phía dưới sẽ được gắn với trang đã chọn cho đến khi bạn đổi trang khác.", lang)}
             </div>
           )}
         </div>
@@ -1473,14 +1470,14 @@ export default function MarketingInputSection({
       <Card
         title={
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>① Chọn sản phẩm</span>
+            <span>① {t("Chọn sản phẩm", lang)}</span>
             <Button
               type="default"
               size="small"
               icon={<PlusOutlined />}
               onClick={() => setQuickProductDrawerOpen(true)}
             >
-              Thêm nhanh
+              {t("Thêm nhanh", lang)}
             </Button>
           </div>
         }
@@ -1489,7 +1486,7 @@ export default function MarketingInputSection({
       >
         {categoriesError && (
           <div className={styles.empty} style={{ color: "#ff4d4f", marginBottom: 8 }}>
-            Lỗi: {categoriesError}
+            {t("Lỗi:", lang)} {categoriesError}
           </div>
         )}
 
@@ -1523,7 +1520,7 @@ export default function MarketingInputSection({
                 (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
               }
               options={[
-                { value: "all", label: `Tất cả danh mục (${categories.length})` },
+                { value: "all", label: `${t("Tất cả danh mục", lang)} (${categories.length})` },
                 ...categories.map((c) => ({
                   value: c._id,
                   label: `${c.name} (${c.products.length})`,
@@ -1535,11 +1532,11 @@ export default function MarketingInputSection({
               onChange={setProductSort}
               style={{ minWidth: 160 }}
               options={[
-                { value: "newest", label: "Mới tạo nhất" },
-                { value: "oldest", label: "Cũ nhất" },
-                { value: "name-asc", label: "Tên A → Z" },
-                { value: "name-desc", label: "Tên Z → A" },
-                { value: "code", label: "Mã sản phẩm" },
+                { value: "newest", label: t("Mới tạo nhất", lang) },
+                { value: "oldest", label: t("Cũ nhất", lang) },
+                { value: "name-asc", label: t("Tên A → Z", lang) },
+                { value: "name-desc", label: t("Tên Z → A", lang) },
+                { value: "code", label: t("Mã sản phẩm", lang) },
               ]}
             />
           </div>
@@ -1553,14 +1550,14 @@ export default function MarketingInputSection({
               marginBottom: 8,
             }}
           >
-            Hiển thị {filteredProductsCount}/{totalProductsCount} sản phẩm
+            {t("Hiển thị", lang)} {filteredProductsCount}/{totalProductsCount} {t("sản phẩm", lang)}
             {productSearch && (
               <Button
                 type="link"
                 size="small"
                 onClick={() => setProductSearch("")}
               >
-                Xóa tìm kiếm
+                {t("Xóa tìm kiếm", lang)}
               </Button>
             )}
           </div>
@@ -1588,7 +1585,7 @@ export default function MarketingInputSection({
               return (
                 <div key={category._id} className={styles.productCategory}>
                   <div className={styles.categoryName}>
-                    {category.name || "Khác"}
+                    {category.name || t("Khác", lang)}
                     <span style={{ fontSize: 11, color: "#999", marginLeft: 6 }}>
                       ({category.products.length})
                     </span>
@@ -1737,7 +1734,7 @@ export default function MarketingInputSection({
             icon={<PlusOutlined />}
             onClick={() => setManualOrderOpen(true)}
           >
-            Nhập đơn hàng thủ công
+            {t("Nhập đơn hàng thủ công", lang)}
           </Button>
         }
       >
@@ -1748,9 +1745,9 @@ export default function MarketingInputSection({
             }`}
             onClick={() => handleInputTypeChange("comment")}
           >
-            📝 Comment
+            📝 {t("Comment", lang)}
             <div className={styles.inputHint}>
-              {columnMapping.getLayout("comment").map(k => COLUMN_FIELD_LABELS[k]).join(" · ")}
+              {columnMapping.getLayout("comment").map(k => t(COLUMN_FIELD_LABELS[k] ?? "", lang)).join(" · ")}
             </div>
           </button>
           <button
@@ -1759,9 +1756,9 @@ export default function MarketingInputSection({
             }`}
             onClick={() => handleInputTypeChange("ladi")}
           >
-            🌐 Landing
+            🌐 {t("Landing", lang)}
             <div className={styles.inputHint}>
-              {columnMapping.getLayout("ladi").map(k => COLUMN_FIELD_LABELS[k]).join(" · ")}
+              {columnMapping.getLayout("ladi").map(k => t(COLUMN_FIELD_LABELS[k] ?? "", lang)).join(" · ")}
             </div>
           </button>
         </div>
@@ -1785,7 +1782,7 @@ export default function MarketingInputSection({
         )}
 
         <div className={styles.inputActions}>
-          <Tooltip title={!selectedFacebookPageId ? "Vui lòng chọn trang Facebook" : !inputText.trim() ? "Nhập dữ liệu trước" : ""} mouseEnterDelay={0}>
+          <Tooltip title={!selectedFacebookPageId ? t("Vui lòng chọn trang Facebook", lang) : !inputText.trim() ? t("Nhập dữ liệu trước", lang) : ""} mouseEnterDelay={0}>
             <Popover
               content={<div style={{ width: 520, maxWidth: "90vw" }}><FieldOrderPreview inputType={inputType} /></div>}
               title={null}
@@ -1799,24 +1796,22 @@ export default function MarketingInputSection({
                 onClick={handleParseLeads}
                 disabled={!selectedFacebookPageId || !inputText.trim()}
               >
-                Phân loại
+                {t("Phân loại", lang)}
               </Button>
             </Popover>
           </Tooltip>
-          <Tooltip title={!selectedFacebookPageId ? "Vui lòng chọn trang Facebook" : ""} mouseEnterDelay={0}>
+          <Tooltip title={!selectedFacebookPageId ? t("Vui lòng chọn trang Facebook", lang) : ""} mouseEnterDelay={0}>
             <Button
               icon={<SnippetsOutlined />}
               onClick={handlePasteFromClipboard}
               disabled={!selectedFacebookPageId}
             >
-              Dán
+              {t("Dán", lang)}
             </Button>
           </Tooltip>
           <Button
             icon={<SettingOutlined />}
             onClick={() => {
-              // Mở modal với layout hiện tại của CẢ 2 mode (sync cả Landing
-              // dù user đang ở tab Comment, để có thể switch và sửa luôn).
               setColumnMappingDraft({
                 comment: columnMapping.getLayout("comment"),
                 ladi: columnMapping.getLayout("ladi"),
@@ -1826,10 +1821,10 @@ export default function MarketingInputSection({
             }}
             title={t("Cấu hình thứ tự cột khi dán", lang)}
           >
-            Cấu hình cột
+            {t("Cấu hình cột", lang)}
           </Button>
           <Button onClick={() => setInputText("")} disabled={!inputText}>
-            Xóa
+            {t("Xóa", lang)}
           </Button>
         </div>
       </Card>
@@ -1846,10 +1841,10 @@ export default function MarketingInputSection({
             <Button onClick={() => {
               setManualOrderOpen(false);
             }}>
-              Hủy
+              {t("Hủy", lang)}
             </Button>
             <Button type="primary" onClick={handleManualOrderAdd}>
-              Thêm vào staging
+              {t("Thêm vào staging", lang)}
             </Button>
           </Space>
         }
@@ -1943,8 +1938,8 @@ export default function MarketingInputSection({
               return (
                 <Form.Item
                   name="comboId"
-                  label="Combo"
-                  rules={[{ required: true, message: "Vui lòng chọn combo" }]}
+                  label={t("Combo", lang)}
+                  rules={[{ required: true, message: t("Vui lòng chọn combo", lang) }]}
                 >
                   <Select
                     placeholder={productId ? t("Chọn combo", lang) : t("Chọn sản phẩm trước", lang)}
@@ -1986,7 +1981,7 @@ export default function MarketingInputSection({
 
       {/* Sprint 8.x: Modal sửa đơn hàng trong staging */}
       <Modal
-        title={`Sửa đơn hàng — STT: ${editingLead ? stagedLeads.indexOf(editingLead) + 1 : ""}`}
+        title={`${t("Sửa đơn hàng", lang)} — STT: ${editingLead ? stagedLeads.indexOf(editingLead) + 1 : ""}`}
         open={editLeadModalOpen}
         onOk={handleSaveEditLead}
         onCancel={() => {
@@ -1994,8 +1989,8 @@ export default function MarketingInputSection({
           setEditingLead(null);
           editLeadForm.resetFields();
         }}
-        okText="Lưu"
-        cancelText="Hủy"
+        okText={t("Lưu", lang)}
+        cancelText={t("Hủy", lang)}
         width={480}
       >
         <Form
@@ -2126,7 +2121,7 @@ export default function MarketingInputSection({
           title={
             <div className={styles.stagingHeader}>
               <span className={styles.stagingCount}>{stagedLeads.length}</span>
-              <span>Đang staging</span>
+              <span>{t("Đang staging", lang)}</span>
               <div className={styles.stagingStats}>
                 <span>📝{stats.commentCount}</span>
                 <span>🌐{stats.ladiCount}</span>
@@ -2147,14 +2142,14 @@ export default function MarketingInputSection({
                 disabled={stagingPhones.length === 0}
                 title={t("Tra cứu tất cả SĐT trong staging để biết khách cũ / khách mới", lang)}
               >
-                Check khách loạt ({stagingPhones.length})
+                {t("Check khách loạt", lang)} ({stagingPhones.length})
               </Button>
               <Button
                 size="small"
                 icon={<ClearOutlined />}
                 onClick={handleClearAll}
               >
-                Xóa
+                {t("Xóa", lang)}
               </Button>
               <Button
                 type="primary"
@@ -2164,7 +2159,7 @@ export default function MarketingInputSection({
                 }
                 onClick={handlePushToSale}
               >
-                Đẩy sang Sale ({stagedLeads.filter((l) => !l.error).length})
+                {t("Đẩy sang Sale", lang)} ({stagedLeads.filter((l) => !l.error).length})
               </Button>
             </div>
           }
@@ -2173,17 +2168,17 @@ export default function MarketingInputSection({
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 60 }}>Thao tác</th>
-                  <th>Ảnh page</th>
+                  <th style={{ width: 60 }}>{t("Thao tác", lang)}</th>
+                  <th>{t("Ảnh page", lang)}</th>
                   <th>#</th>
-                  <th>Nguồn</th>
-                  <th>Sản phẩm</th>
-                  <th>Tên</th>
-                  <th>SĐT</th>
-                  <th>Địa chỉ</th>
-                  <th>Combo</th>
-                  <th>Giá</th>
-                  <th>TG Đặt</th>
+                  <th>{t("Nguồn", lang)}</th>
+                  <th>{t("Sản phẩm", lang)}</th>
+                  <th>{t("Tên", lang)}</th>
+                  <th>{t("SĐT", lang)}</th>
+                  <th>{t("Địa chỉ", lang)}</th>
+                  <th>{t("Combo", lang)}</th>
+                  <th>{t("Giá", lang)}</th>
+                  <th>{t("TG Đặt", lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -2245,8 +2240,8 @@ export default function MarketingInputSection({
                         }`}
                       >
                         {lead.source === LeadSource.FACEBOOK_COMMENT
-                          ? "Comment"
-                          : "Landing"}
+                          ? t("Comment", lang)
+                          : t("Landing", lang)}
                       </span>
                     </td>
                     <td>{lead.productName || "-"}</td>

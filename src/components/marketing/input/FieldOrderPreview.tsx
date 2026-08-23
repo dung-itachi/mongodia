@@ -68,7 +68,7 @@ export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps)
   const lang = useLanguageStore((s) => s.language);
   const fields = inputType === "comment" ? COMMENT_FIELDS : LADI_FIELDS;
   const example = EXAMPLE_BY_MODE[inputType];
-  const modeLabel = MODE_LABEL[inputType];
+  const modeLabel = inputType === "comment" ? t("Comment", lang) : t("Landing", lang);
 
   return (
     <div>
@@ -87,7 +87,7 @@ export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps)
               }`}
               title={f.required ? t("Bắt buộc", lang) : t("Tùy chọn", lang)}
             >
-              {idx + 1}. {f.label}
+              {idx + 1}. {t(f.label, lang)}
             </span>
             {idx < fields.length - 1 && <span className={styles.separator}>›</span>}
           </span>
@@ -123,7 +123,7 @@ export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps)
                   f.key === "address" ? styles.addressAccent : ""
                 }`}
               >
-                {f.label}
+                {t(f.label, lang)}
               </span>
             </span>
           ))}
@@ -141,7 +141,7 @@ export default function FieldOrderPreview({ inputType }: FieldOrderPreviewProps)
                     f.key === "address" ? styles.addressAccent : ""
                   }`}
                 >
-                  {f.label}:
+                  {t(f.label, lang)}:
                 </span>
                 <span className={styles.exampleValue}>{value}</span>
               </div>

@@ -49,9 +49,9 @@ function QuickActionsInner({ data }: QuickActionsProps) {
             key={action.id}
             icon={ICON_MAP[action.icon] ?? null}
             size="large"
-            aria-label={`${t("Tạo mới", lang)} ${action.label}`}
+            aria-label={`${t("Tạo mới", lang)} ${t(action.label, lang)}`}
           >
-            {action.label}
+            {t(action.label, lang)}
           </Button>
         ))}
       </Space>

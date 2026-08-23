@@ -95,10 +95,10 @@ export default function ColumnMappingModal({
     () =>
       COLUMN_FIELDS.map((f) => ({
         value: f.key,
-        label: f.label,
+        label: t(f.label, lang),
         disabled: false,
       })),
-    []
+    [lang]
   );
 
   // Các field đã dùng → disable option tương ứng trong dropdown (trừ hàng hiện tại)
@@ -301,9 +301,12 @@ export default function ColumnMappingModal({
   // Tính preview: Tên · SĐT · Đ/c · ...
   const previewText = useMemo(() => {
     return layout
-      .map((key) => COLUMN_FIELDS.find((f) => f.key === key)?.label ?? key)
+      .map((key) => {
+        const field = COLUMN_FIELDS.find((f) => f.key === key);
+        return field ? t(field.label, lang) : key;
+      })
       .join(" · ");
-  }, [layout]);
+  }, [layout, lang]);
 
   // Validate phone luôn có mặt
   const hasPhone = layout.includes("phone");
