@@ -17,5 +17,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const body = await request.json() as { receivedQuantities?: number[]; note?: string };
     const updated = await warehouseWorkflowService.receiveTransfer({ transferId: id, receivedQuantities: body.receivedQuantities ?? [], note: body.note, employeeId: currentUser.employee._id.toString() });
     return success(updated, "Nhận chuyển kho thành công");
-  } catch (cause) { return error(cause instanceof Error ? cause.message : "Không thể nhận chuyển kho", 400); }
+  } catch (cause) {
+    // Map atomic-guard conflict to HTTP 409 instead of generic 400.
+    const status = (cause as { status?: number } | null)?.status;
+    if (status === 409) return error(cause instanceof Error ? cause.message : "Phiếu chuyển không thể nhận", 409);
+    return error(cause instanceof Error ? cause.message : "Không thể nhận chuyển kho", 400);
+  }
 }

@@ -166,7 +166,7 @@ describe("Phase 3: RESERVE Stock (WarehouseInventory SoT)", () => {
     // Reserve 30 units
     const results = await reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 30 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 30 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -200,7 +200,7 @@ describe("Phase 3: RESERVE Stock (WarehouseInventory SoT)", () => {
     await expect(
       reserveStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 30 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 30 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -221,7 +221,7 @@ describe("Phase 3: RESERVE Stock (WarehouseInventory SoT)", () => {
     await expect(
       reserveStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 5 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -238,7 +238,7 @@ describe("Phase 3: RESERVE Stock (WarehouseInventory SoT)", () => {
 
     await reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: reserveQty }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: reserveQty }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -268,7 +268,7 @@ describe("Phase 3: UNRESERVE Stock (WarehouseInventory SoT)", () => {
     // Unreserve 30 units
     const results = await releaseReservedStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 30 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 30 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -298,7 +298,7 @@ describe("Phase 3: UNRESERVE Stock (WarehouseInventory SoT)", () => {
     await expect(
       releaseReservedStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 30 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 30 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -319,7 +319,7 @@ describe("Phase 3: UNRESERVE Stock (WarehouseInventory SoT)", () => {
     await expect(
       releaseReservedStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 5 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -341,22 +341,22 @@ describe("Phase 3: Concurrency", () => {
 
     // 4 concurrent reserves: 4, 4, 4, 4 = total 16, but only 15 available
     const promises = [
-      reserveStock(warehouseA.toString(), [{ productVariantId: variantId.toString(), quantity: 4 }], {
+      reserveStock(warehouseA.toString(), [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 4 }], {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
         referenceCode: "TEST308a",
       }),
-      reserveStock(warehouseA.toString(), [{ productVariantId: variantId.toString(), quantity: 4 }], {
+      reserveStock(warehouseA.toString(), [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 4 }], {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
         referenceCode: "TEST308b",
       }),
-      reserveStock(warehouseA.toString(), [{ productVariantId: variantId.toString(), quantity: 4 }], {
+      reserveStock(warehouseA.toString(), [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 4 }], {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
         referenceCode: "TEST308c",
       }),
-      reserveStock(warehouseA.toString(), [{ productVariantId: variantId.toString(), quantity: 4 }], {
+      reserveStock(warehouseA.toString(), [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 4 }], {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
         referenceCode: "TEST308d",
@@ -377,7 +377,7 @@ describe("Phase 3: Concurrency", () => {
     await createWarehouseInventoryRecord(warehouseA, variantId, productId, 100, 0);
 
     // Reserve 50
-    await reserveStock(warehouseA.toString(), [{ productVariantId: variantId.toString(), quantity: 50 }], {
+    await reserveStock(warehouseA.toString(), [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 50 }], {
       actorEmployeeId: employeeId.toString(),
       referenceType: "ORDER",
       referenceCode: "TEST309",
@@ -388,7 +388,7 @@ describe("Phase 3: Concurrency", () => {
     expect(wi?.availableQuantity).toBe(50);
 
     // Unreserve 30
-    await releaseReservedStock(warehouseA.toString(), [{ productVariantId: variantId.toString(), quantity: 30 }], {
+    await releaseReservedStock(warehouseA.toString(), [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 30 }], {
       actorEmployeeId: employeeId.toString(),
       referenceType: "ORDER",
       referenceCode: "TEST309",
@@ -427,8 +427,8 @@ describe("Phase 3: Transaction Rollback", () => {
       reserveStock(
         warehouseA.toString(),
         [
-          { productVariantId: variantId.toString(), quantity: 50 },
-          { productVariantId: variant2._id.toString(), quantity: 100 },
+          { itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 50 },
+          { itemType: "PRODUCT", productVariantId: variant2._id.toString(), quantity: 100 },
         ],
         {
           actorEmployeeId: employeeId.toString(),
@@ -455,7 +455,7 @@ describe("Phase 3: History Tracking", () => {
   it("[K] Should create history record for reserve", async () => {
     await createWarehouseInventoryRecord(warehouseA, variantId, productId, 100, 0);
 
-    await reserveStock(warehouseA.toString(), [{ productVariantId: variantId.toString(), quantity: 25 }], {
+    await reserveStock(warehouseA.toString(), [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 25 }], {
       actorEmployeeId: employeeId.toString(),
       referenceType: "ORDER",
       referenceCode: "TEST311",
@@ -469,7 +469,7 @@ describe("Phase 3: History Tracking", () => {
   it("[L] Should create history record for unreserve", async () => {
     await createWarehouseInventoryRecord(warehouseA, variantId, productId, 100, 25);
 
-    await releaseReservedStock(warehouseA.toString(), [{ productVariantId: variantId.toString(), quantity: 15 }], {
+    await releaseReservedStock(warehouseA.toString(), [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 15 }], {
       actorEmployeeId: employeeId.toString(),
       referenceType: "ORDER",
       referenceCode: "TEST312",

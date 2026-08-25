@@ -2,22 +2,29 @@
  * ImportStockModal Component
  *
  * Modal "Nhập" theo `mongolia-crm (7).html` — nhập thêm SL cho 1 sản phẩm
- * (variant) trong kho.
+ * (variant) trong đúng 1 kho.
  *
  *   Nhập — {productCode} · {productName}
+ *   [ Kho đích ]                     ← chọn KHO1 (kho trung gian)
  *   [ Variant dropdown (SKU) ]
  *   [ SL (number) ]
  *   [ Ghi chú ]
  *   [Huỷ] [Nhập]
  *
- * Nhập theo VARIANT (productVariantId) — không phải combo. Mỗi sản phẩm có
- * thể có nhiều variant, người dùng chọn variant cụ thể rồi nhập SL.
+ * Business rule:
+ *   IMPORT phải đi vào đúng 1 kho. Theo luồng hợp lệ, IMPORT từ nhà sản
+ *   xuất phải vào KHO1 (kho trung gian). Nếu muốn KHO2 (kho chính bán
+ *   hàng) tăng tồn, tạo WarehouseTransfer KHO1 → KHO2.
+ *
+ * Path dữ liệu: WarehouseInventory + WarehouseStockMovement (IMPORT)
+ * qua POST /api/warehouse/imports.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal, Select, Input, InputNumber, Form, Alert, App } from "antd";
 import type { WarehouseOverviewItem } from "@/hooks/useWarehouseInventoryOverview";
 import { useWarehouseProductVariantOptions } from "@/hooks/useWarehouseProductVariantOptions";
+import { useWarehouses } from "@/hooks/useWarehouses";
 import { useImportProductStock } from "@/hooks/useImportProductStock";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
@@ -25,11 +32,14 @@ import { t } from "@/lib/i18n";
 export type ImportStockModalProps = {
   open: boolean;
   product: WarehouseOverviewItem | null;
+  /** Kho đích mặc định từ filter overview (nếu user đã chọn kho) */
+  warehouseId?: string;
   onClose: () => void;
   onSuccess?: () => void;
 };
 
 type FormValues = {
+  warehouseId: string;
   productVariantId: string;
   quantity: number;
   note?: string;
@@ -38,6 +48,7 @@ type FormValues = {
 export default function ImportStockModal({
   open,
   product,
+  warehouseId,
   onClose,
   onSuccess,
 }: ImportStockModalProps) {
@@ -47,8 +58,17 @@ export default function ImportStockModal({
   const { variants, loading: variantsLoading } = useWarehouseProductVariantOptions(
     open && product ? product.productId : null
   );
+  const { warehouses: allWarehouses } = useWarehouses();
   const { mutateAsync, isPending, reset } = useImportProductStock();
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const warehouseOptions = useMemo(
+    () =>
+      allWarehouses
+        .filter((w) => w.isActive)
+        .map((w) => ({ value: w._id, label: `${w.code} · ${w.name}` })),
+    [allWarehouses]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -70,16 +90,24 @@ export default function ImportStockModal({
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
+      if (!values.warehouseId) {
+        setSubmitError("Vui lòng chọn kho đích IMPORT");
+        return;
+      }
       setSubmitError(null);
       const result = await mutateAsync({
+        warehouseId: values.warehouseId,
         productVariantId: values.productVariantId,
         quantity: values.quantity,
         note: values.note ?? "",
       });
       message.success(
-        t("Đã nhập {qty} vào {count} kho", lang)
-          .replace("{qty}", String(result.totalChange))
-          .replace("{count}", String(result.updatedWarehouses))
+        t("Đã nhập {qty} vào kho ({code})", lang)
+          .replace("{qty}", String(result.movements[0]?.afterQuantity ?? values.quantity))
+          .replace(
+            "{code}",
+            warehouseOptions.find((w) => w.value === values.warehouseId)?.label ?? values.warehouseId
+          )
       );
       onSuccess?.();
       onClose();
@@ -124,8 +152,33 @@ export default function ImportStockModal({
         form={form}
         layout="vertical"
         requiredMark="optional"
-        initialValues={{ quantity: 1, note: "" }}
+        initialValues={{
+          quantity: 1,
+          note: "",
+          warehouseId: warehouseId ?? undefined,
+        }}
       >
+        <Form.Item
+          name="warehouseId"
+          label={t("Kho đích IMPORT", lang)}
+          rules={[{ required: true, message: t("Vui lòng chọn kho", lang) }]}
+          extra={t(
+            "Nhập từ nhà sản xuất phải vào KHO1 (kho trung gian). Muốn KHO2 tăng tồn, tạo WarehouseTransfer.",
+            lang
+          )}
+        >
+          <Select
+            showSearch
+            placeholder={t("Chọn kho đích", lang)}
+            options={warehouseOptions}
+            disabled={isPending || warehouseOptions.length === 0}
+            filterOption={(input, option) =>
+              String(option?.label ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+            }
+          />
+        </Form.Item>
         <Form.Item
           name="productVariantId"
           label={t("Variant (SKU)", lang)}
@@ -174,7 +227,7 @@ export default function ImportStockModal({
         <Form.Item name="note" label={t("Ghi chú", lang)}>
           <Input.TextArea
             rows={2}
-            placeholder={t("(tuỳ chọn) Lý do nhập / số PO / NCC...", lang)}
+            placeholder={t("(tuỳ biến) Lý do nhập / số PO / NCC...", lang)}
             maxLength={200}
           />
         </Form.Item>

@@ -353,6 +353,7 @@ export default function WarehousesPage() {
 
       <QuickCreateProductDrawer
         open={addProductOpen}
+        warehouseId={overviewWarehouseId}
         onClose={() => setAddProductOpen(false)}
         onSuccess={() => {
           refetchOverview();

@@ -216,7 +216,7 @@ describe("Atomic Reserve Dual-Write", () => {
     // Reserve 5 units
     const results = await reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 5 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -243,7 +243,7 @@ describe("Atomic Reserve Dual-Write", () => {
     await expect(
       reserveStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 10 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 10 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -264,7 +264,7 @@ describe("Atomic Reserve Dual-Write", () => {
     // Reserve 5 units
     await reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 5 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -301,7 +301,7 @@ describe("Atomic Reserve Dual-Write", () => {
     await expect(
       reserveStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 5 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -331,7 +331,7 @@ describe("Atomic Reserve Dual-Write", () => {
     await expect(
       reserveStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 5 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -361,7 +361,7 @@ describe("Atomic Reserve Dual-Write", () => {
 
     await reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 5 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -393,7 +393,7 @@ describe("Atomic Unreserve Dual-Write", () => {
     // Unreserve 3 units
     const results = await releaseReservedStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 3 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 3 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -419,7 +419,7 @@ describe("Atomic Unreserve Dual-Write", () => {
     await expect(
       releaseReservedStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 5 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -440,7 +440,7 @@ describe("Atomic Unreserve Dual-Write", () => {
     // Unreserve 3 units
     await releaseReservedStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 3 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 3 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -474,7 +474,7 @@ describe("Atomic Unreserve Dual-Write", () => {
     await expect(
       releaseReservedStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 3 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 3 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -502,7 +502,7 @@ describe("Atomic Unreserve Dual-Write", () => {
     await expect(
       releaseReservedStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 3 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 3 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",
@@ -536,7 +536,7 @@ describe("Concurrent Operations", () => {
     // Simulate 3 concurrent reserve requests: 4, 3, 4 = total 11 (should only 2 succeed)
     const requestA = reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 4 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 4 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -546,7 +546,7 @@ describe("Concurrent Operations", () => {
 
     const requestB = reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 3 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 3 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -556,7 +556,7 @@ describe("Concurrent Operations", () => {
 
     const requestC = reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 4 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 4 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -598,7 +598,7 @@ describe("Concurrent Operations", () => {
     // Simulate 3 concurrent unreserve requests: 4, 3, 4 = total 11 (should only 2 succeed)
     const requestA = releaseReservedStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 4 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 4 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -608,7 +608,7 @@ describe("Concurrent Operations", () => {
 
     const requestB = releaseReservedStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 3 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 3 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -618,7 +618,7 @@ describe("Concurrent Operations", () => {
 
     const requestC = releaseReservedStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 4 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 4 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -661,7 +661,7 @@ describe("Idempotency", () => {
     // First reserve 10 units
     const result1 = await reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 10 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 10 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -690,7 +690,7 @@ describe("Idempotency", () => {
     // NOTE: True idempotency requires API layer tracking via queryNetReserved
     const result2 = await reserveStock(
       warehouseA.toString(),
-      [{ productVariantId: variantId.toString(), quantity: 10 }],
+      [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 10 }],
       {
         actorEmployeeId: employeeId.toString(),
         referenceType: "ORDER",
@@ -735,7 +735,7 @@ describe("Migration Prerequisites", () => {
     await expect(
       reserveStock(
         warehouseA.toString(),
-        [{ productVariantId: variantId.toString(), quantity: 5 }],
+        [{ itemType: "PRODUCT", productVariantId: variantId.toString(), quantity: 5 }],
         {
           actorEmployeeId: employeeId.toString(),
           referenceType: "ORDER",

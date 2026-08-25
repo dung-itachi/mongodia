@@ -47,30 +47,35 @@ import {
   useVariantValueList,
 } from "@/hooks/useVariants";
 import { useQuickCreateProduct } from "@/hooks/useQuickCreateProduct";
+import { useWarehouses } from "@/hooks/useWarehouses";
 import styles from "./warehouses.module.css";
 
 export type QuickCreateProductDrawerProps = {
   open: boolean;
+  /** Kho đích IMPORT (mặc định từ filter overview) */
+  warehouseId?: string;
   onClose: () => void;
   onSuccess?: () => void;
 };
 
 type FormValues = {
-  // Step 1
+  // Step 0
+  warehouseId: string;
   code: string;
   name: string;
   categoryCode: string;
   description?: string;
-  // Step 2
+  // Step 1
   sku: string;
   variantValues: string[];
-  // Step 3
+  // Step 2
   quantity: number;
   note?: string;
 };
 
 export default function QuickCreateProductDrawer({
   open,
+  warehouseId,
   onClose,
   onSuccess,
 }: QuickCreateProductDrawerProps) {
@@ -84,6 +89,14 @@ export default function QuickCreateProductDrawer({
   const { data: optionsData, isLoading: optionsLoading } =
     useVariantOptionList();
   const options = optionsData?.items ?? [];
+  const { warehouses: allWarehouses } = useWarehouses();
+  const warehouseOptions = useMemo(
+    () =>
+      allWarehouses
+        .filter((w) => w.isActive)
+        .map((w) => ({ value: w._id, label: `${w.code} · ${w.name}` })),
+    [allWarehouses]
+  );
 
   const { mutateAsync, isPending, reset } = useQuickCreateProduct();
 
@@ -152,7 +165,7 @@ const handleRemoveOption = (optionId: string) => {
   const handleNext = async () => {
     try {
       if (step === 0) {
-        await form.validateFields(["code", "name", "categoryCode"]);
+        await form.validateFields(["warehouseId", "code", "name", "categoryCode"]);
       } else if (step === 1) {
         await form.validateFields(["sku", "variantValues"]);
       }
@@ -172,8 +185,13 @@ const handleRemoveOption = (optionId: string) => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      if (!values.warehouseId) {
+        setSubmitError("Vui lòng chọn kho đích IMPORT");
+        return;
+      }
       setSubmitError(null);
       const result = await mutateAsync({
+        warehouseId: values.warehouseId,
         code: values.code,
         name: values.name,
         categoryCode: values.categoryCode,
@@ -184,7 +202,7 @@ const handleRemoveOption = (optionId: string) => {
         note: values.note,
       });
       message.success(
-        `Đã tạo "${result.productCode}" và nhập ${result.totalChange} vào ${result.updatedWarehouses} kho`
+        `Đã tạo "${result.productCode}" và nhập ${result.importedQuantity} (receipt ${result.receiptCode})`
       );
       onSuccess?.();
       onClose();
@@ -257,13 +275,36 @@ const handleRemoveOption = (optionId: string) => {
         form={form}
         layout="vertical"
         requiredMark="optional"
-        initialValues={{ quantity: 1, note: "", variantValues: [] }}
+        initialValues={{
+          quantity: 1,
+          note: "",
+          variantValues: [],
+          warehouseId: warehouseId ?? undefined,
+        }}
       >
         {step === 0 && (
           <>
             <Typography.Title level={5} style={{ marginTop: 0 }}>
               Thông tin sản phẩm
             </Typography.Title>
+            <Form.Item
+              name="warehouseId"
+              label="Kho đích IMPORT"
+              rules={[{ required: true, message: "Vui lòng chọn kho đích" }]}
+              extra="Nhập từ nhà sản xuất phải vào KHO1 (kho trung gian). Muốn KHO2 tăng tồn, tạo WarehouseTransfer KHO1 → KHO2."
+            >
+              <Select
+                showSearch
+                placeholder="Chọn kho đích IMPORT"
+                options={warehouseOptions}
+                disabled={isPending || warehouseOptions.length === 0}
+                filterOption={(input, option) =>
+                  String(option?.label ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              />
+            </Form.Item>
             <Form.Item
               name="code"
               label="Mã sản phẩm"

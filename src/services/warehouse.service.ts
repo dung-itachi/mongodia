@@ -18,7 +18,6 @@ import {
   isWarehouseTransitionAllowed,
   getAllowedWarehouseTransitions,
 } from "@/configs/warehouse-status.config";
-import { OrderStatus } from "@/constants/orderStatus";
 
 // ============================================================================
 // Types
@@ -48,6 +47,8 @@ export interface AssignEmployeeData {
 export interface ChangeStatusResult {
   success: true;
   task: unknown;
+  alreadyShipped?: boolean;
+  terminalStatus?: string;
 }
 
 export interface ChangeStatusError {
@@ -68,16 +69,6 @@ export interface CreateTaskError {
 // ============================================================================
 // Helpers
 // ============================================================================
-
-/**
- * Lazy import OrderService to avoid circular dependency.
- * order.service.ts imports warehouse.service.ts,
- * so warehouse.service.ts cannot directly import orderService.
- */
-async function getOrderService() {
-  const { orderService } = await import("@/services/order.service");
-  return orderService;
-}
 
 /**
  * Get full order document with orderItems and warehouseId.
@@ -174,14 +165,40 @@ export class WarehouseService {
     try {
       session.startTransaction();
 
-      // Update status
+      // Fetch the related order once — needed for both the terminal-status check
+      // and for the shipOrder call below.
+      const orderDoc = await getOrderDocument(task.orderId.toString());
+      if (!orderDoc) {
+        await session.abortTransaction();
+        return { success: false, error: "Không tìm thấy đơn hàng" };
+      }
+      if (!orderDoc.warehouseId) {
+        await session.abortTransaction();
+        return { success: false, error: "Đơn hàng chưa được gán kho, không thể xuất kho" };
+      }
+
+      // Idempotency: if the order is already in a terminal state (SHIPPING, DELIVERED,
+      // RETURNED, RECONCILED, CANCELLED), abort the entire WarehouseTask status change
+      // so we don't double-write the task history. This matches the behaviour of
+      // shipOrder() which also returns alreadyShipped: true and aborts.
+      const TERMINAL_STATUSES = new Set(["SHIPPING", "DELIVERED", "RETURNED", "RECONCILED", "CANCELLED"]);
+      if (TERMINAL_STATUSES.has(orderDoc.status)) {
+        await session.abortTransaction();
+        return {
+          success: true,
+          task,
+          alreadyShipped: true,
+          terminalStatus: orderDoc.status,
+        };
+      }
+
+      // ── 1. Update WarehouseTask status + history (inside the session) ──────
       const updatedTask = await warehouseRepository.changeStatus(taskId, newStatus, session);
       if (!updatedTask) {
         await session.abortTransaction();
         return { success: false, error: "Không thể cập nhật trạng thái" };
       }
 
-      // Record history
       await warehouseHistoryService.createStatusChangeHistory(
         {
           warehouseTaskId: taskId,
@@ -193,66 +210,39 @@ export class WarehouseService {
         session
       );
 
-      // Sync: Warehouse SHIPPED → Order SHIPPING + Ship via WarehouseInventory
-      if (newStatus === WarehouseStatus.SHIPPED) {
-        // Phase 3: Use shipOrder instead of exportOrder
-        // shipOrder updates WarehouseInventory (SoT) and creates stock movements
-        
-        const orderDoc = await getOrderDocument(task.orderId.toString());
-        if (!orderDoc) {
-          await session.abortTransaction();
-          return { success: false, error: "Không tìm thấy đơn hàng" };
-        }
+      // ── 2. Delegate to the canonical shipOrder operation ─────────────────────
+      // orderShipmentService.shipOrder() uses the existing session so everything
+      // (task update + history + inventory + order status + order history) commits
+      // atomically. It returns alreadyShipped: true only when the order was
+      // already terminal before we updated the task above (race condition), in
+      // which case it aborts the transaction.
+      const { orderShipmentService } = await import("@/services/warehouse/orderShipment.service");
 
-        if (!orderDoc.warehouseId) {
-          await session.abortTransaction();
-          return {
-            success: false,
-            error: "Đơn hàng chưa được gán kho, không thể xuất kho",
-          };
-        }
-
-        // Import orderShipmentService lazily
-        const { orderShipmentService } = await import("@/services/warehouse/orderShipment.service");
-        
-        // Call shipOrder with actualShipments from the order
-        // This will:
-        // 1. Consume reserved stock from WarehouseInventory
-        // 2. Create stock movement records
-        // 3. Use WarehouseInventory as SoT
-        // 4. Use same session as changeStatus for atomic transaction
-        let shipmentResult;
-        try {
-          shipmentResult = await orderShipmentService.shipOrder({
-            orderId: task.orderId.toString(),
-            employeeId,
-            // actualShipments will be built from order items
-            note: note || "Xuất kho khi WarehouseTask SHIPPED",
-          }, { session }); // Pass session for transaction propagation
-        } catch (shipError) {
-          await session.abortTransaction();
-          return {
-            success: false,
-            error: `Xuất kho thất bại: ${shipError instanceof Error ? shipError.message : String(shipError)}`,
-          };
-        }
-
-        // Step 2: Change Order status to SHIPPING
-        const orderService = await getOrderService();
-        const orderResult = await orderService.changeStatus({
+      const shipResult = await orderShipmentService.shipOrder(
+        {
           orderId: task.orderId.toString(),
-          newStatus: OrderStatus.SHIPPING,
           employeeId,
-          note: note || "Tự động chuyển SHIPPING khi warehouse SHIPPED",
-        });
+          note: note || "Xuất kho khi WarehouseTask SHIPPED",
+        },
+        { session }
+      );
 
-        if (!orderResult.success) {
-          await session.abortTransaction();
-          return {
-            success: false,
-            error: `Warehouse SHIPPED thành công nhưng Order SHIPPING thất bại: ${orderResult.error}`,
-          };
-        }
+      if (!shipResult.success) {
+        await session.abortTransaction();
+        return { success: false, error: shipResult.error };
+      }
+
+      // shipResult.alreadyShipped === true means the order transitioned to terminal
+      // status between our check above and the shipOrder call (race condition).
+      // shipOrder already aborted the transaction; propagate the idempotent result.
+      if (shipResult.alreadyShipped) {
+        await session.abortTransaction();
+        return {
+          success: true,
+          task: updatedTask,
+          alreadyShipped: true,
+          terminalStatus: shipResult.terminalStatus,
+        };
       }
 
       await session.commitTransaction();

@@ -29,9 +29,19 @@ export interface IInventoryHistory extends Document {
   warehouseId: mongoose.Types.ObjectId;
   /**
    * Biến thể sản phẩm cụ thể (variant = color × size × ...).
-   * Bắt buộc khi gắn với product; null khi gắn với combo.
+   * Bắt buộc khi gắn với product CÓ variant; null khi gắn với product KHÔNG variant
+   * hoặc combo hoặc gift.
    */
   productVariantId?: mongoose.Types.ObjectId;
+  /**
+   * Product gắn với transaction (Phase 4.5: cho product không variant).
+   * Null khi dùng productVariantId.
+   */
+  productId?: mongoose.Types.ObjectId;
+  /**
+   * Gift gắn với transaction (Phase 4.5).
+   */
+  giftId?: mongoose.Types.ObjectId;
   /**
    * Combo gắn với transaction.
    * Bắt buộc khi không có productVariantId.
@@ -96,6 +106,16 @@ const InventoryHistorySchema = new Schema<IInventoryHistory>(
     productVariantId: {
       type: Schema.Types.ObjectId,
       ref: "ProductVariant",
+      index: true,
+    },
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      index: true,
+    },
+    giftId: {
+      type: Schema.Types.ObjectId,
+      ref: "Gift",
       index: true,
     },
     comboId: {

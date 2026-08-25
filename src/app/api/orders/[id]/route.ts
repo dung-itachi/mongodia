@@ -45,6 +45,11 @@ import {
 } from "@/services/order/orderStockWiring.helper";
 import { InventoryReferenceType } from "@/constants/inventoryStatus";
 import { isStatusTransitionAllowed } from "@/configs/order-status.config";
+import { validateOrderWarehouse } from "@/config/warehouse-topology.config";
+import {
+  orderItemsToDemands,
+  type NormalizedOrderItemShape,
+} from "@/services/warehouse/orderDemand";
 
 // ==================================================
 // Status guards
@@ -224,6 +229,16 @@ export async function PATCH(
     if (data.warehouseId !== undefined) {
       if (!existsResults[idx++])
         return errorResponse("Kho không tồn tại", 400);
+      // Topology guard: chỉ KHO2 (MAIN) mới được gán cho Order.
+      try {
+        await validateOrderWarehouse(data.warehouseId);
+      } catch (topologyError) {
+        const err = topologyError as Error & { code?: string };
+        return errorResponse(
+          err.message ?? "Kho không hợp lệ theo topology",
+          400
+        );
+      }
     }
     if (data.marketingEmployeeId !== undefined) {
       if (!existsResults[idx++])
@@ -515,43 +530,50 @@ export async function PATCH(
       }
     }
 
-    // ---- Stock wiring (Phase 4.3) ------------------------------------
-    // Tính diff giữa oldOrder ↔ newOrder. Stock Engine chỉ quan tâm
-    // warehouse / productVariantId / comboId / quantity.
+    // ---- Stock wiring (Phase 4.5 — Inventory Identity Consistency) ------
     //
-    // - Nếu KHÔNG thay đổi các field trên → plan = skip (không đụng Stock).
-    // - Nếu có thay đổi → release reserved (nếu đang thực sự giữ) + reserve lại (nếu đủ điều kiện).
+    // Stock Engine KHÔNG dùng top-level fields:
+    //   - Order.productVariantId
+    //   - Order.comboId
+    //   - Order.quantity (legacy)
+    //   - OrderItem.quantity (legacy)
+    //
+    // Source of truth cho inventory identity:
+    //   - Order.orderItems[].details[].variantId + quantity (PRODUCT)
+    //   - Order.orderItems[].giftSelections[].giftId + quantity (GIFT)
+    //
+    // Both old + new snapshots dùng cùng identity — Reserve/Release/Ship/Return
+    // đều thấy CÙNG MỘT StockDemand.
+    //
+    // Nếu KHÔNG thay đổi demands (orderItems) + warehouseId → plan = skip.
+    // Nếu có thay đổi → release reserved (nếu đang thực sự giữ) + reserve lại.
     //
     // Source of truth cho "Order đang giữ chỗ hay không" là
     // `Σ reservedChange` trên InventoryHistory (append-only log).
+    const oldDemands = orderItemsToDemands(
+      (existedOrder.orderItems as unknown as NormalizedOrderItemShape[]) ?? []
+    );
+    const newDemands = validatedOrderItems
+      ? orderItemsToDemands(
+          validatedOrderItems as unknown as NormalizedOrderItemShape[]
+        )
+      : oldDemands;
+
     const oldStockSnapshot: OrderStockSnapshot = {
       warehouseId: existedOrder.warehouseId?.toString() ?? null,
-      productVariantId: existedOrder.productVariantId?.toString() ?? null,
-      comboId: existedOrder.comboId?.toString() ?? null,
-      quantity: existedOrder.quantity,
       orderType: existedOrder.orderType as OrderType,
+      demands: oldDemands,
     };
     const newStockSnapshot: OrderStockSnapshot = {
       warehouseId:
         updateData.warehouseId !== undefined
           ? ((updateData.warehouseId as string | undefined) ?? null)
           : oldStockSnapshot.warehouseId,
-      productVariantId:
-        updateData.productVariantId !== undefined
-          ? ((updateData.productVariantId as string | undefined) ?? null)
-          : oldStockSnapshot.productVariantId,
-      comboId:
-        updateData.comboId !== undefined
-          ? ((updateData.comboId as string | undefined) ?? null)
-          : oldStockSnapshot.comboId,
-      quantity:
-        updateData.quantity !== undefined
-          ? (updateData.quantity as number)
-          : oldStockSnapshot.quantity,
       orderType:
         updateData.orderType !== undefined
           ? (updateData.orderType as OrderType)
           : oldStockSnapshot.orderType,
+      demands: newDemands,
     };
 
     session.startTransaction();
@@ -565,11 +587,11 @@ export async function PATCH(
     );
 
     // ---- 1) Stock Engine: release reserved (nếu cần) ----------------
-    if (stockPlan.release) {
+    if (stockPlan.release.length > 0) {
       try {
         await releaseReservedStock(
           oldStockSnapshot.warehouseId as string,
-          [stockPlan.release],
+          stockPlan.release,
           {
             actorEmployeeId: currentUser.employee._id,
             referenceType: InventoryReferenceType.ORDER,
@@ -588,16 +610,16 @@ export async function PATCH(
       }
 
       pushHistory(OrderAction.STOCK_RELEASED, {
-        note: `Trả chỗ tồn kho (${stockPlan.release.quantity})`,
+        note: `Trả chỗ tồn kho (${stockPlan.release.length} mặt hàng)`,
       });
     }
 
     // ---- 2) Stock Engine: reserve mới (nếu cần) ---------------------
-    if (stockPlan.reserve) {
+    if (stockPlan.reserve.length > 0) {
       try {
         await reserveStock(
           newStockSnapshot.warehouseId as string,
-          [stockPlan.reserve],
+          stockPlan.reserve,
           {
             actorEmployeeId: currentUser.employee._id,
             referenceType: InventoryReferenceType.ORDER,
@@ -616,7 +638,7 @@ export async function PATCH(
       }
 
       pushHistory(OrderAction.STOCK_RESERVED, {
-        note: `Giữ chỗ tồn kho (${stockPlan.reserve.quantity})`,
+        note: `Giữ chỗ tồn kho (${stockPlan.reserve.length} mặt hàng)`,
       });
 
       // Audit timestamp — KHÔNG set cờ `stockReserved` (đã bỏ).
@@ -747,15 +769,16 @@ export async function DELETE(
 
     session.startTransaction();
 
-    // ---- Stock wiring (Phase 4.3) ------------------------------------
+    // ---- Stock wiring (Phase 4.5 — Inventory Identity Consistency) ------
     // Nếu đơn đang thực sự giữ reserved stock → release trước.
-    // Source of truth = `Σ reservedChange` từ InventoryHistory (cùng session).
+    // Source of truth = demands từ orderItems[] (đã resolve variantId) +
+    // `Σ reservedChange` từ InventoryHistory (cùng session).
     const oldStockSnapshot: OrderStockSnapshot = {
       warehouseId: existedOrder.warehouseId?.toString() ?? null,
-      productVariantId: existedOrder.productVariantId?.toString() ?? null,
-      comboId: existedOrder.comboId?.toString() ?? null,
-      quantity: existedOrder.quantity,
       orderType: existedOrder.orderType as OrderType,
+      demands: orderItemsToDemands(
+        (existedOrder.orderItems as unknown as NormalizedOrderItemShape[]) ?? []
+      ),
     };
 
     const netMap = await queryNetReserved(existedOrder._id, session);
@@ -765,13 +788,13 @@ export async function DELETE(
     );
 
     let stockReleased = false;
-    let stockReleasedQty = 0;
+    let stockReleasedItems = 0;
 
-    if (deleteStockPlan.release) {
+    if (deleteStockPlan.release.length > 0) {
       try {
         await releaseReservedStock(
           oldStockSnapshot.warehouseId as string,
-          [deleteStockPlan.release],
+          deleteStockPlan.release,
           {
             actorEmployeeId: currentUser.employee._id,
             referenceType: InventoryReferenceType.ORDER,
@@ -789,7 +812,7 @@ export async function DELETE(
         throw err;
       }
       stockReleased = true;
-      stockReleasedQty = deleteStockPlan.release.quantity;
+      stockReleasedItems = deleteStockPlan.release.length;
     }
 
     // ---- Soft delete --------------------------------------------------
@@ -825,7 +848,7 @@ export async function DELETE(
         orderId: existedOrder._id,
         employeeId: currentUser.employee._id,
         action: OrderAction.STOCK_RELEASED,
-        note: `Trả chỗ tồn kho (${stockReleasedQty})`,
+        note: `Trả chỗ tồn kho (${stockReleasedItems} mặt hàng)`,
       });
     }
     await OrderHistory.create(historyDocs, { session });

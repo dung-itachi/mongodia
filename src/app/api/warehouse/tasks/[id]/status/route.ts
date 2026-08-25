@@ -15,6 +15,7 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 import { warehouseService } from "@/services/warehouse.service";
+import { getTerminalMessage } from "@/services/warehouse/orderShipment.service";
 import { success, error as errorResponse } from "@/utils/response";
 import { z } from "zod";
 import { canAccessWarehouse } from "@/lib/warehouse-scope";
@@ -95,6 +96,15 @@ export async function PATCH(
 
     if (!result.success) {
       return errorResponse(result.error, 400);
+    }
+
+    // When the order was already in a terminal state, surface a precise message
+    // instead of the generic "Đổi trạng thái thành công".
+    if (result.alreadyShipped) {
+      const message = result.terminalStatus
+        ? getTerminalMessage(result.terminalStatus)
+        : "Đơn đã được xuất kho trước đó.";
+      return success(result.task, message);
     }
 
     return success(result.task, "Đổi trạng thái thành công");

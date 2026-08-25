@@ -57,7 +57,8 @@ export class InsufficientStockError extends StockEngineError {
   constructor(context: {
     warehouseId?: string;
     productVariantId?: string;
-    comboId?: string;
+    productId?: string;
+    giftId?: string;
     availableQuantity: number;
     requestedQuantity: number;
   }) {
@@ -81,7 +82,8 @@ export class InsufficientReservedStockError extends StockEngineError {
   constructor(context: {
     warehouseId?: string;
     productVariantId?: string;
-    comboId?: string;
+    productId?: string;
+    giftId?: string;
     reservedQuantity: number;
     requestedQuantity: number;
   }) {

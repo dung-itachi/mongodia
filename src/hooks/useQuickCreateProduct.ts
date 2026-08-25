@@ -1,19 +1,26 @@
 /**
- * useQuickCreateProduct Hook
+ * useQuickCreateProduct Hook (single-warehouse variant)
  *
  * Pipeline 3 bước để tạo nhanh Product + Variant + nhập kho ngay từ
  * trang `/warehouses`:
  *
  *   1. POST /api/products          → tạo Product
  *   2. POST /api/product-variants  → tạo Variant (đính VariantValue IDs)
- *   3. POST /api/warehouses/import-product-stock → nhập SL vào tất cả kho
+ *   3. POST /api/warehouse/imports → IMPORT vào đúng 1 kho (KHO1) đã chọn
  *
  * Hook này dùng cho `QuickCreateProductDrawer`.
+ *
+ * Lưu ý business rule:
+ *   - IMPORT phải đi vào KHO1 (kho trung gian / kho Trung Quốc).
+ *   - KHÔNG cộng trực tiếp vào KHO2.
+ *   - Để KHO2 có tồn, tạo WarehouseTransfer KHO1 → KHO2.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export type QuickCreateProductInput = {
+  // ---- Warehouse (REQUIRED — chọn kho đích IMPORT) ----
+  warehouseId: string;
   // ---- Product ----
   code: string;
   name: string;
@@ -33,9 +40,8 @@ export type QuickCreateProductResult = {
   productName: string;
   productVariantId: string;
   variantSku: string;
-  updatedWarehouses: number;
-  totalChange: number;
-  referenceCode: string;
+  receiptCode: string;
+  importedQuantity: number;
 };
 
 type ApiResponse<T> = {
@@ -89,29 +95,31 @@ async function postCreateVariant(input: {
   return json.data;
 }
 
-// ---- 3. Import stock ----
+// ---- 3. Import stock (single warehouse, workflow API) ----
 async function postImportStock(
+  warehouseId: string,
   productVariantId: string,
   quantity: number,
   note?: string
-): Promise<{
-  updatedWarehouses: number;
-  totalChange: number;
-  referenceCode: string;
-}> {
-  const res = await fetch("/api/warehouses/import-product-stock", {
+): Promise<{ receiptCode: string; items: unknown[] }> {
+  const res = await fetch("/api/warehouse/imports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      productVariantId,
-      quantity,
+      warehouseId,
       note: note ?? "",
+      items: [
+        {
+          variantId: productVariantId,
+          orderedQuantity: quantity,
+          receivedQuantity: quantity,
+        },
+      ],
     }),
   });
   const json = (await res.json()) as ApiResponse<{
-    updatedWarehouses: number;
-    totalChange: number;
-    referenceCode: string;
+    receiptCode: string;
+    items: unknown[];
   }>;
   if (!res.ok || !json.success || !json.data) {
     throw new Error(json.message || "Không thể nhập kho");
@@ -122,6 +130,10 @@ async function postImportStock(
 async function runQuickCreate(
   input: QuickCreateProductInput
 ): Promise<QuickCreateProductResult> {
+  if (!input.warehouseId) {
+    throw new Error("Vui lòng chọn kho đích để IMPORT");
+  }
+
   // 1. Tạo Product
   const product = await postCreateProduct({
     code: input.code,
@@ -137,8 +149,9 @@ async function runQuickCreate(
     variantValues: input.variantValueIds,
   });
 
-  // 3. Nhập kho
+  // 3. IMPORT vào đúng 1 kho (KHO1 theo business rule)
   const importResult = await postImportStock(
+    input.warehouseId,
     variant._id,
     input.quantity,
     input.note
@@ -150,9 +163,8 @@ async function runQuickCreate(
     productName: product.name,
     productVariantId: variant._id,
     variantSku: variant.sku,
-    updatedWarehouses: importResult.updatedWarehouses,
-    totalChange: importResult.totalChange,
-    referenceCode: importResult.referenceCode,
+    receiptCode: importResult.receiptCode,
+    importedQuantity: input.quantity,
   };
 }
 
@@ -177,6 +189,8 @@ export function useQuickCreateProduct(): UseQuickCreateProductReturn {
         void qc.invalidateQueries({
           queryKey: ["warehouses", "products"],
         });
+        void qc.invalidateQueries({ queryKey: ["warehouse", "inventory"] });
+        void qc.invalidateQueries({ queryKey: ["warehouse", "movements"] });
       },
     }
   );

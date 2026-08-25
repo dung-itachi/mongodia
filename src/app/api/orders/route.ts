@@ -38,6 +38,11 @@ import {
   type OrderStockSnapshot,
 } from "@/services/order/orderStockWiring.helper";
 import { InventoryReferenceType } from "@/constants/inventoryStatus";
+import { validateOrderWarehouse } from "@/config/warehouse-topology.config";
+import {
+  orderItemsToDemands,
+  type NormalizedOrderItemShape,
+} from "@/services/warehouse/orderDemand";
 
 // ==================================================
 // Helpers
@@ -320,6 +325,21 @@ export async function POST(request: Request) {
     if (data.saleEmployeeId && !sale)
       return errorResponse("Nhân viên sale không tồn tại", 400);
 
+    // ---- Topology guard: Order.warehouseId chỉ được dùng KHO2 --------
+    // Validate trước khi start transaction để fail-fast, tránh session
+    // rỗng nếu vi phạm business rule. Trả 400 với thông điệp rõ ràng.
+    if (data.warehouseId) {
+      try {
+        await validateOrderWarehouse(data.warehouseId);
+      } catch (topologyError) {
+        const err = topologyError as Error & { code?: string };
+        return errorResponse(
+          err.message ?? "Kho không hợp lệ theo topology",
+          400
+        );
+      }
+    }
+
     // ---- orderType / orderSource are validated by Zod enum above ------
     const status = (data.status as OrderStatus) || OrderStatus.WAIT_CONFIRM;
     const orderType = (data.orderType as OrderType) || OrderType.NORMAL;
@@ -461,20 +481,28 @@ export async function POST(request: Request) {
     );
 
     // ---- Reserve stock (nếu đủ điều kiện) ---------------------------
+    //
+    // Phase 4.5 refactor: KHÔNG dùng data.productVariantId / data.comboId /
+    // data.quantity cho inventory. Source of truth là `validatedOrderItems[]`
+    // (đã resolve variantId + TOTAL gift quantity qua saleOrderService.validateItem).
+    //
+    // Nếu KHÔNG có validatedOrderItems (vd: backward-compatible legacy order
+    // không có orderItems) → KHÔNG reserve từ top-level fields.
+    const demands = orderItemsToDemands(
+      validatedOrderItems as unknown as NormalizedOrderItemShape[]
+    );
     const stockSnapshot: OrderStockSnapshot = {
       warehouseId: data.warehouseId,
-      productVariantId: data.productVariantId,
-      comboId: data.comboId,
-      quantity: data.quantity,
       orderType,
+      demands,
     };
     const stockPlan = buildStockWiringPlanForCreate(stockSnapshot);
 
-    if (stockPlan.reserve) {
+    if (stockPlan.reserve.length > 0) {
       try {
         await reserveStock(
           data.warehouseId as string,
-          [stockPlan.reserve],
+          stockPlan.reserve,
           {
             actorEmployeeId: currentUser.employee._id,
             referenceType: InventoryReferenceType.ORDER,
@@ -519,12 +547,12 @@ export async function POST(request: Request) {
         note: "Tạo đơn hàng",
       },
     ];
-    if (stockPlan.reserve) {
+    if (stockPlan.reserve.length > 0) {
       historyDocs.push({
         orderId: order._id,
         employeeId: currentUser.employee._id,
         action: OrderAction.STOCK_RESERVED,
-        note: `Giữ chỗ tồn kho (${stockPlan.reserve.quantity})`,
+        note: `Giữ chỗ tồn kho (${stockPlan.reserve.length} mặt hàng)`,
       });
     }
     await OrderHistory.create(historyDocs, { session });

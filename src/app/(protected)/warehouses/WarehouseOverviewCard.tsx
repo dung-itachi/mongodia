@@ -151,6 +151,7 @@ function WarehouseOverviewCardInner({
       <ImportStockModal
         open={!!importTarget}
         product={importTarget}
+        warehouseId={activeWarehouseId}
         onClose={() => setImportTarget(null)}
         onSuccess={() => setImportTarget(null)}
       />

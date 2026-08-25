@@ -385,7 +385,7 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
         </Space>
       }
       placement="right"
-      width={680}
+      size="large"
       open={open}
       onClose={handleClose}
       destroyOnHidden

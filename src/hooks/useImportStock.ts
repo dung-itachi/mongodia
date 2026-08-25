@@ -1,42 +1,66 @@
 /**
  * useImportStock Hook
  *
- * Mutation POST /api/warehouses/[id]/import-stock — nhập kho theo combo/variant
- * vào 1 warehouse cụ thể (giữ cho tương thích API cũ).
+ * Mutation POST /api/warehouse/imports — nhập kho vào một kho cụ thể
+ * (giờ chỉ định KHO1 = kho trung gian theo business rule).
  *
- * Lưu ý: Hiện tại UI modal "Nhập" trong card sản phẩm đang dùng combo flow.
- * Sau khi refactor sang variant, có thể bổ sung productVariantId.
+ * Path dữ liệu: WarehouseInventory + WarehouseStockMovement (IMPORT),
+ * KHÔNG đụng vào legacy `Inventory` model.
+ *
+ * Trước đây hook này gọi `/api/warehouses/[id]/import-stock` (đã deprecated).
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export type ImportStockPayload = {
   warehouseId: string;
-  comboId?: string;
-  productVariantId?: string;
-  quantity: number;
+  productId?: string;
+  variantId?: string;
+  giftId?: string;
+  orderedQuantity: number;
+  receivedQuantity: number;
   note?: string;
+};
+
+export type ImportStockResponseItem = {
+  itemType: string;
+  productName?: string;
+  giftName?: string;
+  beforeQuantity: number;
+  afterQuantity: number;
+  change: number;
+};
+
+export type ImportStockResponseData = {
+  receiptCode: string;
+  movements: ImportStockResponseItem[];
 };
 
 export type ImportStockResponse = {
   success: boolean;
-  data: {
-    beforeQuantity: number;
-    changeQuantity: number;
-    afterQuantity: number;
-    referenceCode: string;
-  };
+  data: { receiptCode: string; items: ImportStockResponseItem[] };
   message?: string;
 };
 
 async function postImportStock(
   payload: ImportStockPayload
-): Promise<ImportStockResponse["data"]> {
-  const { warehouseId, ...body } = payload;
-  const res = await fetch(`/api/warehouses/${warehouseId}/import-stock`, {
+): Promise<ImportStockResponseData> {
+  const res = await fetch("/api/warehouse/imports", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      warehouseId: payload.warehouseId,
+      note: payload.note ?? "",
+      items: [
+        {
+          productId: payload.productId,
+          variantId: payload.variantId,
+          giftId: payload.giftId,
+          orderedQuantity: payload.orderedQuantity,
+          receivedQuantity: payload.receivedQuantity,
+        },
+      ],
+    }),
   });
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -45,11 +69,21 @@ async function postImportStock(
   if (!json.success || !json.data) {
     throw new Error(json.message || "Không thể nhập kho");
   }
-  return json.data;
+  return {
+    receiptCode: json.data.receiptCode,
+    movements: json.data.items.map((m) => ({
+      itemType: m.itemType,
+      productName: m.productName,
+      giftName: m.giftName,
+      beforeQuantity: m.beforeQuantity,
+      afterQuantity: m.afterQuantity,
+      change: m.change,
+    })),
+  };
 }
 
 export type UseImportStockReturn = {
-  mutateAsync: (payload: ImportStockPayload) => Promise<ImportStockResponse["data"]>;
+  mutateAsync: (payload: ImportStockPayload) => Promise<ImportStockResponseData>;
   isPending: boolean;
   error: string | null;
   reset: () => void;
@@ -58,13 +92,15 @@ export type UseImportStockReturn = {
 export function useImportStock(): UseImportStockReturn {
   const qc = useQueryClient();
   const mutation = useMutation<
-    ImportStockResponse["data"],
+    ImportStockResponseData,
     Error,
     ImportStockPayload
   >({
     mutationFn: postImportStock,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["warehouses", "inventory-overview"] });
+      void qc.invalidateQueries({ queryKey: ["warehouse", "inventory"] });
+      void qc.invalidateQueries({ queryKey: ["warehouse", "movements"] });
     },
   });
 

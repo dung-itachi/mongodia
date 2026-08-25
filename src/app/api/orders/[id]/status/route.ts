@@ -6,16 +6,20 @@
  * Sprint 6.2 — Order Workflow
  *
  * PATCH /api/orders/:id/status
- * Change order status with workflow validation
+ * Change order status with workflow validation.
+ * When transitioning to SHIPPING, delegates to the shared atomic shipOrder service
+ * to ensure consistent inventory deduction, stock movement recording, and
+ * WarehouseTask status updates.
  */
 
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
-
 import { orderService } from "@/services/order.service";
+import { orderShipmentService, getTerminalMessage } from "@/services/warehouse/orderShipment.service";
 import { success, error as errorResponse } from "@/utils/response";
+import { OrderStatus } from "@/constants/orderStatus";
 import { z } from "zod";
 
 // ============================================================================
@@ -36,7 +40,6 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication and permission
     const currentUser = await getCurrentUser(request);
 
     if (!currentUser.permissions.includes("order.update")) {
@@ -47,12 +50,10 @@ export async function PATCH(
 
     const { id } = await params;
 
-    // Validate ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return errorResponse("ID không hợp lệ", 400);
     }
 
-    // Parse and validate request body
     let body: unknown;
     try {
       body = await request.json();
@@ -70,12 +71,44 @@ export async function PATCH(
     }
 
     const { status, note } = parsedBody.data;
+    const employeeId = currentUser.employee._id.toString();
 
-    // Call service to change status
+    // ── Special path: SHIPPING ────────────────────────────────────────────────
+    // Both entry points ("Giao hàng" on /orders and "Xác nhận xuất kho" on
+    // /warehouse/shipments) converge here. The unified shipOrder service handles
+    // all side effects atomically:
+    //   1. Inventory deduction
+    //   2. Stock movement recording
+    //   3. Order.status → SHIPPING
+    //   4. WarehouseTask.warehouseStatus → SHIPPED (if applicable)
+    //   5. Idempotency guard (terminal-status check)
+    if (status === OrderStatus.SHIPPING) {
+      const result = await orderShipmentService.shipOrder({
+        orderId: id,
+        employeeId,
+        note,
+      });
+
+      if (!result.success) {
+        return errorResponse(result.error, 400);
+      }
+
+      if (result.alreadyShipped) {
+        // Idempotent — the order is already shipped or in a terminal state.
+        const message = result.terminalStatus
+          ? getTerminalMessage(result.terminalStatus)
+          : "Đơn đã được xuất kho trước đó.";
+        return success(null, message);
+      }
+
+      return success(result.shipments, "Xuất kho thành công");
+    }
+
+    // ── All other status transitions ─────────────────────────────────────────
     const result = await orderService.changeStatus({
       orderId: id,
       newStatus: status,
-      employeeId: currentUser.employee._id.toString(),
+      employeeId,
       note,
     });
 

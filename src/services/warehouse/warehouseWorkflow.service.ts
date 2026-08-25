@@ -8,6 +8,11 @@ import Product from "@/models/Product";
 import Gift from "@/models/Gift";
 import Counter from "@/models/Counter";
 
+import {
+  validateImportTarget,
+  validateTransferDirection,
+} from "@/config/warehouse-topology.config";
+
 export type WarehouseItemInput = {
   productId?: string;
   variantId?: string;
@@ -131,6 +136,11 @@ export class WarehouseWorkflowService {
     try {
       session.startTransaction();
       const warehouseId = oid(input.warehouseId, "Warehouse ID");
+
+      // Topology rule: IMPORT t� nhà sản xuất chỉ được vào KHO1 (kho trung gian).
+      // Reject IMPORT trực tiếp vào KHO2 (sẽ bypass transfer workflow).
+      await validateImportTarget(warehouseId, session);
+
       const createdItems = [];
       for (const raw of input.items) {
         const item = await normalizeItem(raw);
@@ -157,6 +167,12 @@ export class WarehouseWorkflowService {
       session.startTransaction();
       const sourceWarehouseId = oid(input.sourceWarehouseId, "Kho nguồn");
       const destinationWarehouseId = oid(input.destinationWarehouseId, "Kho đích");
+
+      // Topology rule: TRANSFER chỉ hợp lệ theo chiều KHO1 → KHO2.
+      // Reject: KHO2 → KHO1, KHO1 → KHO1, KHO2 → KHO2, và bất kỳ kho nào
+      // không có code trong topology resolver.
+      await validateTransferDirection(sourceWarehouseId, destinationWarehouseId, session);
+
       const employeeId = oid(input.employeeId, "Employee ID");
       const normalized = [];
       for (const raw of input.items) normalized.push({ ...(await normalizeItem(raw)), quantity: positive(raw.quantity, "quantity") });
@@ -185,31 +201,106 @@ export class WarehouseWorkflowService {
     const session = await mongoose.startSession();
     try {
       session.startTransaction();
-      const transfer = await WarehouseTransfer.findById(input.transferId).session(session);
-      if (!transfer) throw new Error("Phiếu chuyển không tồn tại");
-      if (transfer.status !== "SENT") throw new Error("Chỉ phiếu SENT mới được nhận kho");
-      if (input.receivedQuantities.length !== transfer.items.length) throw new Error("Số dòng nhận kho không khớp phiếu chuyển");
+
+      // ── 1. Atomic status guard ────────────────────────────────────────
+      // Find the transfer AND atomically flip its status SENT → RECEIVED.
+      // This is the single point that prevents two concurrent requests from
+      // both passing a "check then mutate" guard. Only one findOneAndUpdate
+      // can match {_id, status: "SENT"}; every subsequent call sees
+      // status: "RECEIVED" and the filter returns null.
+      const transferObjectId = oid(input.transferId, "Transfer ID");
       const employeeId = oid(input.employeeId, "Employee ID");
-      for (let i = 0; i < transfer.items.length; i++) {
-        const line = transfer.items[i];
-        const received = input.receivedQuantities[i];
-        if (!Number.isInteger(received) || received < 0 || received > line.sentQuantity) throw new Error("Số lượng thực nhận không hợp lệ");
-        const item = { itemType: line.giftId ? "GIFT" as const : "PRODUCT" as const, productId: line.productId ?? null, variantId: line.variantId ?? null, giftId: line.giftId ?? null };
-        await adjustInventory(transfer.destinationWarehouseId, item, -line.sentQuantity, session, "inTransitQuantity");
-        if (received > 0) {
-          await adjustInventory(transfer.destinationWarehouseId, item, received, session);
-          await movement({ warehouseId: transfer.destinationWarehouseId, ...item, type: "TRANSFER_IN", quantity: received, referenceType: "TRANSFER", referenceId: transfer._id, referenceCode: transfer.transferCode, createdBy: employeeId, note: input.note ?? "" }, session);
-        }
-        transfer.items[i].receivedQuantity = received;
-        transfer.items[i].difference = received - line.sentQuantity;
+
+      const claimed = await WarehouseTransfer.findOneAndUpdate(
+        { _id: transferObjectId, status: "SENT" },
+        {
+          $set: {
+            status: "RECEIVED",
+            receivedAt: new Date(),
+            receivedBy: employeeId,
+          },
+        },
+        { returnDocument: "after", session }
+      );
+
+      if (!claimed) {
+        // Either the transfer does not exist or it is no longer SENT.
+        // Distinguish 404 vs conflict so the API layer can map correctly.
+        const exists = await WarehouseTransfer.findById(transferObjectId).session(session).lean();
+        if (!exists) throw new Error("Phiếu chuyển không tồn tại");
+        // Already received (or any non-SENT status): idempotent no-op.
+        // Throw a typed marker so the API layer can answer 409 instead of 500.
+        const err = new Error("Phiếu chuyển không ở trạng thái SENT") as Error & { code?: string; status?: number };
+        err.code = "TRANSFER_NOT_SENT";
+        err.status = 409;
+        throw err;
       }
-      transfer.status = "RECEIVED";
-      transfer.receivedAt = new Date();
-      transfer.receivedBy = employeeId;
-      await transfer.save({ session });
+
+      // ── 2. Validate payload against the freshly-claimed transfer ───────
+      if (input.receivedQuantities.length !== claimed.items.length) {
+        throw new Error("Số dòng nhận kho không khớp phiếu chuyển");
+      }
+
+      // ── 3. Apply inventory + write TRANSFER_IN (atomic, same session) ──
+      for (let i = 0; i < claimed.items.length; i++) {
+        const line = claimed.items[i];
+        const received = input.receivedQuantities[i];
+        if (!Number.isInteger(received) || received < 0 || received > line.sentQuantity) {
+          throw new Error("Số lượng thực nhận không hợp lệ");
+        }
+        const item = {
+          itemType: (line.giftId ? "GIFT" : "PRODUCT") as "GIFT" | "PRODUCT",
+          productId: line.productId ?? null,
+          variantId: line.variantId ?? null,
+          giftId: line.giftId ?? null,
+        };
+        await adjustInventory(claimed.destinationWarehouseId, item, -line.sentQuantity, session, "inTransitQuantity");
+        if (received > 0) {
+          await adjustInventory(claimed.destinationWarehouseId, item, received, session);
+          await movement(
+            {
+              warehouseId: claimed.destinationWarehouseId,
+              ...item,
+              type: "TRANSFER_IN",
+              quantity: received,
+              referenceType: "TRANSFER",
+              referenceId: claimed._id,
+              referenceCode: claimed.transferCode,
+              createdBy: employeeId,
+              note: input.note ?? "",
+            },
+            session
+          );
+        }
+      }
+
+      // ── 4. Persist per-line receivedQuantity + difference ──────────────
+      // Status is already RECEIVED from step 1; only update the line totals.
+      const itemsUpdate = claimed.items.map((line, i) => ({
+        productId: line.productId ?? null,
+        variantId: line.variantId ?? null,
+        giftId: line.giftId ?? null,
+        sentQuantity: line.sentQuantity,
+        receivedQuantity: input.receivedQuantities[i],
+        difference: input.receivedQuantities[i] - line.sentQuantity,
+      }));
+      await WarehouseTransfer.updateOne(
+        { _id: claimed._id },
+        { $set: { items: itemsUpdate } },
+        { session }
+      );
+
       await session.commitTransaction();
-      return transfer;
-    } catch (error) { await session.abortTransaction(); throw error; } finally { await session.endSession(); }
+
+      // Return a plain object (no .save side-effects).
+      const result = await WarehouseTransfer.findById(claimed._id).lean();
+      return result;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
   }
 
   async listInventory(filters: { warehouseId?: string; itemType?: string; page?: number; limit?: number }) {
