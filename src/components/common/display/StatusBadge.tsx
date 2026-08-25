@@ -97,7 +97,6 @@ export const DEFAULT_STATUS_MAPPING: Record<string, StatusConfig> = {
   SHIPPING: { color: "#1890ff", backgroundColor: "#e6f7ff", label: "Đang giao", icon: ICON_MAP.CarOutlined, tooltip: "Đơn hàng đang được vận chuyển đến khách" },
   SHIPPED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đã giao hàng", tooltip: "Giao hàng thành công, đang chờ đối soát" },
   RETURNED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Đã hoàn trả", icon: ICON_MAP.UndoOutlined, tooltip: "Khách không nhận hàng, đơn hàng đã được hoàn về" },
-  RECONCILED: { color: "#52c41a", backgroundColor: "#f6ffed", label: "Đối soát", icon: ICON_MAP.CheckCircleOutlined, tooltip: "Shipper đã trả tiền — đây mới là doanh thu thực" },
   CANCELLED: { color: "#8c8c8c", backgroundColor: "#fafafa", label: "Đã hủy", icon: ICON_MAP.CloseCircleOutlined, tooltip: "Đơn hàng đã bị hủy, không được tính doanh thu" },
   REJECTED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Bị từ chối", icon: ICON_MAP.StopOutlined },
   FAILED: { color: "#ff4d4f", backgroundColor: "#fff1f0", label: "Giao thất bại", icon: ICON_MAP.WarningOutlined },

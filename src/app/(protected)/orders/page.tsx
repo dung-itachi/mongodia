@@ -44,16 +44,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { ORDER_STATUS_LABELS, OrderStatus } from "@/constants/orderStatus";
 import { STATUS_ACTIONS } from "@/configs/order-status.config";
 import type { OrderListItem, OrderStatisticsResponse } from "@/types/order";
-import ReconciliationPanel from "./reconciliation/ReconciliationPanel";
 import OrderStatisticsModal from "./OrderStatisticsModal";
-
-/**
- * Khi URL `?status=RECONCILED` thì hiển thị giao diện Đối soát
- * (panel riêng) thay vì danh sách bảng mặc định.
- */
-function isReconciliationView(status: string | undefined): boolean {
-  return status?.toUpperCase() === "RECONCILED";
-}
 
 export default function OrdersPage() {
   return (
@@ -366,19 +357,6 @@ function OrdersPageInner() {
         const productName = order.product?.name;
         if (productName) {
           return <span>{productName}</span>;
-        }
-        return <span style={{ color: "#bfbfbf" }}>-</span>;
-      },
-    },
-    {
-      key: "comboProduct",
-      title: t("Combo sản phẩm", lang),
-      width: 180,
-      render: (_: unknown, record: Record<string, unknown>) => {
-        const order = record as unknown as OrderListItem;
-        const comboName = order.combo?.name;
-        if (comboName) {
-          return <span>{comboName}</span>;
         }
         return <span style={{ color: "#bfbfbf" }}>-</span>;
       },
@@ -758,13 +736,12 @@ function OrdersPageInner() {
   // Title dynamic theo status filter (từ URL ?status=...)
   const pageTitle = useMemo(() => {
     if (!status) return t("Đơn hàng", lang);
-    if (isReconciliationView(status)) return t("Đối soát đơn hàng", lang);
     const label = ORDER_STATUS_LABELS[status as OrderStatus];
     return label ? `${t("Đơn hàng", lang)} · ${t(label, lang)}` : t("Đơn hàng", lang);
   }, [status, lang]);
 
   const titleTooltip = useMemo(() => {
-    if (!status || isReconciliationView(status)) return;
+    if (!status) return;
     const tooltipMap: Record<OrderStatus, string> = {
       [OrderStatus.WAIT_CONFIRM]: t("Sale vừa chốt đơn, chưa xác nhận lại với khách", lang),
       [OrderStatus.CONFIRMED]: t("Đơn đã được xác nhận, sẵn sàng chuyển giao cho kho", lang),
@@ -777,51 +754,6 @@ function OrdersPageInner() {
     };
     return tooltipMap[status as OrderStatus];
   }, [status, lang]);
-
-  // Khi URL ?status=RECONCILED → render ReconciliationPanel (giao diện riêng)
-  if (isReconciliationView(status)) {
-    return (
-      <PageContainer>
-        <PageHeader
-          title={pageTitle}
-          titleTooltip={titleTooltip}
-          subtitle={t("Đối soát các đơn Giao thành công & Hoàn trả sang Đã đối soát", lang)}
-          breadcrumb={[
-            { label: t("Trang chủ", lang), href: "/" },
-            { label: t("Đơn hàng", lang) },
-            { label: t("Đối soát", lang) },
-          ]}
-          actions={
-            <Space>
-              <Button
-                type="default"
-                icon={<BarChartOutlined />}
-                onClick={() => void handleOpenStatistics()}
-              >
-                {t("Thống kê đơn hàng", lang)}
-              </Button>
-              <Button
-                type="primary"
-                icon={<ReloadOutlined spin={loading} />}
-                onClick={() => void handleRefresh()}
-                loading={loading}
-              >
-                {t("Làm mới đơn hàng", lang)}
-              </Button>
-            </Space>
-          }
-        />
-        <ReconciliationPanel />
-
-        <OrderStatisticsModal
-          open={statsOpen}
-          data={statsData}
-          loading={statsMutation.isPending}
-          onClose={handleCloseStatistics}
-        />
-      </PageContainer>
-    );
-  }
 
   return (
     <PageContainer>

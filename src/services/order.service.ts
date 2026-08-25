@@ -76,6 +76,8 @@ export interface CreateFromLeadData {
   // Sprint 8.x: thời gian đơn hàng
   orderDate?: Date;
   receivedDate?: Date;
+  // Sprint 8.x: địa chỉ giao hàng từ Lead
+  address?: string;
 }
 
 export interface CreateCustomerFromLeadData {
@@ -84,6 +86,7 @@ export interface CreateCustomerFromLeadData {
   email?: string;
   address?: string;
   marketingEmployeeId?: string;
+  saleEmployeeId?: string;
 }
 
 export interface ChangeStatusData {
@@ -292,7 +295,12 @@ export class OrderService {
       session.startTransaction();
 
       // Update status in repository
-      const updatedOrder = await orderRepository.changeStatus(orderId, newStatus, session);
+      const updatedOrder = await orderRepository.changeStatus(
+        orderId,
+        newStatus,
+        session,
+        newStatus === OrderStatus.DELIVERED ? new Date() : undefined
+      );
 
       if (!updatedOrder) {
         await session.abortTransaction();
@@ -346,11 +354,11 @@ export class OrderService {
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const day = date.getDate().toString().padStart(2, "0");
 
-    const counter = await Counter.findByIdAndUpdate(
-      `order_${year}${month}${day}`,
+    const counter = await Counter.findOneAndUpdate(
+      { key: `order_${year}${month}${day}` },
       { $inc: { seq: 1 } },
-      { new: true, upsert: true, session }
-    ) as unknown as { seq: number };
+      { returnDocument: "after", upsert: true, setDefaultsOnInsert: true, session }
+    ).lean() as unknown as { seq: number };
 
     const sequence = (counter.seq || 1).toString().padStart(4, "0");
     return `OD${year}${month}${day}${sequence}`;
@@ -668,10 +676,21 @@ export class OrderService {
     data: CreateCustomerFromLeadData,
     session?: mongoose.ClientSession
   ): Promise<ICustomer & { _id: mongoose.Types.ObjectId }> {
+    // Check if customer already exists by phone (only if phone is not empty)
+    if (data.phone && data.phone.trim()) {
+      const existingCustomer = await Customer.findOne({ phone: data.phone.trim(), isActive: true }).lean();
+      if (existingCustomer) {
+        console.log("[createCustomerFromLead] Found existing customer by phone:", existingCustomer._id);
+        return existingCustomer as ICustomer & { _id: mongoose.Types.ObjectId };
+      }
+    }
+    console.log("[createCustomerFromLead] No existing customer, creating new. Phone:", data.phone);
+
     let areaId: mongoose.Types.ObjectId | undefined;
     let teamId: mongoose.Types.ObjectId | undefined;
     let mkEmployeeId: mongoose.Types.ObjectId | undefined;
 
+    // Try to get areaId/teamId from marketing employee first
     if (data.marketingEmployeeId) {
       const employee = await Employee.findById(data.marketingEmployeeId)
         .select("_id areaId teamId")
@@ -684,6 +703,22 @@ export class OrderService {
       }
     }
 
+    // Fallback: try to get areaId/teamId from saleEmployee
+    if (!areaId || !teamId) {
+      const saleEmployeeId = data.saleEmployeeId;
+      if (saleEmployeeId) {
+        const saleEmployee = await Employee.findById(saleEmployeeId)
+          .select("_id areaId teamId")
+          .lean();
+
+        if (saleEmployee) {
+          if (!areaId) areaId = (saleEmployee as unknown as { areaId?: mongoose.Types.ObjectId }).areaId;
+          if (!teamId) teamId = (saleEmployee as unknown as { teamId?: mongoose.Types.ObjectId }).teamId;
+        }
+      }
+    }
+
+    // Final fallback: try to get from settings
     if (!areaId || !teamId) {
       const settings = await Setting.find({ key: { $in: ["DEFAULT_AREA_CODE", "DEFAULT_TEAM_CODE"] } })
         .select("key value")
@@ -718,20 +753,23 @@ export class OrderService {
 
     const seq = (counter as unknown as { seq?: number }).seq ?? 1;
     const customerCode = `KH${String(seq).padStart(6, "0")}`;
+    console.log("[createCustomerFromLead] Generated customerCode:", customerCode, "seq:", seq);
 
     const customer = new Customer({
-      code: customerCode,
-      name: data.customerName.trim(),
+      customerCode,
+      fullName: data.customerName.trim(),
       phone: (data.phone ?? "").trim(),
       email: data.email ?? "",
       areaId,
       teamId,
-      marketingEmployeeId: mkEmployeeId ?? new mongoose.Types.ObjectId(),
-      gender: "OTHER",
+      marketingEmployeeId: mkEmployeeId,
+      saleEmployeeId: data.saleEmployeeId ? new mongoose.Types.ObjectId(data.saleEmployeeId) : undefined,
+      gender: "other",
       birthday: null,
-      address: data.address ?? "",
+      address: { street: data.address ?? "" },
       note: "",
       isActive: true,
+      status: "ACTIVE" as const,
     });
 
     return customer.save({ session }) as Promise<ICustomer & { _id: mongoose.Types.ObjectId }>;
@@ -810,16 +848,30 @@ export class OrderService {
             attributes: detail.attributes.map((attribute) => ({
               optionId: new mongoose.Types.ObjectId(attribute.optionId),
               valueId: new mongoose.Types.ObjectId(attribute.valueId),
+              optionName: attribute.optionName,
+              valueName: attribute.valueName,
             })),
           })),
           sku: "",
-          productName: data.orderItem.comboName,
+          productName: data.orderItem.productName || data.orderItem.comboName,
           quantity: data.orderItem.comboQuantity,
           unitPrice: data.orderItem.sellingPrice,
         }] : [],
         // Sprint 8.x: thời gian đơn hàng từ Lead
         orderDate: data.orderDate,
         receivedDate: data.receivedDate,
+        // Sprint 8.x: convert từ lead = đơn mới, cần xác nhận
+        status: OrderStatus.WAIT_CONFIRM,
+        // Sprint 8.x: địa chỉ giao hàng từ Lead
+        shipping: data.address
+          ? {
+              receiverName: data.customerName,
+              receiverPhone: data.customerPhone ?? "",
+              address: data.address,
+              shippingFee: 0,
+              shippingFeeCurrency: data.currency,
+            }
+          : undefined,
       },
       session
     );

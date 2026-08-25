@@ -57,6 +57,9 @@ export { REVENUE_UNLOCK_STATUSES };
 export interface IOrderProductAttribute {
   optionId: Types.ObjectId;
   valueId: Types.ObjectId;
+  /** Snapshot at order-time so labels stay readable after catalog changes (Sprint 8.x). */
+  optionName?: string;
+  valueName?: string;
 }
 
 export interface IOrderVariantDetail {
@@ -217,6 +220,18 @@ export interface IOrder extends Document {
    * Mặc định `false`. Được toggle qua PATCH /api/orders/:id/confirm-call.
    */
   isCalledForConfirmation: boolean;
+  /**
+   * Đơn đã được đối soát (kiểm tra lại) chưa.
+   * Đây là flag RIÊNG BIỆT, KHÔNG thay đổi status giao hàng.
+   * Mặc định `false`. Được toggle qua PATCH /api/orders/:id/reconcile.
+   */
+  isReconciled: boolean;
+  /** Thời điểm đối soát cuối cùng. */
+  reconciledAt?: Date;
+  /** ID nhân viên thực hiện đối soát. */
+  reconciledBy?: Types.ObjectId;
+  /** Thời điểm giao hàng thành công (DELIVERED). */
+  deliveredAt?: Date;
 
   // ---- Classification -------------------------------------------------
   /**
@@ -398,6 +413,17 @@ const OrderSchema = new Schema<IOrder>(
      * Default `false` (backward-compatible với đơn cũ).
      */
     isCalledForConfirmation: { type: Boolean, default: false },
+    /**
+     * Đơn đã được đối soát chưa.
+     * Toggle qua PATCH /api/orders/:id/reconcile.
+     * KHÔNG thay đổi status giao hàng.
+     * Default `false`.
+     */
+    isReconciled: { type: Boolean, default: false },
+    reconciledAt: { type: Date },
+    reconciledBy: { type: Schema.Types.ObjectId, ref: "Employee" },
+    /** Thời điểm giao hàng thành công (DELIVERED). */
+    deliveredAt: { type: Date },
 
     orderType: {
       type: String,
@@ -564,6 +590,7 @@ OrderSchema.index({ leadId: 1 }, { unique: true, sparse: true });
 // Sprint 8.x: indexes for orderDate and receivedDate
 OrderSchema.index({ orderDate: -1 });
 OrderSchema.index({ receivedDate: -1 });
+OrderSchema.index({ deliveredAt: -1 });
 
 // ==================================================
 // Compound indexes — phục vụ dashboard aggregations
@@ -575,11 +602,18 @@ OrderSchema.index({ isActive: 1, status: 1 });
 // Revenue trend + windowed aggregations cần (isActive, createdAt, status).
 OrderSchema.index({ isActive: 1, createdAt: -1, status: 1 });
 
+// Sprint 8.x: indexes for /api/products/management — tránh COLLSCAN khi query theo productId/comboId
+OrderSchema.index({ productId: 1, status: 1, isActive: 1 });
+OrderSchema.index({ comboId: 1, status: 1, isActive: 1 });
+
 // Scope-based topSale/topMarketing cần prefix theo employeeId kèm status + createdAt.
 // Trước đây chỉ có single-field { saleEmployeeId } / { marketingEmployeeId } —
 // aggregation "all-time top sale" phải quét toàn bộ collection.
 OrderSchema.index({ saleEmployeeId: 1, status: 1, createdAt: -1 });
 OrderSchema.index({ marketingEmployeeId: 1, status: 1, createdAt: -1 });
+
+// Sprint 8.x: filter theo revenueLocked status
+OrderSchema.index({ isActive: 1, revenueLocked: 1, createdAt: -1 });
 
 export const Order =
   mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema);

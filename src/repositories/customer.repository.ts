@@ -261,7 +261,7 @@ export class CustomerRepository {
     const result = await Customer.findByIdAndUpdate(
       id,
       { $set: { isActive: false } },
-      { new: true }
+      { returnDocument: "after" }
     ).lean();
     return result !== null;
   }

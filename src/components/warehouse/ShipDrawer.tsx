@@ -408,7 +408,7 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message={
+        title={
           <Space>
             <Text strong>{order.customerName}</Text>
             {order.customerPhone && <Text type="secondary">| {order.customerPhone}</Text>}

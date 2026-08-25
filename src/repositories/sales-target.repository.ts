@@ -159,7 +159,7 @@ export class SalesTargetRepository {
           year,
         },
       },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     ).lean();
 
     return doc ? mapToTarget(doc as ISalesTarget) : null;
@@ -169,7 +169,7 @@ export class SalesTargetRepository {
     const result = await SalesTarget.findByIdAndUpdate(
       id,
       { $set: { isActive: false } },
-      { new: true }
+      { returnDocument: "after" }
     ).lean();
     return result !== null;
   }

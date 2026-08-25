@@ -34,7 +34,7 @@ import styles from "../orders.module.css";
 
 export type ReconciliationCardProps = {
   title: React.ReactNode;
-  accentColor: "green" | "orange";
+  accentColor: "green" | "orange" | "purple";
   orders: OrderListItem[];
   loading?: boolean;
   emptyText?: string;
@@ -44,6 +44,8 @@ export type ReconciliationCardProps = {
   showRevenue?: boolean;
   exchangeRate?: number;
   onViewDetail?: (id: string) => void;
+  /** True = card "đã đối soát" (cần hiển thị text "Hoàn tác") */
+  isReconciled?: boolean;
 };
 
 function getComboOrProduct(order: OrderListItem): string {
@@ -103,7 +105,7 @@ function ProductComboPopover({ order }: { order: OrderListItem }) {
             render: (_, record) => record.comboName || record.productName || "-",
           },
           {
-            title: "SL",
+            title: t("SL", lang),
             dataIndex: "quantity",
             key: "qty",
             width: 50,
@@ -145,6 +147,7 @@ function ReconciliationCardInner({
   bulkSubmitting = false,
   showRevenue = false,
   exchangeRate = 1,
+  isReconciled = false,
 }: ReconciliationCardProps) {
   const lang = useLanguageStore((s) => s.language);
   const resolvedEmptyText = emptyText ?? t("Chưa có đơn cần đối soát", lang);
@@ -229,7 +232,7 @@ function ReconciliationCardInner({
           },
           {
             key: "quantity",
-            title: "SL",
+            title: t("SL", lang),
             dataIndex: "quantity",
             align: "center" as const,
             width: 60,
@@ -249,6 +252,60 @@ function ReconciliationCardInner({
               </span>
             ),
           },
+          // Date columns based on reconciliation status
+          ...(isReconciled
+            ? [
+                {
+                  key: "reconciledAt",
+                  title: t("Ngày đối soát", lang),
+                  align: "center" as const,
+                  width: 100,
+                  render: (_: unknown, record: OrderListItem) => {
+                    const dateStr = record.reconciledAt;
+                    if (!dateStr) return <span style={{ color: "#999" }}>—</span>;
+                    const d = new Date(dateStr);
+                    return (
+                      <span style={{ fontSize: 12 }}>
+                        {d.toLocaleDateString("vi-VN")}
+                      </span>
+                    );
+                  },
+                },
+              ]
+            : [
+                {
+                  key: "orderDate",
+                  title: t("Ngày đặt", lang),
+                  align: "center" as const,
+                  width: 100,
+                  render: (_: unknown, record: OrderListItem) => {
+                    const dateStr = record.orderDate;
+                    if (!dateStr) return <span style={{ color: "#999" }}>—</span>;
+                    const d = new Date(dateStr);
+                    return (
+                      <span style={{ fontSize: 12 }}>
+                        {d.toLocaleDateString("vi-VN")}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: "deliveredAt",
+                  title: t("Ngày giao", lang),
+                  align: "center" as const,
+                  width: 100,
+                  render: (_: unknown, record: OrderListItem) => {
+                    const dateStr = record.deliveredAt;
+                    if (!dateStr) return <span style={{ color: "#999" }}>—</span>;
+                    const d = new Date(dateStr);
+                    return (
+                      <span style={{ fontSize: 12 }}>
+                        {d.toLocaleDateString("vi-VN")}
+                      </span>
+                    );
+                  },
+                },
+              ]),
         ]
       : []),
     {
@@ -259,16 +316,27 @@ function ReconciliationCardInner({
       render: (_: unknown, record: OrderListItem) => (
         <Space>
           <ProductComboPopover order={record} />
-          <Tooltip title={t("Đối soát đơn hàng này", lang)}>
-            <Button
-              type="primary"
-              size="small"
-              icon={<CheckSquareOutlined />}
-              onClick={() => onReconcileOne(record._id)}
-            >
-              {t("Đối soát", lang)}
-            </Button>
-          </Tooltip>
+          <Popconfirm
+            title={isReconciled ? t("Hoàn tác đối soát?", lang) : t("Đối soát đơn hàng?", lang)}
+            description={isReconciled
+              ? t("Đơn hàng này sẽ trở về trạng thái chưa đối soát.", lang)
+              : t("Đơn hàng này sẽ được chuyển sang trạng thái Đã đối soát.", lang)}
+            okText={isReconciled ? t("Hoàn tác", lang) : t("Đối soát", lang)}
+            cancelText={t("Hủy", lang)}
+            okButtonProps={{ danger: isReconciled }}
+            onConfirm={() => onReconcileOne(record._id)}
+          >
+            <Tooltip title={isReconciled ? t("Hoàn tác đối soát đơn hàng này", lang) : t("Đối soát đơn hàng này", lang)}>
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckSquareOutlined />}
+                danger={isReconciled}
+              >
+                {isReconciled ? t("Hoàn tác", lang) : t("Đối soát", lang)}
+              </Button>
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -289,21 +357,27 @@ function ReconciliationCardInner({
           <span className={styles["recon-card-count"]}>{orders.length}</span>
           {orders.length > 0 && (
             <Popconfirm
-              title={`${t("Đối soát tất cả", lang)} ${orders.length} ${t("đơn", lang)}?`}
-              description={t("Hành động này sẽ chuyển tất cả các đơn sang trạng thái Đã đối soát.", lang)}
-              okText={t("Đối soát", lang)}
+              title={`${isReconciled ? t("Hoàn tác đối soát", lang) : t("Đối soát tất cả", lang)} ${orders.length} ${t("đơn", lang)}?`}
+              description={isReconciled
+                ? t("Hành động này sẽ chuyển tất cả các đơn sang trạng thái chưa đối soát.", lang)
+                : t("Hành động này sẽ chuyển tất cả các đơn sang trạng thái Đã đối soát.", lang)}
+              okText={isReconciled ? t("Hoàn tác", lang) : t("Đối soát", lang)}
               cancelText={t("Hủy", lang)}
-              okButtonProps={{ danger: false }}
+              okButtonProps={{ danger: isReconciled }}
               onConfirm={handleConfirmAll}
             >
-              <Tooltip title={t("Đối soát tất cả đơn hàng trong danh sách", lang)}>
+              <Tooltip title={isReconciled
+                ? t("Hoàn tác đối soát tất cả đơn hàng trong danh sách", lang)
+                : t("Đối soát tất cả đơn hàng trong danh sách", lang)}
+              >
                 <Button
                   type="primary"
                   size="small"
                   loading={bulkSubmitting}
                   icon={<CheckSquareOutlined />}
+                  danger={isReconciled}
                 >
-                  ☑ {t("Đối soát tất cả", lang)}
+                  {isReconciled ? `↩ ${t("Hoàn tác đối soát tất cả", lang)}` : `☑ ${t("Đối soát tất cả", lang)}`}
                 </Button>
               </Tooltip>
             </Popconfirm>

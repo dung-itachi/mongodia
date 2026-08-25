@@ -115,7 +115,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const updatedLead = await Lead.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true }
+      { returnDocument: "after" }
     )
       .populate("productId", "_id code name")
       .populate("comboId", "_id code name")

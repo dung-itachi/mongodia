@@ -10,6 +10,7 @@ import {
   OrderAction,
   OrderType,
   ORDER_STATUS_LABELS,
+  RevenueLockReason,
 } from "@/constants/orderStatus";
 import Product from "@/models/Product";
 import ProductVariant from "@/models/ProductVariant";
@@ -43,6 +44,7 @@ import {
   type OrderStockSnapshot,
 } from "@/services/order/orderStockWiring.helper";
 import { InventoryReferenceType } from "@/constants/inventoryStatus";
+import { isStatusTransitionAllowed } from "@/configs/order-status.config";
 
 // ==================================================
 // Status guards
@@ -369,6 +371,14 @@ export async function PATCH(
 
     // status
     if (data.status !== undefined && data.status !== existedOrder.status) {
+      // Sprint 8.5: Validate status transition
+      if (!isStatusTransitionAllowed(existedOrder.status as string, data.status as string)) {
+        return errorResponse(
+          `Không thể chuyển từ "${ORDER_STATUS_LABELS[existedOrder.status as OrderStatus]}" sang "${ORDER_STATUS_LABELS[data.status as OrderStatus]}"`,
+          400
+        );
+      }
+
       const statusAction = statusActionMap[data.status as string] || OrderAction.UPDATED;
       pushHistory(statusAction, {
         fieldName: "status",
@@ -379,6 +389,21 @@ export async function PATCH(
         note: "Đổi trạng thái",
       });
       updateData.status = data.status;
+
+      // Set deliveredAt when status changes to DELIVERED
+      if (data.status === OrderStatus.DELIVERED) {
+        updateData.deliveredAt = new Date();
+
+        // Calculate revenue: grandTotal - shippingFee (Sprint Revenue Feature)
+        const grandTotal = (existedOrder.summary as { grandTotal?: number })?.grandTotal ?? existedOrder.totalAmount;
+        const shippingFee = (existedOrder.summary as { shippingFee?: number })?.shippingFee
+          ?? (existedOrder.shipping as { shippingFee?: number })?.shippingFee
+          ?? 0;
+        const netRevenue = Math.max(0, grandTotal - shippingFee);
+
+        updateData.marketingRevenueRaw = netRevenue;
+        updateData.saleRevenueRaw = netRevenue;
+      }
     }
 
     // payments — dùng helper isPaymentChanged()
@@ -622,6 +647,29 @@ export async function PATCH(
           session,
           actorEmployeeId: currentUser.employee._id,
         }
+      );
+    }
+
+    // ---- 4b) DELIVERED orders are always revenue-eligible (Sprint Revenue Feature) ----
+    // Đơn giao thành công → doanh thu chắc chắn được tính = grandTotal - shippingFee.
+    // Override revenueEligible/Final sau khi revenue engine đã chạy,
+    // để đảm bảo đơn DELIVERED không bị khóa bởi business rules khác.
+    if (data.status === OrderStatus.DELIVERED) {
+      const deliveredRevenue = (updateData.marketingRevenueRaw as number | undefined)
+        ?? (existedOrder.marketingRevenueRaw as number)
+        ?? 0;
+
+      await Order.updateOne(
+        { _id: id },
+        {
+          $set: {
+            revenueEligible: true,
+            revenueLockReason: RevenueLockReason.NONE,
+            marketingRevenueFinal: deliveredRevenue,
+            saleRevenueFinal: deliveredRevenue,
+          },
+        },
+        { session }
       );
     }
 

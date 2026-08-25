@@ -6,11 +6,12 @@
  * Sprint 8.5: Refactor Order Workflow
  *
  * Workflow mới:
- * WAIT_CONFIRM → CONFIRMED → PACKING → SHIPPING → DELIVERED → RECONCILED
+ * WAIT_CONFIRM → CONFIRMED → PACKING → SHIPPING → DELIVERED
  *                                        ↓
  *                                    RETURNED
- *                                        ↓
- *                                   RECONCILED
+ *
+ * Đối soát: KHÔNG phải status riêng, chỉ là flag isReconciled
+ * trên đơn DELIVERED hoặc RETURNED.
  */
 
 /** Status values used by an Order throughout its lifecycle. */
@@ -27,7 +28,7 @@ export enum OrderStatus {
   DELIVERED = "DELIVERED",
   /** Đơn hoàn. */
   RETURNED = "RETURNED",
-  /** Shipper trả tiền, đơn hoàn tất. Đây mới là doanh thu thực. */
+  /** @deprecated - Không còn là status. Dùng isReconciled flag thay thế. */
   RECONCILED = "RECONCILED",
   /** Đã hủy. */
   CANCELLED = "CANCELLED",
@@ -46,7 +47,6 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   [OrderStatus.SHIPPING]: "Đang giao",
   [OrderStatus.DELIVERED]: "Đã giao",
   [OrderStatus.RETURNED]: "Đã hoàn trả",
-  [OrderStatus.RECONCILED]: "Đã đối soát",
   [OrderStatus.CANCELLED]: "Đã hủy",
 };
 
@@ -58,7 +58,6 @@ export const VALID_ORDER_STATUSES: ReadonlyArray<OrderStatus> = [
   OrderStatus.SHIPPING,
   OrderStatus.DELIVERED,
   OrderStatus.RETURNED,
-  OrderStatus.RECONCILED,
   OrderStatus.CANCELLED,
 ];
 
@@ -66,7 +65,7 @@ export const VALID_ORDER_STATUSES: ReadonlyArray<OrderStatus> = [
 export const REVENUE_UNLOCK_STATUSES: ReadonlySet<OrderStatus> = new Set([
   OrderStatus.CANCELLED,
   OrderStatus.RETURNED,
-  OrderStatus.RECONCILED,
+  OrderStatus.DELIVERED,
 ]);
 
 /**

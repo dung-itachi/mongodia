@@ -108,18 +108,18 @@ export default function ReassignModal({
     >
       {lead && (
         <div style={{ marginBottom: 16 }}>
-          <Alert
-            type="info"
-            showIcon
-            icon={<UserSwitchOutlined />}
-            message={
-              <div>
-                <div><strong>{t("Khách hàng", lang)}:</strong> {lead.leadCode} - {lead.customerName}</div>
-                <div><strong>{t("Điện thoại", lang)}:</strong> {lead.phone || "-"}</div>
-                <div><strong>{t("Sale hiện tại", lang)}:</strong> {currentSaleName}</div>
-              </div>
-            }
-          />
+            <Alert
+              type="info"
+              showIcon
+              icon={<UserSwitchOutlined />}
+              title={
+                <div>
+                  <div><strong>{t("Khách hàng", lang)}:</strong> {lead.leadCode} - {lead.customerName}</div>
+                  <div><strong>{t("Điện thoại", lang)}:</strong> {lead.phone || "-"}</div>
+                  <div><strong>{t("Sale hiện tại", lang)}:</strong> {currentSaleName}</div>
+                </div>
+              }
+            />
         </div>
       )}
 

@@ -610,7 +610,7 @@ export default function QuickOrderImportPage() {
               type="info"
               showIcon
               icon={<UploadOutlined />}
-              message={
+              title={
                 <span>
                   {t("Tỷ giá MNT → VND:", lang)} <strong>{exchangeRate}</strong>
                 </span>
@@ -729,7 +729,7 @@ export default function QuickOrderImportPage() {
                   {stats.invalid > 0 && (
                     <Alert
                       type="error"
-                      message={`${t("Còn", lang)} ${stats.invalid} ${t("dòng lỗi. Không thể tạo đơn.", lang)}`}
+                      title={`${t("Còn", lang)} ${stats.invalid} ${t("dòng lỗi. Không thể tạo đơn.", lang)}`}
                       showIcon
                       style={{ display: "inline-block" }}
                     />
@@ -737,7 +737,7 @@ export default function QuickOrderImportPage() {
                   {stats.invalid === 0 && stats.valid > 0 && (
                     <Alert
                       type="success"
-                      message={`${stats.valid} ${t("đơn hàng sẵn sàng để tạo.", lang)}`}
+                      title={`${stats.valid} ${t("đơn hàng sẵn sàng để tạo.", lang)}`}
                       showIcon
                       style={{ display: "inline-block" }}
                     />

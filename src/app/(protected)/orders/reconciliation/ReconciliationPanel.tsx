@@ -24,7 +24,6 @@ import { memo, useCallback, useState } from "react";
 import { App } from "antd";
 import { useQueryClient } from "@tanstack/react-query";
 import { useReconciliationLists } from "@/hooks/useReconciliationLists";
-import { useChangeOrderStatus } from "@/hooks/useOrders";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import type { OrderListItem } from "@/types/order";
 import { useLanguageStore } from "@/store/language.store";
@@ -32,6 +31,15 @@ import { t } from "@/lib/i18n";
 import ReconciliationStats from "./ReconciliationStats";
 import ReconciliationCard from "./ReconciliationCard";
 import styles from "../orders.module.css";
+
+async function reconcileOrder(orderId: string, value: boolean): Promise<void> {
+  const response = await fetch(`/api/orders/${orderId}/reconcile`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ value }),
+  });
+  if (!response.ok) throw new Error("Failed to reconcile order");
+}
 
 function totalAmount(orders: OrderListItem[]): number {
   return orders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
@@ -42,8 +50,7 @@ function ReconciliationPanelInner() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const {
-    deliveredOrders,
-    returnedOrders,
+    pendingOrders,
     reconciledOrders,
     loading,
     refetch,
@@ -52,15 +59,14 @@ function ReconciliationPanelInner() {
   const { data: exchangeRateData } = useExchangeRate();
   const exchangeRate = exchangeRateData?.rate ?? 1;
 
-  const changeStatus = useChangeOrderStatus();
-  const [bulkSubmittingDelivered, setBulkSubmittingDelivered] = useState(false);
-  const [bulkSubmittingReturned, setBulkSubmittingReturned] = useState(false);
+  const [bulkSubmittingPending, setBulkSubmittingPending] = useState(false);
+  const [bulkSubmittingReconciled, setBulkSubmittingReconciled] = useState(false);
 
   // Track orders that have been clicked for reconciliation (local only)
   const [reconciledOrderIds, setReconciledOrderIds] = useState<Set<string>>(new Set());
 
-  // Sort delivered orders: un-reconciled first, reconciled (clicked) at bottom
-  const sortedDeliveredOrders = [...deliveredOrders].sort((a, b) => {
+  // Sort pending orders: un-reconciled first, reconciled (clicked) at bottom
+  const sortedPendingOrders = [...pendingOrders].sort((a, b) => {
     const aDone = reconciledOrderIds.has(a._id);
     const bDone = reconciledOrderIds.has(b._id);
     if (aDone && !bDone) return 1;
@@ -68,8 +74,8 @@ function ReconciliationPanelInner() {
     return 0;
   });
 
-  // Sort returned orders: un-reconciled first, reconciled (clicked) at bottom
-  const sortedReturnedOrders = [...returnedOrders].sort((a, b) => {
+  // Sort reconciled orders: reconciled first
+  const sortedReconciledOrders = [...reconciledOrders].sort((a, b) => {
     const aDone = reconciledOrderIds.has(a._id);
     const bDone = reconciledOrderIds.has(b._id);
     if (aDone && !bDone) return 1;
@@ -87,12 +93,8 @@ function ReconciliationPanelInner() {
   const handleReconcileOne = useCallback(
     async (id: string) => {
       try {
-        await changeStatus.mutateAsync({
-          id,
-          data: { status: "RECONCILED" },
-        });
+        await reconcileOrder(id, true);
         message.success(t("Đã đối soát đơn hàng", lang));
-        // Add to local reconciled set (will be removed after refetch)
         setReconciledOrderIds((prev) => new Set([...prev, id]));
         invalidateReconciliation();
       } catch (error) {
@@ -103,32 +105,51 @@ function ReconciliationPanelInner() {
         );
       }
     },
-    [changeStatus, message, invalidateReconciliation, lang]
+    [message, invalidateReconciliation, lang]
+  );
+
+  const handleUnreconcileOne = useCallback(
+    async (id: string) => {
+      try {
+        await reconcileOrder(id, false);
+        message.success(t("Đã bỏ đối soát đơn hàng", lang));
+        setReconciledOrderIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        invalidateReconciliation();
+      } catch (error) {
+        message.error(
+          error instanceof Error
+            ? error.message
+            : t("Không thể bỏ đối soát đơn hàng", lang)
+        );
+      }
+    },
+    [message, invalidateReconciliation, lang]
   );
 
   const handleReconcileAll = useCallback(
-    async (source: "delivered" | "returned") => {
-      const list =
-        source === "delivered" ? deliveredOrders : returnedOrders;
+    async (source: "pending" | "reconciled") => {
+      const list = source === "pending" ? pendingOrders : reconciledOrders;
       if (list.length === 0) return;
 
       const setLoading =
-        source === "delivered"
-          ? setBulkSubmittingDelivered
-          : setBulkSubmittingReturned;
+        source === "pending"
+          ? setBulkSubmittingPending
+          : setBulkSubmittingReconciled;
       setLoading(true);
 
-      // Mark all as reconciled locally first
       const allIds = list.map((o) => o._id);
       setReconciledOrderIds((prev) => new Set([...prev, ...allIds]));
 
+      const reconcileFn = source === "pending"
+        ? (id: string) => reconcileOrder(id, true)
+        : (id: string) => reconcileOrder(id, false);
+
       const results = await Promise.allSettled(
-        list.map((o) =>
-          changeStatus.mutateAsync({
-            id: o._id,
-            data: { status: "RECONCILED" },
-          })
-        )
+        list.map((o) => reconcileFn(o._id))
       );
 
       const succeeded = results.filter((r) => r.status === "fulfilled").length;
@@ -142,53 +163,47 @@ function ReconciliationPanelInner() {
             failed > 0 ? ` (${failed} ${t("lỗi", lang)})` : ""
           }`
         );
-      }
-      if (failed > 0 && succeeded === 0) {
+      } else {
         message.error(t("Đối soát thất bại", lang));
       }
 
       invalidateReconciliation();
     },
-    [
-      deliveredOrders,
-      returnedOrders,
-      changeStatus,
-      message,
-      invalidateReconciliation,
-      lang,
-    ]
+    [pendingOrders, reconciledOrders, message, invalidateReconciliation, lang]
   );
 
   return (
     <div className={styles["recon-panel"]}>
       <ReconciliationStats
-        deliveredCount={deliveredOrders.length}
-        returnedCount={returnedOrders.length}
+        pendingCount={pendingOrders.length}
         reconciledCount={reconciledOrders.length}
-        deliveredRevenue={totalAmount(deliveredOrders)}
+        pendingRevenue={totalAmount(pendingOrders)}
         loading={loading}
       />
 
       <ReconciliationCard
-        title={<>{`✅ ${t("Đơn giao thành công", lang)}`}</>}
+        title={<>{`✅ ${t("Đơn chưa đối soát", lang)}`}</>}
         accentColor="green"
-        orders={sortedDeliveredOrders}
+        orders={sortedPendingOrders}
         loading={loading}
         onReconcileOne={handleReconcileOne}
-        onReconcileAll={() => handleReconcileAll("delivered")}
-        bulkSubmitting={bulkSubmittingDelivered}
+        onReconcileAll={() => handleReconcileAll("pending")}
+        bulkSubmitting={bulkSubmittingPending}
         showRevenue
         exchangeRate={exchangeRate}
       />
 
       <ReconciliationCard
         title={<>{`↩ ${t("Đơn đã đối soát", lang)}`}</>}
-        accentColor="orange"
-        orders={sortedReturnedOrders}
+        accentColor="purple"
+        orders={sortedReconciledOrders}
         loading={loading}
-        onReconcileOne={handleReconcileOne}
-        onReconcileAll={() => handleReconcileAll("returned")}
-        bulkSubmitting={bulkSubmittingReturned}
+        onReconcileOne={handleUnreconcileOne}
+        onReconcileAll={() => handleReconcileAll("reconciled")}
+        bulkSubmitting={bulkSubmittingReconciled}
+        showRevenue
+        exchangeRate={exchangeRate}
+        isReconciled
       />
     </div>
   );

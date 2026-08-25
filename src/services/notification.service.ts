@@ -779,7 +779,7 @@ export async function updateOne(
   const updated = await Notification.findByIdAndUpdate(
     id,
     { $set: update },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!updated) {
     throw new NotificationServiceError("Notification không tồn tại", 404);
@@ -798,7 +798,7 @@ export async function togglePin(
   const updated = await Notification.findByIdAndUpdate(
     id,
     { $set: { isPinned } },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!updated) {
     throw new NotificationServiceError("Notification không tồn tại", 404);
@@ -814,7 +814,7 @@ export async function softDelete(id: string): Promise<{ id: string }> {
   const updated = await Notification.findByIdAndUpdate(
     id,
     { $set: { isActive: false } },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!updated) {
     throw new NotificationServiceError("Notification không tồn tại", 404);

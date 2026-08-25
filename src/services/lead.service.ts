@@ -40,7 +40,7 @@ async function generateLeadCode(): Promise<string> {
   const counter = await Counter.findOneAndUpdate(
     { key: counterKey },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   const sequence = (counter?.seq || 1).toString().padStart(4, "0");
@@ -391,7 +391,7 @@ export class LeadService {
       const claimedLead = await Lead.findOneAndUpdate(
         { _id: id, isConverted: false, convertedOrderId: { $exists: false } },
         { $set: { isConverted: true, convertedAt: new Date(), updatedAt: new Date() } },
-        { new: true, session },
+        { returnDocument: "after", session },
       );
       if (!claimedLead) {
         await session.abortTransaction();
@@ -410,6 +410,7 @@ export class LeadService {
             email: existingLead.email,
             address: existingLead.address,
             marketingEmployeeId: existingLead.marketingEmployeeId?.toString(),
+            saleEmployeeId: existingLead.saleEmployeeId?.toString(),
           },
           session
         );
@@ -439,6 +440,8 @@ export class LeadService {
           // Sprint 8.x: thời gian đơn hàng từ Lead
           orderDate: existingLead.orderDate,
           receivedDate: existingLead.receivedDate,
+          // Sprint 8.x: địa chỉ giao hàng từ Lead
+          address: existingLead.address,
         },
         session
       );

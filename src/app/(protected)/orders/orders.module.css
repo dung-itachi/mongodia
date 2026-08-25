@@ -135,6 +135,10 @@
   border-left: 4px solid #fa8c16;
 }
 
+.recon-card--purple {
+  border-left: 4px solid #722ed1;
+}
+
 .recon-card-header {
   display: flex;
   align-items: center;
@@ -183,6 +187,11 @@
 .recon-card--orange .recon-card-count {
   background: #fff7e6;
   color: #fa8c16;
+}
+
+.recon-card--purple .recon-card-count {
+  background: #f9f0ff;
+  color: #722ed1;
 }
 
 .recon-card-body {

@@ -185,7 +185,7 @@ export const MODULES: ModuleDefinition[] = [
   {
     id: "orders-reconciled",
     title: "Đối soát",
-    route: "/orders?status=RECONCILED",
+    route: "/orders/isReconciled",
     permission: "order.view",
     group: "ORDERS",
     icon: `<path d="M9 11l3 3L22 4"/>`,

@@ -326,7 +326,7 @@ export class LeadRepository {
     }
     updateData.updatedAt = new Date();
 
-    const doc = await Lead.findByIdAndUpdate(id, updateData, { new: true })
+    const doc = await Lead.findByIdAndUpdate(id, updateData, { returnDocument: "after" })
       .populate("comboId", "_id code name sellingPrice")
       .populate("productId", "_id code name")
       .populate("facebookPageId", "_id code name")
@@ -342,7 +342,7 @@ export class LeadRepository {
     const result = await Lead.findByIdAndUpdate(
       id,
       { isActive: false },
-      { new: true }
+      { returnDocument: "after" }
     );
     return result !== null;
   }
@@ -358,7 +358,7 @@ export class LeadRepository {
         assignedAt: new Date(),
         updatedAt: new Date(),
       },
-      { new: true }
+      { returnDocument: "after" }
     )
       .populate("marketingEmployeeId", "_id employeeCode fullName")
       .populate("saleEmployeeId", "_id employeeCode fullName")
@@ -791,7 +791,7 @@ export class LeadRepository {
         convertedAt: new Date(),
         updatedAt: new Date(),
       },
-      { new: true }
+      { returnDocument: "after" }
     )
       .populate("marketingEmployeeId", "_id employeeCode fullName")
       .populate("saleEmployeeId", "_id employeeCode fullName")

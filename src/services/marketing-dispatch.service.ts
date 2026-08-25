@@ -537,7 +537,7 @@ export class MarketingDispatchService {
         .populate("marketingEmployeeId", "_id employeeCode fullName")
         .populate("saleEmployeeId", "_id employeeCode fullName")
         .populate("productId", "_id code name")
-        .populate("comboId", "_id code name sellingPrice")
+        .populate("comboId", "_id code name sellingPrice packageQuantity")
         .populate("facebookPageId", "_id code name")
         .sort({ assignedAt: -1 })
         .skip(skip)
@@ -574,6 +574,10 @@ export class MarketingDispatchService {
                 typeof (doc.comboId as { sellingPrice?: unknown }).sellingPrice === "number"
                   ? (doc.comboId as { sellingPrice: number }).sellingPrice
                   : undefined,
+              packageQuantity:
+                typeof (doc.comboId as { packageQuantity?: unknown }).packageQuantity === "number"
+                  ? (doc.comboId as { packageQuantity: number }).packageQuantity
+                  : 1,
             }
           : undefined,
         quantity: doc.quantity,

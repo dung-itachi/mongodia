@@ -191,7 +191,7 @@ export default function BatchCheckCustomersModal({
                   type="warning"
                   showIcon
                   style={{ marginBottom: 16 }}
-                  message={`${groups.failed.length} ${t("SĐT tra cứu lỗi", lang)}`}
+                  title={`${groups.failed.length} ${t("SĐT tra cứu lỗi", lang)}`}
                   description={
                     <div style={{ fontSize: 12 }}>
                       {groups.failed.map((it) => (

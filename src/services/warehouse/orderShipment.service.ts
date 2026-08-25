@@ -91,7 +91,7 @@ async function adjustInventoryForShip(warehouseId: mongoose.Types.ObjectId, item
     updated = await WarehouseInventory.findOneAndUpdate(
       { ...where, reservedQuantity: { $gte: quantity } } as never,
       { $inc: { quantity: -quantity, reservedQuantity: -quantity } },
-      { new: true, session }
+      { returnDocument: "after", session }
     ).lean();
     if (!updated) {
       // Try to get more info for error message
@@ -105,7 +105,7 @@ async function adjustInventoryForShip(warehouseId: mongoose.Types.ObjectId, item
     updated = await WarehouseInventory.findOneAndUpdate(
       { ...where, availableQuantity: { $gte: quantity } } as never,
       { $inc: { quantity: -quantity, availableQuantity: -quantity } },
-      { new: true, session }
+      { returnDocument: "after", session }
     ).lean();
     if (!updated) {
       const current = await WarehouseInventory.findOne(where as never).lean();

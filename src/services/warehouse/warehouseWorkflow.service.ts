@@ -117,7 +117,7 @@ async function adjustInventory(
     const result = await WarehouseInventory.findOneAndUpdate(
       query,
       update,
-      { new: true, session }
+      { returnDocument: "after", session }
     );
     if (!result) throw new Error(`Không đủ tồn kho: cần ${Math.abs(change)}`);
     return result;

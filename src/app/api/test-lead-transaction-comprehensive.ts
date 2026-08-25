@@ -58,7 +58,7 @@ async function generateLeadCodeWithCounter(): Promise<string> {
   const counter = await Counter.findOneAndUpdate(
     { key: counterKey },
     { $inc: { value: 1 } },
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   const sequence = (counter.seq || 1).toString().padStart(4, "0");

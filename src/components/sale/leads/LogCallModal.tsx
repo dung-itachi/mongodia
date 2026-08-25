@@ -178,7 +178,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
         {isNoAnswerStatus && (
           <Alert
             type="warning"
-            message={
+            title={
               <Text>
                 {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Không nghe máy", lang)}&quot;</Text>.
                 {t("Số lần gọi không nghe sẽ được cập nhật.", lang)}
@@ -192,7 +192,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
         {selectedStatus === LeadCallStatus.CALL_BACK && (
           <Alert
             type="info"
-            message={
+            title={
               <Text>
                 {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Đã liên hệ", lang)}&quot;</Text> {t("và được hẹn gọi lại sau.", lang)}
               </Text>
@@ -205,7 +205,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
         {selectedStatus === LeadCallStatus.POTENTIAL && (
           <Alert
             type="success"
-            message={
+            title={
               <Text>
                 {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Tiềm năng", lang)}&quot;</Text>.
                 {t("Bạn có thể tiến hành chốt đơn.", lang)}
@@ -219,7 +219,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
         {selectedStatus === LeadCallStatus.CONVERTED && (
           <Alert
             type="success"
-            message={
+            title={
               <Text>
                 {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Đã chốt", lang)}&quot;</Text>.
                 {t("Bạn có thể tiến hành tạo đơn hàng.", lang)}

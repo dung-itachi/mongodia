@@ -109,7 +109,7 @@ const giftRepository = {
     const updated = await Gift.findByIdAndUpdate(
       id,
       { $set: { isActive: false } },
-      { new: true }
+      { returnDocument: "after" }
     ).lean<IGift | null>();
     return updated;
   },
@@ -124,7 +124,7 @@ const giftRepository = {
     return Gift.findByIdAndUpdate(
       id,
       { $set: data },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     ).lean<IGift | null>();
   },
 
@@ -142,7 +142,7 @@ const giftRepository = {
         stockQuantity: { $gte: Math.max(0, -delta) },
       },
       { $inc: { stockQuantity: delta } },
-      { new: true, session, runValidators: true }
+      { returnDocument: "after", session, runValidators: true }
     ).lean<IGift | null>();
   },
 

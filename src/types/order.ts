@@ -156,6 +156,10 @@ export interface OrderListItem {
   isPrepaid: boolean;
   /** Sale đã gọi điện xác nhận với khách chưa. Default `false`. */
   isCalledForConfirmation?: boolean;
+  /** Đơn đã được đối soát chưa. KHÔNG thay đổi status giao hàng. */
+  isReconciled?: boolean;
+  reconciledAt?: string;
+  reconciledBy?: string;
 
   // Sprint 8.x: Thời gian đơn hàng
   /** Thời gian khách đặt hàng (từ Landing page hoặc dữ liệu dán) */
@@ -248,6 +252,8 @@ export interface OrderFilter {
   order?: "asc" | "desc";
   /** Internal: force isActive filter */
   isActive?: boolean;
+  /** Filter by isReconciled flag (for reconciliation view) */
+  isReconciled?: boolean;
 }
 
 // ============================================================================

@@ -458,9 +458,10 @@ function isActive(pathname: string, search: string, href: string): boolean {
     return false;
   }
 
-  // Href has no query → match any pathname at this path
+  // Href has no query → match only if current URL has no query either
+  // This prevents /orders from matching /orders?status=CONFIRMED
   if (!queryString) {
-    return true;
+    return search === "";
   }
 
   // Href has query → must also match current search params exactly

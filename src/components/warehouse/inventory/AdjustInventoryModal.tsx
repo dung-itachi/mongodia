@@ -233,7 +233,7 @@ export default function AdjustInventoryModal({
           {/* Change preview */}
           {newQty !== undefined && qtyDiff !== 0 && (
             <Alert
-              message={
+              title={
                 <Space>
                   <span>
                     {t("Thay đổi:", lang)} <strong>{qtyDiff > 0 ? `+${formatNumber(qtyDiff)}` : formatNumber(qtyDiff)}</strong>

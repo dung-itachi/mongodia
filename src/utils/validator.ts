@@ -1136,9 +1136,9 @@ export const updateComboSchema = z.object({
 const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "MOMO", "ZALO_PAY", "VNPAY", "OTHER"] as const;
 const CURRENCIES = ["VND", "MNT", "USD"] as const;
 const ORDER_STATUSES = [
-  "PENDING", "CONFIRMED", "PREPAID",
-  "SHIPPING", "COMPLETED", "CANCELLED",
-  "REJECTED", "FAILED",
+  "WAIT_CONFIRM", "CONFIRMED", "PACKING",
+  "SHIPPING", "DELIVERED", "RETURNED",
+  "RECONCILED", "CANCELLED",
 ] as const;
 const ORDER_TYPES = [
   "NORMAL", "COMBO", "GIFT", "EXCHANGE", "REPLACEMENT",
@@ -1230,7 +1230,7 @@ const orderItemSchema = z.object({
 
   const requiredGifts = item.comboQuantity * item.giftQuantity;
   const selectedGifts = item.giftSelections.reduce((sum, gift) => sum + gift.quantity, 0);
-  if (item.giftMode === "CUSTOMER_SELECTED" && selectedGifts !== requiredGifts) {
+  if (item.giftMode === "CUSTOMER_SELECTED" && selectedGifts < requiredGifts) {
     ctx.addIssue({ code: "custom", path: ["giftSelections"], message: `Chi tiết quà phải đủ ${requiredGifts} quà.` });
   }
   if (item.giftMode === "RANDOM" && item.giftSelections.length > 0) {
@@ -1322,7 +1322,7 @@ export const createOrderSchema = z.object({
     .optional()
     .nullable(),
 
-  status: z.enum(ORDER_STATUSES).default("PENDING"),
+  status: z.enum(ORDER_STATUSES).default("WAIT_CONFIRM"),
 
   isPrepaid: z.boolean().default(false),
 

@@ -69,6 +69,7 @@ export async function POST(
     const result = await leadService.convertLead(id, currentUser.employee?._id?.toString() ?? "", orderItem);
 
     if (!result.success) {
+      console.log("[LEAD CONVERT API] Validation error:", result.error);
       return errorResponse(result.error, 400);
     }
 

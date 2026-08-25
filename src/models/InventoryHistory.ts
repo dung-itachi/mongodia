@@ -184,6 +184,15 @@ InventoryHistorySchema.index({ orderId: 1, createdAt: -1 });
 // Truy vết theo ProductVariant (cross-warehouse).
 InventoryHistorySchema.index({ productVariantId: 1, createdAt: -1 });
 
+// Sprint 8.x: composite index cho /api/products/management — query by (productVariantId, warehouseId, transactionType)
+// Tránh index intersection khi lọc nhiều variants cùng lúc
+InventoryHistorySchema.index({
+  productVariantId: 1,
+  warehouseId: 1,
+  transactionType: 1,
+  createdAt: -1,
+});
+
 // Truy vết theo mã tham chiếu + kho (vd: tìm lịch sử kho từ 1 Order).
 InventoryHistorySchema.index({ referenceCode: 1, warehouseId: 1 });
 

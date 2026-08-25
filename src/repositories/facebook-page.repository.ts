@@ -321,7 +321,7 @@ export class FacebookPageRepository {
     const result = await FacebookPage.findByIdAndUpdate(
       id,
       { $set: { isActive: false } },
-      { new: true, session }
+      { returnDocument: "after", session }
     ).lean();
     return result !== null;
   }

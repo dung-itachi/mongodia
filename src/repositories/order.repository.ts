@@ -8,6 +8,7 @@
 
 import mongoose, { type SortOrder } from "mongoose";
 import { Order, type IOrder } from "@/models/Order";
+import { OrderStatus } from "@/constants/orderStatus";
 import type { Types } from "mongoose";
 import type { OrderFilter } from "@/types/order";
 
@@ -29,6 +30,7 @@ export interface CreateOrderData {
   unitPrice: number;
   totalAmount: number;
   currency: "VND" | "MNT" | "USD";
+  status?: string;
   // Sprint Settings: snapshot exchange rate at order creation time
   exchangeRate?: number;
   exchangeRateDate?: Date;
@@ -228,7 +230,7 @@ export class OrderRepository {
   async create(data: CreateOrderData, session?: mongoose.ClientSession): Promise<ReturnType<typeof mapToOrder>> {
     const order = new Order({
       ...data,
-      status: "PENDING",
+      status: data.status ?? OrderStatus.WAIT_CONFIRM,
       isPrepaid: false,
       orderType: "NORMAL",
       payments: [],
@@ -277,7 +279,7 @@ export class OrderRepository {
    * Update a order by ID
    */
   async update(id: string, data: UpdateOrderData, session?: mongoose.ClientSession): Promise<ReturnType<typeof mapToOrder> | null> {
-    const doc = await Order.findByIdAndUpdate(id, data, { new: true, session }).lean();
+    const doc = await Order.findByIdAndUpdate(id, data, { returnDocument: "after", session }).lean();
     if (!doc) return null;
     return mapToOrder(doc as IOrder);
   }
@@ -289,7 +291,7 @@ export class OrderRepository {
     const result = await Order.findByIdAndUpdate(
       id,
       { isActive: false },
-      { new: true, session }
+      { returnDocument: "after", session }
     );
     return result !== null;
   }
@@ -359,12 +361,17 @@ export class OrderRepository {
   async changeStatus(
     id: string,
     status: string,
-    session?: mongoose.ClientSession
+    session?: mongoose.ClientSession,
+    deliveredAt?: Date
   ): Promise<ReturnType<typeof mapToOrder> | null> {
+    const updateData: Record<string, unknown> = { status };
+    if (deliveredAt) {
+      updateData.deliveredAt = deliveredAt;
+    }
     const doc = await Order.findByIdAndUpdate(
       id,
-      { status },
-      { new: true, session }
+      updateData,
+      { returnDocument: "after", session }
     ).lean();
 
     if (!doc) return null;

@@ -323,7 +323,7 @@ export default function PermissionTreePage({ currentUserPermissions }: Props) {
         <Alert
           type="error"
           showIcon
-          message={t("Bạn không có quyền quản lý phân quyền", lang)}
+          title={t("Bạn không có quyền quản lý phân quyền", lang)}
           description={t("Trang này yêu cầu quyền role.permission.manage.", lang)}
         />
       </div>

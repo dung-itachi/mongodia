@@ -179,6 +179,12 @@ export interface OrderResponse {
   isPrepaid: boolean;
   /** Sale đã gọi điện xác nhận với khách chưa. Default `false`. */
   isCalledForConfirmation: boolean;
+  /** Đơn đã được đối soát chưa. */
+  isReconciled?: boolean;
+  /** Thời điểm đối soát (nếu đã đối soát). */
+  reconciledAt?: string;
+  /** Người thực hiện đối soát. */
+  reconciledBy?: string;
 
   // ---- Classification ----------------------------------------------
   orderType: OrderType;
@@ -191,6 +197,8 @@ export interface OrderResponse {
   orderDate?: string;
   /** Thời gian Marketing nhận được đơn (khi push sang Sale) */
   receivedDate?: string;
+  /** Thời gian giao hàng thành công (DELIVERED). */
+  deliveredAt?: string;
 
   // ---- Order Items (Sprint 6.1) ------------------------------------
   orderItems: OrderItemResponse[];
@@ -313,13 +321,15 @@ function mapOrderItem(item: IOrderItem): OrderItemResponse {
     details: (item.details ?? []).map((detail) => ({
       variantId: detail.variantId?.toString(),
       attributes: (detail.attributes ?? []).map((attribute) => {
+        // Sprint 8.x: attributes may store name snapshots directly (order-time preservation).
+        // Fall back to legacy cast only when names are missing.
         const option = attribute.optionId as unknown as { _id?: { toString(): string }; name?: string };
         const value = attribute.valueId as unknown as { _id?: { toString(): string }; name?: string };
         return {
           optionId: option._id?.toString() ?? attribute.optionId.toString(),
           valueId: value._id?.toString() ?? attribute.valueId.toString(),
-          optionName: option.name,
-          valueName: value.name,
+          optionName: attribute.optionName ?? option.name,
+          valueName: attribute.valueName ?? value.name,
         };
       }),
       quantity: detail.quantity,
@@ -391,31 +401,59 @@ function extractPopulatedProductAndCombo(order: IOrder): {
 export function mapOrder(order: IOrder): OrderResponse {
   const populated = extractPopulatedProductAndCombo(order);
 
-  // Extract populated employee objects
+  // Extract populated customer object
+  const rawCustomer = (order as unknown as { customerId?: unknown }).customerId;
+  let customerName = order.customerName;
+  let customerPhone = order.customerPhone;
+  let customerIdStr = order.customerId?.toString() ?? "";
+  if (rawCustomer && typeof rawCustomer === "object" && "name" in rawCustomer) {
+    const c = rawCustomer as { _id?: { toString?: () => string } | string; name?: string; phone?: string };
+    if (c._id) {
+      customerIdStr = typeof c._id === "string" ? c._id : c._id.toString?.() ?? customerIdStr;
+    }
+    if (c.name) customerName = c.name;
+    if (c.phone) customerPhone = c.phone;
+  }
+
+  // Extract populated employee objects - after population, field becomes object not ObjectId
   const rawMarketingEmp = (order as unknown as { marketingEmployeeId?: unknown }).marketingEmployeeId;
+  let marketingEmployeeIdStr = order.marketingEmployeeId?.toString();
   const marketingEmployee = rawMarketingEmp && typeof rawMarketingEmp === "object" && "fullName" in rawMarketingEmp
-    ? {
-        _id: (rawMarketingEmp as { _id: { toString(): string } })._id.toString(),
-        employeeCode: (rawMarketingEmp as { employeeCode: string }).employeeCode,
-        fullName: (rawMarketingEmp as { fullName: string }).fullName,
-      }
+    ? (() => {
+        const emp = rawMarketingEmp as { _id?: { toString?: () => string } | string; employeeCode: string; fullName: string };
+        if (emp._id) {
+          marketingEmployeeIdStr = typeof emp._id === "string" ? emp._id : emp._id.toString?.() ?? marketingEmployeeIdStr;
+        }
+        return {
+          _id: marketingEmployeeIdStr,
+          employeeCode: emp.employeeCode,
+          fullName: emp.fullName,
+        };
+      })()
     : undefined;
 
   const rawSaleEmp = (order as unknown as { saleEmployeeId?: unknown }).saleEmployeeId;
+  let saleEmployeeIdStr = order.saleEmployeeId?.toString();
   const saleEmployee = rawSaleEmp && typeof rawSaleEmp === "object" && "fullName" in rawSaleEmp
-    ? {
-        _id: (rawSaleEmp as { _id: { toString(): string } })._id.toString(),
-        employeeCode: (rawSaleEmp as { employeeCode: string }).employeeCode,
-        fullName: (rawSaleEmp as { fullName: string }).fullName,
-      }
+    ? (() => {
+        const emp = rawSaleEmp as { _id?: { toString?: () => string } | string; employeeCode: string; fullName: string };
+        if (emp._id) {
+          saleEmployeeIdStr = typeof emp._id === "string" ? emp._id : emp._id.toString?.() ?? saleEmployeeIdStr;
+        }
+        return {
+          _id: saleEmployeeIdStr,
+          employeeCode: emp.employeeCode,
+          fullName: emp.fullName,
+        };
+      })()
     : undefined;
 
   return {
     _id: order._id.toString(),
     orderCode: order.orderCode,
-    customerId: order.customerId.toString(),
-    customerName: order.customerName,
-    customerPhone: order.customerPhone,
+    customerId: customerIdStr,
+    customerName,
+    customerPhone,
     leadId: order.leadId?.toString(),
     productId: order.productId?.toString(),
     comboId: order.comboId?.toString(),
@@ -434,14 +472,17 @@ export function mapOrder(order: IOrder): OrderResponse {
     actualWeight: order.actualWeight,
     warehouseId: order.warehouseId?.toString(),
     stockReservedAt: order.stockReservedAt?.toISOString(),
-    marketingEmployeeId: order.marketingEmployeeId?.toString(),
+    marketingEmployeeId: marketingEmployeeIdStr,
     marketingEmployee,
-    saleEmployeeId: order.saleEmployeeId?.toString(),
+    saleEmployeeId: saleEmployeeIdStr,
     saleEmployee,
     status: order.status as OrderStatus,
     statusLabel: ORDER_STATUS_LABELS[order.status as OrderStatus],
     isPrepaid: order.isPrepaid,
     isCalledForConfirmation: order.isCalledForConfirmation ?? false,
+    isReconciled: order.isReconciled,
+    reconciledAt: order.reconciledAt?.toISOString(),
+    reconciledBy: order.reconciledBy?.toString(),
     orderType: order.orderType as OrderType,
     orderTypeLabel: ORDER_TYPE_LABELS[order.orderType as OrderType],
     orderSource: order.orderSource as OrderSource,
@@ -449,6 +490,7 @@ export function mapOrder(order: IOrder): OrderResponse {
     // Sprint 8.x: Thời gian đơn hàng
     orderDate: order.orderDate?.toISOString(),
     receivedDate: order.receivedDate?.toISOString(),
+    deliveredAt: order.deliveredAt?.toISOString(),
     // Sprint 6.1: Order items and summary
     orderItems: (order.orderItems ?? []).map(mapOrderItem),
     summary: mapOrderSummary(order.summary),

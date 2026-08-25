@@ -42,5 +42,17 @@ export async function connectDB() {
 
   cached.conn = await cached.promise;
 
+  // Cleanup: Drop legacy index 'code_1' if exists (schema migration)
+  try {
+    const indexes = await cached.conn.connection.db.collection('customers').indexes();
+    const hasCodeIndex = indexes.some(idx => idx.name === 'code_1');
+    if (hasCodeIndex) {
+      await cached.conn.connection.db.collection('customers').dropIndex('code_1');
+      console.log('[MongoDB] Dropped legacy index: code_1');
+    }
+  } catch (err) {
+    console.warn('[MongoDB] Could not drop legacy index:', err);
+  }
+
   return cached.conn;
 }

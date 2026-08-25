@@ -24,10 +24,10 @@ async function generateLeadCode(session?: mongoose.ClientSession): Promise<strin
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
 
-  const counter = await Counter.findByIdAndUpdate(
-    `lead_${year}${month}${day}`,
+  const counter = await Counter.findOneAndUpdate(
+    { key: `lead_${year}${month}${day}` },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true, session }
+    { returnDocument: "after", upsert: true, session }
   );
 
   const sequence = (counter.seq || 1).toString().padStart(4, "0");

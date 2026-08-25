@@ -51,10 +51,10 @@ async function generateOrderCode(
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
 
-  const counter = await Counter.findByIdAndUpdate(
-    `order_${year}${month}${day}`,
+  const counter = await Counter.findOneAndUpdate(
+    { key: `order_${year}${month}${day}` },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true, session }
+    { returnDocument: "after", upsert: true, session }
   ) as unknown as { seq: number };
 
   const sequence = (counter.seq || 1).toString().padStart(4, "0");
@@ -69,10 +69,10 @@ async function generateCustomerCode(
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const day = date.getDate().toString().padStart(2, "0");
 
-  const counter = await Counter.findByIdAndUpdate(
-    `customer_${year}${month}${day}`,
+  const counter = await Counter.findOneAndUpdate(
+    { key: `customer_${year}${month}${day}` },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true, session }
+    { returnDocument: "after", upsert: true, session }
   ) as unknown as { seq: number };
 
   const sequence = (counter.seq || 1).toString().padStart(5, "0");
@@ -155,7 +155,20 @@ export async function GET(request: Request) {
     }
 
     if (status) {
-      filter.status = status;
+      // Sprint 8.5: CONFIRMED tab = hiển thị cả WAIT_CONFIRM và CONFIRMED
+      if (status === "CONFIRMED") {
+        filter.status = { $in: [OrderStatus.WAIT_CONFIRM, OrderStatus.CONFIRMED] };
+      } else {
+        filter.status = status;
+      }
+    }
+
+    // isReconciled filter: ?isReconciled=true hoặc ?isReconciled=false
+    // Khi có param này, lọc đơn DELIVERED theo flag isReconciled
+    const isReconciledParam = searchParams.get("isReconciled");
+    if (isReconciledParam !== null) {
+      filter.status = OrderStatus.DELIVERED;
+      filter.isReconciled = isReconciledParam === "true";
     }
 
     if (orderType) {
@@ -308,7 +321,7 @@ export async function POST(request: Request) {
       return errorResponse("Nhân viên sale không tồn tại", 400);
 
     // ---- orderType / orderSource are validated by Zod enum above ------
-    const status = (data.status as OrderStatus) || OrderStatus.PENDING;
+    const status = (data.status as OrderStatus) || OrderStatus.WAIT_CONFIRM;
     const orderType = (data.orderType as OrderType) || OrderType.NORMAL;
     const orderSource = (data.orderSource as OrderSource) || OrderSource.MANUAL;
 

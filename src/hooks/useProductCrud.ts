@@ -87,6 +87,9 @@ export interface ProductManagementResponse {
   items: ProductManagementItem[];
   total: number;
   warehouses: WarehouseInfo[];
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 // ============================================================================
@@ -246,6 +249,8 @@ async function fetchProductManagement(params?: {
   categoryCode?: string;
   dateFrom?: string;
   dateTo?: string;
+  page?: number;
+  limit?: number;
 }): Promise<ProductManagementResponse> {
   const searchParams = new URLSearchParams();
   if (params?.warehouseId) searchParams.set("warehouseId", params.warehouseId);
@@ -253,6 +258,8 @@ async function fetchProductManagement(params?: {
   if (params?.categoryCode) searchParams.set("categoryCode", params.categoryCode);
   if (params?.dateFrom) searchParams.set("dateFrom", params.dateFrom);
   if (params?.dateTo) searchParams.set("dateTo", params.dateTo);
+  if (params?.page) searchParams.set("page", params.page.toString());
+  if (params?.limit) searchParams.set("limit", params.limit.toString());
 
   const url = `/api/products/management${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const response = await api.get<{
@@ -273,6 +280,8 @@ export function useProductManagement(params?: {
   categoryCode?: string;
   dateFrom?: string;
   dateTo?: string;
+  page?: number;
+  limit?: number;
 }) {
   return useQuery({
     queryKey: ["product-management", params],

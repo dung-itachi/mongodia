@@ -84,7 +84,7 @@ describe("WarehouseWorkflowService concurrency", () => {
       const updated = await WarehouseInventory.findOneAndUpdate(
         { warehouseId: warehouseA, itemType: "PRODUCT", productId, variantId, quantity: { $gte: 1 } },
         { $inc: { quantity: -1, shippedQuantity: 1 } },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (!updated) throw new Error("Không đủ tồn kho");
       return updated;

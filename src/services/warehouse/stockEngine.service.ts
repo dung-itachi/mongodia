@@ -403,7 +403,7 @@ async function applyWarehouseInventoryReserve(
         availableQuantity: -qty,
       },
     },
-    { new: true, session }
+    { returnDocument: "after", session }
   ).lean();
 
   if (!updated) {
@@ -473,7 +473,7 @@ async function applyWarehouseInventoryUnreserve(
         availableQuantity: qty,
       },
     },
-    { new: true, session }
+    { returnDocument: "after", session }
   ).lean();
 
   if (!updated) {

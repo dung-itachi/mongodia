@@ -255,7 +255,7 @@ export class MarketingExpenseRepository {
     const result = await MarketingExpenseReport.findByIdAndUpdate(
       id,
       { $set: { isActive: false } },
-      { new: true, session }
+      { returnDocument: "after", session }
     ).lean();
     return result !== null;
   }

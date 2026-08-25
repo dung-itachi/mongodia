@@ -246,7 +246,7 @@ const handleRemoveOption = (optionId: string) => {
       {submitError && (
         <Alert
           type="error"
-          message={submitError}
+          title={submitError}
           style={{ marginBottom: 12 }}
           closable
           onClose={() => setSubmitError(null)}

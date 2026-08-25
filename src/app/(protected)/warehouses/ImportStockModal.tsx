@@ -114,7 +114,7 @@ export default function ImportStockModal({
       {submitError && (
         <Alert
           type="error"
-          message={submitError}
+          title={submitError}
           style={{ marginBottom: 12 }}
           closable
           onClose={() => setSubmitError(null)}

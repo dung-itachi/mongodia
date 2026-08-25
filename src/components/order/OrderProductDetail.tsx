@@ -107,6 +107,7 @@ function createOrderItemFromCombo(
     giftQuantity: number;
     sellingPrice: number;
     productId: string;
+    productName?: string;
   }
 ): OrderItem {
   // Tạo details mặc định: 1 dòng với tất cả sản phẩm, không có variant
@@ -130,6 +131,7 @@ function createOrderItemFromCombo(
     discount: 0,
     subtotal: combo.sellingPrice,
     details: [defaultDetail],
+    productName: combo.productName,
   };
 }
 
@@ -275,6 +277,21 @@ function VariantDetailRow({
     () => (product ? getVariantDisplayString(product, detail.attributes) : ""),
     [product, detail.attributes]
   );
+
+  // Auto-select first variant when product has exactly 1 variant and no variant is selected yet
+  useEffect(() => {
+    if (!product?.variants || product.variants.length !== 1) return;
+    if (detail.attributes.length > 0 || detail.variantId) return; // Already has selection
+
+    const firstVariant = product.variants[0];
+    const attributes = variantToAttributes(product, firstVariant);
+    const resolvedId = resolveVariantId(product.variants, attributes);
+    onUpdate({
+      ...detail,
+      variantId: resolvedId || firstVariant._id,
+      attributes,
+    });
+  }, [product, detail, onUpdate]);
 
   const handleAttributeChange = useCallback(
     (optionId: string, valueId: string) => {
@@ -548,8 +565,10 @@ interface GiftSelectionSectionProps {
 }
 
 /**
- * Quà tặng:
- * - RANDOM (mặc định): Shop tự chọn
+ * Quà tặng (collapsible):
+ * - Mặc định: hiện header + nút "Thêm quà tặng"
+ * - Click expand: hiện form nhập SL + chọn ngẫu nhiên/chi tiết + danh sách chi tiết
+ * - RANDOM: Shop tự chọn quà
  * - CUSTOMER_SELECTED: Khách đã chọn, kho phải xuất đúng
  */
 function GiftSelectionSection({
@@ -561,52 +580,76 @@ function GiftSelectionSection({
   disabled,
 }: GiftSelectionSectionProps) {
   const lang = useLanguageStore((s) => s.language);
-  // Fetch danh sách quà active từ Gift API
-  const { data: giftsData, isLoading: isLoadingGifts } = useGiftList({
-    isActive: true,
-  });
-  const gifts: GiftListItem[] = giftsData?.items ?? [];
 
-  const giftOptions = useMemo(
-    () =>
-      gifts.map((g) => ({
-        label: `${g.name} - ${t("Tồn kho", lang)}: ${g.stockQuantity}`,
-        value: g._id,
-        giftName: g.name,
-      })),
-    [gifts, lang]
-  );
+  // Mode cho phần thêm quà chi tiết (mặc định = CUSTOMER_SELECTED)
+  const [selectedMode, setSelectedMode] = useState<"RANDOM" | "CUSTOMER_SELECTED">("RANDOM");
+  // showDetailRows: chỉ mở phần chọn quà khi chọn "Quà chi tiết"
+  const [showDetailRows, setShowDetailRows] = useState(false);
+  // Số lượng quà muốn thêm
+  const [extraQty, setExtraQty] = useState(1);
+
+  // Sync selectedMode với giftMode (dùng khi combo có quà)
+  useEffect(() => {
+    setSelectedMode(giftMode);
+    if (giftMode === "RANDOM") {
+      setShowDetailRows(false);
+    }
+  }, [giftMode]);
+
+  // showModeSelector: chỉ mở khi click "Thêm quà" hoặc đã có giftSelections hoặc combo có quà
+  const [showModeSelector, setShowModeSelector] = useState(false);
+
+  const handleClickAddGift = useCallback(() => {
+    setShowModeSelector(true);
+    setSelectedMode("RANDOM");
+    setShowDetailRows(false);
+    onModeChange("RANDOM");
+  }, [onModeChange]);
+
+  // Nút "Thêm quà" chỉ hiện khi combo không có quà (totalGiftRequired === 0) và chưa mở selector
+  const showAddGiftButton = totalGiftRequired === 0 && !disabled && !showModeSelector;
+  // 2 lựa chọn chỉ hiện khi đã click "Thêm quà" hoặc combo có quà
+  const showModeSelectorFlag = (showModeSelector || totalGiftRequired > 0) && !disabled;
+
+  useEffect(() => {
+    if (!showDetailRows) return;
+    if (selectedMode === "CUSTOMER_SELECTED" && giftSelections.length === 0) {
+      const required = Math.max(0, totalGiftRequired);
+      const padded: GiftSelection[] = [];
+      for (let i = 0; i < required; i++) {
+        padded.push({ giftProductId: "", giftProductName: "", quantity: 1 });
+      }
+      onSelectionsChange(padded);
+    }
+  }, [showDetailRows]);
 
   const handleModeChange = useCallback(
     (e: RadioChangeEvent) => {
       const mode = e.target.value as OrderGiftMode;
+      setSelectedMode(mode);
       onModeChange(mode);
-
       if (mode === "RANDOM") {
-        // Reset selections khi chuyển về RANDOM
+        setShowDetailRows(false);
         onSelectionsChange([]);
-      } else if (mode === "CUSTOMER_SELECTED") {
-        // Auto-fill đủ số dòng = totalGiftRequired (mỗi dòng SL=1, giftProductId="").
-        // User chỉ cần chọn sản phẩm cho từng dòng, không phải bấm "Thêm quà" thủ công.
-        // Nếu đã có selections hợp lệ → giữ nguyên; nếu thiếu → bổ sung; nếu thừa → giữ nguyên (user tự xóa).
+      } else {
+        setShowDetailRows(true);
         const required = Math.max(0, totalGiftRequired);
-        const current = giftSelections ?? [];
-        const padded = [...current];
-        while (padded.length < required) {
+        const padded: GiftSelection[] = [];
+        for (let i = 0; i < required; i++) {
           padded.push({ giftProductId: "", giftProductName: "", quantity: 1 });
         }
         onSelectionsChange(padded);
       }
     },
-    [onModeChange, onSelectionsChange, giftSelections, totalGiftRequired]
+    [onModeChange, onSelectionsChange, totalGiftRequired]
   );
 
-  const handleAddGift = useCallback(() => {
+  const handleAddExtraGift = useCallback(() => {
     onSelectionsChange([
       ...giftSelections,
-      { giftProductId: "", giftProductName: "", quantity: 1 },
+      { giftProductId: "", giftProductName: "", quantity: extraQty },
     ]);
-  }, [giftSelections, onSelectionsChange]);
+  }, [giftSelections, extraQty, onSelectionsChange]);
 
   const handleUpdateGift = useCallback(
     (index: number, gift: GiftSelection) => {
@@ -624,178 +667,178 @@ function GiftSelectionSection({
     [giftSelections, onSelectionsChange]
   );
 
-  if (totalGiftRequired === 0) {
-    return (
-      <div style={{ textAlign: "center", padding: 16, color: "#999" }}>
-        {t("Combo này không có quà tặng", lang)}
-      </div>
-    );
-  }
+  // Fetch danh sách quà active từ Gift API
+  const { data: giftsData, isLoading: isLoadingGifts } = useGiftList({
+    isActive: true,
+  });
+  const gifts: GiftListItem[] = giftsData?.items ?? [];
 
-  // Tính tổng selections để validate
+  const giftOptions = useMemo(
+    () =>
+      gifts.map((g) => ({
+        label: `${g.name} - ${t("Tồn kho", lang)}: ${g.stockQuantity}`,
+        value: g._id,
+        giftName: g.name,
+      })),
+    [gifts, lang]
+  );
+
   const currentTotal = sumGiftSelectionsQuantity(giftSelections);
-  const isValidSelections = currentTotal === totalGiftRequired;
+  const isValidComboGifts = currentTotal >= totalGiftRequired;
+
+  // Label hiển thị trong header tag
+  // modeTag: chỉ hiện khi đã thêm ít nhất 1 quà cụ thể
+  const showModeTag = giftSelections.some(g => g.giftProductId) && !disabled;
+
+  // Tổng số quà hiển thị: dùng giftQuantity đã bao gồm combo + extra
+  // Chỉ cộng thêm khi CUSTOMER_SELECTED để hiển thị số dòng quà đã chọn
+  const totalGiftsCount = selectedMode === "CUSTOMER_SELECTED" && giftSelections.length > 0
+    ? giftSelections.reduce((sum, g) => sum + g.quantity, 0)
+    : totalGiftRequired;
 
   return (
     <div style={{ padding: "12px", background: "#fffbf0", borderRadius: 8 }}>
       {/* Header */}
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 10 }}>
         <Space>
-          <Text strong>{t("Quà tặng", lang)} ({totalGiftRequired})</Text>
-          {giftMode === "CUSTOMER_SELECTED" && (
-            <Tag color={isValidSelections ? "green" : "red"}>
-              {currentTotal} / {totalGiftRequired}
+          <GiftOutlined style={{ color: "#fa8c16" }} />
+          <Text strong>{t("Quà tặng", lang)}</Text>
+          {/* Chỉ hiện "X quà" khi đã click Thêm quà */}
+          {(showModeSelector || totalGiftsCount > 0) && (
+            <Tag color="gold">{totalGiftsCount} {t("quà", lang)}</Tag>
+          )}
+          {showModeTag && (
+            <Tag color={selectedMode === "RANDOM" ? "purple" : "blue"}>
+              {selectedMode === "RANDOM" ? t("Shop tự chọn", lang) : t("Khách tự chọn", lang)}
             </Tag>
           )}
-          {giftMode === "RANDOM" && (
-            <Tag color="purple">{t("Shop tự chọn", lang)}</Tag>
+          {/* Nút "Thêm quà" - chỉ hiện khi combo không có quà và chưa mở selector */}
+          {showAddGiftButton && (
+            <Button
+              type="link"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={handleClickAddGift}
+              style={{ padding: "0 4px", height: "auto", color: "#fa8c16" }}
+            >
+              {t("Thêm quà", lang)}
+            </Button>
           )}
         </Space>
       </div>
 
-      {/* Validation Alert - chỉ cho CUSTOMER_SELECTED */}
-      {giftMode === "CUSTOMER_SELECTED" && !isValidSelections && (
-        <Alert
-          type="warning"
-          title={`${t("Chi tiết quà phải đủ", lang)} ${totalGiftRequired} ${t("quà", lang)}.`}
-          style={{ marginBottom: 12 }}
-          showIcon
-        />
-      )}
-
-      {/* Mode Selection */}
-      <Radio.Group
-        value={giftMode}
-        onChange={handleModeChange}
-        style={{ marginBottom: 16 }}
-        disabled={disabled}
-      >
-        <Space orientation="vertical">
-          <Radio value="RANDOM">
-            <Space>
-              <QuestionOutlined />
-              <Text>{t("Để shop chọn ngẫu nhiên", lang)}</Text>
-            </Space>
-          </Radio>
-          <Radio value="CUSTOMER_SELECTED">
-            <Space>
-              <GiftOutlined />
-              <Text>{t("Khách chọn", lang)}</Text>
-            </Space>
-          </Radio>
-        </Space>
-      </Radio.Group>
-
-      {/* RANDOM: Hiển thị thông báo */}
-      {giftMode === "RANDOM" && (
-        <Alert
-          type="info"
-          title={`${t("Kho sẽ tự chọn", lang)} ${totalGiftRequired} ${t("quà ngẫu nhiên theo quy tắc công ty", lang)}`}
-          showIcon
-        />
-      )}
-
-      {/* CUSTOMER_SELECTED: Hiển thị danh sách yêu cầu */}
-      {giftMode === "CUSTOMER_SELECTED" && (
-        <>
-          {giftSelections.length === 0 && totalGiftRequired === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "12px",
-                border: "1px dashed #fa8c16",
-                borderRadius: 4,
-              }}
-            >
-              <Text type="secondary">{t("Chưa có quà nào được chọn", lang)}</Text>
-              {!disabled && (
-                <Button
-                  type="link"
-                  onClick={handleAddGift}
-                  icon={<PlusOutlined />}
-                >
-                  {t("Thêm quà", lang)}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <>
-              {giftSelections.map((gift, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    alignItems: "center",
-                    padding: "8px 12px",
-                    background: "#fff",
-                    borderRadius: 4,
-                    marginBottom: 8,
-                    border: "1px solid #ffe7ba",
-                  }}
-                >
-                  <GiftOutlined style={{ color: "#fa8c16" }} />
-                  <Select
-                    placeholder={isLoadingGifts ? t("Đang tải...", lang) : t("Chọn sản phẩm", lang)}
-                    value={gift.giftProductId || undefined}
-                    onChange={(value, option) => {
-                      handleUpdateGift(index, {
-                        giftProductId: value as string,
-                        giftProductName: (option as { giftName?: string })?.giftName,
-                        quantity: gift.quantity,
-                      });
-                    }}
-                    options={giftOptions}
-                    style={{ minWidth: 180 }}
+      {/* 2 lựa chọn: Quà ngẫu nhiên / Quà chi tiết - chỉ hiện khi đã click "Thêm quà" */}
+      {showModeSelectorFlag && (
+        <Radio.Group
+          value={selectedMode}
+          onChange={handleModeChange}
+          style={{ marginBottom: 8 }}
+        >
+          <Space orientation="vertical">
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Radio value="RANDOM" />
+              <Text>{t("Quà ngẫu nhiên", lang)}</Text>
+              {selectedMode === "RANDOM" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>{t("SL", lang)}:</Text>
+                  <InputNumber
+                    min={1}
+                    value={extraQty}
+                    onChange={(val) => setExtraQty(val ?? 1)}
+                    style={{ width: 70 }}
                     size="small"
-                    disabled={disabled || isLoadingGifts}
-                    showSearch
-                    optionFilterProp="label"
                   />
-                  <div style={{ minWidth: 70 }}>
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      {t("SL", lang)}
-                    </Text>
-                    <InputNumber
-                      min={1}
-                      value={gift.quantity}
-                      onChange={(qty) => {
-                        handleUpdateGift(index, {
-                          ...gift,
-                          quantity: qty || 1,
-                        });
-                      }}
-                      style={{ width: "100%" }}
-                      size="small"
-                      disabled={disabled}
-                    />
-                  </div>
-                  {!disabled && giftSelections.length > totalGiftRequired && (
+                  {extraQty > 1 && (
                     <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleDeleteGift(index)}
+                      type="primary"
                       size="small"
+                      icon={<PlusOutlined />}
+                      onClick={handleAddExtraGift}
+                      style={{ background: "#fa8c16", borderColor: "#fa8c16" }}
                     />
                   )}
                 </div>
-              ))}
-
-              {!disabled && giftSelections.length < totalGiftRequired && (
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Radio value="CUSTOMER_SELECTED" />
+              <Text>{t("Quà chi tiết", lang)}</Text>
+              {selectedMode === "CUSTOMER_SELECTED" && !disabled && (
                 <Button
-                  type="dashed"
+                  type="link"
+                  size="small"
                   icon={<PlusOutlined />}
-                  onClick={handleAddGift}
-                  block
-                  style={{ borderColor: "#fa8c16", color: "#fa8c16" }}
+                  onClick={handleAddExtraGift}
+                  style={{ padding: "0 4px", height: "auto", color: "#fa8c16" }}
                 >
-                  {t("Thêm yêu cầu quà", lang)}
+                  {t("Thêm", lang)}
                 </Button>
               )}
-            </>
-          )}
-        </>
+            </div>
+          </Space>
+        </Radio.Group>
+      )}
+
+      {/* Chi tiết quà - chỉ hiện khi chọn "Quà chi tiết" */}
+      {selectedMode === "CUSTOMER_SELECTED" && giftSelections.length > 0 && (
+        <div style={{ marginLeft: 24, marginTop: 8 }}>
+          {/* Combo gift detail rows */}
+          {giftSelections.map((gift, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                padding: "6px 10px",
+                background: "#f9f9f9",
+                borderRadius: 4,
+                marginBottom: 6,
+                border: "1px solid #f0f0f0",
+              }}
+            >
+              <Text type="secondary" style={{ fontSize: 12, minWidth: 16 }}>{idx + 1}.</Text>
+              <Select
+                placeholder={isLoadingGifts ? t("Đang tải...", lang) : t("Chọn sản phẩm", lang)}
+                value={gift.giftProductId || undefined}
+                onChange={(value, option) => {
+                  handleUpdateGift(idx, {
+                    giftProductId: value as string,
+                    giftProductName: (option as { giftName?: string })?.giftName,
+                    quantity: gift.quantity,
+                  });
+                }}
+                options={giftOptions}
+                style={{ minWidth: 160 }}
+                size="small"
+                disabled={disabled || isLoadingGifts}
+                showSearch
+                optionFilterProp="label"
+              />
+              <Text type="secondary" style={{ fontSize: 12 }}>{t("SL", lang)}:</Text>
+              <InputNumber
+                min={1}
+                value={gift.quantity}
+                onChange={(qty) => {
+                  handleUpdateGift(idx, { ...gift, quantity: qty || 1 });
+                }}
+                style={{ width: 60 }}
+                size="small"
+                disabled={disabled}
+              />
+              <Button
+                type="text"
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={() => {
+                  const newSelections = giftSelections.filter((_, i) => i !== idx);
+                  onSelectionsChange(newSelections);
+                }}
+              />
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -1146,10 +1189,12 @@ function OrderItemRow({
           <GiftOutlined />
           <Text strong>{t("Quà tặng", lang)}</Text>
           <Tag color="gold">{totalGiftsRequired} {t("quà", lang)}</Tag>
-          {item.giftMode === "RANDOM" ? (
-            <Tag color="purple">{t("Shop tự chọn", lang)}</Tag>
-          ) : (
-            <Tag color="orange">{t("Khách chọn", lang)}</Tag>
+          {totalGiftsRequired > 0 && (
+            item.giftMode === "RANDOM" ? (
+              <Tag color="purple">{t("Shop tự chọn", lang)}</Tag>
+            ) : (
+              <Tag color="orange">{t("Khách chọn", lang)}</Tag>
+            )
           )}
         </Space>
       </Divider>
@@ -1183,15 +1228,21 @@ export default function OrderProductDetail({
   const message = useMessage();
 
   // Calculate totals
+  // Tổng quà = tổng SL từ giftSelections (CUSTOMER_SELECTED) hoặc giftQuantity (RANDOM)
   const totals = useMemo(() => {
     return items.reduce(
-      (acc, item) => ({
-        totalComboCount: acc.totalComboCount + item.comboQuantity,
-        totalProducts: acc.totalProducts + item.comboQuantity * item.packageQuantity,
-        totalGifts: acc.totalGifts + item.comboQuantity * item.giftQuantity,
-        totalSubtotal: acc.totalSubtotal + item.subtotal,
-        totalDiscount: acc.totalDiscount + item.discount,
-      }),
+      (acc, item) => {
+        const itemGiftQty = item.giftMode === "CUSTOMER_SELECTED"
+          ? (item.giftSelections || []).reduce((sum, g) => sum + (g.quantity || 0), 0)
+          : item.comboQuantity * item.giftQuantity;
+        return {
+          totalComboCount: acc.totalComboCount + item.comboQuantity,
+          totalProducts: acc.totalProducts + item.comboQuantity * item.packageQuantity,
+          totalGifts: acc.totalGifts + itemGiftQty,
+          totalSubtotal: acc.totalSubtotal + item.subtotal,
+          totalDiscount: acc.totalDiscount + item.discount,
+        };
+      },
       { totalComboCount: 0, totalProducts: 0, totalGifts: 0, totalSubtotal: 0, totalDiscount: 0 }
     );
   }, [items]);

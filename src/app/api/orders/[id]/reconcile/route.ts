@@ -1,19 +1,19 @@
 /**
  * ==================================================
- * ORDER CONFIRM-CALL TOGGLE API
+ * ORDER RECONCILE TOGGLE API
  * ==================================================
  *
- * PATCH /api/orders/:id/confirm-call
+ * PATCH /api/orders/:id/reconcile
  *
- * Toggle (hoặc set) cờ `isCalledForConfirmation` của Order.
- * Đây là bước "đã gọi điện xác nhận với khách" do Sale thực hiện
- * trước khi chuyển đơn sang PACKING.
+ * Toggle (hoặc set) cờ `isReconciled` của Order.
+ * Đây là bước "đã đối soát" để kiểm tra lại đơn giao thành công.
+ *
+ * QUAN TRỌNG: KHÔNG thay đổi status giao hàng (DELIVERED/RETURNED).
+ * Chỉ đánh dấu đơn đã được kiểm tra lại.
  *
  * Body (optional):
  *   { "value": true | false }
  * Nếu không truyền `value` → server tự toggle giá trị hiện tại.
- *
- * Không ghi OrderHistory theo yêu cầu nghiệp vụ (audit nhẹ).
  */
 
 import { NextResponse } from "next/server";
@@ -21,8 +21,8 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 import { Order, IOrder } from "@/models/Order";
-import { OrderStatus, OrderAction } from "@/constants/orderStatus";
 import { OrderHistory } from "@/models/OrderHistory";
+import { OrderAction } from "@/constants/orderStatus";
 import { mapOrder } from "@/mappers/order.mapper";
 import { success, error as errorResponse } from "@/utils/response";
 import { z } from "zod";
@@ -68,7 +68,7 @@ export async function PATCH(
       );
     }
 
-    const existing = await Order.findById(id).select("_id isActive isCalledForConfirmation status");
+    const existing = await Order.findById(id).select("_id isActive isReconciled");
     if (!existing) {
       return errorResponse("Đơn hàng không tồn tại", 404);
     }
@@ -79,14 +79,18 @@ export async function PATCH(
     const nextValue =
       typeof parsed.data.value === "boolean"
         ? parsed.data.value
-        : !existing.isCalledForConfirmation;
+        : !existing.isReconciled;
 
-    // Sprint 8.5: khi tick đã gọi xác nhận → chuyển status từ WAIT_CONFIRM sang CONFIRMED
-    const updateData: Record<string, unknown> = { isCalledForConfirmation: nextValue };
-    const shouldChangeStatus = nextValue && existing.status === OrderStatus.WAIT_CONFIRM;
+    const updateData: Record<string, unknown> = {
+      isReconciled: nextValue,
+    };
 
-    if (shouldChangeStatus) {
-      updateData.status = OrderStatus.CONFIRMED;
+    if (nextValue) {
+      updateData.reconciledAt = new Date();
+      updateData.reconciledBy = currentUser.employee._id;
+    } else {
+      updateData.reconciledAt = null;
+      updateData.reconciledBy = null;
     }
 
     const [updated] = await Promise.all([
@@ -103,30 +107,18 @@ export async function PATCH(
         .populate("warehouseId", "_id code name")
         .populate("marketingEmployeeId", "_id employeeCode fullName")
         .populate("saleEmployeeId", "_id employeeCode fullName")
+        .populate("reconciledBy", "_id employeeCode fullName")
         .lean(),
-      // Ghi history nếu có đổi status
-      shouldChangeStatus
-        ? OrderHistory.create({
-            orderId: id,
-            employeeId: currentUser.employee._id,
-            action: OrderAction.CONFIRMED,
-            oldValue: OrderStatus.WAIT_CONFIRM,
-            newValue: OrderStatus.CONFIRMED,
-            note: "Xác nhận đơn đã chốt từ Lead",
-          })
-        : Promise.resolve(null),
     ]);
 
     return success(
       mapOrder(updated as unknown as IOrder),
-      shouldChangeStatus
-        ? "Đã xác nhận đơn hàng"
-        : nextValue
-        ? "Đã đánh dấu đã gọi xác nhận"
-        : "Đã bỏ đánh dấu gọi xác nhận"
+      nextValue
+        ? "Đã đánh dấu đối soát"
+        : "Đã bỏ đánh dấu đối soát"
     );
   } catch (error) {
-    console.error("Toggle Confirm Call Error:", error);
-    return errorResponse("Không thể cập nhật cờ xác nhận cuộc gọi", 500);
+    console.error("Toggle Reconcile Error:", error);
+    return errorResponse("Không thể cập nhật trạng thái đối soát", 500);
   }
 }

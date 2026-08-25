@@ -38,6 +38,8 @@ export interface SaleLead {
     name: string;
     /** Giá bán combo (MNT). Có khi API populate comboId với sellingPrice. */
     sellingPrice?: number;
+    /** Số sản phẩm trong 1 combo. Dùng để tính SL = comboQuantity × packageQuantity. */
+    packageQuantity?: number;
   };
   quantity?: number;
   unitPriceMNT?: number;

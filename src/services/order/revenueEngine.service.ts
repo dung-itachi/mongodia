@@ -232,7 +232,7 @@ export async function resolveCustomerRevenue(
     isActive: true,
   })
     .select(
-      "_id customerId productId comboId status isPrepaid orderType createdAt isActive revenueLocked revenueOwnerOrderId revenueLockReason"
+      "_id customerId productId comboId status isPrepaid orderType createdAt isActive revenueLocked revenueOwnerOrderId revenueLockReason marketingRevenueRaw saleRevenueRaw"
     )
     .lean();
 
@@ -282,16 +282,28 @@ export async function resolveCustomerRevenue(
       }
 
       // Persist
+      const persistUpdate: Record<string, unknown> = {
+        revenueLocked: persist.revenueLocked,
+        revenueOwnerOrderId: persist.revenueOwnerOrderId,
+        revenueLockReason: persist.revenueLockReason,
+        revenueCalculatedAt: new Date(),
+      };
+
+      // Calculate final revenue based on decision state (Sprint Revenue Feature)
+      // Only orders with ELIGIBLE state get revenue; LOCKED/EXEMPTED/UNLOCKED get 0
+      if (decision.state === RevenueState.ELIGIBLE) {
+        persistUpdate.revenueEligible = true;
+        persistUpdate.marketingRevenueFinal = doc.marketingRevenueRaw ?? 0;
+        persistUpdate.saleRevenueFinal = doc.saleRevenueRaw ?? 0;
+      } else {
+        persistUpdate.revenueEligible = false;
+        persistUpdate.marketingRevenueFinal = 0;
+        persistUpdate.saleRevenueFinal = 0;
+      }
+
       await Order.updateOne(
         { _id: doc._id },
-        {
-          $set: {
-            revenueLocked: persist.revenueLocked,
-            revenueOwnerOrderId: persist.revenueOwnerOrderId,
-            revenueLockReason: persist.revenueLockReason,
-            revenueCalculatedAt: new Date(),
-          },
-        },
+        { $set: persistUpdate },
         { session }
       );
       persistedCount += 1;

@@ -56,7 +56,7 @@ async function generateLeadCodeWithCounter(): Promise<string> {
   const counter = await Counter.findOneAndUpdate(
     { key: counterKey },
     { $inc: { value: 1 } },
-    { new: true, upsert: true }
+    { returnDocument: "after", upsert: true }
   );
 
   const sequence = (counter.seq || 1).toString().padStart(4, "0");
@@ -90,7 +90,7 @@ async function test_POST_Lead_Transaction_Success(): Promise<string | null> {
     const counter = await Counter.findOneAndUpdate(
       { key: counterKey },
       { $inc: { value: 1 } },
-      { new: true, upsert: true, session }
+      { returnDocument: "after", upsert: true, session }
     );
     console.log("    ✓ Counter incremented:", counter?.seq);
 
@@ -204,7 +204,7 @@ async function test_POST_Lead_Transaction_Rollback(): Promise<string | null> {
     const counter = await Counter.findOneAndUpdate(
       { key: counterKey },
       { $inc: { value: 1 } },
-      { new: true, upsert: true, session }
+      { returnDocument: "after", upsert: true, session }
     );
     console.log("    ✓ Counter incremented in transaction");
 

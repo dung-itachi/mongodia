@@ -105,11 +105,16 @@ export class SaleOrderService {
     let giftSelections: ValidatedSaleOrderItem["giftSelections"] = [];
     if (input.giftMode === "CUSTOMER_SELECTED") {
       const requiredGiftQuantity = input.comboQuantity * giftQuantity;
+      // Cho phép thêm quà ngoài combo: selectionQuantity >= requiredGiftQuantity
       const selectionQuantity = input.giftSelections.reduce((total, selection) => total + selection.quantity, 0);
-      if (selectionQuantity !== requiredGiftQuantity) {
+      if (selectionQuantity < requiredGiftQuantity) {
         throw new Error(`Chi tiết quà phải đủ ${requiredGiftQuantity} quà.`);
       }
+      // Kiểm tra không có giftProductId trùng lặp và không có empty string
       const ids = input.giftSelections.map((selection) => selection.giftProductId);
+      if (ids.some(id => !id || id.trim() === "")) {
+        throw new Error("Vui lòng chọn đủ quà tặng.");
+      }
       if (ids.length !== new Set(ids).size || input.giftSelections.some((selection) => !isPositiveInteger(selection.quantity))) {
         throw new Error("Quà tặng đã chọn không hợp lệ.");
       }
@@ -121,9 +126,13 @@ export class SaleOrderService {
         giftProductName: giftsById.get(selection.giftProductId)!.name,
         quantity: selection.quantity,
       }));
-    } else if (input.giftMode !== "RANDOM") {
+    } else if (input.giftMode === "RANDOM") {
+      // RANDOM: Shop tự chọn quà, không cần kiểm tra giftSelections
+    } else if (input.giftMode !== undefined && input.giftMode !== null) {
+      // giftMode không hợp lệ (không phải CUSTOMER_SELECTED, RANDOM, hoặc undefined)
       throw new Error("Cách nhận quà không hợp lệ.");
     }
+    // Nếu giftMode = undefined/null: không có quà tặng, bỏ qua
 
     const discount = Number.isFinite(input.discount) && input.discount >= 0 ? input.discount : 0;
     const subtotal = Math.max(0, combo.sellingPrice * input.comboQuantity - discount);

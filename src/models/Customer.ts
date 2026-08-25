@@ -39,6 +39,8 @@ export interface ICustomer extends Document {
   zalo?: string;
   note?: string;
 
+  areaId?: mongoose.Types.ObjectId | null;
+  teamId?: mongoose.Types.ObjectId | null;
   marketingEmployeeId?: mongoose.Types.ObjectId;
   saleEmployeeId?: mongoose.Types.ObjectId;
   facebookPageId?: mongoose.Types.ObjectId;
@@ -118,6 +120,18 @@ const CustomerSchema = new Schema<ICustomer>(
       maxlength: 2000,
     },
 
+    areaId: {
+      type: Schema.Types.ObjectId,
+      ref: "Area",
+      default: null,
+      index: true,
+    },
+    teamId: {
+      type: Schema.Types.ObjectId,
+      ref: "Team",
+      default: null,
+      index: true,
+    },
     marketingEmployeeId: {
       type: Schema.Types.ObjectId,
       ref: "Employee",

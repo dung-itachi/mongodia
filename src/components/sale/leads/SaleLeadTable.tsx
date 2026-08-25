@@ -300,7 +300,12 @@ function SaleLeadTableInner({
         align: "center",
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as SaleLead;
-          return lead.quantity ?? <span className={styles.mutedText}>-</span>;
+          const comboQuantity = lead.quantity ?? 1;
+          const packageQuantity = lead.combo?.packageQuantity ?? 1;
+          const totalQuantity = comboQuantity * packageQuantity;
+          return (
+            <span>{totalQuantity}</span>
+          );
         },
       },
       {

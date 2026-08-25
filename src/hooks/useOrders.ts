@@ -40,6 +40,7 @@ async function fetchOrders(filters: OrderFilter): Promise<OrderListResponse> {
   if (filters.limit) params.set("limit", String(filters.limit));
   if (filters.sort) params.set("sort", filters.sort);
   if (filters.order) params.set("order", filters.order);
+  if (filters.isReconciled !== undefined) params.set("isReconciled", String(filters.isReconciled));
 
   const queryString = params.toString();
   const url = `/api/orders${queryString ? `?${queryString}` : ""}`;

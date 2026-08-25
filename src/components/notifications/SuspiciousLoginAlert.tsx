@@ -124,7 +124,7 @@ export default function SuspiciousLoginAlert() {
         type="warning"
         showIcon
         icon={<WarningOutlined />}
-        message={
+        title={
           <Space>
             <span>
               Phát hiện <strong>{data.count}</strong> lần đăng nhập bất thường trong 7 ngày gần đây
@@ -271,7 +271,7 @@ export default function SuspiciousLoginAlert() {
       >
         <Alert
           type="warning"
-          message="Phát hiện đăng nhập lạ"
+          title="Phát hiện đăng nhập lạ"
           description={
             <div>
               <p>Có thể tài khoản của bạn đã bị truy cập trái phép.</p>

@@ -6,11 +6,11 @@
  * Sprint 8.5: Refactor Order Workflow
  *
  * Workflow mới:
- * WAIT_CONFIRM → CONFIRMED → PACKING → SHIPPING → DELIVERED → RECONCILED
- *                                        ↓
- *                                    RETURNED
- *                                        ↓
- *                                   RECONCILED
+ * WAIT_CONFIRM → CONFIRMED → SHIPPING → DELIVERED → RECONCILED
+ *                                  ↓
+ *                              RETURNED
+ *                                  ↓
+ *                             RECONCILED
  *
  * Business Rules:
  * - SHIPPING: Chỉ ở đây mới export Inventory
@@ -24,7 +24,6 @@
 export const ORDER_STATUS_COLORS: Record<string, string> = {
   WAIT_CONFIRM: "warning",
   CONFIRMED: "processing",
-  PACKING: "orange",
   SHIPPING: "blue",
   DELIVERED: "success",
   RETURNED: "error",
@@ -39,7 +38,6 @@ export const ORDER_STATUS_COLORS: Record<string, string> = {
 export const ORDER_STATUS_ICONS: Record<string, string> = {
   WAIT_CONFIRM: "ClockCircleOutlined",
   CONFIRMED: "CheckOutlined",
-  PACKING: "InboxOutlined",
   SHIPPING: "CarOutlined",
   DELIVERED: "CheckCircleOutlined",
   RETURNED: "UndoOutlined",
@@ -51,16 +49,15 @@ export const ORDER_STATUS_ICONS: Record<string, string> = {
  * Allowed status transitions (Sprint 8.5)
  * Key = current status, Value = array of allowed next statuses
  *
- * WAIT_CONFIRM → CONFIRMED → PACKING → SHIPPING → DELIVERED → RECONCILED
- *                                        ↓
- *                                    RETURNED → RECONCILED
+ * WAIT_CONFIRM → CONFIRMED → SHIPPING → DELIVERED → RECONCILED
+ *                                  ↓
+ *                              RETURNED → RECONCILED
  *
  * CANCELLED có thể từ bất kỳ trạng thái nào trước SHIPPING
  */
 export const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
   WAIT_CONFIRM: ["CONFIRMED", "CANCELLED"],
-  CONFIRMED: ["PACKING", "CANCELLED"],
-  PACKING: ["SHIPPING", "CANCELLED"],
+  CONFIRMED: ["SHIPPING", "CANCELLED"],
   SHIPPING: ["DELIVERED", "RETURNED"],
   DELIVERED: ["RECONCILED"],
   RETURNED: ["RECONCILED"],
@@ -84,10 +81,6 @@ export const STATUS_ACTIONS: Record<string, StatusAction[]> = {
     { label: "Hủy đơn", targetStatus: "CANCELLED", color: "red" },
   ],
   CONFIRMED: [
-    { label: "Đóng gói", targetStatus: "PACKING", color: "orange" },
-    { label: "Hủy đơn", targetStatus: "CANCELLED", color: "red" },
-  ],
-  PACKING: [
     { label: "Giao hàng", targetStatus: "SHIPPING", color: "cyan" },
     { label: "Hủy đơn", targetStatus: "CANCELLED", color: "red" },
   ],

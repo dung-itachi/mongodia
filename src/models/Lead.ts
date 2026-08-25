@@ -208,5 +208,8 @@ LeadSchema.index({ isActive: 1, createdAt: -1 });
 LeadSchema.index({ marketingEmployeeId: 1, isActive: 1, createdAt: -1 });
 LeadSchema.index({ saleEmployeeId: 1, isActive: 1, createdAt: -1 });
 
+// Sprint 8.x: filter theo sourceType + time range
+LeadSchema.index({ sourceType: 1, isActive: 1, createdAt: -1 });
+
 export const Lead =
   mongoose.models.Lead || mongoose.model<ILead>("Lead", LeadSchema);

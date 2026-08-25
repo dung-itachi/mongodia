@@ -218,7 +218,7 @@ export class WarehouseRepository {
     const doc = await WarehouseTask.findByIdAndUpdate(
       id,
       { $set: data },
-      { new: true, session }
+      { returnDocument: "after", session }
     ).lean();
 
     if (!doc) return null;
@@ -232,7 +232,7 @@ export class WarehouseRepository {
     const doc = await WarehouseTask.findByIdAndUpdate(
       id,
       { $set: { warehouseStatus: status } },
-      { new: true, session }
+      { returnDocument: "after", session }
     ).lean();
 
     if (!doc) return null;
@@ -246,7 +246,7 @@ export class WarehouseRepository {
     const doc = await WarehouseTask.findByIdAndUpdate(
       id,
       { $set: { assignedEmployeeId: employeeId } },
-      { new: true, session }
+      { returnDocument: "after", session }
     ).lean();
 
     if (!doc) return null;

@@ -958,7 +958,7 @@ Lê Văn C\t0909999999\tCombo VIP\t-500\tINVALID_SOURCE\tnot-a-date`}
                   type="warning"
                   showIcon
                   style={{ marginTop: 12 }}
-                  message={
+                  title={
                     <Text>
                       Sẽ bỏ qua {simulation.invalidRows} dòng:{" "}
                       <Text code>
