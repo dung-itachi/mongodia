@@ -602,7 +602,7 @@ export class LeadRepository {
             { $count: "count" },
           ],
           closedLead: [
-            { $match: { status: LeadStatus.CLOSED } },
+            { $match: { status: { $in: [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED] } } },
             { $count: "count" },
           ],
         },
@@ -729,7 +729,7 @@ export class LeadRepository {
           _id: "$marketingEmployeeId",
           totalLead: { $sum: 1 },
           closedLead: {
-            $sum: { $cond: [{ $eq: ["$status", LeadStatus.CLOSED] }, 1, 0] },
+            $sum: { $cond: [{ $in: ["$status", [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED]] }, 1, 0] },
           },
         },
       },

@@ -139,8 +139,9 @@ export default function MarketingDashboardPage() {
   const totalRevenue = dailyReport?.summary.totalRevenue ?? 0;
   const totalXin = summary?.tongXin ?? 0;
   const totalSpent = summary?.tongTieu ?? 0;
-  const totalClosed = dailyReport?.summary.totalClosed ?? 0;
-  const cpa = totalClosed > 0 ? Math.round(totalXin / totalClosed) : 0;
+  const totalClosedLeads = dailyReport?.summary.totalClosedLeads ?? 0;
+  // CPA = totalXin (ads xin) / closedLeads (lead conversion, not order count)
+  const cpa = totalClosedLeads > 0 ? Math.round(totalXin / totalClosedLeads) : 0;
 
   // Sum Chi phí Ads breakdown từ rows
   const totalMorning = adsRows.reduce((s, r) => s + (r.xinSang ?? 0), 0);

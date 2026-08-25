@@ -25,6 +25,7 @@ import {
   type CreateMarketingExpenseReportData,
   type UpdateMarketingExpenseReportData,
 } from "@/repositories/marketing-expense.repository";
+import { Lead } from "@/models/Lead";
 import { MarketingExpenseReportStatus } from "@/constants/marketing-expense";
 import {
   canMarketingExpenseDelete,
@@ -40,6 +41,93 @@ import type {
   MarketingExpenseSummary,
   UpdateMarketingExpenseInput,
 } from "@/types/marketing-expense";
+
+/**
+ * Sync totalLeads and closedLeads from the Lead collection for a given
+ * MarketingExpenseReport document. This replaces manual entry with
+ * authoritative data from the Lead collection.
+ *
+ * - totalLeads  = count of leads created on that day for the marketing employee.
+ * - closedLeads = count of leads with status CLOSED or ORDER_CREATED.
+ *
+ * Returns the updated fields so callers can recompute derived metrics.
+ */
+async function syncLeadMetricsFromLeads(report: {
+  reportDate: Date;
+  marketingEmployeeId: mongoose.Types.ObjectId;
+}): Promise<{ totalLeads: number; closedLeads: number }> {
+  const dayStart = new Date(report.reportDate);
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const dayEnd = new Date(report.reportDate);
+  dayEnd.setUTCHours(23, 59, 59, 999);
+
+  const [summary] = await Lead.aggregate<{ totalLeads: number; closedLeads: number }>([
+    {
+      $match: {
+        marketingEmployeeId: report.marketingEmployeeId,
+        createdAt: { $gte: dayStart, $lte: dayEnd },
+        isActive: true,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalLeads: { $sum: 1 },
+        closedLeads: {
+          $sum: {
+            $cond: [
+              { $in: ["$status", ["CLOSED", "ORDER_CREATED"]] },
+              1,
+              0,
+            ],
+          },
+        },
+      },
+    },
+  ]);
+
+  return {
+    totalLeads: summary?.totalLeads ?? 0,
+    closedLeads: summary?.closedLeads ?? 0,
+  };
+}
+
+/**
+ * Recompute and persist all lead-derived metrics for a report after
+ * totalLeads / closedLeads have been updated.
+ */
+async function refreshReportMetrics(reportId: string): Promise<void> {
+  const report = await marketingExpenseRepository.findById(reportId);
+  if (!report) return;
+
+  const { totalLeads, closedLeads } = await syncLeadMetricsFromLeads({
+    reportDate: report.reportDate,
+    marketingEmployeeId: report.marketingEmployeeId,
+  });
+
+  const spentTotal =
+    (report.spentBudget?.morning ?? 0) +
+    (report.spentBudget?.afternoon ?? 0) +
+    (report.spentBudget?.emergency ?? 0);
+
+  const { remainingBudget, conversionRate, roas, cpa } =
+    MarketingExpenseCalculator.calculateAll({
+      requestedBudget: report.requestedBudget as IBudgetAllocation,
+      spentBudget: report.spentBudget as IBudgetAllocation,
+      totalRevenue: report.totalRevenue,
+      totalLeads,
+      closedLeads,
+    });
+
+  await marketingExpenseRepository.update(reportId, {
+    totalLeads,
+    closedLeads,
+    remainingBudget,
+    conversionRate,
+    roas,
+    cpa,
+  });
+}
 
 // ============================================================================
 // Result helpers
@@ -62,13 +150,6 @@ export type MarketingExpenseResult<T> =
 // ============================================================================
 // Internal helpers
 // ============================================================================
-
-function coerceFacebookPageId(
-  value: string | null | undefined
-): mongoose.Types.ObjectId | null {
-  if (!value) return null;
-  return new mongoose.Types.ObjectId(value);
-}
 
 function normalizeBudget(input?: {
   morning?: number;
@@ -128,8 +209,12 @@ export class MarketingExpenseService {
     const spentBudget = normalizeBudget(input.spentBudget);
 
     const totalRevenue = Math.max(0, input.totalRevenue ?? 0);
-    const totalLeads = Math.max(0, input.totalLeads ?? 0);
-    const closedLeads = Math.max(0, input.closedLeads ?? 0);
+
+    // Auto-sync totalLeads / closedLeads from Lead collection (Source of Truth).
+    const { totalLeads, closedLeads } = await syncLeadMetricsFromLeads({
+      reportDate,
+      marketingEmployeeId: new mongoose.Types.ObjectId(input.marketingEmployeeId),
+    });
 
     const { remainingBudget, conversionRate, roas, cpa } =
       MarketingExpenseCalculator.calculateAll({
@@ -192,70 +277,44 @@ export class MarketingExpenseService {
         : undefined,
     };
 
-    if (input.marketingEmployeeId) {
-      data.marketingEmployeeId = new mongoose.Types.ObjectId(
-        input.marketingEmployeeId
-      );
-    }
+    const budgetChanged =
+      input.requestedBudget !== undefined || input.spentBudget !== undefined;
 
-    if (input.facebookPageId !== undefined) {
-      data.facebookPageId = coerceFacebookPageId(input.facebookPageId);
+    if (budgetChanged) {
+      data.requestedBudget = normalizeBudget(
+        input.requestedBudget ?? existing.requestedBudget
+      );
+      data.spentBudget = normalizeBudget(
+        input.spentBudget ?? existing.spentBudget
+      );
     }
 
     if (input.note !== undefined) {
       data.note = (input.note ?? "").toString().slice(0, 2000);
     }
 
-    const budgetChanged =
-      input.requestedBudget !== undefined || input.spentBudget !== undefined;
-    const metricsChanged =
-      input.totalRevenue !== undefined ||
-      input.totalLeads !== undefined ||
-      input.closedLeads !== undefined;
+    // Always sync totalLeads / closedLeads from Lead collection (Source of Truth).
+    // Manual input values are ignored — the Lead collection is authoritative.
+    const { totalLeads, closedLeads } = await syncLeadMetricsFromLeads({
+      reportDate: existing.reportDate,
+      marketingEmployeeId: existing.marketingEmployeeId,
+    });
 
-    if (budgetChanged || metricsChanged) {
-      const nextRequested = budgetChanged
-        ? normalizeBudget(
-            input.requestedBudget ?? existing.requestedBudget
-          )
-        : (existing.requestedBudget as IBudgetAllocation);
+    // Recalculate derived metrics whenever leads or budget change.
+    const metrics = MarketingExpenseCalculator.calculateAll({
+      requestedBudget: (budgetChanged ? data.requestedBudget : existing.requestedBudget) as IBudgetAllocation,
+      spentBudget: (budgetChanged ? data.spentBudget : existing.spentBudget) as IBudgetAllocation,
+      totalRevenue: existing.totalRevenue,
+      totalLeads,
+      closedLeads,
+    });
 
-      const nextSpent = budgetChanged
-        ? normalizeBudget(input.spentBudget ?? existing.spentBudget)
-        : (existing.spentBudget as IBudgetAllocation);
-
-      const nextRevenue =
-        input.totalRevenue !== undefined
-          ? input.totalRevenue
-          : existing.totalRevenue;
-      const nextLeads =
-        input.totalLeads !== undefined ? input.totalLeads : existing.totalLeads;
-      const nextClosed =
-        input.closedLeads !== undefined
-          ? input.closedLeads
-          : existing.closedLeads;
-
-      if (budgetChanged) {
-        data.requestedBudget = nextRequested;
-        data.spentBudget = nextSpent;
-      }
-
-      const metrics = MarketingExpenseCalculator.calculateAll({
-        requestedBudget: nextRequested,
-        spentBudget: nextSpent,
-        totalRevenue: nextRevenue,
-        totalLeads: nextLeads,
-        closedLeads: nextClosed,
-      });
-
-      data.remainingBudget = metrics.remainingBudget;
-      data.totalRevenue = nextRevenue;
-      data.totalLeads = nextLeads;
-      data.closedLeads = nextClosed;
-      data.conversionRate = metrics.conversionRate;
-      data.roas = metrics.roas;
-      data.cpa = metrics.cpa;
-    }
+    data.totalLeads = totalLeads;
+    data.closedLeads = closedLeads;
+    data.remainingBudget = metrics.remainingBudget;
+    data.conversionRate = metrics.conversionRate;
+    data.roas = metrics.roas;
+    data.cpa = metrics.cpa;
 
     const updated = await marketingExpenseRepository.update(id, data);
     if (!updated) {

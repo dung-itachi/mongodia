@@ -6,7 +6,7 @@
  * Trả về các hoạt động gần nhất trên hệ thống:
  *   - recentOrders: 5 đơn hàng mới nhất
  *   - recentLeads: 5 lead mới nhất
- *   - recentInventory: 5 thay đổi kho gần nhất
+ *   - recentInventory: 5 thay đổi kho gần nhất (đã filter scope)
  *   - notifications: 5 thông báo gần nhất (từ collection Notification,
  *                    filter theo recipients = currentUser hoặc wildcard)
  *
@@ -20,7 +20,7 @@
  *   - 4 main fetches chạy song song (Promise.all).
  *   - Top-level import cho ProductVariant / Combo (bỏ dynamic await import).
  *   - Notifications query dùng recipientMode="broadcast" thay vì $size: 0.
- *   - unstable_cache 30s.
+ *   - unstable_cache 30s với cache key chứa current date để tránh stale "recent" data.
  */
 
 import { NextResponse } from "next/server";
@@ -127,7 +127,53 @@ async function fetchActivitiesData(
           "_id customerName sourceType saleEmployeeId marketingEmployeeId status createdAt"
         )
         .lean() as unknown as Promise<LeadLean[]>,
+      // Scope inventory: GLOBAL sees all movements; SELF scopes to own orders.
+      // Non-order movements (INBOUND, ADJUST, TRANSFER) are always visible (system-level).
+      // roleCode and userOid are passed as pipeline variables via $$.
       InventoryHistory.aggregate<InvLean>([
+        {
+          $lookup: {
+            from: "orders",
+            let: { invOrderId: "$orderId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$_id", "$$invOrderId"] },
+                },
+              },
+              {
+                $project: {
+                  _id: 1,
+                  marketingEmployeeId: 1,
+                  saleEmployeeId: 1,
+                },
+              },
+            ],
+            as: "order",
+          },
+        },
+        {
+          $match: {
+            $expr: {
+              $or: [
+                { $eq: [scope, "GLOBAL"] },
+                { $eq: [{ $ifNull: ["$orderId", null] }, null] },
+                {
+                  $and: [
+                    { $eq: ["$$roleCode", "MKT"] },
+                    { $eq: [{ $arrayElemAt: ["$order.marketingEmployeeId", 0] }, userOid] },
+                  ],
+                },
+                {
+                  $and: [
+                    { $ne: ["$$roleCode", "MKT"] },
+                    { $eq: [{ $arrayElemAt: ["$order.saleEmployeeId", 0] }, userOid] },
+                  ],
+                },
+              ],
+            },
+          },
+        },
         { $sort: { createdAt: -1 } },
         { $limit: ACTIVITY_LIMIT },
         {
@@ -141,7 +187,7 @@ async function fetchActivitiesData(
             referenceCode: 1,
           },
         },
-      ]),
+      ], { let: { roleCode, userOid } }),
       Notification.find({
         isActive: true,
         $or: [
@@ -312,6 +358,8 @@ export async function GET(request: Request) {
     const isGlobal = scope === "GLOBAL";
     const roleCode = currentUser.role.code;
     const userObjectId = currentUser.employee._id.toString();
+    // Include current date in cache key so "5 recent items" refreshes daily.
+    const today = new Date().toISOString().slice(0, 10);
 
     const cachedFetch = unstable_cache(
       async () =>
@@ -320,7 +368,7 @@ export async function GET(request: Request) {
           roleCode,
           userObjectId,
         }),
-      [`dashboard:activities:${isGlobal ? "GLOBAL" : "SELF"}:${roleCode}:${userObjectId}`],
+      [`dashboard:activities:${isGlobal ? "GLOBAL" : "SELF"}:${roleCode}:${userObjectId}:${today}`],
       { revalidate: 30, tags: [`dashboard:${userObjectId}`] }
     );
 

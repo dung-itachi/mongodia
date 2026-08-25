@@ -142,7 +142,7 @@ export async function aggregateLeadSummary(filter?: MarketingDashboardFilter): P
           { $count: "count" },
         ],
         closedLead: [
-          { $match: { status: LeadStatus.CLOSED } },
+          { $match: { status: { $in: [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED] } } },
           { $count: "count" },
         ],
       },
@@ -212,7 +212,7 @@ export async function aggregateTopMarketingByLeads(limit = 5): Promise<TopMarket
         _id: "$marketingEmployeeId",
         totalLead: { $sum: 1 },
         closedLead: {
-          $sum: { $cond: [{ $eq: ["$status", LeadStatus.CLOSED] }, 1, 0] },
+          $sum: { $cond: [{ $in: ["$status", [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED]] }, 1, 0] },
         },
       },
     },
@@ -618,7 +618,7 @@ export async function aggregateConversionTrend(period: ChartPeriod = "7d"): Prom
       $group: {
         _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
         total: { $sum: 1 },
-        closed: { $sum: { $cond: [{ $eq: ["$status", LeadStatus.CLOSED] }, 1, 0] } },
+        closed: { $sum: { $cond: [{ $in: ["$status", [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED]] }, 1, 0] } },
       },
     },
     {
@@ -784,7 +784,7 @@ export async function aggregateTopMarketingEmployees(limit = 10): Promise<TopMar
           $sum: { $cond: [{ $in: ["$status", [LeadStatus.QUALIFIED, LeadStatus.ASSIGNED]] }, 1, 0] },
         },
         closedLeads: {
-          $sum: { $cond: [{ $eq: ["$status", LeadStatus.CLOSED] }, 1, 0] },
+          $sum: { $cond: [{ $in: ["$status", [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED]] }, 1, 0] },
         },
         revenue: {
           $sum: { $arrayElemAt: ["$expenseData.totalRevenue", 0] },
@@ -1117,11 +1117,11 @@ export async function aggregateLeadTrendSummary(filter?: MarketingDashboardFilte
           { $count: "count" },
         ],
         monthClosedCount: [
-          { $match: { createdAt: { $gte: monthStart }, status: LeadStatus.CLOSED } },
+          { $match: { createdAt: { $gte: monthStart }, status: { $in: [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED] } } },
           { $count: "count" },
         ],
         lastMonthClosedCount: [
-          { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd }, status: LeadStatus.CLOSED } },
+          { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd }, status: { $in: [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED] } } },
           { $count: "count" },
         ],
       },
@@ -1570,7 +1570,7 @@ function buildLeadMatch(filter: MarketingDashboardFilter): Record<string, unknow
         match.saleEmployeeId = { $exists: true, $ne: null };
         break;
       case "closedLead":
-        match.status = LeadStatus.CLOSED;
+        match.status = { $in: [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED] };
         break;
       case "conversionRate":
       case "monthLead":
@@ -1648,7 +1648,7 @@ export async function aggregateExportData(
           $facet: {
             totalLead: [{ $count: "count" }],
             closedLead: [
-              { $match: { status: LeadStatus.CLOSED } },
+              { $match: { status: { $in: [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED] } } },
               { $count: "count" },
             ],
             todayLead: [
@@ -1761,7 +1761,7 @@ export async function aggregateExportData(
           $group: {
             _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
             total: { $sum: 1 },
-            closed: { $sum: { $cond: [{ $eq: ["$status", LeadStatus.CLOSED] }, 1, 0] } },
+            closed: { $sum: { $cond: [{ $in: ["$status", [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED]] }, 1, 0] } },
           },
         },
         {
@@ -1780,15 +1780,15 @@ export async function aggregateExportData(
         { $sort: { date: 1 as const } },
       ]).exec(),
 
-      // Expense summary
+      // Expense summary (spent only from MarketingExpenseReport; leads & revenue from authoritative sources)
+      // totalLeads/closedLeads come from Lead collection (Source of Truth), not self-reported.
+      // monthRevenue comes from Order.totalAmount (Source of Truth), not self-reported.
       MarketingExpenseReport.aggregate([
         { $match: expenseMatch },
         {
           $group: {
             _id: null,
             totalSpent: { $sum: { $add: ["$spentBudget.morning", "$spentBudget.afternoon", "$spentBudget.emergency"] } },
-            totalRevenue: { $sum: "$totalRevenue" },
-            totalClosedLeads: { $sum: "$closedLeads" },
           },
         },
       ]).exec(),
@@ -1813,9 +1813,11 @@ export async function aggregateExportData(
   const monthLead = (facets.monthLead?.[0]?.count as number) ?? 0;
   const assignedLead = (facets.assignedLead?.[0]?.count as number) ?? 0;
 
-  const expenseResult = expenseSummary[0] ?? { totalSpent: 0, totalRevenue: 0, totalClosedLeads: 0 };
-  const roas = expenseResult.totalSpent > 0 ? expenseResult.totalRevenue / expenseResult.totalSpent : 0;
-  const cpa = expenseResult.totalClosedLeads > 0 ? expenseResult.totalSpent / expenseResult.totalClosedLeads : 0;
+  const expenseResult = expenseSummary[0] ?? { totalSpent: 0 };
+  // ROAS = Order.totalAmount revenue / spent (not self-reported revenue)
+  const roas = expenseResult.totalSpent > 0 ? orderSummary.totalRevenue / expenseResult.totalSpent : 0;
+  // CPA = totalSpent / closedLeads (from Lead collection, not self-reported)
+  const cpa = closedLead > 0 ? expenseResult.totalSpent / closedLead : 0;
   const conversionRate = totalLead > 0 ? Math.round((closedLead / totalLead) * 1000) / 10 : 0;
 
   return {
@@ -1826,7 +1828,7 @@ export async function aggregateExportData(
       assignedLead,
       closedLead,
       totalSpent: expenseResult.totalSpent,
-      monthRevenue: expenseResult.totalRevenue,
+      monthRevenue: orderSummary.totalRevenue,
       roas,
       cpa,
       conversionRate,
@@ -1928,7 +1930,7 @@ async function aggregateTopMarketingEmployeesWithFilter(
           $sum: { $cond: [{ $in: ["$status", [LeadStatus.QUALIFIED, LeadStatus.ASSIGNED]] }, 1, 0] },
         },
         closedLeads: {
-          $sum: { $cond: [{ $eq: ["$status", LeadStatus.CLOSED] }, 1, 0] },
+          $sum: { $cond: [{ $in: ["$status", [LeadStatus.CLOSED, LeadStatus.ORDER_CREATED]] }, 1, 0] },
         },
         revenue: {
           $sum: { $arrayElemAt: ["$expenseData.totalRevenue", 0] },

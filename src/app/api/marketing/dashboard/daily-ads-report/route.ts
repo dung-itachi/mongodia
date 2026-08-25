@@ -156,18 +156,7 @@ export async function GET(request: Request) {
       matchFilter.marketingEmployeeId = { $in: resolvedEmployeeIds };
     }
 
-    const orderMatch: Record<string, unknown> = {
-      createdAt: { $gte: startDate, $lte: endDate },
-      isActive: true,
-      revenueEligible: true,
-      status: "DELIVERED",
-      marketingEmployeeId: { $exists: true, $ne: null },
-    };
-    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
-      orderMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
-    }
-
-    // First, get ads report data grouped by date
+    // Get ads report data grouped by date
     const adsReportData = await MarketingExpenseReport.aggregate([
       { $match: matchFilter },
       {
@@ -203,12 +192,24 @@ export async function GET(request: Request) {
     ]);
 
     // Get revenue from Order table for each date
+    // Uses totalAmount for non-CANCELLED orders (consistent revenue logic across all endpoints).
+    // revenueEligible filter removed — totalAmount is always populated for active orders.
+    const orderMatch: Record<string, unknown> = {
+      createdAt: { $gte: startDate, $lte: endDate },
+      isActive: true,
+      status: { $nin: ["CANCELLED"] },
+      marketingEmployeeId: { $exists: true, $ne: null },
+    };
+    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      orderMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
+    }
+
     const orderRevenueData = await Order.aggregate([
       { $match: orderMatch },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          totalRevenue: { $sum: "$marketingRevenueFinal" },
+          totalRevenue: { $sum: "$totalAmount" },
           orderCount: { $sum: 1 },
         },
       },

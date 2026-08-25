@@ -371,6 +371,7 @@ export async function GET(request: Request) {
     const isGlobal = scope === "GLOBAL";
     const roleCode = currentUser.role.code;
     const userObjectId = currentUser.employee._id.toString();
+    const today = new Date().toISOString().slice(0, 10);
 
     const cachedFetch = unstable_cache(
       async () =>
@@ -380,7 +381,7 @@ export async function GET(request: Request) {
           range,
           userObjectId,
         }),
-      [`dashboard:charts:${isGlobal ? "GLOBAL" : "SELF"}:${roleCode}:${range}:${userObjectId}`],
+      [`dashboard:charts:${isGlobal ? "GLOBAL" : "SELF"}:${roleCode}:${range}:${userObjectId}:${today}`],
       { revalidate: 60, tags: [`dashboard:${userObjectId}`] }
     );
 

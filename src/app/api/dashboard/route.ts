@@ -360,12 +360,13 @@ export async function GET(request: Request) {
     const scope = isGlobal ? "GLOBAL" : "SELF";
     const roleCode = currentUser.role.code;
     const userObjectId = currentUser.employee._id.toString();
+    const today = new Date().toISOString().slice(0, 10);
 
-    // Cache 30s cho mỗi (scope, roleCode, period, userId). Tag-based invalidation có thể
-    // được trigger từ Order/Lead POST/PUT nếu cần strict real-time.
+    // Cache 30s cho mỗi (scope, roleCode, period, userId). Include today in key
+    // so that "current period" aggregations don't serve stale yesterday data.
     const cachedFetch = unstable_cache(
       async () => fetchDashboardData({ scope, roleCode, period, userObjectId }),
-      [`dashboard:summary:${scope}:${roleCode}:${period}:${userObjectId}`],
+      [`dashboard:summary:${scope}:${roleCode}:${period}:${userObjectId}:${today}`],
       { revalidate: 30, tags: [`dashboard:${userObjectId}`] }
     );
 
