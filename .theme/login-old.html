@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MongoDia - Đăng nhập</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      color: #fff;
+      background: #000;
+    }
+
+    /* ============ Background video ============ */
+    .videoBg {
+      position: fixed; inset: 0; z-index: 0;
+      overflow: hidden; background: #000;
+    }
+    .videoBg iframe {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 100vw;
+      height: 56.25vw;        /* 16:9 */
+      min-width: 177.77vh;
+      min-height: 100vh;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    /* Fallback gradient (chỉ hiện khi iframe YouTube lỗi 152 / bị chặn) */
+    .fallbackBg {
+      position: absolute; inset: 0;
+      display: none;
+      background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #0f0c29);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+    }
+    .videoBg.noVideo .fallbackBg { display: block; }
+    .videoBg.noVideo iframe     { display: none; }
+
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Ẩn chrome / controls của YouTube */
+    .videoBg iframe + style { display: none; }
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 1;
+    }
+
+    /* ============ Layout ============ */
+    .container {
+      width: 100%; min-height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+      position: relative; z-index: 10;
+      padding: 20px;
+    }
+
+    .card {
+      width: 390px; max-width: 100%;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+      color: #fff;
+    }
+
+    .card h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .card p.subtitle {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #ddd;
+      font-size: 15px;
+    }
+
+    /* ============ Form ============ */
+    form { width: 100%; }
+
+    .input {
+      width: 100%;
+      padding: 15px;
+      border: none; border-radius: 10px;
+      margin-bottom: 18px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      outline: none;
+      font-size: 15px;
+      transition: background 0.3s ease;
+    }
+    .input::placeholder { color: #ddd; }
+    .input:focus { background: rgba(255, 255, 255, 0.25); }
+
+    /* Chrome autofill override — giữ nền trong suốt */
+    .input:-webkit-autofill,
+    .input:-webkit-autofill:hover,
+    .input:-webkit-autofill:focus,
+    .input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.15) inset !important;
+      -webkit-text-fill-color: #fff !important;
+      transition: background-color 5000s ease-in-out 0s !important;
+    }
+
+    .passwordBox { position: relative; }
+
+    .show {
+      position: absolute;
+      right: 15px; top: 13px;
+      cursor: pointer;
+      color: #ddd;
+      user-select: none;
+      transition: color 0.3s ease;
+      z-index: 11;
+      font-size: 18px;
+    }
+    .show:hover { color: #fff; }
+
+    .submitBtn {
+      width: 100%;
+      padding: 15px;
+      border: none; border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #00b894;
+      color: #fff;
+      transition: background 0.3s ease;
+      font-weight: 500;
+    }
+    .submitBtn:hover:not(:disabled) { background: #00d4aa; }
+    .submitBtn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .links {
+      margin-top: 20px;
+      display: flex; justify-content: space-between;
+      font-size: 14px;
+    }
+    .links a {
+      color: #fff;
+      text-decoration: none;
+      transition: text-decoration 0.3s ease;
+    }
+    .links a:hover { text-decoration: underline; }
+
+    .footer {
+      margin-top: 25px;
+      text-align: center;
+      font-size: 13px;
+      color: #ddd;
+    }
+
+    /* ============ Mute button ============ */
+    .muteBtn {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      z-index: 100;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      width: 50px; height: 50px;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      color: #fff;
+    }
+    .muteBtn:hover {
+      background: rgba(0, 0, 0, 0.7);
+      transform: scale(1.1);
+    }
+
+    @media (max-width: 500px) {
+      .card { width: 90%; padding: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="videoBg" id="videoBg">
+    <!-- Iframe YouTube đúng link dự án đang dùng: https://youtu.be/sF3i-LHRMcw
+         autoplay + mute + loop + random start; chỉ giữ các flag an toàn
+         (bỏ disablekb=1, fs=0, enablejsapi=1, modestbranding=1 để tránh lỗi 152). -->
+    <iframe
+      id="ytplayer"
+      name="ytplayer"
+      src="about:blank"
+      title="Background"
+      frameborder="0"
+      allow="autoplay; encrypted-media; accelerometer; gyroscope; picture-in-picture"
+      allowfullscreen
+    ></iframe>
+
+    <!-- Fallback gradient — tự bật nếu iframe YouTube không phát được -->
+    <div class="fallbackBg"></div>
+
+    <div class="overlay"></div>
+
+    <div class="container">
+      <div class="card">
+        <h1>Welcome</h1>
+        <p class="subtitle">Đăng nhập hệ thống</p>
+
+        <form id="loginForm" autocomplete="off">
+          <input
+            class="input"
+            type="text"
+            name="username"
+            placeholder="Username"
+            required
+          />
+
+          <div class="passwordBox">
+            <input
+              id="password"
+              class="input"
+              type="password"
+              name="password"
+              placeholder="Password"
+              required
+            />
+            <span class="show" id="togglePwd" title="Hiện/Ẩn mật khẩu">👁</span>
+          </div>
+
+          <button type="submit" class="submitBtn" id="submitBtn">LOGIN</button>
+        </form>
+
+        <div class="links">
+          <a href="#" id="forgotLink">Quên mật khẩu?</a>
+          <a href="#" id="registerLink">Đăng ký</a>
+        </div>
+
+        <div class="footer">MongoDia - Quản lý dữ liệu</div>
+      </div>
+    </div>
+
+    <button class="muteBtn" id="muteBtn" title="Bật/Tắt âm thanh" type="button">🔇</button>
+  </div>
+
+  <script>
+    (function () {
+      /* ============ Background video YouTube ============
+         Link gốc dự án: https://youtu.be/sF3i-LHRMcw
+         Mở qua file:// thường gặp lỗi 152 vì YouTube từ chối nhúng từ origin "null".
+         Nếu iframe không phát được, tự fallback sang gradient động. */
+      const VIDEO_ID    = "sF3i-LHRMcw";
+      const VIDEO_LENGTH = 10800;
+      const MIN_START   = 20;
+      const MAX_START   = VIDEO_LENGTH - 300;
+
+      function getRandomStart() {
+        return Math.floor(Math.random() * (MAX_START - MIN_START + 1)) + MIN_START;
+      }
+
+      const videoBg = document.getElementById("videoBg");
+      const iframe  = document.getElementById("ytplayer");
+      const muteBtn = document.getElementById("muteBtn");
+      const start   = getRandomStart();
+
+      iframe.src =
+        "https://www.youtube.com/embed/" + VIDEO_ID +
+        "?autoplay=1&mute=1&controls=0&loop=1&playlist=" + VIDEO_ID +
+        "&start=" + start +
+        "&playsinline=1&rel=0&iv_load_policy=3";
+
+      /* Phát hiện lỗi 152 / chặn nhúng -> bật fallback gradient */
+      let iframeReady = false;
+      iframe.addEventListener("load", function () {
+        iframeReady = true;
+        try {
+          const loc = iframe.contentWindow && iframe.contentWindow.location;
+          if (!loc || loc.href === "about:blank") {
+            videoBg.classList.add("noVideo");
+          }
+        } catch (_) { /* cross-origin -> iframe đã load thật, OK */ }
+      });
+      // Nếu sau 6s iframe vẫn chưa load thì bật fallback
+      setTimeout(function () { if (!iframeReady) videoBg.classList.add("noVideo"); }, 6000);
+
+      /* ============ Toggle mật khẩu ============ */
+      const pwd       = document.getElementById("password");
+      const togglePwd = document.getElementById("togglePwd");
+      let showPassword = false;
+      togglePwd.addEventListener("click", function () {
+        showPassword = !showPassword;
+        pwd.type = showPassword ? "text" : "password";
+      });
+
+      /* ============ Toggle mute (YouTube iFrame API qua postMessage) ============ */
+      let isMuted = true;
+      muteBtn.addEventListener("click", function () {
+        if (videoBg.classList.contains("noVideo")) return;
+        const target = document.querySelector("iframe[name=ytplayer]");
+        if (target && target.contentWindow) {
+          target.contentWindow.postMessage(
+            JSON.stringify({ event: "command", func: isMuted ? "unMute" : "mute" }),
+            "*"
+          );
+          isMuted = !isMuted;
+          muteBtn.textContent = isMuted ? "🔇" : "🔊";
+        }
+      });
+
+      /* ============ Submit form (chỉ demo, không gọi API) ============ */
+      const form      = document.getElementById("loginForm");
+      const submitBtn = document.getElementById("submitBtn");
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const fd   = new FormData(form);
+        const user = fd.get("username");
+        const pass = fd.get("password");
+
+        submitBtn.disabled    = true;
+        submitBtn.textContent = "ĐANG ĐĂNG NHẬP...";
+
+        setTimeout(function () {
+          alert("Demo form\nUsername: " + user +
+                "\nPassword: " + (pass ? "•".repeat(String(pass).length) : ""));
+          submitBtn.disabled    = false;
+          submitBtn.textContent = "LOGIN";
+        }, 700);
+      });
+
+      /* Liên kết demo — chặn điều hướng để không rời trang */
+      document.getElementById("forgotLink").addEventListener("click", function (e) {
+        e.preventDefault();
+        alert("Demo — tính năng quên mật khẩu chưa bật trong bản này.");
+      });
+      document.getElementById("registerLink").addEventListener("click", function (e) {
+        e.preventDefault();
+        alert("Demo — liên kết đăng ký chưa bật trong bản này.");
+      });
+    })();
+  </script>
+</body>
+</html>
