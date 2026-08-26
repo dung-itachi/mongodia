@@ -297,6 +297,10 @@ export interface IOrder extends Document {
 
   // ---- Audit ---------------------------------------------------------
   note?: string;
+  /** Sprint 8.x — Thời gian khách đặt hàng (từ Landing page hoặc dữ liệu dán). */
+  orderDate?: Date;
+  /** Sprint 8.x — Thời gian Marketing nhận được đơn (khi push sang Sale). */
+  receivedDate?: Date;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

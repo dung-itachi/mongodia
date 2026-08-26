@@ -15,7 +15,7 @@ import { Lead } from "@/models/Lead";
 import Employee from "@/models/Employee";
 import Role from "@/models/Role";
 import { orderService } from "@/services/order.service";
-import { saleOrderService } from "@/services/sale-order.service";
+import { saleOrderService, type ValidatedSaleOrderItem } from "@/services/sale-order.service";
 import type { OrderItem } from "@/types/variant";
 import type {
   Lead as LeadDomain,
@@ -375,7 +375,7 @@ export class LeadService {
       return { success: false, error: "Thiếu thông tin đơn hàng" };
     }
 
-    let validatedOrderItem: OrderItem;
+    let validatedOrderItem: ValidatedSaleOrderItem;
     try {
       validatedOrderItem = await saleOrderService.validateItem(orderItem);
     } catch (error) {
@@ -417,6 +417,10 @@ export class LeadService {
         customerId = created._id.toString();
       }
 
+      // Resolve default warehouse from the converting employee.
+      const converter = await Employee.findById(convertedBy).lean();
+      const defaultWarehouseId = converter?.warehouseId?.toString();
+
       // Create order from lead
       const order = await orderService.createFromLead(
         {
@@ -426,12 +430,20 @@ export class LeadService {
           customerPhone: existingLead.phone,
           productId: validatedOrderItem.productId,
           comboId: validatedOrderItem.comboId,
+          warehouseId: defaultWarehouseId,
           productSnapshot: undefined,
           comboSnapshot: undefined,
           quantity: validatedOrderItem.comboQuantity,
           unitPrice: validatedOrderItem.sellingPrice,
           totalAmount: validatedOrderItem.subtotal,
-          orderItem: validatedOrderItem,
+          orderItem: {
+            ...validatedOrderItem,
+            details: validatedOrderItem.details.map((d) => ({
+              quantity: d.quantity,
+              variantId: d.variantId ?? undefined,
+              attributes: d.attributes,
+            })),
+          },
           currency: "VND",
           estimatedWeight: existingLead.estimatedWeight,
           marketingEmployeeId: existingLead.marketingEmployeeId?.toString(),

@@ -11,15 +11,14 @@
  *   │ 📦 Tồn kho · 🚚 Đang giao │
  *   │ ↩ Đang hoàn · ✅ Giao TC  │
  *   │ 📥 Hoàn kho · Tổng nhập   │
- *   │ [Nhập]                  │
+ *   │ [Nhập] [Chi tiết]         │
+ *   │  • Variant-A   [120]      │  ← breakdown variant (fetch lazy)
+ *   │  • Variant-B   [ 30]      │
  *   └──────────────────────────┘
- *
- * - "Nhập"   → m� modal nhập theo VARIANT cụ thể
- * - "Chi tiết" → mở drawer xem breakdown từng variant
  */
 
-import { memo, useState } from "react";
-import { Button, Empty, Skeleton, Tag } from "antd";
+import { memo, useEffect, useState } from "react";
+import { Button, Empty, Skeleton, Tag, Spin } from "antd";
 import {
   PlusOutlined,
   EyeOutlined,
@@ -28,6 +27,8 @@ import {
   RollbackOutlined,
   CheckCircleOutlined,
   DownloadOutlined,
+  ImportOutlined,
+  ExportOutlined,
 } from "@ant-design/icons";
 import type { WarehouseOverviewItem } from "@/hooks/useWarehouseInventoryOverview";
 import ImportStockModal from "./ImportStockModal";
@@ -40,6 +41,13 @@ export type WarehouseOverviewCardProps = {
   items: WarehouseOverviewItem[];
   loading?: boolean;
   activeWarehouseId?: string;
+  variant?: "full" | "source";
+};
+
+type VariantRow = {
+  productVariantId: string;
+  sku: string;
+  stock: number;
 };
 
 const TONE: Record<string, string> = {
@@ -51,14 +59,68 @@ const TONE: Record<string, string> = {
   muted: "#8c8c8c",
 };
 
+function stockVariantClass(stock: number): string {
+  if (stock === 0) return `${styles["wh-item-variant-stock"]} ${styles["wh-item-variant-stock--zero"]}`;
+  if (stock <= 10) return `${styles["wh-item-variant-stock"]} ${styles["wh-item-variant-stock--low"]}`;
+  return styles["wh-item-variant-stock"];
+}
+
 function WarehouseOverviewCardInner({
   items,
   loading = false,
   activeWarehouseId,
+  variant = "full",
 }: WarehouseOverviewCardProps) {
   const lang = useLanguageStore((s) => s.language);
   const [importTarget, setImportTarget] = useState<WarehouseOverviewItem | null>(null);
   const [detailTarget, setDetailTarget] = useState<WarehouseOverviewItem | null>(null);
+  const [variantsMap, setVariantsMap] = useState<Record<string, VariantRow[]>>({});
+  const [variantsLoading, setVariantsLoading] = useState<Record<string, boolean>>({});
+
+  // Fetch variant breakdown lazily per product so the card shows
+  // stock-per-SKU without forcing the user to open the drawer.
+  useEffect(() => {
+    let cancelled = false;
+    if (items.length === 0) return;
+    (async () => {
+      for (const item of items) {
+        if (cancelled) return;
+        if (variantsMap[item.productId]) continue;
+        setVariantsLoading((prev) => ({ ...prev, [item.productId]: true }));
+        try {
+          const url = `/api/warehouses/inventory-overview/${item.productId}/variants${
+            activeWarehouseId ? `?warehouseId=${activeWarehouseId}` : ""
+          }`;
+          const res = await fetch(url);
+          const json = await res.json();
+          const rows: VariantRow[] = (json?.data?.items ?? []).map(
+            (v: { productVariantId: string; sku: string; stock: number }) => ({
+              productVariantId: v.productVariantId,
+              sku: v.sku,
+              stock: v.stock ?? 0,
+            })
+          );
+          if (!cancelled) {
+            setVariantsMap((prev) => ({ ...prev, [item.productId]: rows }));
+          }
+        } catch {
+          // keep silent — card-level breakdown is non-critical
+        } finally {
+          if (!cancelled) {
+            setVariantsLoading((prev) => ({
+              ...prev,
+              [item.productId]: false,
+            }));
+          }
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // re-fetch when active warehouse changes so variant stock reflects filter
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, activeWarehouseId]);
 
   // Badge tồn kho: giúp user nhìn nhanh SP nào hết hàng / tồn thấp
   const renderStockBadge = (stock: number) => {
@@ -90,62 +152,96 @@ function WarehouseOverviewCardInner({
   return (
     <>
       <div className={styles["wh-grid"]}>
-        {items.map((item) => (
-          <div key={item.productId} className={styles["wh-item"]}>
-            <h4 className={styles["wh-item-title"]}>
-              <span className={styles["wh-item-code"]}>{item.productCode}</span>{" "}
-              {item.productName}
-              <span style={{ marginLeft: 8 }}>
-                {renderStockBadge(item.stock)}
-              </span>
-            </h4>
-            <div className={styles["wh-item-stock"]}>{item.stock}</div>
-            <div className={styles["wh-item-stock-label"]}>
-              {t("TỒN KHO", lang)}
-              {activeWarehouseId ? ` (${t("KHO NÀY", lang)})` : ` (${t("TẤT CẢ KHO", lang)})`}
-            </div>
+        {items.map((item) => {
+          const variants = variantsMap[item.productId];
+          const isLoadingVariants = variantsLoading[item.productId];
+          return (
+            <div key={item.productId} className={styles["wh-item"]}>
+              <h4 className={styles["wh-item-title"]}>
+                <span className={styles["wh-item-code"]}>{item.productCode}</span>{" "}
+                {item.productName}
+                <span style={{ marginLeft: 8 }}>
+                  {renderStockBadge(item.stock)}
+                </span>
+              </h4>
+              <div className={styles["wh-item-stock"]}>{item.stock}</div>
+              <div className={styles["wh-item-stock-label"]}>
+                {t("TỒN KHO", lang)}
+                {activeWarehouseId ? ` (${t("KHO NÀY", lang)})` : ` (${t("TẤT CẢ KHO", lang)})`}
+              </div>
 
-            <div className={styles["wh-item-stats"]}>
-              <span style={{ color: TONE.blue }}>
-                <InboxOutlined /> {t("Tồn kho:", lang)} <b>{item.stock}</b>
-              </span>
-              <span style={{ color: TONE.amber }}>
-                <TruckOutlined /> {t("Đang giao:", lang)} <b>{item.shipping}</b>
-              </span>
-              <span style={{ color: TONE.orange }}>
-                <RollbackOutlined /> {t("Đang hoàn về:", lang)} <b>{item.returning}</b>
-              </span>
-              <span style={{ color: TONE.green }}>
-                <CheckCircleOutlined /> {t("Đã giao TC:", lang)} <b>{item.delivered}</b>
-              </span>
-              <span style={{ color: TONE.purple }}>
-                <DownloadOutlined /> {t("Đã hoàn kho:", lang)} <b>{item.returned}</b>
-              </span>
-              <span style={{ color: TONE.muted }}>
-                {t("Tổng nhập:", lang)} <b>{item.imported}</b>
-              </span>
-            </div>
+              <div className={styles["wh-item-stats"]}>
+                <span style={{ color: TONE.blue }}>
+                  <InboxOutlined /> {t("Tồn kho:", lang)} <b>{item.stock}</b>
+                </span>
+                {variant === "source" ? (
+                  <>
+                    <span style={{ color: TONE.green }}>
+                      <ImportOutlined /> {t("Tổng nhập:", lang)} <b>{item.imported}</b>
+                    </span>
+                    <span style={{ color: TONE.amber }}>
+                      <ExportOutlined /> {t("Đã chuyển đi:", lang)} <b>{item.transferredOut}</b>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ color: TONE.amber }}>
+                      <TruckOutlined /> {t("Đang giao:", lang)} <b>{item.shipping}</b>
+                    </span>
+                    <span style={{ color: TONE.orange }}>
+                      <RollbackOutlined /> {t("Đang hoàn về:", lang)} <b>{item.returning}</b>
+                    </span>
+                    <span style={{ color: TONE.green }}>
+                      <CheckCircleOutlined /> {t("Đã giao TC:", lang)} <b>{item.delivered}</b>
+                    </span>
+                    <span style={{ color: TONE.purple }}>
+                      <DownloadOutlined /> {t("Đã hoàn kho:", lang)} <b>{item.returned}</b>
+                    </span>
+                    <span style={{ color: TONE.muted }}>
+                      {t("Tổng nhập:", lang)} <b>{item.imported}</b>
+                    </span>
+                  </>
+                )}
+              </div>
 
-            <div className={styles["wh-item-actions"]}>
-              <Button
-                type="primary"
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() => setImportTarget(item)}
-              >
-                {t("Nhập", lang)}
-              </Button>
-              <Button
-                type="default"
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={() => setDetailTarget(item)}
-              >
-                {t("Chi tiết", lang)}
-              </Button>
+              {/* Per-variant breakdown (lazy-loaded) */}
+              {(isLoadingVariants || (variants && variants.length > 0)) && (
+                <div className={styles["wh-item-variants"]}>
+                  {isLoadingVariants && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#8c8c8c" }}>
+                      <Spin size="small" /> {t("Đang tải phân loại...", lang)}
+                    </div>
+                  )}
+                  {variants?.map((v) => (
+                    <div key={v.productVariantId} className={styles["wh-item-variant"]}>
+                      <span className={styles["wh-item-variant-sku"]}>• {v.sku}</span>
+                      <span className={stockVariantClass(v.stock)}>{v.stock}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className={styles["wh-item-actions"]}>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => setImportTarget(item)}
+                >
+                  {t("Nhập", lang)}
+                </Button>
+                <Button
+                  type="default"
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() => setDetailTarget(item)}
+                >
+                  {t("Chi tiết", lang)}
+                </Button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <ImportStockModal

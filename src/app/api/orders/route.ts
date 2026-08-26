@@ -38,7 +38,7 @@ import {
   type OrderStockSnapshot,
 } from "@/services/order/orderStockWiring.helper";
 import { InventoryReferenceType } from "@/constants/inventoryStatus";
-import { validateOrderWarehouse } from "@/config/warehouse-topology.config";
+import { validateOrderWarehouse, getKho2Id } from "@/config/warehouse-topology.config";
 import {
   orderItemsToDemands,
   type NormalizedOrderItemShape,
@@ -340,6 +340,20 @@ export async function POST(request: Request) {
       }
     }
 
+    // ---- Resolve warehouseId: auto-assign KHO2 if not provided ---------
+    // Every Order that will ship must belong to KHO2 (kho chính bán hàng).
+    // If the caller does not supply warehouseId, resolve KHO2 as the single
+    // source of truth so the order can proceed through the inventory workflow.
+    let resolvedWarehouseId: string | undefined = data.warehouseId ?? undefined;
+    if (!resolvedWarehouseId) {
+      try {
+        resolvedWarehouseId = (await getKho2Id()).toString();
+      } catch {
+        // KHO2 not seeded — leave warehouseId undefined; the UI will need
+        // to warn the user before they can ship this order.
+      }
+    }
+
     // ---- orderType / orderSource are validated by Zod enum above ------
     const status = (data.status as OrderStatus) || OrderStatus.WAIT_CONFIRM;
     const orderType = (data.orderType as OrderType) || OrderType.NORMAL;
@@ -412,7 +426,7 @@ export async function POST(request: Request) {
           exchangeRateDate: new Date(),
           estimatedWeight: data.estimatedWeight || undefined,
           actualWeight: data.actualWeight || undefined,
-          warehouseId: data.warehouseId || undefined,
+          warehouseId: resolvedWarehouseId,
           marketingEmployeeId: data.marketingEmployeeId || undefined,
           saleEmployeeId: data.saleEmployeeId || undefined,
           status,
@@ -492,7 +506,7 @@ export async function POST(request: Request) {
       validatedOrderItems as unknown as NormalizedOrderItemShape[]
     );
     const stockSnapshot: OrderStockSnapshot = {
-      warehouseId: data.warehouseId,
+      warehouseId: resolvedWarehouseId,
       orderType,
       demands,
     };
@@ -501,7 +515,7 @@ export async function POST(request: Request) {
     if (stockPlan.reserve.length > 0) {
       try {
         await reserveStock(
-          data.warehouseId as string,
+          resolvedWarehouseId as string,
           stockPlan.reserve,
           {
             actorEmployeeId: currentUser.employee._id,

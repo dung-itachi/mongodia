@@ -21,7 +21,6 @@ export default function ThemeProvider({ children }: Props) {
         },
       }}
       componentSize="middle"
-      popupTriggerType="hover"
       popupMatchSelectWidth={false}
     >
       <App>

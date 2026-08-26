@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:strict": "tsc --noEmit && next build",
     "start": "next start",
     "lint": "eslint",
     "seed": "dotenv -e .env.local -- tsx src/db/seed.ts"

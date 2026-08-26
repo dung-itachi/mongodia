@@ -131,7 +131,6 @@ function createOrderItemFromCombo(
     discount: 0,
     subtotal: combo.sellingPrice,
     details: [defaultDetail],
-    productName: combo.productName,
   };
 }
 
@@ -891,19 +890,40 @@ function OrderItemRow({
 
   const handleUpdateDetail = useCallback(
     (index: number, detail: ProductVariantSelection) => {
-      const combinationKey = detail.attributes.map((attribute) => attribute.valueId).sort().join(":");
-      const duplicate = item.details.some((existing, existingIndex) =>
-        existingIndex !== index && existing.attributes.map((attribute) => attribute.valueId).sort().join(":") === combinationKey
-      );
-      if (combinationKey && duplicate) {
-        void message.warning(t("Biến thể này đã tồn tại.", lang));
+      const combinationKey = detail.attributes.map((a) => a.valueId).sort().join(":");
+
+      // Nếu không có attributes thì update bình thường
+      if (!combinationKey) {
+        const newDetails = [...item.details];
+        newDetails[index] = detail;
+        onUpdate({ ...item, details: newDetails });
         return;
       }
-      const newDetails = [...item.details];
-      newDetails[index] = detail;
-      onUpdate({ ...item, details: newDetails });
+
+      // Kiểm tra xem có dòng nào khác có cùng biến thể không
+      const existingIndex = item.details.findIndex(
+        (existing, i) => i !== index && existing.attributes.map((a) => a.valueId).sort().join(":") === combinationKey
+      );
+
+      if (existingIndex >= 0) {
+        // Gộp: cộng quantity và xóa dòng hiện tại
+        const newDetails = [...item.details];
+        newDetails[existingIndex] = {
+          ...newDetails[existingIndex],
+          quantity: newDetails[existingIndex].quantity + detail.quantity,
+        };
+        // Xóa dòng hiện tại
+        newDetails.splice(index, 1);
+        onUpdate({ ...item, details: newDetails });
+        void message.success(t("Đã gộp với dòng biến thể cùng loại.", lang));
+      } else {
+        // Không trùng: update bình thường
+        const newDetails = [...item.details];
+        newDetails[index] = detail;
+        onUpdate({ ...item, details: newDetails });
+      }
     },
-    [item, onUpdate]
+    [item, onUpdate, message, lang]
   );
 
   const handleDeleteDetail = useCallback(

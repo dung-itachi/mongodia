@@ -342,7 +342,7 @@ function TimelineTab({ leadId }: { leadId: string }) {
         <CardSection>
           <EmptyState
             title="Chưa có lịch sử Timeline"
-            title="Các thay đổi của Khách hàng sẽ hiển thị tại đây."
+            description="Các thay đổi của Khách hàng sẽ hiển thị tại đây."
           />
         </CardSection>
       </div>

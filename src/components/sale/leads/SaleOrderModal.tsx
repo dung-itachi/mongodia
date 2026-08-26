@@ -152,7 +152,6 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
         giftQuantity: initialCombo.giftQuantity ?? 0,
         sellingPrice: initialCombo.sellingPrice,
         productId: productId(initialCombo) ?? "",
-        productName: product?.name,
       },
       lead,
       lead.quantity && lead.quantity > 0 ? lead.quantity : 1
@@ -173,7 +172,6 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
         giftQuantity: combo.giftQuantity ?? 0,
         sellingPrice: combo.sellingPrice,
         productId: productId(combo) ?? "",
-        productName: product?.name,
       },
       lead,
       items[0]?.comboQuantity ?? (lead?.quantity && lead.quantity > 0 ? lead.quantity : 1)

@@ -50,7 +50,11 @@ function extractToken(request: Request): string | null {
   return null;
 }
 
-export async function getCurrentUserFromSseRequest(request: Request) {
+export async function getCurrentUserFromSseRequest(request: Request): Promise<{
+  employee: any;
+  role: any;
+  permissions: string[];
+}> {
   const token = extractToken(request);
   if (!token) {
     throw new Error("UNAUTHORIZED");
@@ -60,8 +64,8 @@ export async function getCurrentUserFromSseRequest(request: Request) {
   const cached = getCachedSession(token);
   if (cached) {
     return {
-      employee: cached.employee,
-      role: cached.role,
+      employee: cached.employee as any,
+      role: cached.role as any,
       permissions: cached.permissions,
     };
   }
@@ -96,7 +100,11 @@ export async function getCurrentUserFromSseRequest(request: Request) {
         .lean()
     : [];
 
-  const session = {
+  const session: {
+    employee: any;
+    role: any;
+    permissions: string[];
+  } = {
     employee,
     role,
     permissions: perms.map((p) => p.code),

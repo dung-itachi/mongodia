@@ -101,8 +101,8 @@ async function refreshReportMetrics(reportId: string): Promise<void> {
   if (!report) return;
 
   const { totalLeads, closedLeads } = await syncLeadMetricsFromLeads({
-    reportDate: report.reportDate,
-    marketingEmployeeId: report.marketingEmployeeId,
+    reportDate: new Date(report.reportDate),
+    marketingEmployeeId: new mongoose.Types.ObjectId(report.marketingEmployeeId),
   });
 
   const spentTotal =
@@ -295,10 +295,10 @@ export class MarketingExpenseService {
 
     // Always sync totalLeads / closedLeads from Lead collection (Source of Truth).
     // Manual input values are ignored — the Lead collection is authoritative.
-    const { totalLeads, closedLeads } = await syncLeadMetricsFromLeads({
-      reportDate: existing.reportDate,
-      marketingEmployeeId: existing.marketingEmployeeId,
-    });
+const { totalLeads, closedLeads } = await syncLeadMetricsFromLeads({
+    reportDate: new Date(existing.reportDate),
+    marketingEmployeeId: new mongoose.Types.ObjectId(existing.marketingEmployeeId),
+  });
 
     // Recalculate derived metrics whenever leads or budget change.
     const metrics = MarketingExpenseCalculator.calculateAll({

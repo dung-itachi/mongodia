@@ -183,7 +183,8 @@ export class SaleOrderService {
     const discount = Number.isFinite(input.discount) && input.discount >= 0 ? input.discount : 0;
     const subtotal = Math.max(0, combo.sellingPrice * input.comboQuantity - discount);
     return {
-      comboId: combo._id.toString(), productId: product._id.toString(), comboName: combo.name, comboCode: combo.code,
+      comboId: combo._id.toString(), productId: product._id.toString(),
+      comboName: combo.name, comboCode: combo.code,
       comboQuantity: input.comboQuantity, packageQuantity, giftQuantity, giftMode: input.giftMode,
       giftSelections, sellingPrice: combo.sellingPrice, discount, subtotal, details,
     };

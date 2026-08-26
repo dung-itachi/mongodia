@@ -141,7 +141,6 @@ export default function ProductForm({
       onSubmit={handleSubmit}
       submitText={isEditing ? getTranslated("Cập nhật / Tạo mới") : getTranslated("Cập nhật / Tạo mới")}
       width={600}
-      afterOpenChange={handleAfterOpenChange}
     >
       <Form
         form={form}

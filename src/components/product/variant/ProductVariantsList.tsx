@@ -132,7 +132,7 @@ export default function ProductVariantsList({
       return variantValues
         .map((v) => {
           if (typeof v === "object" && v !== null) {
-            const obj = v as Record<string, unknown>;
+            const obj = v as unknown as Record<string, unknown>;
             const variantOptionId = obj.variantOptionId;
             let optionId = "";
             let optionName = "";

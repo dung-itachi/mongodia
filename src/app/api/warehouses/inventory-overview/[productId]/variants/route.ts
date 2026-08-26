@@ -16,7 +16,7 @@ import { Order } from "@/models/Order";
 import { OrderStatus } from "@/constants/orderStatus";
 import Product from "@/models/Product";
 import ProductVariant from "@/models/ProductVariant";
-import Inventory from "@/models/Inventory";
+import WarehouseInventory from "@/models/WarehouseInventory";
 import { InventoryHistory } from "@/models/InventoryHistory";
 import { success, error as errorResponse } from "@/utils/response";
 
@@ -94,26 +94,30 @@ export async function GET(
       } satisfies WarehouseProductVariantsResponse);
     }
 
-    // ---- Tồn kho theo variant ----
-    const invAgg = (await Inventory.aggregate([
+    // Support warehouse filter
+    const url = new URL(request.url);
+    const warehouseIdParam = url.searchParams.get("warehouseId");
+
+    // ---- Tồn kho theo variant (availableQuantity) ----
+    const inventoryMatch: Record<string, unknown> = {
+      variantId: {
+        $in: variantIds.map((id) => new mongoose.Types.ObjectId(id)),
+      },
+      itemType: "PRODUCT",
+      isActive: { $ne: false },
+    };
+    if (warehouseIdParam) {
+      inventoryMatch.warehouseId = new mongoose.Types.ObjectId(warehouseIdParam);
+    }
+    const invAgg = (await WarehouseInventory.aggregate([
       {
-        $match: {
-          productVariantId: {
-            $in: variantIds.map((id) => new mongoose.Types.ObjectId(id)),
-          },
-          isActive: { $ne: false },
-        },
+        $match: inventoryMatch,
       },
       {
         $group: {
-          _id: "$productVariantId",
+          _id: "$variantId",
           stock: {
-            $sum: {
-              $subtract: [
-                { $ifNull: ["$quantity", 0] },
-                { $ifNull: ["$reservedQuantity", 0] },
-              ],
-            },
+            $sum: { $ifNull: ["$availableQuantity", 0] },
           },
         },
       },
@@ -124,15 +128,19 @@ export async function GET(
     // ---- Tổng nhập từ InventoryHistory (INBOUND) ----
     const importedByVariant = new Map<string, number>();
     try {
+      const histMatch: Record<string, unknown> = {
+        productVariantId: {
+          $in: variantIds.map((id) => new mongoose.Types.ObjectId(id)),
+        },
+        transactionType: "INBOUND",
+        isActive: { $ne: false },
+      };
+      if (warehouseIdParam) {
+        histMatch.warehouseId = new mongoose.Types.ObjectId(warehouseIdParam);
+      }
       const histAgg = (await InventoryHistory.aggregate([
         {
-          $match: {
-            productVariantId: {
-              $in: variantIds.map((id) => new mongoose.Types.ObjectId(id)),
-            },
-            transactionType: "INBOUND",
-            isActive: { $ne: false },
-          },
+          $match: histMatch,
         },
         {
           $group: {

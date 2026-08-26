@@ -295,7 +295,7 @@ export default function ProductPage() {
       />
 
       {/* Statistics Cards */}
-      <CardSection style={{ padding: "16px 24px" }}>
+      <div style={{ padding: "16px 24px" }}><CardSection>
         <StatGrid columns={4} gap={16} minItemWidth={160}>
           <StatCard
             title={t("Tổng sản phẩm", lang)}
@@ -326,7 +326,7 @@ export default function ProductPage() {
             loading={isLoading}
           />
         </StatGrid>
-      </CardSection>
+      </CardSection></div>
 
       {/* Filter Section */}
       <CardSection>

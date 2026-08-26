@@ -190,7 +190,7 @@ export async function PUT(
     }
 
     const existedSku = await ProductVariant.findOne({
-      sku: data.sku.toUpperCase(),
+      sku: (data.sku ?? "").toUpperCase(),
       _id: { $ne: id },
     });
 
@@ -220,7 +220,7 @@ export async function PUT(
       {
         $set: {
           productId: data.productId,
-          sku: data.sku.toUpperCase(),
+          sku: (data.sku ?? "").toUpperCase(),
           barcode: data.barcode ?? "",
           image: data.image ?? "",
           variantValues: data.variantValues,

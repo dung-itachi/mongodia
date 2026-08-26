@@ -477,7 +477,7 @@ export default function OrderDetailPage({ params }: PageProps) {
         const gifts = item.giftSelections ?? [];
         // Sprint 8.x: Ưu tiên dùng order.product.name (được populate từ productId)
         // vì item.productName có thể là tên combo do bug cũ.
-        const productName = order.product?.name || item.productName || "";
+        const productName = order?.product?.name || item.productName || "";
         const hasCombo = Boolean(item.comboName);
         const hasProduct = Boolean(productName);
         return (
@@ -1115,34 +1115,32 @@ export default function OrderDetailPage({ params }: PageProps) {
           {/* Revenue Card */}
           <div style={{ marginBottom: 16 }}>
             <CardSection
-              title={
-                <Space>
-                  {t("Doanh thu", lang)}
-                  <Tooltip
-                    title={
-                      <div style={{ fontSize: 12 }}>
-                        <div style={{ marginBottom: 4, color: "#52c41a" }}>
-                          <CheckCircleOutlined style={{ marginRight: 4 }} />
-                          <strong>Đơn giao thành công (DELIVERED):</strong> Doanh thu LUÔN được tính = Tổng tiền - Phí ship
-                        </div>
-                        <div style={{ marginBottom: 4 }}>
-                          <CheckOutlined style={{ color: "#52c41a", marginRight: 4 }} />
-                          Đơn đầu tiên cùng sản phẩm/combo → được tính doanh thu
-                        </div>
-                        <div style={{ marginBottom: 4 }}>
-                          <ClockCircleOutlined style={{ color: "#8c8c8c", marginRight: 4 }} />
-                          Các đơn sau → bị khóa, chờ đơn trước hoàn thành
-                        </div>
-                        <div>
-                          <DeleteOutlined style={{ color: "#ff4d4f", marginRight: 4 }} />
-                          Đơn GIFT/EXCHANGE/REPLACEMENT → không tính doanh thu
-                        </div>
+              title={t("Doanh thu", lang)}
+              actions={
+                <Tooltip
+                  title={
+                    <div style={{ fontSize: 12 }}>
+                      <div style={{ marginBottom: 4, color: "#52c41a" }}>
+                        <CheckCircleOutlined style={{ marginRight: 4 }} />
+                        <strong>Đơn giao thành công (DELIVERED):</strong> Doanh thu LUÔN được tính = T�ng tiền - Phí ship
                       </div>
-                    }
-                  >
-                    <QuestionCircleOutlined style={{ color: "#8c8c8c", cursor: "help" }} />
-                  </Tooltip>
-                </Space>
+                      <div style={{ marginBottom: 4 }}>
+                        <CheckOutlined style={{ color: "#52c41a", marginRight: 4 }} />
+                        Đơn đầu tiên cùng sản phẩm/combo → được tính doanh thu
+                      </div>
+                      <div style={{ marginBottom: 4 }}>
+                        <ClockCircleOutlined style={{ color: "#8c8c8c", marginRight: 4 }} />
+                        Các đơn sau → bị khóa, chờ đơn trước hoàn thành
+                      </div>
+                      <div>
+                        <DeleteOutlined style={{ color: "#ff4d4f", marginRight: 4 }} />
+                        Đơn GIFT/EXCHANGE/REPLACEMENT → không tính doanh thu
+                      </div>
+                    </div>
+                  }
+                >
+                  <QuestionCircleOutlined style={{ color: "#8c8c8c", cursor: "help" }} />
+                </Tooltip>
               }
             >
               <Row gutter={[16, 8]}>

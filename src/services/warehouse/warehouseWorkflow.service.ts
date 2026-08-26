@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Inventory from "@/models/Inventory";
 import WarehouseInventory from "@/models/WarehouseInventory";
 import WarehouseReceipt from "@/models/WarehouseReceipt";
 import WarehouseTransfer from "@/models/WarehouseTransfer";
@@ -95,22 +96,25 @@ async function adjustInventory(
   const filter = itemFilter(warehouseId, item);
 
   if (change > 0) {
-    // Increase: add to quantity and availableQuantity
+    const setOnInsert: Record<string, unknown> = { shippedQuantity: 0, reservedQuantity: 0, isActive: true };
+    if (field !== "inTransitQuantity") setOnInsert.inTransitQuantity = 0;
+
     const update = {
       $inc: {
         [field]: change,
         ...(field === "quantity" ? { availableQuantity: change } : {}),
       },
-      $setOnInsert: { inTransitQuantity: 0, shippedQuantity: 0, reservedQuantity: 0, isActive: true },
+      $setOnInsert: setOnInsert,
     };
-    const result = await WarehouseInventory.findOneAndUpdate(
+    await WarehouseInventory.findOneAndUpdate(
       filter,
       update,
       { upsert: true, new: true, session, setDefaultsOnInsert: true }
     );
-    return result;
+
+    // Also update the shared Inventory model (used by /warehouses)
+    await syncToInventory(warehouseId, item, change, session, field);
   } else {
-    // Decrease: check available or quantity
     const query = field === "quantity"
       ? { ...filter, availableQuantity: { $gte: Math.abs(change) } }
       : { ...filter, [field]: { $gte: Math.abs(change) } };
@@ -125,7 +129,40 @@ async function adjustInventory(
       { returnDocument: "after", session }
     );
     if (!result) throw new Error(`Không đủ tồn kho: cần ${Math.abs(change)}`);
-    return result;
+
+    await syncToInventory(warehouseId, item, change, session, field);
+  }
+}
+
+export async function syncToInventory(
+  warehouseId: mongoose.Types.ObjectId,
+  item: Omit<NormalizedItem, "quantity">,
+  change: number,
+  session: mongoose.ClientSession,
+  field: "quantity" | "inTransitQuantity"
+) {
+  // Inventory model only has quantity field (no inTransitQuantity/availableQuantity).
+  // Only sync for quantity changes.
+  if (item.itemType !== "PRODUCT") return;
+  if (field !== "quantity") return;
+
+  const variantId = item.variantId ?? item.productId!;
+  const filter = { warehouseId, productVariantId: variantId };
+
+  if (change > 0) {
+    const setOnInsert: Record<string, unknown> = { reservedQuantity: 0, isActive: true };
+
+    await Inventory.findOneAndUpdate(
+      filter,
+      { $inc: { quantity: change, availableQuantity: change }, $setOnInsert: setOnInsert },
+      { upsert: true, new: true, session, setDefaultsOnInsert: true }
+    );
+  } else {
+    await Inventory.findOneAndUpdate(
+      { ...filter, availableQuantity: { $gte: Math.abs(change) } },
+      { $inc: { quantity: change, availableQuantity: change } },
+      { returnDocument: "after", session }
+    );
   }
 }
 

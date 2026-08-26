@@ -330,6 +330,7 @@ export function useUpdateLead() {
         customerName?: string;
         phone?: string;
         address?: string;
+        note?: string;
         productId?: string;
         comboId?: string;
         comboQuantity?: number;

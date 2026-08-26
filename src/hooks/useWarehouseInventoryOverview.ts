@@ -21,6 +21,7 @@ export type WarehouseOverviewItem = {
   delivered: number;
   returned: number;
   imported: number;
+  transferredOut: number;
 };
 
 export type WarehouseOverviewTotals = {
@@ -30,6 +31,8 @@ export type WarehouseOverviewTotals = {
   returning: number;
   delivered: number;
   returned: number;
+  imported: number;
+  transferredOut: number;
 };
 
 export type WarehouseOverviewResponse = {
@@ -43,6 +46,7 @@ export type WarehouseOverviewResponse = {
 
 export type WarehouseOverviewParams = {
   warehouseId?: string | null;
+  areaCountryCode?: string | null;
 };
 
 async function fetchOverview(
@@ -51,6 +55,9 @@ async function fetchOverview(
   const search = new URLSearchParams();
   if (params.warehouseId) {
     search.set("warehouseId", params.warehouseId);
+  }
+  if (params.areaCountryCode) {
+    search.set("areaCountryCode", params.areaCountryCode);
   }
   const url = `/api/warehouses/inventory-overview${
     search.toString() ? `?${search.toString()}` : ""

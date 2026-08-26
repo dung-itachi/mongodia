@@ -142,7 +142,7 @@ export default function CategoryPage() {
       />
 
       {/* Statistics Cards */}
-      <CardSection style={{ padding: "16px 24px" }}>
+      <div style={{ padding: "16px 24px" }}><CardSection>
         <StatGrid columns={3} gap={16} minItemWidth={160}>
           <StatCard
             title={t("Tổng danh mục", lang)}
@@ -166,7 +166,7 @@ export default function CategoryPage() {
             loading={isLoading}
           />
         </StatGrid>
-      </CardSection>
+      </CardSection></div>
 
       <CardSection>
         <CategoryTable

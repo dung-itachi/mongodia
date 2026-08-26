@@ -360,13 +360,15 @@ export default function WarehouseTransfersPage() {
   );
 
   // ─── Product options (only show those in source warehouse inventory) ─────
+  // Include products with product-level stock (variantId = null) AND products
+  // whose variants have stock (variantId != null). Without this second case,
+  // variant products would never appear in the picker.
   const productOptionsInStock = useMemo(() => {
-    const ids = new Set(
-      sourceInventory
-        .filter((inv) => inv.itemType === "PRODUCT" && !inv.variantId)
-        .map((inv) => inv.productId)
-        .filter(Boolean)
-    );
+    const ids = new Set<string>();
+    for (const inv of sourceInventory) {
+      if (inv.itemType !== "PRODUCT") continue;
+      if (inv.productId) ids.add(inv.productId);
+    }
     return products
       .filter((p) => ids.has(p._id))
       .map((p) => ({ value: p._id, label: `${p.code} • ${p.name}` }));
@@ -879,7 +881,7 @@ export default function WarehouseTransfersPage() {
           </Text>
 
           <Table
-            rowKey={(_, i) => String(i)}
+            rowKey="idx"
             dataSource={
               activeRecord?.items.map((item, idx) => ({
                 ...item,

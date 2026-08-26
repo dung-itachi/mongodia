@@ -101,7 +101,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
   const selectedCombo = useMemo(() => combos.find((combo) => combo._id === selectedComboId), [combos, selectedComboId]);
 
   // Fetch product with variants
-  const { product, loading: productLoading } = useProductWithVariants(selectedProductId);
+  const { product, loading: productLoading } = useProductWithVariants(selectedProductId ?? null);
 
   // Initialize form when lead opens
   useEffect(() => {
@@ -370,7 +370,6 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
               <Spin size="small" />
             ) : (
               <Select
-                name="productId"
                 value={selectedProductId}
                 onChange={handleProductChange}
                 style={{ width: "100%", marginTop: 8 }}
@@ -405,7 +404,6 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
                 />
               ) : (
                 <Select
-                  name="comboId"
                   value={selectedComboId}
                   onChange={handleComboChange}
                   style={{ width: "100%", marginTop: 8 }}
@@ -507,11 +505,11 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
                   <Text strong style={{ color: "#1890ff", fontSize: 16 }}>
                     {formatMNT(item.subtotal)} ₮
                   </Text>
-                  {form.getFieldValue("exchangeRate") && (
+                  {(form.getFieldValue as (name: string) => unknown)("exchangeRate") ? (
                     <Text type="secondary">
-                      (= {formatMNT(item.subtotal * (form.getFieldValue("exchangeRate") || 0))} VND)
+                      (= {formatMNT(item.subtotal * ((form.getFieldValue as (name: string) => unknown)("exchangeRate") as number || 0))} VND)
                     </Text>
-                  )}
+                  ) : null}
                 </Space>
               }
               style={{ marginTop: 16 }}

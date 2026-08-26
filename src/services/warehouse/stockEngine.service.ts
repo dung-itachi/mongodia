@@ -68,6 +68,7 @@
 
 import mongoose from "mongoose";
 
+import Inventory from "@/models/Inventory";
 import WarehouseInventory from "@/models/WarehouseInventory";
 import { InventoryHistory } from "@/models/InventoryHistory";
 import {
@@ -83,6 +84,69 @@ import {
   InsufficientReservedStockError,
   InvalidStockInputError,
 } from "./stockEngine.errors";
+
+// ==================================================
+// Dual-write sync helper
+// ==================================================
+
+/**
+ * Mirrors a WarehouseInventory update into the shared Inventory model.
+ * Only applies to PRODUCT items (Inventory does not track GIFT).
+ */
+async function syncProductToDual(
+  warehouseId: mongoose.Types.ObjectId,
+  item: StockLineItem,
+  change: number,
+  session: mongoose.ClientSession,
+  options: {
+    field?: "quantity" | "reservedQuantity" | "inTransitQuantity";
+    reservedChange?: number;
+    availableChange?: number;
+  } = {}
+) {
+  if (item.itemType !== "PRODUCT") return;
+
+  const variantId = item.productVariantId
+    ? toObjectId(item.productVariantId)
+    : toObjectId(item.productId!);
+  const filter = { warehouseId, productVariantId: variantId };
+
+  if (change > 0 || (options.availableChange && options.availableChange > 0)) {
+    const setOnInsert: Record<string, unknown> = { reservedQuantity: 0, isActive: true };
+
+    // availableQuantity: only in $setOnInsert (when NOT being $inc'd).
+    // We $inc it only when change > 0 (to set the initial value without conflict).
+    const inc: Record<string, number> = {};
+    if (change !== 0) {
+      inc.quantity = change;
+      inc.availableQuantity = change;
+    } else if (options.availableChange) {
+      // Zero change but availableQuantity update (reserve/unreserve): skip $setOnInsert
+      // for availableQuantity and only $inc it.
+      inc.availableQuantity = options.availableChange;
+    }
+
+    await Inventory.findOneAndUpdate(
+      filter,
+      { $inc: inc, $setOnInsert: setOnInsert },
+      { upsert: true, new: true, session, setDefaultsOnInsert: true }
+    );
+  } else {
+    // Decrease: check available
+    const checkField = "availableQuantity";
+    await Inventory.findOneAndUpdate(
+      { ...filter, [checkField]: { $gte: Math.abs(change) } },
+      {
+        $inc: {
+          quantity: change,
+          availableQuantity: change,
+          ...(options.reservedChange ? { reservedQuantity: options.reservedChange } : {}),
+        },
+      },
+      { returnDocument: "after", session }
+    );
+  }
+}
 
 // ==================================================
 // Public Types
@@ -487,6 +551,12 @@ async function applyReserve(
     });
   }
 
+  // Sync to shared Inventory model
+  await syncProductToDual(warehouseId, item, 0, session, {
+    reservedChange: qty,
+    availableChange: -qty,
+  });
+
   return {
     beforeQuantity: updated.quantity as number,
     changeQuantity: 0,
@@ -530,6 +600,12 @@ async function applyUnreserve(
       requestedQuantity: qty,
     });
   }
+
+  // Sync to shared Inventory model
+  await syncProductToDual(warehouseId, item, 0, session, {
+    reservedChange: -qty,
+    availableChange: qty,
+  });
 
   return {
     beforeQuantity: updated.quantity as number,
@@ -576,6 +652,7 @@ async function applyShip(
         requestedQuantity: qty,
       });
     }
+    // GIFT: no sync to Inventory (Inventory only tracks products)
     return {
       beforeQuantity: (updated.quantity as number) + qty,
       changeQuantity: -qty,
@@ -607,6 +684,10 @@ async function applyShip(
       requestedQuantity: qty,
     });
   }
+
+  // Sync to shared Inventory model
+  await syncProductToDual(warehouseId, item, -qty, session);
+
   return {
     beforeQuantity: (updated.quantity as number) + qty,
     changeQuantity: -qty,
@@ -654,6 +735,10 @@ async function applyReturn(
   ).lean();
 
   if (!updated) throw new Error("Không thể hoàn hàng vào kho");
+
+  // Sync to shared Inventory model (for PRODUCT items)
+  await syncProductToDual(warehouseId, item, qty, session);
+
   return {
     beforeQuantity: beforeQty,
     changeQuantity: qty,

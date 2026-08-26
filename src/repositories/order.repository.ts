@@ -35,10 +35,21 @@ export interface CreateOrderData {
   exchangeRate?: number;
   exchangeRateDate?: Date;
   estimatedWeight?: number;
+  warehouseId?: Types.ObjectId;
   marketingEmployeeId?: Types.ObjectId;
   saleEmployeeId?: Types.ObjectId;
   orderSource: string;
   note?: string;
+  // Sprint 8.x: thời gian đơn hàng
+  orderDate?: Date;
+  receivedDate?: Date;
+  shipping?: {
+    receiverName?: string;
+    receiverPhone?: string;
+    address?: string;
+    shippingFee?: number;
+    shippingFeeCurrency?: "VND" | "MNT" | "USD";
+  } | null;
   // Sprint 6.1: Order items and summary
   orderItems?: Array<Record<string, unknown>>;
   summary?: {

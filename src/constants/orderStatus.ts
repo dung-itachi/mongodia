@@ -47,6 +47,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   [OrderStatus.SHIPPING]: "Đang giao",
   [OrderStatus.DELIVERED]: "Đã giao",
   [OrderStatus.RETURNED]: "Đã hoàn trả",
+  [OrderStatus.RECONCILED]: "Đã đối soát",
   [OrderStatus.CANCELLED]: "Đã hủy",
 };
 

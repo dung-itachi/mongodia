@@ -316,6 +316,8 @@ export default function WarehousesPage() {
           returning: 0,
           delivered: 0,
           returned: 0,
+          imported: 0,
+          transferredOut: 0,
         }}
         loading={overviewLoading}
       />

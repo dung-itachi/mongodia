@@ -310,7 +310,7 @@ function mapOrderItem(item: IOrderItem): OrderItemResponse {
   return {
     comboId: item.comboId?.toString(),
     productId: item.productId?.toString(),
-    comboName: item.comboName || item.productName || "",
+    comboName: item.comboName || "",
     comboCode: item.comboCode,
     comboQuantity: item.comboQuantity ?? item.quantity ?? 1,
     packageQuantity: item.packageQuantity ?? 1,
@@ -341,7 +341,7 @@ function mapOrderItem(item: IOrderItem): OrderItemResponse {
       quantity: gift.quantity,
     })),
     sku: item.sku,
-    productName: item.productName || item.comboName || "",
+    productName: item.productName || "",
     quantity: item.quantity ?? item.comboQuantity ?? 1,
     unitPrice: item.unitPrice ?? item.sellingPrice ?? 0,
   };
@@ -417,15 +417,15 @@ export function mapOrder(order: IOrder): OrderResponse {
 
   // Extract populated employee objects - after population, field becomes object not ObjectId
   const rawMarketingEmp = (order as unknown as { marketingEmployeeId?: unknown }).marketingEmployeeId;
-  let marketingEmployeeIdStr = order.marketingEmployeeId?.toString();
-  const marketingEmployee = rawMarketingEmp && typeof rawMarketingEmp === "object" && "fullName" in rawMarketingEmp
+  let marketingEmployeeIdStr: string | undefined = order.marketingEmployeeId?.toString();
+  const marketingEmployee: { _id: string; employeeCode: string; fullName: string } | undefined = rawMarketingEmp && typeof rawMarketingEmp === "object" && "fullName" in rawMarketingEmp
     ? (() => {
         const emp = rawMarketingEmp as { _id?: { toString?: () => string } | string; employeeCode: string; fullName: string };
         if (emp._id) {
           marketingEmployeeIdStr = typeof emp._id === "string" ? emp._id : emp._id.toString?.() ?? marketingEmployeeIdStr;
         }
         return {
-          _id: marketingEmployeeIdStr,
+          _id: marketingEmployeeIdStr ?? "",
           employeeCode: emp.employeeCode,
           fullName: emp.fullName,
         };
@@ -433,15 +433,15 @@ export function mapOrder(order: IOrder): OrderResponse {
     : undefined;
 
   const rawSaleEmp = (order as unknown as { saleEmployeeId?: unknown }).saleEmployeeId;
-  let saleEmployeeIdStr = order.saleEmployeeId?.toString();
-  const saleEmployee = rawSaleEmp && typeof rawSaleEmp === "object" && "fullName" in rawSaleEmp
+  let saleEmployeeIdStr: string | undefined = order.saleEmployeeId?.toString();
+  const saleEmployee: { _id: string; employeeCode: string; fullName: string } | undefined = rawSaleEmp && typeof rawSaleEmp === "object" && "fullName" in rawSaleEmp
     ? (() => {
         const emp = rawSaleEmp as { _id?: { toString?: () => string } | string; employeeCode: string; fullName: string };
         if (emp._id) {
           saleEmployeeIdStr = typeof emp._id === "string" ? emp._id : emp._id.toString?.() ?? saleEmployeeIdStr;
         }
         return {
-          _id: saleEmployeeIdStr,
+          _id: saleEmployeeIdStr ?? "",
           employeeCode: emp.employeeCode,
           fullName: emp.fullName,
         };

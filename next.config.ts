@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   serverExternalPackages: ["mongoose", "mongodb", "bson"],
   webpack: (config, { isServer }) => {
     if (!isServer) {

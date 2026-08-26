@@ -48,7 +48,7 @@ export default function GiftPage() {
     const totalGifts = gifts.length;
     const activeGifts = gifts.filter((g) => g.isActive !== false).length;
     const inactiveGifts = totalGifts - activeGifts;
-    const totalInventory = gifts.reduce((sum, g) => sum + (g.inventory ?? 0), 0);
+    const totalInventory = gifts.reduce((sum, g) => sum + ((g as GiftListItem & { inventory?: number }).inventory ?? 0), 0);
 
     return {
       totalGifts,
@@ -152,8 +152,9 @@ export default function GiftPage() {
       />
 
       {/* Statistics Cards */}
-      <CardSection style={{ padding: "16px 24px" }}>
-        <StatGrid columns={4} gap={16} minItemWidth={160}>
+      <div style={{ padding: "16px 24px" }}>
+        <CardSection>
+          <StatGrid columns={4} gap={16} minItemWidth={160}>
           <StatCard
             title={t("Tổng quà tặng", lang)}
             value={stats.totalGifts}
@@ -183,7 +184,8 @@ export default function GiftPage() {
             loading={isLoading}
           />
         </StatGrid>
-      </CardSection>
+        </CardSection>
+      </div>
 
       <CardSection>
         <div className={styles.toolbar}>

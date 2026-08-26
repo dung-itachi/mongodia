@@ -111,7 +111,8 @@ export default function WarehouseShipmentsPage() {
   const getOrderItemTotals = useCallback((order: OrderListItem) => {
     const items = order.orderItems ?? [];
     return {
-      comboName: items.map((item) => item.comboName || item.productName).filter(Boolean).join(", ") || "-",
+      comboName: items.map((item) => item.comboName).filter(Boolean).join(", ") || order.combo?.name || "-",
+      productName: order.product?.name || items.map((item) => item.productName).filter(Boolean).join(", ") || "-",
       comboQuantity: items.reduce((sum, item) => sum + (item.comboQuantity ?? item.quantity ?? 0), 0),
       productQuantity: items.reduce((sum, item) => sum + item.comboQuantity * item.packageQuantity, 0),
       giftQuantity: items.reduce((sum, item) => sum + item.comboQuantity * item.giftQuantity, 0),
@@ -153,7 +154,7 @@ export default function WarehouseShipmentsPage() {
     {
       key: "combo",
       title: t("Combo", lang),
-      width: 200,
+      width: 180,
       render: (_: unknown, record: Record<string, unknown>) => {
         const totals = getOrderItemTotals(record as unknown as OrderListItem);
         return (
@@ -162,6 +163,25 @@ export default function WarehouseShipmentsPage() {
             <div style={{ fontSize: 12, color: "#8c8c8c" }}>
               {totals.comboQuantity} combo
             </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: "product",
+      title: t("Sản phẩm", lang),
+      width: 220,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const totals = getOrderItemTotals(record as unknown as OrderListItem);
+        return (
+          <div>
+            <div style={{ fontSize: 13 }}>{totals.productName}</div>
+            {totals.productName !== "-" && (
+              <div style={{ fontSize: 12, color: "#8c8c8c" }}>
+                <ShoppingOutlined style={{ marginRight: 2 }} />
+                {totals.productQuantity} sản phẩm
+              </div>
+            )}
           </div>
         );
       },
@@ -398,7 +418,7 @@ export default function WarehouseShipmentsPage() {
         </Space>
 
         {loading ? (
-          <SkeletonTable rows={10} columns={7} />
+          <SkeletonTable rows={10} columns={8} />
         ) : orders.length === 0 ? (
           <EmptyState
             title={t("Không có đơn hàng", lang)}
@@ -415,7 +435,7 @@ export default function WarehouseShipmentsPage() {
             loading={loading}
             pagination={pagination}
             rowKey="_id"
-            scroll={{ x: 1200 }}
+            scroll={{ x: 1400 }}
           />
         )}
       </div>

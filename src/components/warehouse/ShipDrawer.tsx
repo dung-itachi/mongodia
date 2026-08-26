@@ -72,6 +72,7 @@ interface ProductDisplayItem {
   key: string;
   comboName: string;
   comboCode: string;
+  productName: string;
   comboQuantity: number;
   packageQuantity: number;
   totalProducts: number;
@@ -167,8 +168,11 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
 
       return {
         key: `${idx}`,
-        comboName: item.comboName || item.productName || "Combo",
+        comboName: item.comboName || "Combo",
         comboCode: item.comboCode || "",
+        // Ưu tiên order.product.name (populate từ productId) vì productName trong
+        // orderItem snapshot có thể bị set sai = tên combo ở một số đơn cũ.
+        productName: order?.product?.name || item.productName || "",
         comboQuantity: comboQty,
         packageQuantity: pkgQty,
         totalProducts,
@@ -184,8 +188,14 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
   const totals = useMemo(() => {
     const totalProducts = displayItems.reduce((sum, item) => sum + item.totalProducts, 0);
     const totalGifts = displayItems.reduce((sum, item) => sum + item.gifts.reduce((s, g) => s + g.quantity, 0), 0);
-    return { totalProducts, totalGifts };
-  }, [displayItems]);
+    // First non-empty product name from items, fallback to order-level populated product
+    const primaryProductName =
+      displayItems.find((it) => it.productName)?.productName || order?.product?.name || "";
+    // First non-empty combo name from items, fallback to order-level populated combo
+    const primaryComboName =
+      displayItems.find((it) => it.comboName && it.comboName !== "Combo")?.comboName || order?.combo?.name || "";
+    return { totalProducts, totalGifts, primaryProductName, primaryComboName };
+  }, [displayItems, order?.product?.name, order?.combo?.name]);
 
   // Product columns for expanded view
   const productColumns: ColumnsType<ProductVariantSelection> = useMemo(() => [
@@ -275,13 +285,20 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
       key: "combo",
       render: (_, record) => (
         <div>
-          <Text strong>{record.comboName}</Text>
-          {record.comboCode && (
-            <Text type="secondary" style={{ marginLeft: 8 }}>
-              ({record.comboCode})
-            </Text>
-          )}
-          <div style={{ fontSize: 12 }}>
+          <div>
+            <Text type="secondary" style={{ fontSize: 11 }}>Combo: </Text>
+            <Text strong>{record.comboName}</Text>
+            {record.comboCode && (
+              <Text type="secondary" style={{ marginLeft: 8 }}>
+                ({record.comboCode})
+              </Text>
+            )}
+          </div>
+          <div style={{ marginTop: 2 }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>Sản phẩm: </Text>
+            <Text>{record.productName || "-"}</Text>
+          </div>
+          <div style={{ fontSize: 12, marginTop: 4 }}>
             <Text type="secondary">
               {record.comboQuantity} combo × {record.packageQuantity} SP = {record.totalProducts} sản phẩm
             </Text>
@@ -415,17 +432,23 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
           </Space>
         }
         description={
-          <Space size="large">
-            <Text>
-              <ShoppingOutlined style={{ marginRight: 4 }} />
-              {totals.totalProducts} sản phẩm
-            </Text>
-            {totals.totalGifts > 0 && (
+          <Space size="large" wrap>
+            {totals.primaryProductName && (
               <Text>
-                <GiftOutlined style={{ marginRight: 4 }} />
-                {totals.totalGifts} quà
+                <ShoppingOutlined style={{ marginRight: 4 }} />
+                <Text type="secondary">Sản phẩm: </Text>
+                <Text strong>{totals.primaryProductName}</Text>
               </Text>
             )}
+            {totals.primaryComboName && (
+              <Text>
+                <Text type="secondary">Combo: </Text>
+                <Text strong>{totals.primaryComboName}</Text>
+              </Text>
+            )}
+            <Text>
+              {totals.totalProducts} sản phẩm × {totals.totalGifts} quà
+            </Text>
           </Space>
         }
       />

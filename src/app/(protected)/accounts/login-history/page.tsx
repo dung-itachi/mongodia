@@ -40,7 +40,7 @@ export default function LoginHistoryPage() {
   const lang = useLanguageStore((s) => s.language);
   const user = useAuthStore((state) => state.user);
   const isAdmin =
-    user?.role?.code === "ADMIN" || user?.permissions.includes("*");
+    user?.role === "ADMIN" || user?.permissions.includes("*");
   const canViewAll =
     isAdmin || (user?.permissions.includes("login-history.viewAll") ?? false);
 
@@ -59,7 +59,7 @@ export default function LoginHistoryPage() {
   }>({ visible: false, item: null });
 
   // Non-admin users only see their own history
-  const employeeId = canViewAll ? filterEmployee || undefined : user?.employeeId;
+  const employeeId = canViewAll ? filterEmployee || undefined : user?._id;
 
   const { data, isLoading, error, refetch } = useLoginHistory({
     search: search || undefined,

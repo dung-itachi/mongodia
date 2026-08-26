@@ -40,6 +40,7 @@ import Employee from "@/models/Employee";
 import Customer, { ICustomer } from "@/models/Customer";
 // Sprint 6.3: Warehouse Integration
 import { warehouseService } from "@/services/warehouse.service";
+import { getKho2Id } from "@/config/warehouse-topology.config";
 
 import type { OrderItem as SaleOrderItem } from "@/types/variant";
 import type {
@@ -62,6 +63,7 @@ export interface CreateFromLeadData {
   customerPhone?: string;
   productId?: string;
   comboId?: string;
+  warehouseId?: string;
   productSnapshot?: { code: string; name: string };
   comboSnapshot?: { code: string; name: string };
   quantity: number;
@@ -200,7 +202,7 @@ export class OrderService {
       return {
         comboId: item.comboId ? new mongoose.Types.ObjectId(item.comboId) : undefined,
         productId: item.productId ? new mongoose.Types.ObjectId(item.productId) : undefined,
-        comboName: item.comboName ?? item.productName ?? "",
+        comboName: item.comboName || "",
         comboCode: item.comboCode ?? "",
         comboQuantity,
         packageQuantity,
@@ -223,7 +225,7 @@ export class OrderService {
           quantity: gift.quantity,
         })),
         sku: item.sku ?? "",
-        productName: item.productName ?? item.comboName ?? "",
+        productName: item.productName || "",
         quantity: comboQuantity,
         unitPrice: sellingPrice,
       };
@@ -397,6 +399,26 @@ export class OrderService {
     // Existing orders are NEVER recalculated when this rate later changes.
     const exchangeRateSnap = await getCurrentExchangeRate();
 
+    // ── Auto-assign KHO2 when warehouseId is missing ───────────────────────
+    // Every order that will eventually ship must belong to KHO2 (kho chính
+    // bán hàng). If the caller does not supply a warehouseId, resolve KHO2
+    // as the single source of truth. This covers:
+    //   - Manual order creation (form without warehouse picker)
+    //   - Any future flow that calls orderService.create() without warehouseId
+    //   - Orders from Lead Convert / Quick Import that already pass warehouseId
+    //     are NOT affected (they keep the explicit value).
+    let warehouseId: mongoose.Types.ObjectId | undefined;
+    if (data.warehouseId) {
+      warehouseId = new mongoose.Types.ObjectId(data.warehouseId);
+    } else {
+      try {
+        warehouseId = await getKho2Id();
+      } catch {
+        // KHO2 not seeded yet — create order without warehouseId.
+        // The UI should warn users they need to assign a warehouse before shipping.
+      }
+    }
+
     const order = await orderRepository.create({
       orderCode,
       customerId: new mongoose.Types.ObjectId(data.customerId),
@@ -405,6 +427,7 @@ export class OrderService {
       leadId: data.leadId ? new mongoose.Types.ObjectId(data.leadId) : undefined,
       productId: data.productId ? new mongoose.Types.ObjectId(data.productId) : undefined,
       comboId: data.comboId ? new mongoose.Types.ObjectId(data.comboId) : undefined,
+      warehouseId,
       productSnapshot: undefined,
       comboSnapshot: undefined,
       quantity: data.quantity ?? 1,
@@ -786,6 +809,20 @@ export class OrderService {
     // orders see the latest rate.
     const exchangeRateSnap = await getCurrentExchangeRate();
 
+    // Auto-assign KHO2 when warehouseId is not provided.
+    // This mirrors the logic in create() so Lead Convert flow also
+    // guarantees every order is associated with KHO2 (kho chính bán hàng).
+    let warehouseId: mongoose.Types.ObjectId | undefined;
+    if (data.warehouseId) {
+      warehouseId = new mongoose.Types.ObjectId(data.warehouseId);
+    } else {
+      try {
+        warehouseId = await getKho2Id(session);
+      } catch {
+        // KHO2 not seeded yet — create order without warehouseId.
+      }
+    }
+
     return orderRepository.create(
       {
         orderCode,
@@ -799,6 +836,7 @@ export class OrderService {
         comboId: data.comboId
           ? new mongoose.Types.ObjectId(data.comboId)
           : undefined,
+        warehouseId,
         productSnapshot: data.productSnapshot,
         comboSnapshot: data.comboSnapshot,
         quantity: data.quantity,
@@ -853,7 +891,7 @@ export class OrderService {
             })),
           })),
           sku: "",
-          productName: data.orderItem.productName || data.orderItem.comboName,
+          productName: data.orderItem.comboName,
           quantity: data.orderItem.comboQuantity,
           unitPrice: data.orderItem.sellingPrice,
         }] : [],

@@ -25,9 +25,12 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     // Count leads with saleEmployeeId (pushed to Sale)
-    // Filter by current marketing employee if not GLOBAL
-    const scope = currentUser.scope;
-    const marketingEmployeeId = scope === "GLOBAL" ? undefined : currentUser.employee._id.toString();
+    // Filter by current marketing employee if not GLOBAL (ADMIN or wildcard perm)
+    const isGlobal =
+      currentUser.roleCode === "ADMIN" ||
+      currentUser.permissions.includes("*") ||
+      currentUser.permissions.includes("lead.viewAll");
+    const marketingEmployeeId = isGlobal ? undefined : currentUser.employee._id.toString();
 
     const count = await marketingDispatchService.countPushedLeads(marketingEmployeeId);
 

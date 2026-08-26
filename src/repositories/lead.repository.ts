@@ -449,12 +449,12 @@ export class LeadRepository {
     const Team = mongoose.model("Team");
     const EmployeeModel = mongoose.model("Employee");
 
-    const team = await Team.findOne({ code: params.teamId }).select("_id").lean();
+    const team = await Team.findOne({ code: params.teamId }).select("_id").lean<{ _id: mongoose.Types.ObjectId }>();
     if (!team) {
       return { items: [], total: 0, page, limit, totalPages: 1 };
     }
 
-    const teamEmployees = await EmployeeModel.find({ teamId: team._id }).select("_id").lean();
+    const teamEmployees = await EmployeeModel.find({ teamId: team._id }).select("_id").lean<Array<{ _id: mongoose.Types.ObjectId }>>();
     const employeeIds = teamEmployees.map((e) => e._id);
 
     if (employeeIds.length === 0) {

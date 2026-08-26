@@ -46,14 +46,14 @@ export default function WarehouseQuickPick({ value, onChange, warehouses, childr
         disabled={!kho1}
         onClick={() => kho1 && onChange(kho1._id)}
       >
-        {t("Kho 1", lang)}
+        {kho1?.name ?? t("Kho 1", lang)}
       </Button>
       <Button
         type={isKho2 ? "primary" : "default"}
         disabled={!kho2}
         onClick={() => kho2 && onChange(kho2._id)}
       >
-        {t("Kho 2", lang)}
+        {kho2?.name ?? t("Kho 2", lang)}
       </Button>
       <Button type={isAll ? "primary" : "default"} onClick={() => onChange(undefined)}>
         {t("Tất cả", lang)}

@@ -133,7 +133,7 @@ export async function GET(
   
       const existedCode =
         await Product.findOne({
-          code: data.code.toUpperCase(),
+          code: (data.code ?? "").toUpperCase(),
           _id: { $ne: id },
         });
   
@@ -172,8 +172,8 @@ export async function GET(
       await Product.updateOne(
         { _id: id },
         {
-          code: data.code.toUpperCase(),
-  
+          code: (data.code ?? "").toUpperCase(),
+
           name: data.name,
   
           categoryId: category._id,

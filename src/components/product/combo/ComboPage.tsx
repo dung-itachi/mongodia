@@ -286,7 +286,7 @@ export default function ComboPage() {
       />
 
       {/* Statistics Cards */}
-      <CardSection style={{ padding: "16px 24px" }}>
+      <div style={{ padding: "16px 24px" }}><CardSection>
         <StatGrid columns={5} gap={16} minItemWidth={160}>
           <StatCard
             title={t("Tổng số combo", lang)}
@@ -324,7 +324,7 @@ export default function ComboPage() {
             loading={isLoading}
           />
         </StatGrid>
-      </CardSection>
+      </CardSection></div>
 
       {/* Filter Section */}
       <CardSection>

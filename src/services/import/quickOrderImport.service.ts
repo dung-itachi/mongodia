@@ -33,6 +33,7 @@ import Setting from "@/models/Setting";
 import { OrderSource } from "@/constants/orderStatus";
 import { CustomerStatus } from "@/types/customer";
 import { orderService } from "@/services/order.service";
+import { getKho2Id } from "@/config/warehouse-topology.config";
 
 import type { QuickOrderImportContext } from "@/types/quickOrder";
 import type { EditableQuickOrderRow } from "@/types/quickOrder";
@@ -209,6 +210,19 @@ export async function importQuickOrders(
 
   const session = await mongoose.startSession();
 
+  // Resolve KHO2 once outside the transaction (immutable reference data).
+  // Topologically, every Order created for sale must belong to KHO2.
+  let kho2Id: Types.ObjectId;
+  try {
+    kho2Id = await getKho2Id();
+  } catch (err) {
+    await session.endSession();
+    throw new Error(
+      "QuickOrderImport: không thể xác định KHO2 (kho chính bán hàng). Vui lòng kiểm tra seed warehouse có code = \"KHO2\" đang active.",
+      { cause: err }
+    );
+  }
+
   try {
     await session.withTransaction(async () => {
       for (const row of validRows) {
@@ -252,6 +266,7 @@ export async function importQuickOrders(
               customerPhone: row.editablePhone,
               productId: row.editableProductId,
               comboId: row.editableComboId,
+              warehouseId: kho2Id.toString(),
               productSnapshot: product
                 ? { code: product.code, name: product.name }
                 : undefined,

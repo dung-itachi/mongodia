@@ -1,0 +1,2339 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>3D Interactive Login</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+        }
+
+        body {
+            min-height: 100vh;
+
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background:
+                radial-gradient(circle at 20% 20%,
+                    #312e81,
+                    transparent 35%),
+                radial-gradient(circle at 80% 80%,
+                    #581c87,
+                    transparent 35%),
+                #020617;
+
+            overflow: hidden;
+
+            perspective: 1500px;
+        }
+
+        /* =========================================
+       BACKGROUND - GALAXY
+    ========================================= */
+
+        .background {
+            position: fixed;
+            inset: 0;
+
+            pointer-events: none;
+
+            overflow: hidden;
+
+            background:
+                radial-gradient(ellipse at 30% 50%,
+                    #1a0533 0%,
+                    #0d001a 40%,
+                    #000000 100%);
+        }
+
+        /* Stars layer */
+        .stars {
+            position: absolute;
+            inset: 0;
+
+            background-image:
+                radial-gradient(2px 2px at 20px 30px,
+                    rgba(255,255,255,0.9),
+                    transparent),
+                radial-gradient(2px 2px at 40px 70px,
+                    rgba(255,255,255,0.8),
+                    transparent),
+                radial-gradient(1px 1px at 90px 40px,
+                    rgba(255,255,255,0.6),
+                    transparent),
+                radial-gradient(2px 2px at 130px 80px,
+                    rgba(255,255,255,0.9),
+                    transparent),
+                radial-gradient(1px 1px at 160px 120px,
+                    rgba(255,255,255,0.5),
+                    transparent),
+                radial-gradient(1px 1px at 200px 50px,
+                    rgba(200,220,255,0.8),
+                    transparent),
+                radial-gradient(2px 2px at 250px 150px,
+                    rgba(255,255,255,0.7),
+                    transparent),
+                radial-gradient(1px 1px at 300px 100px,
+                    rgba(255,255,255,0.6),
+                    transparent),
+                radial-gradient(1px 1px at 350px 200px,
+                    rgba(255,255,255,0.9),
+                    transparent),
+                radial-gradient(2px 2px at 400px 50px,
+                    rgba(255,255,255,0.8),
+                    transparent);
+
+            background-size:
+                450px 250px;
+
+            animation: twinkle 4s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Nebula effect */
+        .nebula {
+            position: absolute;
+            border-radius: 50%;
+
+            pointer-events: none;
+        }
+
+        .nebula-1 {
+            width: 600px;
+            height: 400px;
+
+            top: -100px;
+            left: -200px;
+
+            background:
+                radial-gradient(ellipse at center,
+                    rgba(120, 0, 255, 0.15) 0%,
+                    rgba(80, 0, 150, 0.08) 40%,
+                    transparent 70%);
+
+            filter: blur(40px);
+
+            transform: rotate(-20deg);
+        }
+
+        .nebula-2 {
+            width: 500px;
+            height: 500px;
+
+            right: -150px;
+            bottom: -100px;
+
+            background:
+                radial-gradient(ellipse at center,
+                    rgba(0, 100, 255, 0.12) 0%,
+                    rgba(0, 50, 150, 0.06) 50%,
+                    transparent 70%);
+
+            filter: blur(50px);
+
+            transform: rotate(15deg);
+        }
+
+        .nebula-3 {
+            width: 400px;
+            height: 300px;
+
+            bottom: 20%;
+            left: 30%;
+
+            background:
+                radial-gradient(ellipse at center,
+                    rgba(255, 0, 100, 0.08) 0%,
+                    rgba(150, 0, 100, 0.04) 50%,
+                    transparent 70%);
+
+            filter: blur(60px);
+        }
+
+        /* Galaxy center / Sun */
+        .sun {
+            position: absolute;
+
+            width: 80px;
+            height: 80px;
+
+            border-radius: 50%;
+
+            top: 15%;
+            left: 75%;
+
+            background:
+                radial-gradient(circle at 30% 30%,
+                    #fff7ae,
+                    #ffd93d,
+                    #ff9500,
+                    #ff6b00,
+                    transparent 100%);
+
+            box-shadow:
+                0 0 60px 20px rgba(255, 200, 50, 0.4),
+                0 0 120px 60px rgba(255, 150, 0, 0.2),
+                0 0 200px 100px rgba(255, 100, 0, 0.1);
+
+            animation: sunPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes sunPulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow:
+                    0 0 60px 20px rgba(255, 200, 50, 0.4),
+                    0 0 120px 60px rgba(255, 150, 0, 0.2),
+                    0 0 200px 100px rgba(255, 100, 0, 0.1);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow:
+                    0 0 80px 30px rgba(255, 200, 50, 0.5),
+                    0 0 150px 80px rgba(255, 150, 0, 0.25),
+                    0 0 250px 120px rgba(255, 100, 0, 0.12);
+            }
+        }
+
+        /* Planet orbits */
+        .orbit {
+            position: absolute;
+
+            top: 15%;
+            left: 75%;
+
+            border: 1px solid rgba(255, 255, 255, 0.08);
+
+            border-radius: 50%;
+
+            pointer-events: none;
+        }
+
+        .orbit-1 {
+            width: 160px;
+            height: 160px;
+
+            margin-left: -40px;
+            margin-top: -40px;
+        }
+
+        .orbit-2 {
+            width: 250px;
+            height: 250px;
+
+            margin-left: -85px;
+            margin-top: -85px;
+        }
+
+        .orbit-3 {
+            width: 360px;
+            height: 360px;
+
+            margin-left: -140px;
+            margin-top: -140px;
+        }
+
+        .orbit-4 {
+            width: 500px;
+            height: 500px;
+
+            margin-left: -210px;
+            margin-top: -210px;
+        }
+
+        /* Planets */
+        .planet {
+            position: absolute;
+
+            border-radius: 50%;
+
+            pointer-events: none;
+        }
+
+        .planet-1 {
+            width: 14px;
+            height: 14px;
+
+            top: 0;
+
+            left: 50%;
+
+            margin-left: -7px;
+            margin-top: -7px;
+
+            background:
+                radial-gradient(circle at 30% 30%,
+                    #e8d5b7,
+                    #c9a86c,
+                    #8b7355);
+
+            box-shadow:
+                0 0 10px 2px rgba(255, 220, 180, 0.3);
+
+            animation: orbit1 8s linear infinite;
+        }
+
+        @keyframes orbit1 {
+            from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
+            to { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+        }
+
+        .planet-2 {
+            width: 20px;
+            height: 20px;
+
+            top: 50%;
+
+            left: 0;
+
+            margin-left: -10px;
+            margin-top: -10px;
+
+            background:
+                radial-gradient(circle at 30% 30%,
+                    #ffb366,
+                    #e67300,
+                    #995c00);
+
+            box-shadow:
+                0 0 15px 3px rgba(255, 150, 50, 0.3);
+
+            animation: orbit2 15s linear infinite;
+        }
+
+        @keyframes orbit2 {
+            from { transform: rotate(-60deg) translateX(125px) rotate(60deg); }
+            to { transform: rotate(300deg) translateX(125px) rotate(-300deg); }
+        }
+
+        .planet-3 {
+            width: 26px;
+            height: 26px;
+
+            top: 50%;
+            left: 50%;
+
+            margin-left: -13px;
+            margin-top: -13px;
+
+            background:
+                radial-gradient(circle at 50% 50%,
+                    #4a90d9 0%,
+                    #2d5a87 30%,
+                    #1a3a5c 60%,
+                    #0d1f33 100%);
+
+            box-shadow:
+                0 0 20px 5px rgba(74, 144, 217, 0.3),
+                inset -5px -5px 15px rgba(0, 0, 0, 0.5);
+
+            animation: orbit3 25s linear infinite;
+        }
+
+        @keyframes orbit3 {
+            from { transform: rotate(30deg) translateX(180px) rotate(-30deg); }
+            to { transform: rotate(390deg) translateX(180px) rotate(-390deg); }
+        }
+
+        /* Saturn with rings */
+        .planet-4 {
+            width: 32px;
+            height: 32px;
+
+            top: 50%;
+            left: 50%;
+
+            margin-left: -16px;
+            margin-top: -16px;
+
+            background:
+                radial-gradient(circle at 40% 40%,
+                    #f4d59e,
+                    #d4a76a,
+                    #a67c52,
+                    #6b4423);
+
+            box-shadow:
+                0 0 20px 5px rgba(244, 213, 158, 0.2);
+
+            animation: orbit4 40s linear infinite;
+        }
+
+        .planet-4::before {
+            content: "";
+
+            position: absolute;
+
+            top: 50%;
+            left: 50%;
+
+            width: 60px;
+            height: 12px;
+
+            margin-left: -30px;
+            margin-top: -6px;
+
+            border: 3px solid rgba(210, 180, 140, 0.5);
+
+            border-radius: 50%;
+
+            transform: rotateX(70deg);
+
+            background: transparent;
+        }
+
+        @keyframes orbit4 {
+            from { transform: rotate(-20deg) translateX(250px) rotate(20deg); }
+            to { transform: rotate(340deg) translateX(250px) rotate(-340deg); }
+        }
+
+        /* Distant stars / shooting stars */
+        .shooting-star {
+            position: absolute;
+
+            width: 100px;
+            height: 2px;
+
+            background:
+                linear-gradient(90deg,
+                    rgba(255, 255, 255, 0),
+                    rgba(255, 255, 255, 0.8),
+                    rgba(255, 255, 255, 0));
+
+            border-radius: 50%;
+
+            opacity: 0;
+
+            animation: shoot 6s ease-in-out infinite;
+        }
+
+        .shooting-star-1 {
+            top: 10%;
+            left: 10%;
+
+            transform: rotate(35deg);
+
+            animation-delay: 0s;
+        }
+
+        .shooting-star-2 {
+            top: 30%;
+            right: 20%;
+
+            transform: rotate(-40deg);
+
+            animation-delay: 3s;
+        }
+
+        @keyframes shoot {
+            0% {
+                opacity: 0;
+                transform: rotate(35deg) translateX(-100px);
+            }
+            5% {
+                opacity: 1;
+            }
+            15% {
+                opacity: 0;
+                transform: rotate(35deg) translateX(300px);
+            }
+            100% {
+                opacity: 0;
+                transform: rotate(35deg) translateX(300px);
+            }
+        }
+
+        .shooting-star-2 {
+            animation-name: shoot2;
+        }
+
+        @keyframes shoot2 {
+            0% {
+                opacity: 0;
+                transform: rotate(-40deg) translateX(100px);
+            }
+            5% {
+                opacity: 1;
+            }
+            15% {
+                opacity: 0;
+                transform: rotate(-40deg) translateX(-300px);
+            }
+            100% {
+                opacity: 0;
+                transform: rotate(-40deg) translateX(-300px);
+            }
+        }
+
+        /* Moon for card */
+        .moon {
+            position: absolute;
+
+            width: 30px;
+            height: 30px;
+
+            top: 70%;
+            right: 15%;
+
+            border-radius: 50%;
+
+            background:
+                radial-gradient(circle at 60% 40%,
+                    #e8e8e8,
+                    #c0c0c0,
+                    #808080,
+                    #404040);
+
+            box-shadow:
+                0 0 20px 5px rgba(200, 200, 200, 0.2),
+                inset -5px -5px 15px rgba(0, 0, 0, 0.3);
+
+            animation: moonFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes moonFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        /* Floating asteroids */
+        .asteroid {
+            position: absolute;
+
+            width: 8px;
+            height: 8px;
+
+            background: #555;
+
+            border-radius: 40% 60% 50% 70%;
+
+            opacity: 0.4;
+
+            animation: drift 20s linear infinite;
+        }
+
+        .asteroid-1 {
+            top: 40%;
+            left: 5%;
+
+            animation-duration: 25s;
+            animation-delay: 0s;
+        }
+
+        .asteroid-2 {
+            top: 60%;
+            right: 8%;
+
+            width: 6px;
+            height: 6px;
+
+            animation-duration: 30s;
+            animation-delay: -10s;
+        }
+
+        @keyframes drift {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+                opacity: 0.4;
+            }
+            50% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translate(100vw, -20vh) rotate(360deg);
+                opacity: 0.4;
+            }
+        }
+
+        /* =========================================
+       MODE SWITCH
+    ========================================= */
+
+        .mode-switch {
+            position: fixed;
+
+            top: 25px;
+            right: 25px;
+
+            z-index: 100;
+
+            display: flex;
+
+            padding: 5px;
+
+            border-radius: 14px;
+
+            background: rgba(15, 23, 42, 0.65);
+
+            border: 1px solid rgba(255, 255, 255, 0.1);
+
+            backdrop-filter: blur(20px);
+
+            box-shadow:
+                0 20px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .mode-btn {
+            border: none;
+
+            padding: 9px 15px;
+
+            border-radius: 10px;
+
+            background: transparent;
+
+            color: #94a3b8;
+
+            font-size: 13px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition: 0.3s;
+        }
+
+        .mode-btn.active {
+            color: white;
+
+            background:
+                linear-gradient(135deg,
+                    #6366f1,
+                    #8b5cf6);
+
+            box-shadow:
+                0 8px 20px rgba(99, 102, 241, 0.35);
+        }
+
+        #btnRotate360 {
+            font-size: 11px;
+            padding: 9px 12px;
+        }
+
+        /* =========================================
+       SCENE
+    ========================================= */
+
+        .scene {
+            width: 430px;
+
+            height: 600px;
+
+            position: relative;
+
+            perspective: 1400px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+        }
+
+        /* =========================================
+       BACK 3D LAYERS
+    ========================================= */
+
+        .layer {
+            position: absolute;
+
+            width: 360px;
+            height: 480px;
+
+            border-radius: 30px;
+
+            border: 1px solid rgba(255, 255, 255, 0.08);
+
+            background:
+                linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.08),
+                    rgba(255, 255, 255, 0.01));
+
+            backdrop-filter: blur(8px);
+
+            pointer-events: none;
+
+            transition:
+                transform 0.15s ease-out;
+        }
+
+        .layer-1 {
+            transform:
+                translateZ(-100px) translateX(-35px) rotate(-8deg);
+
+            opacity: 0.5;
+        }
+
+        .layer-2 {
+            transform:
+                translateZ(-60px) translateX(35px) rotate(8deg);
+
+            opacity: 0.35;
+        }
+
+        /* =========================================
+       CARD
+    ========================================= */
+
+        .login-card {
+            width: 390px;
+
+            padding: 42px;
+
+            position: relative;
+
+            border-radius: 30px;
+
+            background:
+                linear-gradient(135deg,
+                    rgba(30, 41, 59, 0.9),
+                    rgba(15, 23, 42, 0.86));
+
+            border:
+                1px solid rgba(255, 255, 255, 0.15);
+
+            backdrop-filter: blur(25px);
+
+            -webkit-backdrop-filter: blur(25px);
+
+            transform-style: preserve-3d;
+
+            cursor: grab;
+
+            will-change: transform;
+
+            contain: layout style paint;
+
+            box-shadow:
+                0 60px 100px rgba(0, 0, 0, 0.5),
+                0 20px 40px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+            transition:
+                transform 0.15s ease-out,
+                box-shadow 0.4s ease;
+        }
+
+        .login-card::before {
+            content: "";
+
+            position: absolute;
+
+            inset: 1px;
+
+            border-radius: 29px;
+
+            background:
+                linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.08),
+                    transparent 35%);
+
+            pointer-events: none;
+        }
+
+        /* Dynamic light */
+        .light {
+            position: absolute;
+
+            width: 250px;
+            height: 250px;
+
+            border-radius: 50%;
+
+            background:
+                radial-gradient(circle,
+                    rgba(129, 140, 248, 0.25),
+                    transparent 70%);
+
+            filter: blur(20px);
+
+            will-change: transform, opacity;
+
+            pointer-events: none;
+
+            transform: translate(-50%, -50%);
+
+            transition:
+                left 0.1s,
+                top 0.1s;
+        }
+
+        /* =========================================
+       CONTENT DEPTH
+    ========================================= */
+
+        .content {
+            position: relative;
+
+            transform-style: preserve-3d;
+        }
+
+        .depth-1 {
+            transform: translateZ(25px);
+        }
+
+        .depth-2 {
+            transform: translateZ(40px);
+        }
+
+        .depth-3 {
+            transform: translateZ(55px);
+        }
+
+        /* =========================================
+       LOGO
+    ========================================= */
+
+        .logo {
+            width: 62px;
+            height: 62px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 18px;
+
+            background:
+                linear-gradient(135deg,
+                    #6366f1,
+                    #8b5cf6);
+
+            color: white;
+
+            font-size: 24px;
+
+            font-weight: 900;
+
+            margin-bottom: 25px;
+
+            box-shadow:
+                0 20px 35px rgba(99, 102, 241, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.35);
+
+            transform:
+                translateZ(60px);
+
+            transition:
+                transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform:
+                translateZ(75px) rotateY(10deg) rotateX(-8deg);
+        }
+
+        /* =========================================
+       TEXT
+    ========================================= */
+
+        h1 {
+            color: white;
+
+            font-size: 31px;
+
+            letter-spacing: -1px;
+
+            margin-bottom: 8px;
+
+            transform: translateZ(45px);
+        }
+
+        .subtitle {
+            color: #94a3b8;
+
+            font-size: 14px;
+
+            margin-bottom: 30px;
+
+            transform: translateZ(35px);
+        }
+
+        /* =========================================
+       FORM
+    ========================================= */
+
+        .form-group {
+            margin-bottom: 18px;
+
+            transform-style: preserve-3d;
+        }
+
+        label {
+            display: block;
+
+            color: #cbd5e1;
+
+            font-size: 13px;
+
+            font-weight: 600;
+
+            margin-bottom: 8px;
+
+            transform: translateZ(20px);
+        }
+
+        input {
+            width: 100%;
+
+            height: 51px;
+
+            padding: 0 16px;
+
+            border-radius: 13px;
+
+            border:
+                1px solid rgba(255, 255, 255, 0.1);
+
+            outline: none;
+
+            background:
+                rgba(2, 6, 23, 0.65);
+
+            color: white;
+
+            font-size: 14px;
+
+            box-shadow:
+                inset 0 1px 3px rgba(0, 0, 0, 0.3),
+                0 5px 10px rgba(0, 0, 0, 0.1);
+
+            transition:
+                0.3s ease;
+
+            transform:
+                translateZ(25px);
+        }
+
+        input:focus {
+            border-color: #818cf8;
+
+            box-shadow:
+                0 0 0 4px rgba(99, 102, 241, 0.12),
+                0 15px 30px rgba(0, 0, 0, 0.25);
+
+            transform:
+                translateZ(38px);
+        }
+
+        input::placeholder {
+            color: #64748b;
+        }
+
+        /* =========================================
+       OPTIONS
+    ========================================= */
+
+        .options {
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            margin: 5px 0 23px;
+
+            transform: translateZ(30px);
+        }
+
+        .remember {
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+
+            color: #94a3b8;
+
+            font-size: 13px;
+        }
+
+        .remember input {
+            width: 15px;
+            height: 15px;
+
+            transform: none;
+
+            accent-color: #6366f1;
+        }
+
+        .forgot {
+            color: #818cf8;
+
+            text-decoration: none;
+
+            font-size: 13px;
+
+            font-weight: 600;
+        }
+
+        /* =========================================
+       LOGIN BUTTON
+    ========================================= */
+
+        .login-btn {
+            width: 100%;
+
+            height: 53px;
+
+            border: none;
+
+            border-radius: 13px;
+
+            background:
+                linear-gradient(135deg,
+                    #6366f1,
+                    #8b5cf6);
+
+            color: white;
+
+            font-size: 14px;
+
+            font-weight: 800;
+
+            cursor: pointer;
+
+            position: relative;
+
+            overflow: hidden;
+
+            transform: translateZ(45px);
+
+            box-shadow:
+                0 18px 35px rgba(99, 102, 241, 0.35);
+
+            transition:
+                transform 0.25s ease,
+                box-shadow 0.25s ease;
+        }
+
+        .login-btn::before {
+            content: "";
+
+            position: absolute;
+
+            width: 100px;
+            height: 200%;
+
+            top: -50%;
+
+            left: -120px;
+
+            background:
+                linear-gradient(90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.35),
+                    transparent);
+
+            transform: rotate(20deg);
+
+            transition:
+                left 0.6s ease;
+        }
+
+        .login-btn:hover::before {
+            left: 120%;
+        }
+
+        .login-btn:hover {
+            transform:
+                translateZ(65px) translateY(-4px);
+
+            box-shadow:
+                0 25px 45px rgba(99, 102, 241, 0.45);
+        }
+
+        .login-btn:active {
+            transform:
+                translateZ(40px) translateY(2px);
+        }
+
+        /* =========================================
+       DIVIDER
+    ========================================= */
+
+        .divider {
+            display: flex;
+
+            align-items: center;
+
+            gap: 12px;
+
+            margin: 27px 0;
+
+            color: #64748b;
+
+            font-size: 11px;
+
+            transform: translateZ(25px);
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+
+            flex: 1;
+
+            height: 1px;
+
+            background:
+                rgba(255, 255, 255, 0.1);
+        }
+
+        /* =========================================
+       SOCIAL
+    ========================================= */
+
+        .social {
+            display: flex;
+
+            gap: 10px;
+
+            transform: translateZ(35px);
+        }
+
+        .social-btn {
+            flex: 1;
+
+            height: 46px;
+
+            border-radius: 12px;
+
+            border:
+                1px solid rgba(255, 255, 255, 0.1);
+
+            background:
+                rgba(15, 23, 42, 0.6);
+
+            color: #cbd5e1;
+
+            cursor: pointer;
+
+            font-weight: 600;
+
+            transition:
+                transform 0.25s ease,
+                background 0.25s ease;
+        }
+
+        .social-btn:hover {
+            background:
+                rgba(255, 255, 255, 0.08);
+
+            transform:
+                translateZ(12px) translateY(-3px);
+        }
+
+        /* =========================================
+       REGISTER
+    ========================================= */
+
+        .register {
+            text-align: center;
+
+            margin-top: 25px;
+
+            color: #64748b;
+
+            font-size: 13px;
+
+            transform: translateZ(25px);
+        }
+
+        .register a {
+            color: #818cf8;
+
+            font-weight: 700;
+
+            text-decoration: none;
+        }
+
+        /* =========================================
+       2D MODE
+    ========================================= */
+
+        body.mode-2d {
+            background:
+                radial-gradient(circle at 20% 20%,
+                    #dbeafe,
+                    transparent 35%),
+                radial-gradient(circle at 80% 80%,
+                    #ede9fe,
+                    transparent 35%),
+                #f8fafc;
+        }
+
+        body.mode-2d .layer {
+            opacity: 0;
+        }
+
+        body.mode-2d .login-card {
+            background: rgba(255, 255, 255, 0.95);
+
+            border: 1px solid #e2e8f0;
+
+            box-shadow:
+                0 25px 60px rgba(15, 23, 42, 0.1);
+
+            transform:
+                rotateX(0) rotateY(0) translateZ(0);
+        }
+
+        body.mode-2d .logo {
+            background: #111827;
+
+            box-shadow:
+                0 10px 20px rgba(0, 0, 0, 0.15);
+
+            transform: translateZ(0);
+        }
+
+        body.mode-2d h1 {
+            color: #111827;
+
+            transform: translateZ(0);
+        }
+
+        body.mode-2d .subtitle {
+            color: #64748b;
+
+            transform: translateZ(0);
+        }
+
+        body.mode-2d label {
+            color: #374151;
+
+            transform: translateZ(0);
+        }
+
+        body.mode-2d input {
+            background: #f8fafc;
+
+            color: #111827;
+
+            border-color: #e2e8f0;
+
+            transform: translateZ(0);
+        }
+
+        body.mode-2d .options,
+        body.mode-2d .login-btn,
+        body.mode-2d .divider,
+        body.mode-2d .social,
+        body.mode-2d .register {
+            transform: translateZ(0);
+        }
+
+        body.mode-2d .login-btn {
+            background: #111827;
+
+            box-shadow:
+                0 10px 20px rgba(17, 24, 39, 0.15);
+        }
+
+        body.mode-2d .social-btn {
+            background: white;
+
+            color: #374151;
+
+            border-color: #e2e8f0;
+        }
+
+        /* =========================================
+       MOBILE
+    ========================================= */
+
+        @media (max-width: 520px) {
+
+            .scene {
+                width: 100%;
+
+                height: auto;
+            }
+
+            .login-card {
+                width:
+                    calc(100vw - 32px);
+
+                padding: 32px 25px;
+            }
+
+            .layer {
+                display: none;
+            }
+
+            .mode-switch {
+                top: 15px;
+                right: 15px;
+            }
+
+            h1 {
+                font-size: 27px;
+            }
+        }
+
+        /* =========================================
+   GLOBAL CURSOR LIGHT
+========================================= */
+
+        body::after {
+            content: "";
+
+            position: fixed;
+
+            width: 500px;
+            height: 500px;
+
+            left: var(--mouse-x, 50%);
+            top: var(--mouse-y, 50%);
+
+            transform:
+                translate(-50%, -50%);
+
+            border-radius: 50%;
+
+            background:
+                radial-gradient(circle,
+                    rgba(99, 102, 241, 0.08),
+                    rgba(139, 92, 246, 0.03) 35%,
+                    transparent 70%);
+
+            pointer-events: none;
+
+            z-index: 1;
+
+            transition:
+                left 0.15s ease-out,
+                top 0.15s ease-out;
+        }
+
+
+        /* =========================================
+   BACKGROUND RIPPLE
+========================================= */
+
+        .background-ripple {
+            position: fixed;
+
+            width: 30px;
+            height: 30px;
+
+            border-radius: 50%;
+
+            transform:
+                translate(-50%, -50%) scale(0);
+
+            pointer-events: none;
+
+            z-index: 2;
+
+            border:
+                1px solid rgba(129, 140, 248, 0.8);
+
+            background:
+                radial-gradient(circle,
+                    rgba(129, 140, 248, 0.18),
+                    transparent 65%);
+
+            box-shadow:
+                0 0 30px rgba(99, 102, 241, 0.25);
+
+            animation:
+                backgroundRipple 1s cubic-bezier(.15, .8, .25, 1) forwards;
+        }
+
+
+        @keyframes backgroundRipple {
+
+            0% {
+                width: 30px;
+                height: 30px;
+
+                opacity: 0.9;
+
+                transform:
+                    translate(-50%, -50%) scale(0);
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                width: 600px;
+                height: 600px;
+
+                opacity: 0;
+
+                transform:
+                    translate(-50%, -50%) scale(1);
+            }
+
+        }
+    </style>
+</head>
+
+<body class="mode-3d">
+
+    <!-- Background - Galaxy -->
+    <div class="background">
+        <div class="stars"></div>
+        <div class="nebula nebula-1"></div>
+        <div class="nebula nebula-2"></div>
+        <div class="nebula nebula-3"></div>
+        <div class="sun"></div>
+        <div class="orbit orbit-1"><div class="planet planet-1"></div></div>
+        <div class="orbit orbit-2"><div class="planet planet-2"></div></div>
+        <div class="orbit orbit-3"><div class="planet planet-3"></div></div>
+        <div class="orbit orbit-4"><div class="planet planet-4"></div></div>
+        <div class="shooting-star shooting-star-1"></div>
+        <div class="shooting-star shooting-star-2"></div>
+        <div class="moon"></div>
+        <div class="asteroid asteroid-1"></div>
+        <div class="asteroid asteroid-2"></div>
+    </div>
+
+    <!-- Mode -->
+    <div class="mode-switch">
+
+        <button class="mode-btn" id="btn2d">
+            2D
+        </button>
+
+        <button class="mode-btn active" id="btn3d">
+            3D
+        </button>
+
+        <button class="mode-btn" id="btnRotate360" title="Xoay 360°">
+            360°
+        </button>
+
+    </div>
+
+    <!-- Scene -->
+    <div class="scene" id="scene">
+
+        <!-- 3D layers -->
+        <div class="layer layer-1"></div>
+
+        <div class="layer layer-2"></div>
+
+        <!-- Login -->
+        <div class="login-card" id="card">
+
+            <div class="light" id="light"></div>
+
+            <div class="content">
+
+                <div class="logo">
+                    M
+                </div>
+
+                <h1>
+                    Welcome back
+                </h1>
+
+                <p class="subtitle">
+                    Sign in to continue to your account
+                </p>
+
+                <form>
+
+                    <div class="form-group">
+
+                        <label>
+                            Email
+                        </label>
+
+                        <input type="email" placeholder="you@example.com" />
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>
+                            Password
+                        </label>
+
+                        <input type="password" placeholder="••••••••" />
+
+                    </div>
+
+                    <div class="options">
+
+                        <label class="remember">
+
+                            <input type="checkbox" />
+
+                            Remember me
+
+                        </label>
+
+                        <a href="#" class="forgot">
+                            Forgot password?
+                        </a>
+
+                    </div>
+
+                    <button class="login-btn" type="submit">
+                        Sign in
+                    </button>
+
+                </form>
+
+                <div class="divider">
+                    OR
+                </div>
+
+                <div class="social">
+
+                    <button class="social-btn">
+                        Google
+                    </button>
+
+                    <button class="social-btn">
+                        GitHub
+                    </button>
+
+                </div>
+
+                <div class="register">
+
+                    Don't have an account?
+
+                    <a href="#">
+                        Create account
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const body = document.body;
+
+        const scene = document.getElementById("scene");
+        const card = document.getElementById("card");
+        const light = document.getElementById("light");
+
+        const btn2d = document.getElementById("btn2d");
+        const btn3d = document.getElementById("btn3d");
+        const btnRotate360 = document.getElementById("btnRotate360");
+
+        const orb1 = document.querySelector(".orb-1");
+        const orb2 = document.querySelector(".orb-2");
+        const orb3 = document.querySelector(".orb-3");
+
+
+        /* =========================================
+           MODE SWITCH
+        ========================================= */
+
+        btn2d.addEventListener("click", () => {
+
+            body.classList.remove("mode-3d");
+            body.classList.add("mode-2d");
+
+            btn2d.classList.add("active");
+            btn3d.classList.remove("active");
+
+            resetCard();
+        });
+
+
+        btn3d.addEventListener("click", () => {
+
+            body.classList.remove("mode-2d");
+            body.classList.add("mode-3d");
+
+            btn3d.classList.add("active");
+            btn2d.classList.remove("active");
+
+            resetCard();
+        });
+
+
+        /* =========================================
+           360 DEGREE ROTATION
+        ========================================= */
+
+        let isRotating = false;
+        let rotationAngle = 0;
+        let rotationAnimationId = null;
+
+        btnRotate360.addEventListener("click", () => {
+
+            if (isRotating) {
+                return;
+            }
+
+            if (
+                !body.classList.contains("mode-3d")
+            ) {
+                body.classList.remove("mode-2d");
+                body.classList.add("mode-3d");
+                btn3d.classList.add("active");
+                btn2d.classList.remove("active");
+            }
+
+            isRotating = true;
+            btnRotate360.classList.add("active");
+
+            card.style.transition = "none";
+
+            const startTime = performance.now();
+            const duration = 1500;
+
+            function animateRotation(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+
+                rotationAngle = easeOutCubic * 360;
+
+                card.style.transform = `
+                    rotateY(${rotationAngle}deg)
+                    rotateX(${-10 + Math.sin(progress * Math.PI * 2) * 5}deg)
+                    translateZ(50px)
+                `;
+
+                if (progress < 1) {
+                    rotationAnimationId =
+                        requestAnimationFrame(
+                            animateRotation
+                        );
+                } else {
+                    isRotating = false;
+                    btnRotate360.classList.remove("active");
+                    rotationAngle = 0;
+
+                    card.style.transition =
+                        "transform 0.5s cubic-bezier(.2,.8,.2,1)";
+
+                    setTimeout(() => {
+                        resetCard();
+                    }, 100);
+                }
+            }
+
+            rotationAnimationId =
+                requestAnimationFrame(
+                    animateRotation
+                );
+        });
+
+
+        /* =========================================
+           GLOBAL BACKGROUND PARALLAX
+           
+           Quan trọng:
+           Không đặt listener ở .scene nữa.
+           Listener nằm trên window để toàn màn hình
+           đều tương tác.
+        ========================================= */
+
+        let mouseX = 0;
+        let mouseY = 0;
+
+        let targetX = 0;
+        let targetY = 0;
+
+        let currentX = 0;
+        let currentY = 0;
+
+        let lastOrbUpdate = 0;
+
+        let lastOrbX = 0;
+        let lastOrbY = 0;
+
+        window.addEventListener("mousemove", (event) => {
+
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+
+
+            /*
+              Chuẩn hóa tọa độ:
+        
+              -1 = bên trái / phía trên
+               0 = chính giữa
+               1 = bên phải / phía dưới
+            */
+
+            targetX =
+                (event.clientX / window.innerWidth - 0.5) * 2;
+
+            targetY =
+                (event.clientY / window.innerHeight - 0.5) * 2;
+
+
+            /*
+              Skip orb updates nếu delta nhỏ (<0.5px)
+              và chưa đủ frame
+            */
+
+            const now = performance.now();
+
+            if (
+                now - lastOrbUpdate < 16 ||
+                (Math.abs(targetX - lastOrbX) < 0.01 &&
+                 Math.abs(targetY - lastOrbY) < 0.01)
+            ) {
+                return;
+            }
+
+            lastOrbUpdate = now;
+            lastOrbX = targetX;
+            lastOrbY = targetY;
+
+
+            /*
+              Background parallax
+            */
+
+            if (body.classList.contains("mode-3d")) {
+
+                orb1.style.transform = `
+          translate3d(
+            ${targetX * 45}px,
+            ${targetY * 45}px,
+            30px
+          )
+        `;
+
+                orb2.style.transform = `
+          translate3d(
+            ${targetX * -65}px,
+            ${targetY * -65}px,
+            60px
+          )
+        `;
+
+                orb3.style.transform = `
+          translate3d(
+            ${targetX * 90}px,
+            ${targetY * 90}px,
+            100px
+          )
+        `;
+
+            } else {
+
+                /*
+                  2D mode cũng có interaction
+                  nhưng nhẹ hơn.
+                */
+
+                orb1.style.transform = `
+          translate3d(
+            ${targetX * 15}px,
+            ${targetY * 15}px,
+            0
+          )
+        `;
+
+                orb2.style.transform = `
+          translate3d(
+            ${targetX * -20}px,
+            ${targetY * -20}px,
+            0
+          )
+        `;
+
+                orb3.style.transform = `
+          translate3d(
+            ${targetX * 30}px,
+            ${targetY * 30}px,
+            0
+          )
+        `;
+            }
+
+
+            /*
+              Global cursor light
+        
+              Ánh sáng chạy theo chuột
+              ngay cả khi chuột đang ở background.
+            */
+
+            document.body.style.setProperty(
+                "--mouse-x",
+                `${event.clientX}px`
+            );
+
+            document.body.style.setProperty(
+                "--mouse-y",
+                `${event.clientY}px`
+            );
+
+        });
+
+
+        /* =========================================
+           SMOOTH BACKGROUND MOVEMENT
+        ========================================= */
+
+        /*
+          Frame skip: chỉ update mỗi 2 frame
+          để giảm tải GPU ~50%
+        */
+        let bgFrame = 0;
+
+        function animateBackground() {
+
+            bgFrame++;
+
+            if (bgFrame % 2 === 0) {
+
+                currentX +=
+                    (targetX - currentX) * 0.08;
+
+                currentY +=
+                    (targetY - currentY) * 0.08;
+            }
+
+            requestAnimationFrame(
+                animateBackground
+            );
+        }
+
+        animateBackground();
+
+
+        /* =========================================
+           CARD 3D MOUSE INTERACTION
+           
+           - Khi chỉ hover (không giữ chuột):
+             card nghiêng nhẹ theo vị trí chuột.
+           - Khi giữ chuột kéo (drag):
+             card xoay 360° tự do theo chuột.
+        ========================================= */
+
+        let cardRotationY = 0;
+        let cardRotationX = 0;
+
+        let targetTiltX = 0;
+        let targetTiltY = 0;
+
+        let currentTiltX = 0;
+        let currentTiltY = 0;
+
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        let cardHoverActive = false;
+
+
+        scene.addEventListener("mousedown", (event) => {
+
+            if (
+                !body.classList.contains("mode-3d")
+            ) {
+                return;
+            }
+
+            if (isRotating) {
+                return;
+            }
+
+            if (
+                event.target.closest(
+                    "input, button, a"
+                )
+            ) {
+                return;
+            }
+
+            isDragging = true;
+            cardHoverActive = false;
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
+
+            card.style.transition = "none";
+
+            document.body.style.cursor = "grabbing";
+        });
+
+
+        window.addEventListener("mousemove", (event) => {
+
+            if (
+                !body.classList.contains("mode-3d")
+            ) {
+                return;
+            }
+
+            const sceneRect =
+                scene.getBoundingClientRect();
+            const isInsideScene =
+                event.clientX >= sceneRect.left &&
+                event.clientX <= sceneRect.right &&
+                event.clientY >= sceneRect.top &&
+                event.clientY <= sceneRect.bottom;
+
+            const x =
+                event.clientX - sceneRect.left;
+            const y =
+                event.clientY - sceneRect.top;
+
+            light.style.left = `${x}px`;
+            light.style.top = `${y}px`;
+
+
+            if (isDragging) {
+
+                const deltaX =
+                    event.clientX - lastMouseX;
+                const deltaY =
+                    event.clientY - lastMouseY;
+
+                cardRotationY += deltaX * 0.5;
+                cardRotationX -= deltaY * 0.5;
+
+                cardRotationX =
+                    Math.max(-90, Math.min(90, cardRotationX));
+
+                card.style.transform = `
+                    rotateX(${cardRotationX}deg)
+                    rotateY(${cardRotationY}deg)
+                    translateZ(50px)
+                `;
+
+                lastMouseX = event.clientX;
+                lastMouseY = event.clientY;
+
+            } else if (isInsideScene) {
+
+                cardHoverActive = true;
+
+                const centerX = sceneRect.width / 2;
+                const centerY = sceneRect.height / 2;
+
+                targetTiltY =
+                    ((x - centerX) / centerX) * 12;
+                targetTiltX =
+                    ((centerY - y) / centerY) * 12;
+
+            }
+
+        });
+
+
+        window.addEventListener("mouseup", () => {
+
+            if (!isDragging) {
+                return;
+            }
+
+            isDragging = false;
+            document.body.style.cursor = "";
+
+            card.style.transition =
+                "transform 0.6s cubic-bezier(.2,.8,.2,1)";
+
+            cardRotationY = 0;
+            cardRotationX = 0;
+
+            card.style.transform = `
+                rotateX(0deg)
+                rotateY(0deg)
+                translateZ(30px)
+            `;
+        });
+
+
+        let lastAppliedTiltX = 0;
+        let lastAppliedTiltY = 0;
+
+        function animateCardTilt() {
+
+            let needsUpdate = false;
+
+            if (
+                body.classList.contains("mode-3d") &&
+                cardHoverActive &&
+                !isDragging
+            ) {
+
+                currentTiltX +=
+                    (targetTiltX - currentTiltX) * 0.15;
+                currentTiltY +=
+                    (targetTiltY - currentTiltY) * 0.15;
+
+                needsUpdate =
+                    Math.abs(currentTiltX - lastAppliedTiltX) > 0.05 ||
+                    Math.abs(currentTiltY - lastAppliedTiltY) > 0.05;
+
+            } else if (!isDragging && !cardHoverActive) {
+
+                currentTiltX *= 0.85;
+                currentTiltY *= 0.85;
+
+                needsUpdate =
+                    Math.abs(currentTiltX) > 0.05 ||
+                    Math.abs(currentTiltY) > 0.05;
+            }
+
+            if (needsUpdate) {
+
+                lastAppliedTiltX = currentTiltX;
+                lastAppliedTiltY = currentTiltY;
+
+                card.style.transform =
+                    `translate3d(0,0,20px) rotateX(${currentTiltX}deg) rotateY(${currentTiltY}deg)`;
+
+            }
+
+            requestAnimationFrame(animateCardTilt);
+        }
+
+        requestAnimationFrame(animateCardTilt);
+
+
+        /* =========================================
+           CARD MOUSE LEAVE
+        ========================================= */
+
+        scene.addEventListener(
+            "mouseleave",
+            () => {
+
+                if (isRotating || isDragging) {
+                    return;
+                }
+
+                cardHoverActive = false;
+                resetCard();
+
+            }
+        );
+
+
+        function resetCard() {
+
+            cardRotationY = 0;
+            cardRotationX = 0;
+
+            targetTiltX = 0;
+            targetTiltY = 0;
+            currentTiltX = 0;
+            currentTiltY = 0;
+
+            card.style.transition =
+                "transform 0.6s cubic-bezier(.2,.8,.2,1)";
+
+            if (
+                body.classList.contains("mode-3d")
+            ) {
+
+                card.style.transform = `
+                    rotateX(0deg)
+                    rotateY(0deg)
+                    translateZ(30px)
+                `;
+
+            } else {
+
+                card.style.transform = `
+                    rotateX(0deg)
+                    rotateY(0deg)
+                    translateZ(0)
+                `;
+
+            }
+
+        }
+
+
+        /* =========================================
+           BACKGROUND CLICK RIPPLE
+           
+           Click bất kỳ đâu trên màn hình.
+        ========================================= */
+
+        window.addEventListener("click", (event) => {
+
+            /*
+              Không tạo ripple khi click vào
+              button/input/link/form control.
+            */
+
+            const isInteractive =
+                event.target.closest(
+                    "button, input, a"
+                );
+
+            if (isInteractive) {
+                return;
+            }
+
+
+            createRipple(
+                event.clientX,
+                event.clientY
+            );
+
+        });
+
+
+        function createRipple(x, y) {
+
+            const ripple =
+                document.createElement("div");
+
+            ripple.className =
+                "background-ripple";
+
+
+            ripple.style.left =
+                `${x}px`;
+
+            ripple.style.top =
+                `${y}px`;
+
+
+            document.body.appendChild(
+                ripple
+            );
+
+
+            /*
+              Remove sau animation
+            */
+
+            setTimeout(() => {
+
+                ripple.remove();
+
+            }, 1000);
+
+
+            /*
+              Làm các orb phản ứng
+            */
+
+            if (
+                body.classList.contains("mode-3d")
+            ) {
+
+                orb1.animate(
+                    [
+                        {
+                            transform:
+                                "scale(1)"
+                        },
+
+                        {
+                            transform:
+                                "scale(1.18)"
+                        },
+
+                        {
+                            transform:
+                                "scale(1)"
+                        }
+                    ],
+                    {
+                        duration: 600,
+                        easing:
+                            "cubic-bezier(.2,.8,.2,1)"
+                    }
+                );
+
+
+                orb2.animate(
+                    [
+                        {
+                            transform:
+                                "scale(1)"
+                        },
+
+                        {
+                            transform:
+                                "scale(1.12)"
+                        },
+
+                        {
+                            transform:
+                                "scale(1)"
+                        }
+                    ],
+                    {
+                        duration: 750,
+                        easing:
+                            "cubic-bezier(.2,.8,.2,1)"
+                    }
+                );
+
+            }
+
+        }
+
+
+        /* =========================================
+           TOUCH
+        ========================================= */
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isTouching = false;
+
+        scene.addEventListener(
+            "touchstart",
+            (event) => {
+
+                if (
+                    !body.classList.contains("mode-3d")
+                ) {
+                    return;
+                }
+
+                if (isRotating) {
+                    return;
+                }
+
+                if (
+                    event.target.closest(
+                        "input, button, a"
+                    )
+                ) {
+                    return;
+                }
+
+                isTouching = true;
+                const touch = event.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+
+                card.style.transition = "none";
+
+            },
+            { passive: true }
+        );
+
+
+        scene.addEventListener(
+            "touchmove",
+            (event) => {
+
+                if (
+                    !body.classList.contains("mode-3d") ||
+                    !isTouching
+                ) {
+                    return;
+                }
+
+                const touch = event.touches[0];
+                const deltaX = touch.clientX - touchStartX;
+                const deltaY = touch.clientY - touchStartY;
+
+                const newRotationY = cardRotationY + deltaX * 0.5;
+                const newRotationX = cardRotationX - deltaY * 0.5;
+
+                cardRotationX =
+                    Math.max(-60, Math.min(60, newRotationX));
+
+                card.style.transform = `
+                    rotateX(${cardRotationX}deg)
+                    rotateY(${newRotationY}deg)
+                    translateZ(50px)
+                `;
+
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+
+            },
+            { passive: true }
+        );
+
+
+        scene.addEventListener(
+            "touchend",
+            () => {
+
+                if (!isTouching) {
+                    return;
+                }
+
+                isTouching = false;
+
+                card.style.transition =
+                    "transform 0.6s cubic-bezier(.2,.8,.2,1)";
+
+                cardRotationY = 0;
+                cardRotationX = 0;
+
+                card.style.transform = `
+                    rotateX(0deg)
+                    rotateY(0deg)
+                    translateZ(30px)
+                `;
+
+            },
+            { passive: true }
+        );
+
+
+        /* =========================================
+           FORM DEMO
+        ========================================= */
+
+        document
+            .querySelector("form")
+            .addEventListener(
+                "submit",
+                (event) => {
+
+                    event.preventDefault();
+
+                    alert(
+                        "Login demo"
+                    );
+
+                }
+            );
+
+
+        /* =========================================
+           INITIAL
+        ========================================= */
+
+        resetCard();
+
+    </script>
+
+</body>
+
+</html>

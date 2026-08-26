@@ -26,8 +26,8 @@ export class ForbiddenError extends Error {
 }
 
 interface SessionData {
-  employee: Awaited<ReturnType<typeof Employee.findOne>>;
-  role: Awaited<ReturnType<typeof Role.findOne>>;
+  employee: any;
+  role: any;
   permissions: string[];
 }
 
@@ -67,7 +67,13 @@ async function loadSession(employeeId: string, roleId: string): Promise<SessionD
   };
 }
 
-export async function getCurrentUser(request: Request) {
+export async function getCurrentUser(request: Request): Promise<{
+  employee: any;
+  role: any;
+  permissions: string[];
+  accountId?: string;
+  roleCode: string;
+}> {
   const authorization = request.headers.get("authorization");
 
   if (!authorization?.startsWith("Bearer ")) {
@@ -84,8 +90,8 @@ export async function getCurrentUser(request: Request) {
   const cached = getCachedSession(token);
   if (cached) {
     return {
-      employee: cached.employee,
-      role: cached.role,
+      employee: cached.employee as any,
+      role: cached.role as any,
       permissions: cached.permissions,
       accountId: (cached.employee as { accountId?: string })?.accountId,
       roleCode: (cached.role as { code: string }).code,

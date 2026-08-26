@@ -295,7 +295,7 @@ function ReconciliationCardInner({
                   align: "center" as const,
                   width: 100,
                   render: (_: unknown, record: OrderListItem) => {
-                    const dateStr = record.deliveredAt;
+                    const dateStr = record.shipping?.actualDelivery;
                     if (!dateStr) return <span style={{ color: "#999" }}>—</span>;
                     const d = new Date(dateStr);
                     return (

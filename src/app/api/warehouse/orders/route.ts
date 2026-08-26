@@ -107,6 +107,8 @@ export async function GET(request: Request) {
         .populate("customerId", "_id code name phone")
         .populate("warehouseId", "_id code name")
         .populate("saleEmployeeId", "_id employeeCode fullName")
+        .populate("productId", "_id code name")
+        .populate("comboId", "_id code name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

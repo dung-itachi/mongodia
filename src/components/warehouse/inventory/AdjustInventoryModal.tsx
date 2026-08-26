@@ -271,7 +271,7 @@ export default function AdjustInventoryModal({
               formatter={(value) =>
                 value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ""
               }
-              parser={(value) => {
+              parser={(value: string | undefined) => {
                 const parsed = value?.replace(/,/g, "");
                 return parsed ? Number(parsed) : 0;
               }}

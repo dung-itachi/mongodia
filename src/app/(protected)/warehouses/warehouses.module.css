@@ -233,6 +233,56 @@
   gap: 4px;
 }
 
+/* ---- Inline variant breakdown in card ---- */
+.wh-item-variants {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.wh-item-variant {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.wh-item-variant-sku {
+  color: #595959;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wh-item-variant-stock {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #1890ff;
+  background: rgba(24, 144, 255, 0.08);
+  padding: 1px 8px;
+  border-radius: 10px;
+  min-width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.wh-item-variant-stock--zero {
+  color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.08);
+}
+
+.wh-item-variant-stock--low {
+  color: #fa8c16;
+  background: rgba(250, 140, 22, 0.1);
+}
+
 /* ---- Quick-create pills (selected options) ---- */
 .wh-qc-pills {
   display: flex;

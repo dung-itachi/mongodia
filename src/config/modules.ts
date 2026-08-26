@@ -314,6 +314,22 @@ export const MODULES: ModuleDefinition[] = [
     icon: `<path d="M21 8v13H3V8"/>`,
   },
   {
+    id: "warehouses-china",
+    title: "Kho Trung Quốc",
+    route: "/warehouses/china",
+    permission: "warehouse.view",
+    group: "WAREHOUSE",
+    icon: `<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18"/>`,
+  },
+  {
+    id: "warehouses-mongolia",
+    title: "Kho Mông Cổ",
+    route: "/warehouses/mongolia",
+    permission: "warehouse.view",
+    group: "WAREHOUSE",
+    icon: `<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a13 13 0 0 1 0 18M12 3a13 13 0 0 0 0 18"/>`,
+  },
+  {
     id: "warehouse-inventory",
     title: "Tồn kho",
     route: "/warehouse/inventory",
