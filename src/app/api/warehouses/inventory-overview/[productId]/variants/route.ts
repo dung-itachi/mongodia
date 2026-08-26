@@ -18,6 +18,7 @@ import Product from "@/models/Product";
 import ProductVariant from "@/models/ProductVariant";
 import WarehouseInventory from "@/models/WarehouseInventory";
 import { InventoryHistory } from "@/models/InventoryHistory";
+import Warehouse from "@/models/Warehouse";
 import { success, error as errorResponse } from "@/utils/response";
 
 export type WarehouseVariantOverviewItem = {
@@ -97,6 +98,23 @@ export async function GET(
     // Support warehouse filter
     const url = new URL(request.url);
     const warehouseIdParam = url.searchParams.get("warehouseId");
+    const warehouseCodeParam = url.searchParams.get("warehouseCode")?.trim().toUpperCase() || "";
+
+    // Resolve scoped warehouse IDs (same precedence as overview route).
+    // - warehouseId wins when supplied and valid.
+    // - otherwise fall back to warehouseCode (KHO1 / KHO2).
+    let scopedWarehouseIds: mongoose.Types.ObjectId[] | null = null;
+    if (warehouseIdParam && mongoose.Types.ObjectId.isValid(warehouseIdParam)) {
+      scopedWarehouseIds = [new mongoose.Types.ObjectId(warehouseIdParam)];
+    } else if (warehouseCodeParam) {
+      const ws = await Warehouse.find({
+        code: warehouseCodeParam,
+        isActive: true,
+      })
+        .select("_id")
+        .lean();
+      scopedWarehouseIds = ws.map((w) => w._id as mongoose.Types.ObjectId);
+    }
 
     // ---- Tồn kho theo variant (availableQuantity) ----
     const inventoryMatch: Record<string, unknown> = {
@@ -106,8 +124,8 @@ export async function GET(
       itemType: "PRODUCT",
       isActive: { $ne: false },
     };
-    if (warehouseIdParam) {
-      inventoryMatch.warehouseId = new mongoose.Types.ObjectId(warehouseIdParam);
+    if (scopedWarehouseIds) {
+      inventoryMatch.warehouseId = { $in: scopedWarehouseIds };
     }
     const invAgg = (await WarehouseInventory.aggregate([
       {
@@ -135,8 +153,8 @@ export async function GET(
         transactionType: "INBOUND",
         isActive: { $ne: false },
       };
-      if (warehouseIdParam) {
-        histMatch.warehouseId = new mongoose.Types.ObjectId(warehouseIdParam);
+      if (scopedWarehouseIds) {
+        histMatch.warehouseId = { $in: scopedWarehouseIds };
       }
       const histAgg = (await InventoryHistory.aggregate([
         {

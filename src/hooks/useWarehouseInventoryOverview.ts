@@ -46,7 +46,8 @@ export type WarehouseOverviewResponse = {
 
 export type WarehouseOverviewParams = {
   warehouseId?: string | null;
-  areaCountryCode?: string | null;
+  /** Mã kho hard-coded (KHO1 / KHO2). KHÔNG dùng areaCountryCode — Area chỉ dành cho nhân viên. */
+  warehouseCode?: string | null;
 };
 
 async function fetchOverview(
@@ -56,8 +57,8 @@ async function fetchOverview(
   if (params.warehouseId) {
     search.set("warehouseId", params.warehouseId);
   }
-  if (params.areaCountryCode) {
-    search.set("areaCountryCode", params.areaCountryCode);
+  if (params.warehouseCode) {
+    search.set("warehouseCode", params.warehouseCode);
   }
   const url = `/api/warehouses/inventory-overview${
     search.toString() ? `?${search.toString()}` : ""

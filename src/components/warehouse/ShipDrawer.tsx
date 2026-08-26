@@ -93,8 +93,16 @@ export default function ShipDrawer({ open, order, onClose, onSuccess }: Props) {
   const isLoading = shipMutation.isPending;
 
   // Fetch warehouse inventory for gifts (only GIFT items)
-  // warehouseId is a string, warehouse is the populated object
-  const warehouseIdStr: string | undefined = order?.warehouseId ?? order?.warehouse?._id;
+  // order.warehouseId có thể là ObjectId object hoặc string do Mongoose serialize
+  // khác nhau giữa các endpoints. Luôn extract `_id` nếu là object.
+  const warehouseIdStr: string | undefined =
+    typeof order?.warehouseId === "string"
+      ? order.warehouseId
+      : order?.warehouseId && typeof order.warehouseId === "object"
+        ? String((order.warehouseId as { _id?: unknown })._id ?? "")
+        : order?.warehouse?._id
+          ? String(order.warehouse._id)
+          : undefined;
   const { items: inventoryItems, loading: inventoryLoading } = useWarehouseInventory({
     filters: {
       warehouseId: warehouseIdStr ?? "",

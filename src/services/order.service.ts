@@ -41,6 +41,15 @@ import Customer, { ICustomer } from "@/models/Customer";
 // Sprint 6.3: Warehouse Integration
 import { warehouseService } from "@/services/warehouse.service";
 import { getKho2Id } from "@/config/warehouse-topology.config";
+// Stock Engine (Phase 4.5) — reserve stock khi tạo đơn
+import { reserveStock } from "@/services/warehouse/stockEngine.service";
+import { StockEngineError } from "@/services/warehouse/stockEngine.errors";
+import {
+  orderItemsToDemands,
+  type NormalizedOrderItemShape,
+} from "@/services/warehouse/orderDemand";
+import { buildStockWiringPlanForCreate, type OrderStockSnapshot } from "@/services/order/orderStockWiring.helper";
+import { InventoryReferenceType } from "@/constants/inventoryStatus";
 
 import type { OrderItem as SaleOrderItem } from "@/types/variant";
 import type {
@@ -419,38 +428,98 @@ export class OrderService {
       }
     }
 
-    const order = await orderRepository.create({
-      orderCode,
-      customerId: new mongoose.Types.ObjectId(data.customerId),
-      customerName: data.customerName,
-      customerPhone: data.customerPhone,
-      leadId: data.leadId ? new mongoose.Types.ObjectId(data.leadId) : undefined,
-      productId: data.productId ? new mongoose.Types.ObjectId(data.productId) : undefined,
-      comboId: data.comboId ? new mongoose.Types.ObjectId(data.comboId) : undefined,
-      warehouseId,
-      productSnapshot: undefined,
-      comboSnapshot: undefined,
-      quantity: data.quantity ?? 1,
-      unitPrice: data.unitPrice ?? 0,
-      totalAmount: data.totalAmount ?? summary.grandTotal,
-      currency,
-      exchangeRate: exchangeRateSnap.rate,
-      exchangeRateDate: new Date(),
-      estimatedWeight: data.estimatedWeight,
-      marketingEmployeeId: data.marketingEmployeeId
-        ? new mongoose.Types.ObjectId(data.marketingEmployeeId)
-        : undefined,
-      saleEmployeeId: data.saleEmployeeId
-        ? new mongoose.Types.ObjectId(data.saleEmployeeId)
-        : undefined,
-      orderSource: data.orderSource ?? OrderSource.MANUAL,
-      note: data.note,
-      // Sprint 6.1: Order items and summary
-      orderItems: processedOrderItems,
-      summary,
-    });
+    // Wrap insert + reserve trong transaction để rollback nếu reserve fail.
+    // Trước đây hàm này KHÔNG gọi reserveStock (chỉ /api/orders route làm).
+    // Khi user tạo đơn qua Quick Import / Lead Convert (gọi thẳng service),
+    // reservedQuantity vẫn =0 → ship fail "Đang giữ: 0". Bug này được fix
+    // bằng cách gọi reserveStock ở đây (Phase 4.5 contract).
+    const session = await mongoose.startSession();
+    let order: Awaited<ReturnType<typeof orderRepository.create>> | undefined;
+    try {
+      await session.withTransaction(async () => {
+        const created = await orderRepository.create(
+          {
+            orderCode,
+            customerId: new mongoose.Types.ObjectId(data.customerId),
+            customerName: data.customerName,
+            customerPhone: data.customerPhone,
+            leadId: data.leadId ? new mongoose.Types.ObjectId(data.leadId) : undefined,
+            productId: data.productId ? new mongoose.Types.ObjectId(data.productId) : undefined,
+            comboId: data.comboId ? new mongoose.Types.ObjectId(data.comboId) : undefined,
+            warehouseId,
+            productSnapshot: undefined,
+            comboSnapshot: undefined,
+            quantity: data.quantity ?? 1,
+            unitPrice: data.unitPrice ?? 0,
+            totalAmount: data.totalAmount ?? summary.grandTotal,
+            currency,
+            exchangeRate: exchangeRateSnap.rate,
+            exchangeRateDate: new Date(),
+            estimatedWeight: data.estimatedWeight,
+            marketingEmployeeId: data.marketingEmployeeId
+              ? new mongoose.Types.ObjectId(data.marketingEmployeeId)
+              : undefined,
+            saleEmployeeId: data.saleEmployeeId
+              ? new mongoose.Types.ObjectId(data.saleEmployeeId)
+              : undefined,
+            orderSource: data.orderSource ?? OrderSource.MANUAL,
+            note: data.note,
+            // Sprint 6.1: Order items and summary
+            orderItems: processedOrderItems,
+            summary,
+          },
+          session
+        );
+        order = created;
 
-    return order;
+        // ── Reserve stock (Phase 4.5) ─────────────────────────────────────
+        // Source of truth cho inventory là `orderItems[].details[]`. Nếu thiếu
+        // details → không reserve (giống logic ở /api/orders POST route).
+        if (warehouseId && processedOrderItems.length > 0) {
+          const demands = orderItemsToDemands(
+            processedOrderItems as unknown as NormalizedOrderItemShape[]
+          );
+          const stockSnapshot: OrderStockSnapshot = {
+            warehouseId: warehouseId.toString(),
+            orderType: "NORMAL" as never,
+            demands,
+          };
+          const stockPlan = buildStockWiringPlanForCreate(stockSnapshot);
+          if (stockPlan.reserve.length > 0) {
+            await reserveStock(
+              warehouseId.toString(),
+              stockPlan.reserve,
+              {
+                actorEmployeeId: new mongoose.Types.ObjectId(createdBy),
+                referenceType: InventoryReferenceType.ORDER,
+                referenceCode: orderCode,
+                orderId: created._id,
+                note: `Tạo đơn ${orderCode}`,
+              },
+              { session }
+            );
+            await OrderHistory.create(
+              [
+                {
+                  orderId: created._id,
+                  employeeId: new mongoose.Types.ObjectId(createdBy),
+                  action: OrderAction.STOCK_RESERVED,
+                  fieldName: "stockReservedAt",
+                  oldValue: null,
+                  newValue: new Date(),
+                  note: `Tự động reserve khi tạo đơn ${orderCode}`,
+                },
+              ],
+              { session }
+            );
+          }
+        }
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    return order!;
   }
 
   /**

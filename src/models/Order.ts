@@ -230,6 +230,23 @@ export interface IOrder extends Document {
   reconciledAt?: Date;
   /** ID nhân viên thực hiện đối soát. */
   reconciledBy?: Types.ObjectId;
+  /**
+   * Hàng hoàn đã được nhập lại kho chưa (chỉ áp dụng khi status = RETURNED).
+   * Đây là flag RIÊNG BIỆT với status — giúp distinguish giữa:
+   *   - `false`: đơn đã hoàn, hàng đang trên đường về kho (UI: "Đang hoàn về")
+   *   - `true` : đơn đã hoàn, hàng đã được nhập lại kho (UI: "Đã hoàn kho")
+   *
+   * Mặc định `false`. Được set `true` khi user click nút "Hoàn kho" ở
+   * `/orders/[id]` (gọi POST /api/warehouse/orders/:id/return).
+   *
+   * Song song với flag, `returnStock` đã cộng `quantity + availableQuantity`
+   * vào `WarehouseInventory` — flag chỉ phục vụ UI Overview.
+   */
+  whReturned?: boolean;
+  /** Thời điểm nhập hoàn kho. */
+  returnedToStockAt?: Date;
+  /** ID nhân viên nhập hoàn kho. */
+  returnedToStockBy?: Types.ObjectId;
   /** Thời điểm giao hàng thành công (DELIVERED). */
   deliveredAt?: Date;
 
@@ -426,6 +443,13 @@ const OrderSchema = new Schema<IOrder>(
     isReconciled: { type: Boolean, default: false },
     reconciledAt: { type: Date },
     reconciledBy: { type: Schema.Types.ObjectId, ref: "Employee" },
+    /**
+     * Hàng hoàn đã được nhập lại kho chưa.
+     * Default `false`. Set `true` khi user click "Hoàn kho" (bước 2).
+     */
+    whReturned: { type: Boolean, default: false },
+    returnedToStockAt: { type: Date },
+    returnedToStockBy: { type: Schema.Types.ObjectId, ref: "Employee" },
     /** Thời điểm giao hàng thành công (DELIVERED). */
     deliveredAt: { type: Date },
 

@@ -11,7 +11,7 @@
 
 import { Suspense, useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Checkbox, Dropdown, Space, Tooltip } from "antd";
+import { Button, Checkbox, Dropdown, Space, Tag, Tooltip } from "antd";
 import { useMessage } from "@/contexts/MessageContext";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
@@ -27,6 +27,8 @@ import {
   ReloadOutlined,
   BarChartOutlined,
   UndoOutlined,
+  RollbackOutlined,
+  GiftOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -40,6 +42,7 @@ import SkeletonTable from "@/components/common/overlay/SkeletonTable";
 import ConfirmDialog from "@/components/common/feedback/ConfirmDialog";
 
 import { useOrders, useDeleteOrder, useChangeOrderStatus, useToggleOrderConfirmCall, useOrderStatistics } from "@/hooks/useOrders";
+import { useReturnOrder } from "@/hooks/useWarehouseShipments";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ORDER_STATUS_LABELS, OrderStatus } from "@/constants/orderStatus";
 import { STATUS_ACTIONS } from "@/configs/order-status.config";
@@ -118,9 +121,73 @@ function OrdersPageInner() {
   // Toggle cờ "đã gọi xác nhận" — chỉ dùng cho status=CONFIRMED
   const toggleConfirmCallMutation = useToggleOrderConfirmCall();
 
+  // Nhập hoàn kho (chỉ dùng cho status=RETURNED, whReturned=false)
+  const returnOrderMutation = useReturnOrder();
+  const [returnTarget, setReturnTarget] = useState<OrderListItem | null>(null);
+  const [returnLoading, setReturnLoading] = useState(false);
+
+// Build shipments payload từ orderItems[].details[] (variantId + quantity).
+    // Trước đây UI chỉ build productId level → shipStock fail với variant filter
+    // không khớp. Đọc details[] cho cả PRODUCT và GIFT để flow hoàn kho khớp với
+    // ship trước đó.
+    const buildReturnPayload = useCallback((order: OrderListItem) => {
+      const items = order.orderItems ?? [];
+      const shipments: Array<{
+        itemType: "PRODUCT" | "GIFT";
+        productId?: string;
+        variantId?: string;
+        giftId?: string;
+        quantity: number;
+      }> = [];
+      for (const item of items) {
+        const dets = item.details ?? [];
+        if (dets.length > 0) {
+          for (const d of dets) {
+            shipments.push({
+              itemType: "PRODUCT",
+              productId: item.productId,
+              variantId: d.variantId,
+              quantity: d.quantity ?? 1,
+            });
+          }
+        }
+        const gifts = item.giftSelections ?? [];
+        for (const g of gifts) {
+          shipments.push({
+            itemType: "GIFT",
+            giftId: g.giftProductId,
+            quantity: g.quantity ?? 1,
+          });
+        }
+      }
+      return { items: shipments, note: `Hoàn đơn ${order.orderCode}` };
+    }, []);
+
+  const handleConfirmReturn = useCallback(async () => {
+    if (!returnTarget) return;
+    setReturnLoading(true);
+    try {
+      await returnOrderMutation.mutateAsync({
+        orderId: returnTarget._id,
+        payload: buildReturnPayload(returnTarget),
+      });
+      message.success(t("Đã nhập hoàn kho", lang));
+      setReturnTarget(null);
+      void refetch();
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : t("Nhập hoàn kho thất bại", lang)
+      );
+    } finally {
+      setReturnLoading(false);
+    }
+  }, [returnTarget, returnOrderMutation, buildReturnPayload, message, lang, refetch]);
+
   // Show quick action buttons only for CONFIRMED and SHIPPING status
   const showQuickActions = status === "CONFIRMED";
   const showShippingActions = status === "SHIPPING";
+  // Khi filter theo status=RETURNED, hiển thị cột "Đã nhập hoàn" + nút "Nhập hoàn kho".
+  const showReturnedActions = status === "RETURNED";
 
   const handleFilterChange = useCallback((values: Record<string, unknown>) => {
     if (values.status !== undefined) {
@@ -373,7 +440,61 @@ function OrdersPageInner() {
       title: t("Tổng quà", lang),
       width: 90,
       align: "center" as const,
-      render: (_: unknown, record: Record<string, unknown>) => getOrderItemTotals(record as unknown as OrderListItem).giftQuantity || "-",
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const order = record as unknown as OrderListItem;
+        const totals = getOrderItemTotals(order);
+        if (!totals.giftQuantity) return <span style={{ color: "#bfbfbf" }}>-</span>;
+        const items = order.orderItems ?? [];
+        const hasCustomerSelected = items.some(
+          (it) => it.giftMode === "CUSTOMER_SELECTED" && (it.giftSelections ?? []).length > 0
+        );
+        return (
+          <Space size={4} orientation="vertical" style={{ alignItems: "center" }}>
+            <Tag color={hasCustomerSelected ? "blue" : "purple"}>
+              {totals.giftQuantity}
+            </Tag>
+            <span style={{ fontSize: 11, color: "#8c8c8c" }}>
+              {hasCustomerSelected ? t("Khách chọn", lang) : t("Ngẫu nhiên", lang)}
+            </span>
+          </Space>
+        );
+      },
+    },
+    {
+      // Cột "Quà khách chọn" — chỉ hiện khi đơn có giftMode=CUSTOMER_SELECTED.
+      // Liệt kê tên từng quà + số lượng để dễ kiểm tra nhanh khi chốt đơn.
+      key: "giftSelections",
+      title: t("Quà khách chọn", lang),
+      width: 200,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const order = record as unknown as OrderListItem;
+        const items = order.orderItems ?? [];
+        const lines: Array<{ name: string; qty: number; key: string }> = [];
+        for (const it of items) {
+          if (it.giftMode !== "CUSTOMER_SELECTED") continue;
+          for (const g of it.giftSelections ?? []) {
+            if (!g.giftProductId) continue;
+            lines.push({
+              name: g.giftProductName || g.giftProductId,
+              qty: g.quantity,
+              key: `${it.comboId ?? ""}-${g.giftProductId}`,
+            });
+          }
+        }
+        if (lines.length === 0) {
+          return <span style={{ color: "#bfbfbf" }}>-</span>;
+        }
+        return (
+          <Space size={2} orientation="vertical" style={{ lineHeight: 1.4 }}>
+            {lines.map((l) => (
+              <span key={l.key} style={{ fontSize: 12 }}>
+                <GiftOutlined style={{ color: "#fa8c16", marginRight: 4 }} />
+                {l.name} <Tag color="gold" style={{ marginLeft: 2 }}>x{l.qty}</Tag>
+              </span>
+            ))}
+          </Space>
+        );
+      },
     },
     {
       key: "amountMNT",
@@ -435,6 +556,30 @@ function OrdersPageInner() {
       render: (value: unknown) => (
         <StatusBadge status={String(value)} />
       ),
+    },
+    {
+      // Cột "Đã nhập hoàn kho" — chỉ hiển thị khi đang filter RETURNED.
+      // Phân biệt đơn RETURNED + whReturned=false (đang trên đường về) vs
+      // đơn RETURNED + whReturned=true (đã nhập lại kho).
+      key: "whReturned",
+      title: (
+        <Tooltip title={t("Đã nhập lại kho chưa (sau khi khách hoàn trả hàng)", lang)}>
+          <span>{t("Đã nhập hoàn", lang)}</span>
+        </Tooltip>
+      ),
+      dataIndex: "whReturned",
+      width: 130,
+      align: "center" as const,
+      hidden: !showReturnedActions,
+      render: (_: unknown, record: Record<string, unknown>) => {
+        const order = record as unknown as OrderListItem;
+        const returned = order.whReturned === true;
+        return returned ? (
+          <Tag color="success">{t("Đã nhập", lang)}</Tag>
+        ) : (
+          <Tag color="warning">{t("Đang hoàn về", lang)}</Tag>
+        );
+      },
     },
     {
       // Cột "Xác nhận gọi" — chỉ hiển thị khi đang filter CONFIRMED.
@@ -515,7 +660,7 @@ function OrdersPageInner() {
     {
       key: "actions",
       title: t("Thao tác", lang),
-      width: showQuickActions || showShippingActions ? 280 : 100,
+      width: showQuickActions || showShippingActions || showReturnedActions ? 280 : 100,
       align: "center" as const,
       render: (_: unknown, record: Record<string, unknown>) => {
         const order = record as unknown as OrderListItem;
@@ -593,6 +738,49 @@ function OrdersPageInner() {
                   button
                 );
               })}
+            </Space>
+          );
+        }
+
+        // Khi filter theo status=RETURNED, hiển thị nút "Nhập hoàn kho" cho đơn chưa
+        // nhập (whReturned=false). Đơn đã nhập rồi → chỉ hiển thị Tag đã nhập.
+        if (showReturnedActions) {
+          const alreadyReturned = order.whReturned === true;
+          return (
+            <Space
+              size={6}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <Button
+                type="text"
+                icon={<EyeOutlined />}
+                size="small"
+                aria-label={t("Xem chi tiết", lang)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/orders/${order._id}`);
+                }}
+              >
+                {t("Xem", lang)}
+              </Button>
+              {alreadyReturned ? (
+                <Tag color="success">{t("Đã nhập hoàn", lang)}</Tag>
+              ) : (
+                <Button
+                  type="primary"
+                  icon={<RollbackOutlined />}
+                  size="small"
+                  aria-label={t("Nhập hoàn kho", lang)}
+                  loading={returnOrderMutation.isPending && returnTarget?._id === order._id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReturnTarget(order);
+                  }}
+                >
+                  {t("Nhập hoàn kho", lang)}
+                </Button>
+              )}
             </Space>
           );
         }
@@ -688,7 +876,7 @@ function OrdersPageInner() {
         );
       },
     },
-  ], [router, getOrderItemTotals, showQuickActions, showShippingActions, handleQuickAction, toggleConfirmCallMutation, page, pageSize]);
+  ], [router, getOrderItemTotals, showQuickActions, showShippingActions, showReturnedActions, handleQuickAction, toggleConfirmCallMutation, returnOrderMutation, returnTarget, setReturnTarget, page, pageSize]);
 
   const columns = tableColumns;
 
@@ -822,7 +1010,7 @@ function OrdersPageInner() {
             loading={loading}
             pagination={pagination}
             rowKey="_id"
-            scroll={{ x: 2300 }}
+            scroll={{ x: 2500 }}
           />
         )}
       </div>
@@ -851,6 +1039,21 @@ function OrdersPageInner() {
         loading={quickActionLoading}
         onConfirm={handleConfirmQuickAction}
         onCancel={() => setQuickActionTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!returnTarget}
+        title={t("Xác nhận nhập hoàn kho", lang)}
+        content={
+          returnTarget
+            ? `${t("Sau khi xác nhận, hàng hoàn sẽ được cộng lại vào tồn kho cho đơn", lang)} ${returnTarget.orderCode}. ${t("Thao tác này không thể hoàn tác.", lang)}`
+            : ""
+        }
+        type="confirm"
+        confirmText={t("Xác nhận nhập", lang)}
+        loading={returnLoading}
+        onConfirm={handleConfirmReturn}
+        onCancel={() => setReturnTarget(null)}
       />
 
       <OrderStatisticsModal

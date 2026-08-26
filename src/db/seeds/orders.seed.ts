@@ -1249,7 +1249,13 @@ export async function seedOrders() {
     throw new Error("Seed Order: missing required employees");
   }
 
-  // ---- Ensure warehouses (chưa có Warehouse seed riêng) ----------------
+  // ---- Ensure warehouses -----------------------------------------------------
+  // Theo quy tắc nghiệp vụ hiện tại, TẤT CẢ order đều thuộc KHO2 (kho Mông
+  // Cổ, kho chính). KHO1 chỉ phục vụ nhập hàng + chuyển về KHO2. Vì vậy
+  // mọi `warehouseCode: "WH-PVD-01" / "WH-PVD-02"` trong seed spec dưới đây
+  // được remap về KHO2 trước khi tạo Order (xem `resolveWarehouseId`).
+  // Kho `WH-PVD-01` / `WH-PVD-02` cũ không còn dùng cho orders; vẫn giữ
+  // trong DB để không phá vỡ các reference lịch sử (vd: kho vật lý cũ).
   const wh1Id = await ensureWarehouse({
     code: "WH-PVD-01",
     name: "Kho PVD - Tổng",
@@ -1260,6 +1266,16 @@ export async function seedOrders() {
     name: "Kho PVD - Phụ kiện",
     managerId: idOf(empWhA),
   });
+  const kho2Id = idOf(
+    await Warehouse.findOne({ code: "KHO2", isActive: true })
+  );
+  if (!kho2Id) {
+    throw new Error(
+      "Seed Order: KHO2 chưa được seed — chạy `seedWarehouses()` trước."
+    );
+  }
+  // resolveWarehouseId: luôn trỏ về KHO2, bất kể warehouseCode trong spec.
+  const resolveWarehouseId = (_specCode?: string) => kho2Id;
 
   // ---- Resolve Customers (đã tạo ở Lead seed) ---------------------------
   const customerDuongId = idOf(await Customer.findOne({ code: "KH000001" }));
@@ -1398,9 +1414,7 @@ export async function seedOrders() {
       totalAmount: spec.totalAmount,
       currency: spec.currency,
       estimatedWeight: spec.estimatedWeight,
-      warehouseId: spec.warehouseCode
-        ? (await Warehouse.findOne({ code: spec.warehouseCode }))?._id
-        : undefined,
+      warehouseId: resolveWarehouseId(spec.warehouseCode),
       marketingEmployeeId: (
         await Employee.findOne({ employeeCode: spec.marketingEmployeeCode })
       )?._id,

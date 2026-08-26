@@ -160,6 +160,17 @@ export interface OrderListItem {
   isReconciled?: boolean;
   reconciledAt?: string;
   reconciledBy?: string;
+  /**
+   * Hàng hoàn đã được nhập lại kho chưa (chỉ áp dụng khi status=RETURNED).
+   * Default `false` (= hàng đang trên đường về kho, "Đang hoàn về").
+   * Set `true` khi user click "Hoàn kho" ở /orders/[id] hoặc
+   * "Nhập hoàn kho" ở /orders?status=RETURNED.
+   */
+  whReturned?: boolean;
+  /** Thời điểm nhập hoàn kho (ISO string). */
+  returnedToStockAt?: string;
+  /** ID nhân viên nhập hoàn kho. */
+  returnedToStockBy?: string;
 
   // Sprint 8.x: Thời gian đơn hàng
   /** Thời gian khách đặt hàng (từ Landing page hoặc dữ liệu dán) */

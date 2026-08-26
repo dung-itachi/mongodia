@@ -17,7 +17,7 @@
  *   └──────────────────────────┘
  */
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Button, Empty, Skeleton, Tag, Spin } from "antd";
 import {
   PlusOutlined,
@@ -41,6 +41,8 @@ export type WarehouseOverviewCardProps = {
   items: WarehouseOverviewItem[];
   loading?: boolean;
   activeWarehouseId?: string;
+  /** Mã kho hard-coded (KHO1 / KHO2). Dùng để label và làm dep cho variant breakdown fetch. */
+  warehouseCode?: string;
   variant?: "full" | "source";
 };
 
@@ -69,6 +71,7 @@ function WarehouseOverviewCardInner({
   items,
   loading = false,
   activeWarehouseId,
+  warehouseCode,
   variant = "full",
 }: WarehouseOverviewCardProps) {
   const lang = useLanguageStore((s) => s.language);
@@ -79,6 +82,14 @@ function WarehouseOverviewCardInner({
 
   // Fetch variant breakdown lazily per product so the card shows
   // stock-per-SKU without forcing the user to open the drawer.
+  // Dùng 1 key ổn định làm dep để React không cảnh báo "deps changed size"
+  // khi parent truyền/nhận `warehouseCode` không nhất quán giữa các route.
+  const filterKey = useMemo(
+    () =>
+      `${activeWarehouseId ?? ""}|${warehouseCode ?? ""}|${items.length}`,
+    [activeWarehouseId, warehouseCode, items]
+  );
+
   useEffect(() => {
     let cancelled = false;
     if (items.length === 0) return;
@@ -88,8 +99,15 @@ function WarehouseOverviewCardInner({
         if (variantsMap[item.productId]) continue;
         setVariantsLoading((prev) => ({ ...prev, [item.productId]: true }));
         try {
+          const params = new URLSearchParams();
+          if (activeWarehouseId) {
+            params.set("warehouseId", activeWarehouseId);
+          } else if (warehouseCode) {
+            params.set("warehouseCode", warehouseCode);
+          }
+          const queryString = params.toString();
           const url = `/api/warehouses/inventory-overview/${item.productId}/variants${
-            activeWarehouseId ? `?warehouseId=${activeWarehouseId}` : ""
+            queryString ? `?${queryString}` : ""
           }`;
           const res = await fetch(url);
           const json = await res.json();
@@ -118,9 +136,8 @@ function WarehouseOverviewCardInner({
     return () => {
       cancelled = true;
     };
-    // re-fetch when active warehouse changes so variant stock reflects filter
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, activeWarehouseId]);
+  }, [filterKey]);
 
   // Badge tồn kho: giúp user nhìn nhanh SP nào hết hàng / tồn thấp
   const renderStockBadge = (stock: number) => {
@@ -167,7 +184,11 @@ function WarehouseOverviewCardInner({
               <div className={styles["wh-item-stock"]}>{item.stock}</div>
               <div className={styles["wh-item-stock-label"]}>
                 {t("TỒN KHO", lang)}
-                {activeWarehouseId ? ` (${t("KHO NÀY", lang)})` : ` (${t("TẤT CẢ KHO", lang)})`}
+                {activeWarehouseId
+                  ? ` (${t("KHO NÀY", lang)})`
+                  : warehouseCode
+                    ? ` (${t("KHO " + warehouseCode, lang)})`
+                    : ` (${t("TẤT CẢ KHO", lang)})`}
               </div>
 
               <div className={styles["wh-item-stats"]}>
@@ -255,6 +276,8 @@ function WarehouseOverviewCardInner({
       <WarehouseProductDetailDrawer
         open={!!detailTarget}
         product={detailTarget}
+        activeWarehouseId={activeWarehouseId}
+        warehouseCode={warehouseCode}
         onClose={() => setDetailTarget(null)}
       />
     </>

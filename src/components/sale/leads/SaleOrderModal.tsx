@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Modal, Select, Spin, Typography } from "antd";
-import { SwapOutlined } from "@ant-design/icons";
+import { Alert, Modal, Select, Spin, Tag, Typography } from "antd";
+import { GiftOutlined, SwapOutlined } from "@ant-design/icons";
 import OrderProductDetail, { createOrderItemFromCombo } from "@/components/order/OrderProductDetail";
 import { useComboList, type ComboListItem } from "@/hooks/useCombos";
 import { useProductWithVariants } from "@/hooks/useProductVariants";
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import {
   validateOrderItem,
+  getTotalGifts,
   type OrderItem,
   type ProductVariantSelection,
 } from "@/types/variant";
@@ -238,6 +239,64 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
       </div>
       {!combosLoading && combos.length === 0 && <Alert type="warning" title={t("Không có combo đang hoạt động cho sản phẩm của khách hàng này.", lang)} showIcon />}
       {item && !validation.isValid && <Alert type="warning" title={validation.detailsError || validation.giftsError || t("Thông tin đơn hàng chưa hợp lệ.", lang)} showIcon style={{ marginBottom: 12 }} />}
+      {item && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: 12,
+            background: "#fafafa",
+            border: "1px solid #f0f0f0",
+            borderRadius: 6,
+          }}
+        >
+          <Typography.Text strong>
+            <GiftOutlined style={{ marginRight: 6, color: "#fa8c16" }} />
+            {t("Tổng quan quà tặng", lang)}
+          </Typography.Text>
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 12, color: "#595959" }}>
+              <Typography.Text>
+                {t("Combo", lang)}: <strong>{item.comboName}</strong> ({item.comboCode}) ·{" "}
+                {t("SL combo", lang)}: <strong>{item.comboQuantity}</strong> ·{" "}
+                {t("Quà/combo", lang)}: <strong>{item.giftQuantity}</strong> ·{" "}
+                {t("Tổng quà", lang)}:{" "}
+                <Tag color={item.giftMode === "CUSTOMER_SELECTED" ? "blue" : "purple"} style={{ marginInline: 4 }}>
+                  {getTotalGifts(item)}
+                </Tag>
+                <Typography.Text type="secondary">
+                  ({item.giftMode === "CUSTOMER_SELECTED" ? t("Khách chọn", lang) : t("Ngẫu nhiên", lang)})
+                </Typography.Text>
+              </Typography.Text>
+            </div>
+            {item.giftMode === "CUSTOMER_SELECTED" ? (
+              (item.giftSelections ?? []).length === 0 ? (
+                <Typography.Text type="secondary" style={{ display: "block", marginTop: 6, fontSize: 12 }}>
+                  {t("Chưa chọn quà chi tiết cho khách.", lang)}
+                </Typography.Text>
+              ) : (
+                <ul style={{ margin: "6px 0 0 0", padding: 0, listStyle: "none" }}>
+                  {(item.giftSelections ?? []).map((g) => (
+                    <li
+                      key={`${item.comboId}-${g.giftProductId ?? Math.random()}`}
+                      style={{ fontSize: 13, lineHeight: 1.7 }}
+                    >
+                      <GiftOutlined style={{ color: "#fa8c16", marginRight: 6 }} />
+                      <span>{g.giftProductName || g.giftProductId || t("Chưa chọn quà", lang)}</span>
+                      <Tag color="gold" style={{ marginLeft: 6 }}>
+                        x{g.quantity}
+                      </Tag>
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : (
+              <Typography.Text type="secondary" style={{ display: "block", marginTop: 6, fontSize: 12 }}>
+                {t("Quà sẽ được kho chọn ngẫu nhiên theo tồn kho.", lang)}
+              </Typography.Text>
+            )}
+          </div>
+        </div>
+      )}
       {productLoading ? <Spin /> : item && <OrderProductDetail items={items} product={product} onChange={setItems} disabled={loading} />}
     </Modal>
   );

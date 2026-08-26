@@ -6,7 +6,7 @@
  * Kho chính — track đầy đủ:
  *  - Tồn kho, đang giao, đang hoàn về, đã giao TC, đã hoàn kho, tổng nhập
  *
- * Tương tự /warehouses nhưng filter areaCountryCode="MN".
+ * Tương tự /warehouses nhưng filter warehouseCode="KHO2".
  */
 
 import { useState, useMemo } from "react";
@@ -43,20 +43,18 @@ export default function WarehousesMongoliaPage() {
     loading: overviewLoading,
     refetch: refetchOverview,
   } = useWarehouseInventoryOverview({
-    areaCountryCode: "MN",
+    warehouseCode: "KHO2",
     warehouseId: overviewWarehouseId,
   });
 
+  // Chỉ giữ lại KHO2 trong dropdown (page này đã cố định warehouseCode=KHO2
+  // ở API layer — đây là UX phụ cho user muốn xem chi tiết 1 kho con nếu sau này
+  // có nhiều kho MN).
   const mongoliaWarehouses = useMemo(
     () =>
       warehouses.filter((w: { code?: string; name?: string }) => {
         const code = String(w.code ?? "").toUpperCase();
-        const name = String(w.name ?? "").toLowerCase();
-        return (
-          code.startsWith("MN") ||
-          name.includes("mông cổ") ||
-          name.includes("mongolia")
-        );
+        return code.startsWith("KHO2") || code === "KHO2";
       }),
     [warehouses]
   );
@@ -127,6 +125,7 @@ export default function WarehousesMongoliaPage() {
             items={filteredOverviewItems}
             loading={overviewLoading}
             activeWarehouseId={overviewWarehouseId}
+            warehouseCode="KHO2"
             variant="full"
           />
         </div>

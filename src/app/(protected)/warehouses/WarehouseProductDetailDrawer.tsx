@@ -35,6 +35,9 @@ export type WarehouseProductDetailDrawerProps = {
   open: boolean;
   product: WarehouseOverviewItem | null;
   onClose: () => void;
+  activeWarehouseId?: string;
+  /** Mã kho hard-coded (KHO1 / KHO2) — dùng để filter breakdown. */
+  warehouseCode?: string;
 };
 
 const TONE: Record<string, string> = {
@@ -50,9 +53,17 @@ export default function WarehouseProductDetailDrawer({
   open,
   product,
   onClose,
+  activeWarehouseId,
+  warehouseCode,
 }: WarehouseProductDetailDrawerProps) {
   const productId = open && product ? product.productId : null;
-  const { data, loading, error } = useWarehouseProductVariants(productId);
+  const { data, loading, error } = useWarehouseProductVariants(
+    productId,
+    {
+      warehouseId: activeWarehouseId,
+      warehouseCode,
+    }
+  );
 
   useEffect(() => {
     if (!open) return;

@@ -6,8 +6,6 @@ export function mapWarehouse(warehouse: any) {
 
     name: warehouse.name,
 
-    areaId: warehouse.areaId,
-
     address: warehouse.address,
 
     managerId: warehouse.managerId,

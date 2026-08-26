@@ -35,7 +35,6 @@ import Product from "@/models/Product";
 import WarehouseInventory from "@/models/WarehouseInventory";
 import { InventoryHistory } from "@/models/InventoryHistory";
 import ProductVariant from "@/models/ProductVariant";
-import Area from "@/models/Area";
 import Warehouse from "@/models/Warehouse";
 import { success, error as errorResponse } from "@/utils/response";
 
@@ -85,26 +84,25 @@ export async function GET(request: Request) {
     // ---- Filter theo kho (optional) ----
     const { searchParams } = new URL(request.url);
     const warehouseIdParam = searchParams.get("warehouseId")?.trim() || "";
-    const areaCountryCodeParam = searchParams.get("areaCountryCode")?.trim().toUpperCase() || "";
+    const warehouseCodeParam = searchParams.get("warehouseCode")?.trim().toUpperCase() || "";
 
     // Resolve scoped warehouse IDs.
     // - warehouseId wins if both supplied.
-    // - areaCountryCode resolves to all warehouses in Areas with that
-    //   countryCode (e.g. "CN" for China, "MN" for Mongolia).
+    // - warehouseCode resolves to the matching KHO1 / KHO2.
+    //   (Warehouses are hard-coded by code — KHÔNG dùng Area để filter.)
     let scopedWarehouseIds: mongoose.Types.ObjectId[] | null = null;
     if (warehouseIdParam && mongoose.Types.ObjectId.isValid(warehouseIdParam)) {
       scopedWarehouseIds = [new mongoose.Types.ObjectId(warehouseIdParam)];
-    } else if (areaCountryCodeParam) {
-      const areas = await Area.find({ countryCode: areaCountryCodeParam })
-        .select("_id")
-        .lean();
-      const areaIds = areas.map((a) => a._id);
-      const ws = await Warehouse.find({ areaId: { $in: areaIds } })
+    } else if (warehouseCodeParam) {
+      const ws = await Warehouse.find({
+        code: warehouseCodeParam,
+        isActive: true,
+      })
         .select("_id")
         .lean();
       scopedWarehouseIds = ws.map((w) => w._id as mongoose.Types.ObjectId);
       if (scopedWarehouseIds.length === 0) {
-        // No warehouses in this country yet — short-circuit with empty result.
+        // No warehouses match — short-circuit with empty result.
         return success({
           totals: {
             productCount: 0,

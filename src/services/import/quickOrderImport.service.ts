@@ -29,6 +29,7 @@ import { Types } from "mongoose";
 import Counter from "@/models/Counter";
 import Customer, { ICustomer } from "@/models/Customer";
 import Setting from "@/models/Setting";
+import ProductVariant from "@/models/ProductVariant";
 
 import { OrderSource } from "@/constants/orderStatus";
 import { CustomerStatus } from "@/types/customer";
@@ -258,6 +259,44 @@ export async function importQuickOrders(
               )
             : undefined;
 
+          // ── Resolve variant cho details[] ─────────────────────────────────
+          // Trước đây gửi details:[] → orderItemsToDemands không build demand
+          // → reserveStock không chạy → ship fail "Đang giữ: 0".
+          // Quick Import không nhận variant từ paste text nên chọn variant
+          // đầu tiên (active) của product làm đại diện. Khi sau này UI có
+          // dropdown variant, có thể thay bằng variant user chọn.
+          const packageQuantity = 1; // QuickOrderComboRef không có packageQuantity
+          const variant = row.editableProductId
+            ? await ProductVariant.findOne({
+                productId: new Types.ObjectId(row.editableProductId),
+                isActive: true,
+              })
+                .select("_id variantValues")
+                .lean()
+            : null;
+          const details: Array<{
+            variantId: string;
+            attributes: Array<{ optionId: string; valueId: string }>;
+            quantity: number;
+          }> = [];
+          if (variant) {
+            const requiredQty = row.editableQuantity * packageQuantity;
+            const attrs =
+              variant.variantValues && variant.variantValues.length >= 2
+                ? [
+                    {
+                      optionId: variant.variantValues[0].toString(),
+                      valueId: variant.variantValues[1].toString(),
+                    },
+                  ]
+                : [];
+            details.push({
+              variantId: variant._id.toString(),
+              attributes: attrs,
+              quantity: requiredQty,
+            });
+          }
+
           // Create order using orderService
           const order = await orderService.create(
             {
@@ -286,12 +325,12 @@ export async function importQuickOrders(
                   comboName: combo?.name || row.editableProductId || "",
                   comboCode: combo?.code || "",
                   comboQuantity: row.editableQuantity,
-                  packageQuantity: 1,
+                  packageQuantity,
                   giftQuantity: combo?.giftQuantity || 0,
                   sellingPrice: row.editablePrice,
                   discount: 0,
                   subtotal: row.editablePrice * row.editableQuantity,
-                  details: [],
+                  details,
                   giftMode: combo?.giftQuantity ? "RANDOM" : "RANDOM",
                   giftSelections: [],
                   productName: product?.name || row.editableProductId || "",

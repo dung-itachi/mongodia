@@ -338,7 +338,11 @@ function buildInventoryFilter(
       warehouseId,
       itemType: "PRODUCT",
       variantId: toObjectId(item.productVariantId),
-      productId: null,
+      // Khi có variantId, KHÔNG filter productId: vì seed legacy có cả
+      // productId + variantId trong cùng row. Filter productId: null ở đây
+      // sẽ miss legacy rows và reserveStock fail "availableQuantity = 0"
+      // dù tồn thực sự đang có (xem bug report KHO2 seed reserve).
+      productId: { $ne: null } as unknown as null,
       giftId: null,
       isActive: true,
     };

@@ -5,7 +5,12 @@ export interface IWarehouse {
 
   name: string;
 
-  areaId: Types.ObjectId;
+  /**
+   * Optional `areaId` — kept on the model purely for backwards-compat with
+   * older docs. Warehouses are NOT scoped by Area (Area chỉ dùng cho nhân
+   * viên). Use `code` (KHO1 / KHO2) to address a warehouse.
+   */
+  areaId?: Types.ObjectId | null;
 
   address?: string;
 
@@ -35,7 +40,8 @@ const WarehouseSchema = new Schema<IWarehouse>(
     areaId: {
       type: Schema.Types.ObjectId,
       ref: "Area",
-      required: true,
+      required: false,
+      default: null,
     },
 
     address: {
@@ -66,7 +72,6 @@ const WarehouseSchema = new Schema<IWarehouse>(
 );
 
 // `code` đã được đánh unique ở field def — không cần khai báo lại ở đây.
-WarehouseSchema.index({ areaId: 1 });
 WarehouseSchema.index({ managerId: 1 });
 
 const Warehouse: Model<IWarehouse> =

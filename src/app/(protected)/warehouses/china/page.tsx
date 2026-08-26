@@ -12,7 +12,7 @@
  * vì đó là nghiệp vụ của kho chính (Mông Cổ).
  *
  * Layout tương tự /warehouses nhưng dùng variant="source" cho stats grid
- * và filter areaCountryCode="CN".
+ * và filter warehouseCode="KHO1".
  */
 
 import { useState, useMemo } from "react";
@@ -49,23 +49,18 @@ export default function WarehousesChinaPage() {
     loading: overviewLoading,
     refetch: refetchOverview,
   } = useWarehouseInventoryOverview({
-    areaCountryCode: "CN",
+    warehouseCode: "KHO1",
     warehouseId: overviewWarehouseId,
   });
 
-  // Chỉ giữ lại các kho thuộc China trong dropdown (phòng khi user có kho MN).
+  // Chỉ giữ lại KHO1 trong dropdown (page này đã cố định warehouseCode=KHO1
+  // ở API layer — đây là UX phụ cho user muốn xem chi tiết 1 kho con nếu sau này
+  // có nhiều kho CN).
   const chinaWarehouses = useMemo(
     () =>
       warehouses.filter((w: { code?: string; name?: string }) => {
         const code = String(w.code ?? "").toUpperCase();
-        const name = String(w.name ?? "").toLowerCase();
-        // Best-effort heuristic — backend luôn filter theo areaCountryCode,
-        // đây chỉ là UX phụ.
-        return (
-          code.startsWith("CN") ||
-          name.includes("trung quốc") ||
-          name.includes("china")
-        );
+        return code.startsWith("KHO1") || code === "KHO1";
       }),
     [warehouses]
   );
@@ -136,6 +131,7 @@ export default function WarehousesChinaPage() {
             items={filteredOverviewItems}
             loading={overviewLoading}
             activeWarehouseId={overviewWarehouseId}
+            warehouseCode="KHO1"
             variant="source"
           />
         </div>

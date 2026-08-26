@@ -185,6 +185,16 @@ export interface OrderResponse {
   reconciledAt?: string;
   /** Người thực hiện đối soát. */
   reconciledBy?: string;
+  /**
+   * Hàng hoàn đã được nhập lại kho chưa (chỉ áp dụng khi status=RETURNED).
+   * `false` = hàng đang trên đường về kho (UI: "Đang hoàn về").
+   * `true`  = hàng đã được nhập lại kho (UI: "Đã hoàn kho").
+   */
+  whReturned?: boolean;
+  /** Thời điểm nhập hoàn kho. */
+  returnedToStockAt?: string;
+  /** ID nhân viên nhập hoàn kho. */
+  returnedToStockBy?: string;
 
   // ---- Classification ----------------------------------------------
   orderType: OrderType;
@@ -483,6 +493,10 @@ export function mapOrder(order: IOrder): OrderResponse {
     isReconciled: order.isReconciled,
     reconciledAt: order.reconciledAt?.toISOString(),
     reconciledBy: order.reconciledBy?.toString(),
+    // Hàng hoàn đã nhập lại kho chưa (chỉ có ý nghĩa khi status=RETURNED).
+    whReturned: order.whReturned ?? false,
+    returnedToStockAt: order.returnedToStockAt?.toISOString(),
+    returnedToStockBy: order.returnedToStockBy?.toString(),
     orderType: order.orderType as OrderType,
     orderTypeLabel: ORDER_TYPE_LABELS[order.orderType as OrderType],
     orderSource: order.orderSource as OrderSource,

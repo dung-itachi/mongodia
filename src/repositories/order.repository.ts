@@ -159,6 +159,9 @@ function mapToOrder(doc: IOrder) {
     isActive: doc.isActive,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
+    whReturned: doc.whReturned,
+    returnedToStockAt: doc.returnedToStockAt?.toISOString(),
+    returnedToStockBy: doc.returnedToStockBy?.toString(),
   };
 }
 

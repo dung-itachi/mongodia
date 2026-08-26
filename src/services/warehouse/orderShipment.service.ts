@@ -967,6 +967,20 @@ export class OrderShipmentService {
         { session }
       );
 
+      // ── 5. Mark order đã được nhập hoàn kho ──────────────────────────────
+      // Set `whReturned = true` để UI Overview bucket = "returned" (Đã hoàn
+      // kho) thay vì "returning" (Đang hoàn về). Phải làm CUỐI transaction
+      // (sau khi returnStock + history đã OK) để rollback nếu có lỗi.
+      await Order.findByIdAndUpdate(
+        input.orderId,
+        {
+          whReturned: true,
+          returnedToStockAt: new Date(),
+          returnedToStockBy: employeeId,
+        },
+        { session }
+      );
+
       if (ownsSession) {
         await session.commitTransaction();
       }

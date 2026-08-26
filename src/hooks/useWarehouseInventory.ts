@@ -147,6 +147,10 @@ export function useWarehouseInventory({ filters }: UseWarehouseInventoryOptions)
     queryFn: () => fetchInventory(filters),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+    // Bỏ qua fetch khi không có warehouseId (vd: parent chưa load order xong).
+    // Trước đây vẫn fetch với warehouseId="" → backend trả 403 nếu user không phải
+    // admin, gây log nhiễu `[object Object]` ở những chỗ serialize sai.
+    enabled: !!filters.warehouseId,
   });
 
   const items = useMemo(() => {
