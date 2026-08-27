@@ -15,6 +15,7 @@ import { Lead } from "@/models/Lead";
 import { LeadStatus } from "@/constants/leadStatus";
 import { LeadAction } from "@/constants/leadAction";
 import { LeadHistory } from "@/models/LeadHistory";
+import { Order } from "@/models/Order";
 import { leadRepository } from "@/repositories/lead.repository";
 import { leadService } from "@/services/lead.service";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_ORDER } from "@/constants/leadStatus";
@@ -546,102 +547,128 @@ export class MarketingDispatchService {
       Lead.countDocuments(filter),
     ]);
 
+    // Sprint 8.x: Batch lookup Order.status cho các Lead đã convert để hiển thị
+    // cột "Tình trạng đơn hàng" ở /leads. Tránh N+1 query.
+    const convertedOrderIds = items
+      .map((doc) => doc.convertedOrderId)
+      .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
+    const orderDocs = convertedOrderIds.length
+      ? await Order.find({ _id: { $in: convertedOrderIds } })
+          .select("_id orderCode status")
+          .lean()
+      : [];
+    const orderStatusMap = new Map<string, { orderCode: string; status: string }>();
+    for (const o of orderDocs as Array<{
+      _id: mongoose.Types.ObjectId;
+      orderCode?: string;
+      status?: string;
+    }>) {
+      orderStatusMap.set(o._id.toString(), {
+        orderCode: o.orderCode ?? "",
+        status: o.status ?? "",
+      });
+    }
+
     return {
-      items: items.map((doc) => ({
-        _id: doc._id.toString(),
-        leadCode: doc.leadCode,
-        customerName: doc.customerName,
-        phone: doc.phone,
-        phone2: doc.phone2,
-        email: doc.email,
-        facebookLink: doc.facebookLink,
-        address: doc.address,
-        sourceType: doc.sourceType,
-        status: doc.status,
-        product: doc.productId && typeof doc.productId === "object" && "name" in doc.productId
-          ? {
-              _id: (doc.productId as { _id: { toString(): string } })._id.toString(),
-              code: (doc.productId as { code: string }).code,
-              name: (doc.productId as { name: string }).name,
-            }
-          : undefined,
-        combo: doc.comboId && typeof doc.comboId === "object" && "name" in doc.comboId
-          ? {
-              _id: (doc.comboId as { _id: { toString(): string } })._id.toString(),
-              code: (doc.comboId as { code: string }).code,
-              name: (doc.comboId as { name: string }).name,
-              sellingPrice:
-                typeof (doc.comboId as { sellingPrice?: unknown }).sellingPrice === "number"
-                  ? (doc.comboId as { sellingPrice: number }).sellingPrice
-                  : undefined,
-              packageQuantity:
-                typeof (doc.comboId as { packageQuantity?: unknown }).packageQuantity === "number"
-                  ? (doc.comboId as { packageQuantity: number }).packageQuantity
-                  : 1,
-            }
-          : undefined,
-        quantity: doc.quantity,
-        unitPriceMNT: doc.unitPriceMNT,
-        exchangeRate: doc.exchangeRate,
-        marketingEmployeeId: doc.marketingEmployeeId
-          ? {
-              _id: (doc.marketingEmployeeId as { _id: { toString(): string } })._id.toString(),
-              employeeCode: (doc.marketingEmployeeId as { employeeCode: string }).employeeCode,
-              name: (doc.marketingEmployeeId as { fullName: string }).fullName,
-            }
-          : undefined,
-        saleEmployeeId: doc.saleEmployeeId
-          ? {
-              _id: (doc.saleEmployeeId as { _id: { toString(): string } })._id.toString(),
-              employeeCode: (doc.saleEmployeeId as { employeeCode: string }).employeeCode,
-              name: (doc.saleEmployeeId as { fullName: string }).fullName,
-            }
-          : undefined,
-        // Sprint 8.7 — variant details snapshot đã có sẵn trên doc (Mixed type)
-        variantDetails: Array.isArray(doc.variantDetails)
-          ? (doc.variantDetails as Array<Record<string, unknown>>).map((vd) => ({
-              quantity: typeof vd.quantity === "number" ? vd.quantity : 0,
-              attributes: Array.isArray(vd.attributes)
-                ? (vd.attributes as Array<Record<string, unknown>>).map((a) => ({
-                    optionId: a.optionId?.toString() ?? "",
-                    valueId: a.valueId?.toString() ?? "",
-                    optionName: typeof a.optionName === "string" ? a.optionName : undefined,
-                    valueName: typeof a.valueName === "string" ? a.valueName : undefined,
-                  }))
-                : [],
-              variantId: vd.variantId?.toString() ?? undefined,
-            }))
-          : undefined,
-        giftMode: doc.giftMode === "CUSTOMER_SELECTED" ? "CUSTOMER_SELECTED" : doc.giftMode === "RANDOM" ? "RANDOM" : undefined,
-        giftSelections: Array.isArray(doc.giftSelections)
-          ? (doc.giftSelections as Array<Record<string, unknown>>).map((g) => ({
-              giftProductId: g.giftProductId?.toString() ?? "",
-              giftProductName: typeof g.giftProductName === "string" ? g.giftProductName : undefined,
-              quantity: typeof g.quantity === "number" ? g.quantity : 0,
-            }))
-          : undefined,
-        assignedAt: doc.assignedAt,
-        isConverted: doc.isConverted,
-        isDuplicate: doc.isDuplicate,
-        noAnswerCount: noAnswerMap.get(doc._id.toString()) || 0,
-        facebookPage: doc.facebookPageId && typeof doc.facebookPageId === "object" && "name" in doc.facebookPageId
-          ? {
-              _id: (doc.facebookPageId as { _id: { toString(): string } })._id.toString(),
-              code: (doc.facebookPageId as { code: string }).code,
-              name: (doc.facebookPageId as { name: string }).name,
-            }
-          : undefined,
-        note: doc.note,
-        // Sprint 8.x — additional dates
-        leadDate: doc.leadDate ?? undefined,
-        orderDate: doc.orderDate ?? undefined,
-        receivedDate: doc.receivedDate ?? undefined,
-        // Convert info
-        convertedOrderId: doc.convertedOrderId?.toString() ?? undefined,
-        convertedAt: doc.convertedAt ?? undefined,
-        createdAt: doc.createdAt,
-        updatedAt: doc.updatedAt,
-      })),
+      items: items.map((doc) => {
+        const orderInfo = doc.convertedOrderId
+          ? orderStatusMap.get(doc.convertedOrderId.toString())
+          : undefined;
+        return {
+          _id: doc._id.toString(),
+          leadCode: doc.leadCode,
+          customerName: doc.customerName,
+          phone: doc.phone,
+          phone2: doc.phone2,
+          email: doc.email,
+          facebookLink: doc.facebookLink,
+          address: doc.address,
+          sourceType: doc.sourceType,
+          status: doc.status,
+          product: doc.productId && typeof doc.productId === "object" && "name" in doc.productId
+            ? {
+                _id: (doc.productId as { _id: { toString(): string } })._id.toString(),
+                code: (doc.productId as { code: string }).code,
+                name: (doc.productId as { name: string }).name,
+              }
+            : undefined,
+          combo: doc.comboId && typeof doc.comboId === "object" && "name" in doc.comboId
+            ? {
+                _id: (doc.comboId as { _id: { toString(): string } })._id.toString(),
+                code: (doc.comboId as { code: string }).code,
+                name: (doc.comboId as { name: string }).name,
+                sellingPrice:
+                  typeof (doc.comboId as { sellingPrice?: unknown }).sellingPrice === "number"
+                    ? (doc.comboId as { sellingPrice: number }).sellingPrice
+                    : undefined,
+                packageQuantity:
+                  typeof (doc.comboId as { packageQuantity?: unknown }).packageQuantity === "number"
+                    ? (doc.comboId as { packageQuantity: number }).packageQuantity
+                    : 1,
+              }
+            : undefined,
+          quantity: doc.quantity,
+          unitPriceMNT: doc.unitPriceMNT,
+          exchangeRate: doc.exchangeRate,
+          marketingEmployeeId: doc.marketingEmployeeId
+            ? {
+                _id: (doc.marketingEmployeeId as { _id: { toString(): string } })._id.toString(),
+                employeeCode: (doc.marketingEmployeeId as { employeeCode: string }).employeeCode,
+                name: (doc.marketingEmployeeId as { fullName: string }).fullName,
+              }
+            : undefined,
+          saleEmployeeId: doc.saleEmployeeId
+            ? {
+                _id: (doc.saleEmployeeId as { _id: { toString(): string } })._id.toString(),
+                employeeCode: (doc.saleEmployeeId as { employeeCode: string }).employeeCode,
+                name: (doc.saleEmployeeId as { fullName: string }).fullName,
+              }
+            : undefined,
+          variantDetails: Array.isArray(doc.variantDetails)
+            ? (doc.variantDetails as Array<Record<string, unknown>>).map((vd) => ({
+                quantity: typeof vd.quantity === "number" ? vd.quantity : 0,
+                attributes: Array.isArray(vd.attributes)
+                  ? (vd.attributes as Array<Record<string, unknown>>).map((a) => ({
+                      optionId: a.optionId?.toString() ?? "",
+                      valueId: a.valueId?.toString() ?? "",
+                      optionName: typeof a.optionName === "string" ? a.optionName : undefined,
+                      valueName: typeof a.valueName === "string" ? a.valueName : undefined,
+                    }))
+                  : [],
+                variantId: vd.variantId?.toString() ?? undefined,
+              }))
+            : undefined,
+          giftMode: doc.giftMode === "CUSTOMER_SELECTED" ? "CUSTOMER_SELECTED" : doc.giftMode === "RANDOM" ? "RANDOM" : undefined,
+          giftSelections: Array.isArray(doc.giftSelections)
+            ? (doc.giftSelections as Array<Record<string, unknown>>).map((g) => ({
+                giftProductId: g.giftProductId?.toString() ?? "",
+                giftProductName: typeof g.giftProductName === "string" ? g.giftProductName : undefined,
+                quantity: typeof g.quantity === "number" ? g.quantity : 0,
+              }))
+            : undefined,
+          assignedAt: doc.assignedAt,
+          isConverted: doc.isConverted,
+          isDuplicate: doc.isDuplicate,
+          noAnswerCount: noAnswerMap.get(doc._id.toString()) || 0,
+          facebookPage: doc.facebookPageId && typeof doc.facebookPageId === "object" && "name" in doc.facebookPageId
+            ? {
+                _id: (doc.facebookPageId as { _id: { toString(): string } })._id.toString(),
+                code: (doc.facebookPageId as { code: string }).code,
+                name: (doc.facebookPageId as { name: string }).name,
+              }
+            : undefined,
+          note: doc.note,
+          leadDate: doc.leadDate ?? undefined,
+          orderDate: doc.orderDate ?? undefined,
+          receivedDate: doc.receivedDate ?? undefined,
+          convertedOrderId: doc.convertedOrderId?.toString() ?? undefined,
+          convertedAt: doc.convertedAt ?? undefined,
+          orderCode: orderInfo?.orderCode,
+          orderStatus: orderInfo?.status,
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+        };
+      }),
       total,
       page,
       limit,
@@ -699,33 +726,62 @@ export class MarketingDispatchService {
       Lead.countDocuments(filter),
     ]);
 
+    // Sprint 8.x: Batch lookup Order.status cho các Lead đã convert để hiển thị
+    // cột "Tình trạng đơn hàng" ở /marketing/orders.
+    const convertedOrderIds = items
+      .map((doc) => doc.convertedOrderId)
+      .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
+    const orderDocs = convertedOrderIds.length
+      ? await Order.find({ _id: { $in: convertedOrderIds } })
+          .select("_id orderCode status")
+          .lean()
+      : [];
+    const orderStatusMap = new Map<string, { orderCode: string; status: string }>();
+    for (const o of orderDocs as Array<{
+      _id: mongoose.Types.ObjectId;
+      orderCode?: string;
+      status?: string;
+    }>) {
+      orderStatusMap.set(o._id.toString(), {
+        orderCode: o.orderCode ?? "",
+        status: o.status ?? "",
+      });
+    }
+
     return {
-      items: items.map((doc) => ({
-        _id: doc._id.toString(),
-        leadCode: doc.leadCode,
-        customerName: doc.customerName,
-        phone: doc.phone,
-        address: doc.address,
-        sourceType: doc.sourceType,
-        status: doc.status,
-        product: doc.product,
-        combo: doc.combo,
-        quantity: doc.quantity,
-        unitPriceMNT: doc.unitPriceMNT,
-        exchangeRate: doc.exchangeRate,
-        saleEmployeeId: doc.saleEmployeeId,
-        isConverted: doc.isConverted,
-        convertedOrderId: doc.convertedOrderId?.toString(),
-        facebookPage: doc.facebookPageId && typeof doc.facebookPageId === "object" && "name" in doc.facebookPageId
-          ? {
-              _id: (doc.facebookPageId as { _id: { toString(): string } })._id.toString(),
-              code: (doc.facebookPageId as { code: string }).code,
-              name: (doc.facebookPageId as { name: string }).name,
-            }
-          : undefined,
-        createdAt: doc.createdAt,
-        updatedAt: doc.updatedAt,
-      })),
+      items: items.map((doc) => {
+        const orderInfo = doc.convertedOrderId
+          ? orderStatusMap.get(doc.convertedOrderId.toString())
+          : undefined;
+        return {
+          _id: doc._id.toString(),
+          leadCode: doc.leadCode,
+          customerName: doc.customerName,
+          phone: doc.phone,
+          address: doc.address,
+          sourceType: doc.sourceType,
+          status: doc.status,
+          product: doc.product,
+          combo: doc.combo,
+          quantity: doc.quantity,
+          unitPriceMNT: doc.unitPriceMNT,
+          exchangeRate: doc.exchangeRate,
+          saleEmployeeId: doc.saleEmployeeId,
+          isConverted: doc.isConverted,
+          convertedOrderId: doc.convertedOrderId?.toString(),
+          facebookPage: doc.facebookPageId && typeof doc.facebookPageId === "object" && "name" in doc.facebookPageId
+            ? {
+                _id: (doc.facebookPageId as { _id: { toString(): string } })._id.toString(),
+                code: (doc.facebookPageId as { code: string }).code,
+                name: (doc.facebookPageId as { name: string }).name,
+              }
+            : undefined,
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+          orderCode: orderInfo?.orderCode,
+          orderStatus: orderInfo?.status,
+        };
+      }),
       total,
       page,
       limit,

@@ -6,9 +6,14 @@
  * the global baseline when aggregating order revenue: `combo total +
  * shipping fee`.
  *
- * Authorization (Phase 8 — Permission Audit):
- *   - GET requires `system-settings.view` (or legacy `settings.shipping_fee.view`)
+ * Authorization (Sprint 8.x+ — Public Read):
+ *   - GET requires authentication only (any logged-in user). The value is
+ *     safe to expose — it is a global, non-secret configuration that the
+ *     FE needs to compute revenue columns on /leads, /marketing/orders,
+ *     and the order detail page. Without this, SALE/MKT/... hit 403
+ *     whenever they load those pages and the revenue columns go blank.
  *   - PUT requires `system-settings.manage` (or legacy `settings.shipping_fee.update`)
+ *     so only Admin/Manager can mutate the setting.
  *
  * IMPORTANT: Writing a new shipping fee does NOT recalculate any existing
  * Order documents. Each Order carries its own snapshot (`summary.shippingFee`,
@@ -17,7 +22,7 @@
  * Business: Phí ship cố định cộng vào tổng giá trị combo để ra doanh số đơn hàng.
  */
 
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, UnauthorizedError } from "@/lib/auth";
 import {
   getCurrentShippingFee,
   setShippingFee,
@@ -26,20 +31,18 @@ import { success, error as errorResponse } from "@/utils/response";
 
 export async function GET(request: Request) {
   try {
-    const currentUser = await getCurrentUser(request);
-
-    const hasView =
-      currentUser.permissions.includes("*") ||
-      currentUser.permissions.includes("system-settings.view") ||
-      currentUser.permissions.includes("system-settings.manage") ||
-      currentUser.permissions.includes("settings.shipping_fee.view");
-    if (!hasView) {
-      return errorResponse("Bạn không có quyền xem phí ship", 403);
-    }
+    // Public read for any authenticated user. The shipping fee is a
+    // global, non-secret value that FE needs to compute revenue columns.
+    // Restricting this to admin caused 403s on /leads, /marketing/orders,
+    // and /orders/:id for non-admin roles — see Sprint 8.x public-read.
+    await getCurrentUser(request);
 
     const value = await getCurrentShippingFee();
     return success(value);
   } catch (err) {
+    if (err instanceof UnauthorizedError) {
+      return errorResponse(err.message, 401);
+    }
     console.error("Get Shipping Fee Error:", err);
     return errorResponse("Không thể lấy phí ship", 500);
   }

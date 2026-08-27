@@ -5,9 +5,14 @@
  * Returns/updates the active exchange rate (1 MNT → VND) used for Order
  * snapshotting and revenue reporting.
  *
- * Authorization (Phase 8 — Permission Audit):
- *   - GET requires `system-settings.view` (or legacy `settings.exchange_rate.view`)
+ * Authorization (Sprint 8.x+ — Public Read):
+ *   - GET requires authentication only (any logged-in user). The rate is
+ *     a global, non-secret configuration that the FE needs to render
+ *     MNT↔VND toggles on /leads, /marketing/orders, the order detail
+ *     page, the dashboard, and the leads reconciliation panel. Without
+ *     this, SALE/MKT/... hit 403 whenever they load those pages.
  *   - PUT requires `system-settings.manage` (or legacy `settings.exchange_rate.update`)
+ *     so only Admin/Manager can mutate the setting.
  *
  * IMPORTANT: Writing a new rate does NOT recalculate any existing Order
  * documents. Each Order carries its own snapshot (`exchangeRate`,
@@ -17,8 +22,7 @@
  * MNT → VND for reporting purposes only.
  */
 
-import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, UnauthorizedError } from "@/lib/auth";
 import {
   getCurrentExchangeRate,
   setExchangeRate,
@@ -27,20 +31,19 @@ import { success, error as errorResponse } from "@/utils/response";
 
 export async function GET(request: Request) {
   try {
-    const currentUser = await getCurrentUser(request);
-
-    const hasView =
-      currentUser.permissions.includes("*") ||
-      currentUser.permissions.includes("system-settings.view") ||
-      currentUser.permissions.includes("system-settings.manage") ||
-      currentUser.permissions.includes("settings.exchange_rate.view");
-    if (!hasView) {
-      return errorResponse("Bạn không có quyền xem tỷ giá", 403);
-    }
+    // Public read for any authenticated user. The rate is a global,
+    // non-secret value that FE needs to render MNT↔VND toggles.
+    // Restricting this to admin caused 403s on /leads, /marketing/orders,
+    // /dashboard, and the leads reconciliation panel for non-admin roles
+    // — see Sprint 8.x public-read.
+    await getCurrentUser(request);
 
     const value = await getCurrentExchangeRate();
     return success(value);
   } catch (err) {
+    if (err instanceof UnauthorizedError) {
+      return errorResponse(err.message, 401);
+    }
     console.error("Get Exchange Rate Error:", err);
     return errorResponse("Không thể lấy tỷ giá", 500);
   }

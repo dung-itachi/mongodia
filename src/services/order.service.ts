@@ -28,9 +28,13 @@ import Setting from "@/models/Setting";
 import Area from "@/models/Area";
 import Team from "@/models/Team";
 import { OrderHistory } from "@/models/OrderHistory";
+import { Lead } from "@/models/Lead";
+import { LeadHistory } from "@/models/LeadHistory";
 import { orderRepository } from "@/repositories/order.repository";
 import { orderHistoryService } from "@/services/order-history.service";
 import { OrderSource, OrderStatus, ORDER_STATUS_LABELS, OrderAction } from "@/constants/orderStatus";
+import { LeadStatus, LEAD_STATUS_LABELS } from "@/constants/leadStatus";
+import { LeadAction } from "@/constants/leadAction";
 import {
   isStatusTransitionAllowed,
   getAllowedNextStatuses,
@@ -264,6 +268,8 @@ export class OrderService {
   /**
    * Change order status with validation
    * Sprint 6.2: Order Workflow
+   * Sprint 8.x: Sync Lead.status ngược lại khi Order chạm trạng thái đầu cuối
+   * (CONFIRMED/CANCELLED/RETURNED) để /leads và /marketing/orders phản ánh đúng.
    */
   async changeStatus(
     data: ChangeStatusData
@@ -340,6 +346,18 @@ export class OrderService {
           },
           { session }
         );
+      }
+
+      // Sprint 8.x: Sync Lead.status khi Order chuyển trạng thái quan trọng
+      // để /leads và /marketing/orders phản ánh đúng tiến độ đơn.
+      if (existingOrder.leadId) {
+        await syncLeadStatusFromOrder({
+          leadId: existingOrder.leadId.toString(),
+          orderStatus: newStatus as OrderStatus,
+          orderId,
+          actorEmployeeId: employeeId,
+          session,
+        });
       }
 
       await session.commitTransaction();
@@ -983,6 +1001,75 @@ export class OrderService {
       session
     );
   }
+}
+
+// ============================================================================
+// Sprint 8.x — Sync Lead.status từ Order.status
+// ============================================================================
+
+/**
+ * Map Order.status (terminal/snapshot) sang Lead.status tương ứng.
+ * Trả về null nếu không cần sync (giữ nguyên Lead.status hiện tại).
+ *
+ * - CONFIRMED   → CLOSED ("Đã chốt" — đơn đã xác nhận với khách, Sale chốt xong)
+ * - CANCELLED   → CANCELLED ("Hủy")
+ * - RETURNED    → LOST ("Không mua" — khách không nhận hàng)
+ * - PACKING/SHIPPING/DELIVERED/RECONCILED → null (giữ CLOSED, đơn vẫn đang xử lý)
+ */
+function mapOrderStatusToLeadStatus(orderStatus: OrderStatus): LeadStatus | null {
+  switch (orderStatus) {
+    case OrderStatus.CONFIRMED:
+      return LeadStatus.CLOSED;
+    case OrderStatus.CANCELLED:
+      return LeadStatus.CANCELLED;
+    case OrderStatus.RETURNED:
+      return LeadStatus.LOST;
+    default:
+      return null;
+  }
+}
+
+interface SyncLeadStatusInput {
+  leadId: string;
+  orderId: string;
+  orderStatus: OrderStatus;
+  actorEmployeeId: string;
+  session: mongoose.ClientSession;
+}
+
+/**
+ * Sync Lead.status theo Order.status khi Order chuyển trạng thái đầu cuối.
+ * Ghi LeadHistory để audit. An toàn để gọi trong transaction của Order.
+ */
+async function syncLeadStatusFromOrder(input: SyncLeadStatusInput): Promise<void> {
+  const newLeadStatus = mapOrderStatusToLeadStatus(input.orderStatus);
+  if (!newLeadStatus) return;
+
+  // Chỉ sync khi Lead đã được convert (có convertedOrderId trỏ về order này)
+  // tránh ghi đè trạng thái Lead không liên quan.
+  const lead = await Lead.findOneAndUpdate(
+    {
+      _id: input.leadId,
+      convertedOrderId: new mongoose.Types.ObjectId(input.orderId),
+    },
+    { $set: { status: newLeadStatus, updatedAt: new Date() } },
+    { returnDocument: "after", session: input.session },
+  );
+  if (!lead) return;
+
+  await LeadHistory.create(
+    [
+      {
+        leadId: lead._id,
+        employeeId: new mongoose.Types.ObjectId(input.actorEmployeeId),
+        action: LeadAction.STATUS_CHANGED,
+        oldValue: LEAD_STATUS_LABELS[lead.status as LeadStatus] ?? lead.status,
+        newValue: LEAD_STATUS_LABELS[newLeadStatus],
+        note: `Đồng bộ từ Order: ${ORDER_STATUS_LABELS[input.orderStatus]} (${input.orderStatus})`,
+      },
+    ],
+    { session: input.session },
+  );
 }
 
 // Singleton instance

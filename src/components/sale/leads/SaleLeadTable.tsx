@@ -14,7 +14,7 @@ import {
   EyeOutlined,
   EditOutlined,
 } from "@ant-design/icons";
-import { DataTable, StatusBadge } from "@/components/common";
+import { DataTable, StatusBadge, DEFAULT_STATUS_MAPPING } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LEAD_STATUS_LABELS, LeadStatus } from "@/constants/leadStatus";
@@ -413,6 +413,26 @@ function SaleLeadTableInner({
                 </Tag>
               )}
             </div>
+          );
+        },
+      },
+      // Sprint 8.x: Cột "Tình trạng đơn hàng" — hiển thị Order status cho Lead đã chốt đơn.
+      // Sử dụng DEFAULT_STATUS_MAPPING để hiển thị màu/icon của Order statuses.
+      {
+        key: "orderStatus",
+        title: t("Tình trạng ĐH", lang),
+        width: 140,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as SaleLead;
+          if (!lead.isConverted || !lead.orderStatus) {
+            return <span className={styles.mutedText}>-</span>;
+          }
+          return (
+            <StatusBadge
+              status={lead.orderStatus}
+              mapping={DEFAULT_STATUS_MAPPING}
+              showIcon
+            />
           );
         },
       },

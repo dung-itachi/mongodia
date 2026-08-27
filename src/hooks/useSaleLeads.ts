@@ -78,6 +78,10 @@ export interface SaleLead {
   convertedOrderId?: string;
   /** Thời điểm convert thành Order. */
   convertedAt?: string;
+  /** Sprint 8.x: Mã đơn hàng (từ Order đã convert). */
+  orderCode?: string;
+  /** Sprint 8.x: Trạng thái Order (WAIT_CONFIRM/CONFIRMED/PACKING/SHIPPING/DELIVERED/RETURNED/CANCELLED). */
+  orderStatus?: string;
   /** Sprint 8.7: Variant details snapshot để form chốt đơn prefill. */
   variantDetails?: Array<{
     quantity: number;

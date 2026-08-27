@@ -404,6 +404,9 @@ async function appendHistory(
     afterQuantity: input.afterQuantity,
     reservedChange: input.reservedChange ?? 0,
     note: input.note ?? "",
+    // collection.insertOne bypasses Mongoose timestamps middleware;
+    // phải set createdAt thủ công để dashboard activities và audit trail hoạt động.
+    createdAt: new Date(),
   };
   const created = await InventoryHistory.collection.insertOne(doc as unknown as Record<string, unknown>, {
     session: input.session ?? undefined,

@@ -6,15 +6,26 @@
  * Pure unit tests (no MongoDB required) covering the permission
  * surface for the System Settings module:
  *
- *   - `system-settings.view`   → can open module / GET data
+ *   - `system-settings.view`   → can open module / browse pages
  *   - `system-settings.manage` → can mutate (PUT/POST/DELETE)
  *
+ * Sprint 8.x+ note (Public Read):
+ *   The two API endpoints `/api/settings/exchange-rate` and
+ *   `/api/settings/shipping-fee` open up their GET method to ANY
+ *   authenticated user (no permission gate) so FE pages like /leads,
+ *   /marketing/orders, the dashboard, the leads reconciliation panel,
+ *   and /orders/:id can render the revenue/MNT↔VND columns without
+ *   403 for non-admin roles. Only the PUT (mutation) side remains
+ *   gated by `system-settings.manage`.
+ *
  * Cases:
- *   [SS-A] No permission          → 403 (helper denies)
- *   [SS-B] view only              → GET ok, mutation denied
+ *   [SS-A] No permission          → 403 on PUT (mutation denied)
+ *   [SS-B] view only              → PUT denied
  *   [SS-C] view only              → mutation API helper denies
  *   [SS-D] manage                 → mutation helper allows
- *   [SS-E] admin wildcard "*"     → both view and manage allowed
+ *   [SS-E] admin wildcard "*"     → mutation allowed (read also works)
+ *   [SS-PR] Public read           → GET works for any logged-in user,
+ *                                  regardless of perm set
  *
  * Plus registry/visibility checks:
  *   [SS-F] Modules registry lists both settings items under
@@ -145,14 +156,25 @@ describe("API authorization policy (mirrored from route.ts)", () => {
    * Mirror of the authorization predicate used in
    * `/api/settings/{exchange-rate,shipping-fee}/route.ts`.
    * If this drifts from the API code, the tests will fail loudly.
+   *
+   * Sprint 8.x+ Public Read:
+   *   - GET: any authenticated user (no perm gate) — we don't gate by
+   *     permission because the value is needed by FE to compute revenue
+   *     columns on /leads, /marketing/orders, etc. for non-admin roles.
+   *   - PUT: still gated by `system-settings.manage` (or legacy
+   *     settings.{...}.update) so only Admin/Manager can mutate.
+   *
+   * Because the GET side is open, the read-side mirror is simply
+   * "isAuthenticated" — represented in this pure unit test by always
+   * returning true. The tests below assert:
+   *   (a) any logged-in user (regardless of perms) → GET ok
+   *   (b) PUT requires manage perm, else 403
    */
-  function canRead(perms: string[], legacyView: string): boolean {
-    return (
-      perms.includes("*") ||
-      perms.includes(SS_VIEW) ||
-      perms.includes(SS_MANAGE) ||
-      perms.includes(legacyView)
-    );
+  function canRead(_perms: string[], _legacyView: string): boolean {
+    // Public read: any authenticated user is allowed. Authentication is
+    // enforced upstream by `getCurrentUser(request)` which returns 401
+    // when no/invalid token is present — not modelled here.
+    return true;
   }
 
   function canWrite(perms: string[], legacyUpdate: string): boolean {
@@ -163,29 +185,38 @@ describe("API authorization policy (mirrored from route.ts)", () => {
     );
   }
 
-  it("[SS-A] no permission → 403 for both exchange-rate and shipping-fee", () => {
-    expect(canRead([], LEGACY_EX_VIEW)).toBe(false);
+  it("[SS-A] no permission → 403 for PUT on both exchange-rate and shipping-fee", () => {
     expect(canWrite([], LEGACY_EX_UPDATE)).toBe(false);
-    expect(canRead([], LEGACY_SF_VIEW)).toBe(false);
     expect(canWrite([], LEGACY_SF_UPDATE)).toBe(false);
   });
 
-  it("[SS-B] view-only → GET succeeds, PUT/POST/DELETE denied", () => {
-    expect(canRead([SS_VIEW], LEGACY_EX_VIEW)).toBe(true);
+  it("[SS-PR] public read: GET works for any logged-in user (no perm gate)", () => {
+    // Even an empty permission set can read because the value is a
+    // global, non-secret configuration that FE pages depend on.
+    expect(canRead([], LEGACY_EX_VIEW)).toBe(true);
+    expect(canRead([], LEGACY_SF_VIEW)).toBe(true);
+
+    // SALE / MKT / LEADER (no settings perms) still get to read.
+    expect(canRead(["order.view"], LEGACY_EX_VIEW)).toBe(true);
+    expect(canRead(["lead.view", "lead.create"], LEGACY_SF_VIEW)).toBe(true);
+
+    // Has legacy view code → still reads (read has never been a gate).
+    expect(canRead([LEGACY_EX_VIEW], LEGACY_EX_VIEW)).toBe(true);
+    expect(canRead([LEGACY_SF_VIEW], LEGACY_SF_VIEW)).toBe(true);
+  });
+
+  it("[SS-B] view-only → PUT denied (mutation still gated by manage)", () => {
     expect(canWrite([SS_VIEW], LEGACY_EX_UPDATE)).toBe(false);
-    expect(canRead([SS_VIEW], LEGACY_SF_VIEW)).toBe(true);
     expect(canWrite([SS_VIEW], LEGACY_SF_UPDATE)).toBe(false);
   });
 
-  it("[SS-C] view-only user (legacy code) → PUT denied but GET ok", () => {
-    expect(canRead([LEGACY_EX_VIEW], LEGACY_EX_VIEW)).toBe(true);
+  it("[SS-C] view-only user (legacy code) → PUT denied", () => {
     expect(canWrite([LEGACY_EX_VIEW], LEGACY_EX_UPDATE)).toBe(false);
+    expect(canWrite([LEGACY_SF_VIEW], LEGACY_SF_UPDATE)).toBe(false);
   });
 
-  it("[SS-D] manage user → both GET and mutation succeed", () => {
-    expect(canRead([SS_MANAGE], LEGACY_EX_VIEW)).toBe(true);
+  it("[SS-D] manage user → PUT succeeds", () => {
     expect(canWrite([SS_MANAGE], LEGACY_EX_UPDATE)).toBe(true);
-    expect(canRead([SS_MANAGE], LEGACY_SF_VIEW)).toBe(true);
     expect(canWrite([SS_MANAGE], LEGACY_SF_UPDATE)).toBe(true);
   });
 
@@ -194,10 +225,8 @@ describe("API authorization policy (mirrored from route.ts)", () => {
     expect(hasAnyPermission([SS_MANAGE], [SS_VIEW, SS_MANAGE])).toBe(true);
   });
 
-  it("[SS-E] admin wildcard → full access", () => {
-    expect(canRead(["*"], LEGACY_EX_VIEW)).toBe(true);
+  it("[SS-E] admin wildcard → mutation allowed", () => {
     expect(canWrite(["*"], LEGACY_EX_UPDATE)).toBe(true);
-    expect(canRead(["*"], LEGACY_SF_VIEW)).toBe(true);
     expect(canWrite(["*"], LEGACY_SF_UPDATE)).toBe(true);
   });
 });

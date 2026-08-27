@@ -282,34 +282,38 @@ async function fetchActivitiesData(
     createdAt: l.createdAt.toISOString(),
   }));
 
-  const recentInventory: RecentInventory[] = recentInvDocs.map((h) => {
-    const product =
-      (h.productVariantId &&
-        variantMap.get(h.productVariantId.toString())) ||
-      (h.comboId && comboMap.get(h.comboId.toString())) ||
-      "Kho";
+  const recentInventory: RecentInventory[] = recentInvDocs
+    // Bỏ qua các bản ghi cũ thiếu createdAt (do insert thủ công trước khi
+    // stockEngine.appendHistory được fix — vẫn an toàn nếu aggregation trả về rỗng).
+    .filter((h) => h.createdAt)
+    .map((h) => {
+      const product =
+        (h.productVariantId &&
+          variantMap.get(h.productVariantId.toString())) ||
+        (h.comboId && comboMap.get(h.comboId.toString())) ||
+        "Kho";
 
-    const isIn = (() => {
-      if (h.action === InventoryAction.INBOUND) return true;
-      if (h.action === InventoryAction.RETURN) return true;
-      if (h.action === InventoryAction.TRANSFER_IN) return true;
-      if (h.action === InventoryAction.UNRESERVE) return true;
-      if (
-        h.action === InventoryAction.ADJUST &&
-        (h.changeQuantity ?? 0) > 0
-      )
-        return true;
-      return false;
-    })();
+      const isIn = (() => {
+        if (h.action === InventoryAction.INBOUND) return true;
+        if (h.action === InventoryAction.RETURN) return true;
+        if (h.action === InventoryAction.TRANSFER_IN) return true;
+        if (h.action === InventoryAction.UNRESERVE) return true;
+        if (
+          h.action === InventoryAction.ADJUST &&
+          (h.changeQuantity ?? 0) > 0
+        )
+          return true;
+        return false;
+      })();
 
-    return {
-      id: h._id.toString(),
-      product,
-      type: isIn ? "IN" : "OUT",
-      quantity: Math.abs(h.changeQuantity ?? 0),
-      createdAt: h.createdAt.toISOString(),
-    };
-  });
+      return {
+        id: h._id.toString(),
+        product,
+        type: isIn ? "IN" : "OUT",
+        quantity: Math.abs(h.changeQuantity ?? 0),
+        createdAt: (h.createdAt as Date).toISOString(),
+      };
+    });
 
   const notifications: NotificationItem[] = notifDocs.map((n) => {
     const ageMs = Date.now() - new Date(n.createdAt).getTime();

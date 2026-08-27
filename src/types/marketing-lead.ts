@@ -62,6 +62,10 @@ export interface MarketingLead {
   orderId?: string;
   /** Thời điểm convert (Sprint 5.7). */
   convertedAt?: string;
+  /** Sprint 8.x: Mã đơn hàng (từ Order đã convert). */
+  orderCode?: string;
+  /** Sprint 8.x: Trạng thái Order (WAIT_CONFIRM/CONFIRMED/PACKING/SHIPPING/DELIVERED/RETURNED/CANCELLED). */
+  orderStatus?: string;
   /** Ngày giờ từ Landing page (Sprint 8.x). */
   leadDate?: string;
   /** Thời gian đơn hàng (Sprint 8.x) - thời gian khách đặt. */

@@ -9,7 +9,7 @@
 
 import { memo, useMemo, useState } from "react";
 import { EyeOutlined, EditOutlined, DeleteOutlined, UserSwitchOutlined, SwapOutlined } from "@ant-design/icons";
-import { ActionButton, DataTable, StatusBadge } from "@/components/common";
+import { ActionButton, DataTable, StatusBadge, DEFAULT_STATUS_MAPPING } from "@/components/common";
 import type { Column } from "@/components/common/table/DataTable";
 import type { TableProps, TooltipProps } from "antd";
 import { Tooltip } from "antd";
@@ -287,6 +287,26 @@ function MarketingLeadTableInner({
             mapping={LEAD_STATUS_BADGE_MAPPING}
           />
         ),
+      },
+      // Sprint 8.x: Cột "Tình trạng đơn hàng" — hiển thị Order status cho Lead đã chốt đơn.
+      // Sử dụng DEFAULT_STATUS_MAPPING để hiển thị màu/icon của Order statuses.
+      {
+        key: "orderStatus",
+        title: t("Tình trạng ĐH", lang),
+        width: 140,
+        render: (_value: unknown, record: Record<string, unknown>) => {
+          const lead = record as unknown as MarketingLead;
+          if (!lead.isConverted || !lead.orderStatus) {
+            return <span className={styles["mi-muted-text"]}>-</span>;
+          }
+          return (
+            <StatusBadge
+              status={lead.orderStatus}
+              mapping={DEFAULT_STATUS_MAPPING}
+              showIcon
+            />
+          );
+        },
       },
       {
         key: "note",
