@@ -30,6 +30,7 @@ import AssignSaleDrawer from "@/components/marketing/leads/AssignSaleDrawer";
 import CallLogTimeline from "@/components/sale/leads/CallLogTimeline";
 import { useLeadTimeline, useConvertLead, useUpdateLead, useDeleteLead } from "@/hooks/useMarketingLeads";
 import { useLeadCallHistory } from "@/hooks/useLeadCallLog";
+import { LeadActivityProvider, useLeadActivityContext } from "@/components/sale/leads/LeadActivityContext";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LeadStatus } from "@/constants/leadStatus";
 import type { MarketingLead } from "@/types/marketing-lead";
@@ -365,7 +366,7 @@ function HistoryTab({ lead }: { lead: MarketingLead }) {
 
 function TimelineTab({ leadId }: { leadId: string }) {
   const lang = useLanguageStore((s) => s.language);
-  const { items, loading, error } = useLeadTimeline(leadId);
+  const { timeline: items, loading, error } = useLeadActivityContext();
 
   if (loading) {
     return (
@@ -509,7 +510,7 @@ function getActionColor(action: string): string {
 
 function CallLogTab({ leadId }: { leadId: string }) {
   const lang = useLanguageStore((s) => s.language);
-  const { callHistory, loading, error } = useLeadCallHistory(leadId);
+  const { callHistory, loading, error } = useLeadActivityContext();
 
   if (loading) {
     return (
@@ -747,7 +748,9 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
 
       {/* Tabs */}
       <CardSection>
-        <Tabs defaultActiveKey="info" items={tabItems} />
+        <LeadActivityProvider leadId={lead._id}>
+          <Tabs defaultActiveKey="info" items={tabItems} />
+        </LeadActivityProvider>
       </CardSection>
 
       {/* Assign Sale Drawer */}

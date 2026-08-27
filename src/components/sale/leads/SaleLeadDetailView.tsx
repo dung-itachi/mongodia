@@ -27,8 +27,8 @@ import {
 
 import { CardSection, DescriptionList, StatusBadge, SkeletonCard, EmptyState } from "@/components/common";
 import CallLogTimeline from "@/components/sale/leads/CallLogTimeline";
-import { useLeadTimeline, useConvertLead } from "@/hooks/useMarketingLeads";
-import { useLeadCallHistory } from "@/hooks/useLeadCallLog";
+import { LeadActivityProvider, useLeadActivityContext } from "@/components/sale/leads/LeadActivityContext";
+import { useConvertLead } from "@/hooks/useMarketingLeads";
 import { LEAD_SOURCE_LABELS, LeadSource } from "@/constants/leadSource";
 import { LeadStatus, LEAD_STATUS_LABELS } from "@/constants/leadStatus";
 import type { SaleLead } from "@/hooks/useSaleLeads";
@@ -430,12 +430,12 @@ function HistoryTab({ lead }: { lead: SaleLead }) {
 }
 
 // =============================================================================
-// Tab: Timeline
+// Tab: Timeline (using shared context)
 // =============================================================================
 
 function TimelineTab({ leadId }: { leadId: string }) {
   const lang = useLanguageStore((s) => s.language);
-  const { items, loading, error } = useLeadTimeline(leadId);
+  const { timeline: items, loading, error } = useLeadActivityContext();
 
   if (loading) {
     return (
@@ -580,7 +580,7 @@ function getActionColor(action: string): string {
 
 function CallLogTab({ leadId }: { leadId: string }) {
   const lang = useLanguageStore((s) => s.language);
-  const { callHistory, loading, error } = useLeadCallHistory(leadId);
+  const { callHistory, loading, error } = useLeadActivityContext();
 
   if (loading) {
     return (
@@ -751,7 +751,9 @@ export function SaleLeadDetailView({
 
       {/* Tabs */}
       <CardSection>
-        <Tabs defaultActiveKey="info" items={tabItems} />
+        <LeadActivityProvider leadId={lead._id}>
+          <Tabs defaultActiveKey="info" items={tabItems} />
+        </LeadActivityProvider>
       </CardSection>
 
       {/* Convert Modal */}

@@ -139,7 +139,7 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
     productId: lead?.product?._id,
     isActive: true,
   });
-  const combos = combosData?.items ?? [];
+  const combos = useMemo(() => combosData?.items ?? [], [combosData?.items]);
   const selectedCombo = useMemo(() => combos.find((combo) => combo._id === selectedComboId), [combos, selectedComboId]);
   const selectedProductId = selectedCombo ? productId(selectedCombo) : lead?.product?._id ?? null;
   const { product, loading: productLoading } = useProductWithVariants(selectedProductId);

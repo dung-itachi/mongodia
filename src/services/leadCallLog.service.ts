@@ -10,7 +10,9 @@ import { leadHistoryService } from "./leadHistory.service";
 import { LeadAction } from "@/constants/leadAction";
 import { LeadStatus } from "@/constants/leadStatus";
 import { LeadCallStatus } from "@/constants/leadCallStatus";
+import { OrderStatus } from "@/constants/orderStatus";
 import { leadRepository } from "@/repositories/lead.repository";
+import { Order } from "@/models/Order";
 import type { CallLogItem, CreateCallLogData } from "@/repositories/leadCallLog.repository";
 
 export class LeadCallLogService {
@@ -18,6 +20,7 @@ export class LeadCallLogService {
    * Ghi nhận một cuộc gọi mới
    * - Tạo bản ghi LeadCallLog
    * - Cập nhật trạng thái Lead nếu cần
+   * - Nếu status là LEAD_CLOSED và Lead đã có order → cập nhật Order status
    */
   async logCall(data: CreateCallLogData): Promise<CallLogItem> {
     // Tạo bản ghi cuộc gọi
@@ -43,6 +46,20 @@ export class LeadCallLogService {
       } catch (error) {
         // Log error nhưng không fail việc tạo call log
         console.error("Error updating lead status:", error);
+      }
+    }
+
+    // Nếu là LEAD_CLOSED và Lead đã có order → cập nhật Order status
+    if (data.status === LeadCallStatus.LEAD_CLOSED) {
+      try {
+        const lead = await leadRepository.findById(data.leadId);
+        if (lead?.convertedOrderId) {
+          await Order.findByIdAndUpdate(lead.convertedOrderId, {
+            status: OrderStatus.LEAD_CLOSED,
+          });
+        }
+      } catch (error) {
+        console.error("Error updating order status:", error);
       }
     }
 
@@ -84,6 +101,8 @@ export class LeadCallLogService {
 
   /**
    * Map trạng thái cuộc gọi sang trạng thái Lead
+   * Chỉ những trạng thái nào cần cập nhật Lead status mới return giá trị.
+   * LEAD_CLOSED chỉ ghi nhận cuộc gọi, không đổi trạng thái Lead.
    */
   private mapCallStatusToLeadStatus(
     callStatus: LeadCallStatus
@@ -103,6 +122,8 @@ export class LeadCallLogService {
         return LeadStatus.CONTACTED;
       case LeadCallStatus.CONVERTED:
         return LeadStatus.CLOSED;
+      // LEAD_CLOSED: chỉ ghi nhận cuộc gọi, không đổi trạng thái Lead
+      case LeadCallStatus.LEAD_CLOSED:
       default:
         return null;
     }

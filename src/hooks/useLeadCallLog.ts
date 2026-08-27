@@ -82,6 +82,67 @@ async function logCall(
 }
 
 // ============================================================================
+// Combined Timeline API (Performance Optimization)
+// ============================================================================
+
+export interface CombinedTimelineResponse {
+  timeline: CombinedTimelineItem[];
+  callHistory: CallLogItem[];
+}
+
+export interface CombinedTimelineItem {
+  id: string;
+  leadId: string;
+  action: string;
+  field?: string;
+  oldValue?: string;
+  newValue?: string;
+  note?: string;
+  employee: {
+    id: string;
+    name: string;
+    employeeCode: string;
+  } | null;
+  createdAt: string;
+}
+
+async function fetchCombinedTimeline(leadId: string): Promise<CombinedTimelineResponse> {
+  const response = await api.get(`/api/leads/${leadId}/timeline-combined`);
+  return response.data.data;
+}
+
+/**
+ * Hook để lấy cả timeline và lịch sử cuộc gọi trong 1 request
+ * Thay thế việc gọi 2 API riêng biệt
+ */
+export function useLeadTimelineCombined(leadId: string | null) {
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<CombinedTimelineResponse, Error>({
+    queryKey: ["lead-timeline-combined", leadId],
+    queryFn: () => fetchCombinedTimeline(leadId!),
+    enabled: !!leadId,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+  });
+
+  return {
+    timeline: data?.timeline ?? [],
+    callHistory: data?.callHistory ?? [],
+    loading: isLoading,
+    error: error?.message ?? null,
+    refetch,
+  };
+}
+
+// ============================================================================
 // Hooks
 // ============================================================================
 

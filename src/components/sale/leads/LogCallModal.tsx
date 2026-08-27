@@ -43,6 +43,7 @@ interface LogCallModalProps {
   lead: SaleLead | null;
   onClose: () => void;
   onSuccess?: () => void;
+  onConvert?: () => void;
 }
 
 /** Icons cho từng trạng thái */
@@ -65,10 +66,12 @@ function getStatusIcon(status: LeadCallStatus) {
   }
 }
 
-function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps) {
+function LogCallModalInner({ open, lead, onClose, onSuccess, onConvert }: LogCallModalProps) {
   const lang = useLanguageStore((s) => s.language);
   const [form] = Form.useForm();
   const [selectedStatus, setSelectedStatus] = useState<LeadCallStatus | null>(null);
+  const [shouldConvert, setShouldConvert] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
 
   const logCallMutation = useLogCall();
 
@@ -80,6 +83,21 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
     if (!lead) return;
 
     try {
+      // Nếu là CONVERTED và có onConvert → chốt đơn TRƯỚC, ghi nhận SAU
+      if (values.status === LeadCallStatus.CONVERTED && shouldConvert && onConvert) {
+        setIsConverting(true);
+        try {
+          await onConvert();
+        } catch (error) {
+          console.error("Convert failed:", error);
+          setIsConverting(false);
+          void message.error("Chốt đơn thất bại. Vui lòng thử lại.");
+          return;
+        }
+        setIsConverting(false);
+      }
+
+      // Ghi nhận cuộc gọi (sau khi chốt đơn thành công hoặc nếu không phải convert)
       await logCallMutation.mutateAsync({
         leadId: lead._id,
         payload: {
@@ -100,6 +118,7 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
   const handleClose = () => {
     form.resetFields();
     setSelectedStatus(null);
+    setShouldConvert(false);
     onClose();
   };
 
@@ -216,13 +235,27 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
           />
         )}
 
+        {selectedStatus === LeadCallStatus.LEAD_CLOSED && (
+          <Alert
+            type="success"
+            title={
+              <Text>
+                {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Đã gọi chốt", lang)}&quot;</Text>.
+                {t("Cuộc gọi được ghi nhận thành công, đơn hàng sẽ được tạo sau.", lang)}
+              </Text>
+            }
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
         {selectedStatus === LeadCallStatus.CONVERTED && (
           <Alert
             type="success"
             title={
               <Text>
-                {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Đã chốt", lang)}&quot;</Text>.
-                {t("Bạn có thể tiến hành tạo đơn hàng.", lang)}
+                {t("Khách hàng sẽ được chuyển sang trạng thái", lang)} <Text strong>&quot;{t("Chốt đơn", lang)}&quot;</Text>.
+                {t("Sau khi ghi nhận, bạn sẽ được chuyển sang màn hình tạo đơn hàng.", lang)}
               </Text>
             }
             showIcon
@@ -242,14 +275,31 @@ function LogCallModalInner({ open, lead, onClose, onSuccess }: LogCallModalProps
         <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
             <Button onClick={handleClose}>{t("Hủy", lang)}</Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={logCallMutation.isPending}
-              icon={<PhoneOutlined />}
-            >
-              {t("Ghi nhận cuộc gọi", lang)}
-            </Button>
+            {selectedStatus === LeadCallStatus.CONVERTED && onConvert && (
+              <Button
+                type="primary"
+                loading={logCallMutation.isPending || isConverting}
+                icon={<SwapOutlined />}
+                style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
+                onClick={() => {
+                  setShouldConvert(true);
+                  form.submit();
+                }}
+              >
+                {t("Chốt đơn", lang)}
+              </Button>
+            )}
+            {selectedStatus !== LeadCallStatus.CONVERTED && (
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={logCallMutation.isPending}
+                icon={<PhoneOutlined />}
+                onClick={() => setShouldConvert(false)}
+              >
+                {t("Ghi nhận cuộc gọi", lang)}
+              </Button>
+            )}
           </Space>
         </Form.Item>
       </Form>

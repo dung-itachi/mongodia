@@ -1136,7 +1136,7 @@ export const updateComboSchema = z.object({
 const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "MOMO", "ZALO_PAY", "VNPAY", "OTHER"] as const;
 const CURRENCIES = ["VND", "MNT", "USD"] as const;
 const ORDER_STATUSES = [
-  "WAIT_CONFIRM", "CONFIRMED", "PACKING",
+  "WAIT_CONFIRM", "LEAD_CLOSED", "CONFIRMED", "PACKING",
   "SHIPPING", "DELIVERED", "RETURNED",
   "RECONCILED", "CANCELLED",
 ] as const;

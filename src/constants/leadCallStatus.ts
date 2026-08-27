@@ -19,7 +19,9 @@ export enum LeadCallStatus {
   NOT_INTERESTED = "NOT_INTERESTED",
   /** Hẹn gọi lại - Khách hẹn gọi lại sau */
   CALL_BACK = "CALL_BACK",
-  /** Chốt đơn - Chuyển sang trạng thái chốt đơn thành công */
+  /** Đã gọi chốt - Khách đồng ý mua, đã xác nhận nhưng chưa tạo đơn */
+  LEAD_CLOSED = "LEAD_CLOSED",
+  /** Chốt đơn - Chuyển sang trạng thái chốt đơn, mở form tạo đơn hàng */
   CONVERTED = "CONVERTED",
 }
 
@@ -31,6 +33,7 @@ export const LEAD_CALL_STATUS_LABELS: Record<LeadCallStatus, string> = {
   [LeadCallStatus.POTENTIAL]: "Tiềm năng",
   [LeadCallStatus.NOT_INTERESTED]: "Không nhu cầu",
   [LeadCallStatus.CALL_BACK]: "Hẹn gọi lại",
+  [LeadCallStatus.LEAD_CLOSED]: "Đã gọi chốt",
   [LeadCallStatus.CONVERTED]: "Chốt đơn",
 };
 
@@ -45,6 +48,7 @@ export const NO_ANSWER_STATUSES = [
 export const POSITIVE_STATUSES = [
   LeadCallStatus.POTENTIAL,
   LeadCallStatus.CALL_BACK,
+  LeadCallStatus.LEAD_CLOSED,
   LeadCallStatus.CONVERTED,
 ] as const;
 

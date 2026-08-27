@@ -452,6 +452,12 @@ export default function SaleLeadsPage() {
         lead={loggingCallLead}
         onClose={() => setLoggingCallLead(null)}
         onSuccess={handleLogCallSuccess}
+        onConvert={() => {
+          if (loggingCallLead) {
+            setLoggingCallLead(null);
+            setConvertingLead(loggingCallLead);
+          }
+        }}
       />
 
       {/* Edit Lead Modal */}

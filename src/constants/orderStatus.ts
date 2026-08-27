@@ -18,6 +18,8 @@
 export enum OrderStatus {
   /** Sale vừa chốt, chưa xác nhận lại với khách. */
   WAIT_CONFIRM = "WAIT_CONFIRM",
+  /** Đã gọi điện chốt đơn nhưng chưa xác nhận. */
+  LEAD_CLOSED = "LEAD_CLOSED",
   /** Đã xác nhận / chốt đơn. */
   CONFIRMED = "CONFIRMED",
   /** Đang đóng gói. */
@@ -42,6 +44,7 @@ export enum OrderStatus {
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   [OrderStatus.WAIT_CONFIRM]: "Chờ xác nhận",
+  [OrderStatus.LEAD_CLOSED]: "Đã gọi chốt",
   [OrderStatus.CONFIRMED]: "Đã xác nhận",
   [OrderStatus.PACKING]: "Đang đóng gói",
   [OrderStatus.SHIPPING]: "Đang giao",
@@ -54,6 +57,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 /** Valid order statuses for workflow (Sprint 8.5) */
 export const VALID_ORDER_STATUSES: ReadonlyArray<OrderStatus> = [
   OrderStatus.WAIT_CONFIRM,
+  OrderStatus.LEAD_CLOSED,
   OrderStatus.CONFIRMED,
   OrderStatus.PACKING,
   OrderStatus.SHIPPING,

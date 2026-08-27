@@ -64,20 +64,55 @@ export class LeadCallLogRepository {
 
   /**
    * Tìm lịch sử cuộc gọi theo lead ID, sắp xếp theo thời gian giảm dần
+   * Using aggregate with $lookup for better performance
    */
   async findByLeadId(leadId: string): Promise<CallLogItem[]> {
-    const docs = await LeadCallLog.find({
-      leadId: new mongoose.Types.ObjectId(leadId),
-    })
-      .sort({ callTime: -1 })
-      .populate({
-        path: "saleId",
-        select: "_id employeeCode fullName",
-        options: { lean: true },
-      })
-      .lean();
+    const docs = await LeadCallLog.aggregate([
+      { $match: { leadId: new mongoose.Types.ObjectId(leadId) } },
+      { $sort: { callTime: -1 } },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "saleId",
+          foreignField: "_id",
+          as: "saleData",
+        },
+      },
+      { $unwind: { path: "$saleData", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          leadId: 1,
+          saleId: 1,
+          callTime: 1,
+          status: 1,
+          note: 1,
+          duration: 1,
+          createdAt: 1,
+          "saleData._id": 1,
+          "saleData.employeeCode": 1,
+          "saleData.fullName": 1,
+        },
+      },
+    ]);
 
-    return docs.map((doc) => this.mapToItem(doc));
+    return docs.map((doc) => ({
+      id: (doc._id as mongoose.Types.ObjectId).toString(),
+      leadId: (doc.leadId as mongoose.Types.ObjectId).toString(),
+      saleId: (doc.saleId as mongoose.Types.ObjectId).toString(),
+      callTime: doc.callTime,
+      status: doc.status,
+      note: doc.note,
+      duration: doc.duration,
+      sale: doc.saleData
+        ? {
+            id: doc.saleData._id.toString(),
+            name: doc.saleData.fullName,
+            employeeCode: doc.saleData.employeeCode,
+          }
+        : undefined,
+      createdAt: doc.createdAt,
+    }));
   }
 
   /**

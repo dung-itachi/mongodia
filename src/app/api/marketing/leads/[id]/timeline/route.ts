@@ -12,7 +12,6 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUser } from "@/lib/auth";
 import { leadHistoryService } from "@/services/leadHistory.service";
-import { leadService } from "@/services/lead.service";
 import { success, error as errorResponse } from "@/utils/response";
 
 export async function GET(
@@ -25,11 +24,6 @@ export async function GET(
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return errorResponse("ID không hợp lệ", 400);
-    }
-
-    const lead = await leadService.getById(id);
-    if (!lead) {
-      return errorResponse("Lead không tồn tại", 404);
     }
 
     const timeline = await leadHistoryService.getTimeline(id);
