@@ -67,8 +67,8 @@ interface OrderProductDetailProps {
   product?: ProductWithVariants | null;
   /** Loading state */
   loading?: boolean;
-  /** Callback khi items thay đổi */
-  onChange: (items: OrderItem[]) => void;
+  /** Callback khi items thay đổi (hỗ trợ functional updater để tránh stale closure) */
+  onChange: (items: OrderItem[] | ((prev: OrderItem[]) => OrderItem[])) => void;
   /** Disabled state */
   disabled?: boolean;
 }
@@ -625,6 +625,7 @@ function GiftSelectionSection({
   const handleModeChange = useCallback(
     (e: RadioChangeEvent) => {
       const mode = e.target.value as OrderGiftMode;
+      console.log("[GiftSelectionSection.handleModeChange]", { prev: giftMode, next: mode, totalGiftRequired });
       setSelectedMode(mode);
       onModeChange(mode);
       if (mode === "RANDOM") {
@@ -640,7 +641,7 @@ function GiftSelectionSection({
         onSelectionsChange(padded);
       }
     },
-    [onModeChange, onSelectionsChange, totalGiftRequired]
+    [onModeChange, onSelectionsChange, totalGiftRequired, giftMode]
   );
 
   const handleAddExtraGift = useCallback(() => {
@@ -654,6 +655,7 @@ function GiftSelectionSection({
     (index: number, gift: GiftSelection) => {
       const newSelections = [...giftSelections];
       newSelections[index] = gift;
+      console.log("[GiftSelectionSection.handleUpdateGift]", { index, gift, totalSelections: newSelections.length, allFilled: newSelections.every(g => g.giftProductId) });
       onSelectionsChange(newSelections);
     },
     [giftSelections, onSelectionsChange]
@@ -850,7 +852,7 @@ function GiftSelectionSection({
 interface OrderItemRowProps {
   item: OrderItem;
   product: ProductWithVariants | null;
-  onUpdate: (item: OrderItem) => void;
+  onUpdate: (updater: (current: OrderItem) => OrderItem) => void;
   onDelete: () => void;
   disabled?: boolean;
 }
@@ -885,8 +887,8 @@ function OrderItemRow({
       quantity: 1,
       attributes: [],
     };
-    onUpdate({ ...item, details: [...item.details, newDetail] });
-  }, [item, onUpdate]);
+    onUpdate((cur) => ({ ...cur, details: [...cur.details, newDetail] }));
+  }, [onUpdate]);
 
   const handleUpdateDetail = useCallback(
     (index: number, detail: ProductVariantSelection) => {
@@ -894,87 +896,108 @@ function OrderItemRow({
 
       // Nếu không có attributes thì update bình thường
       if (!combinationKey) {
-        const newDetails = [...item.details];
-        newDetails[index] = detail;
-        onUpdate({ ...item, details: newDetails });
+        onUpdate((cur) => {
+          const newDetails = [...cur.details];
+          newDetails[index] = detail;
+          return { ...cur, details: newDetails };
+        });
         return;
       }
 
-      // Kiểm tra xem có dòng nào khác có cùng biến thể không
-      const existingIndex = item.details.findIndex(
+      // Detect merge trước khi update (để hiện message 1 lần, không gọi side effect
+      // bên trong updater — React có thể gọi updater nhiều lần trong Strict Mode/concurrent).
+      const currentItem = item;
+      const existingIndex = currentItem.details.findIndex(
         (existing, i) => i !== index && existing.attributes.map((a) => a.valueId).sort().join(":") === combinationKey
       );
+      const willMerge = existingIndex >= 0;
 
-      if (existingIndex >= 0) {
-        // Gộp: cộng quantity và xóa dòng hiện tại
-        const newDetails = [...item.details];
-        newDetails[existingIndex] = {
-          ...newDetails[existingIndex],
-          quantity: newDetails[existingIndex].quantity + detail.quantity,
-        };
-        // Xóa dòng hiện tại
-        newDetails.splice(index, 1);
-        onUpdate({ ...item, details: newDetails });
+      onUpdate((cur) => {
+        const newDetails = [...cur.details];
+        if (willMerge) {
+          // Gộp: cộng quantity và xóa dòng hiện tại
+          newDetails[existingIndex] = {
+            ...newDetails[existingIndex],
+            quantity: newDetails[existingIndex].quantity + detail.quantity,
+          };
+          // Xóa dòng hiện tại
+          newDetails.splice(index, 1);
+        } else {
+          // Không trùng: update bình thường
+          newDetails[index] = detail;
+        }
+        return { ...cur, details: newDetails };
+      });
+
+      // Side effect (toast) chạy SAU khi enqueue state update — không nằm trong updater.
+      if (willMerge) {
         void message.success(t("Đã gộp với dòng biến thể cùng loại.", lang));
-      } else {
-        // Không trùng: update bình thường
-        const newDetails = [...item.details];
-        newDetails[index] = detail;
-        onUpdate({ ...item, details: newDetails });
       }
     },
-    [item, onUpdate, message, lang]
+    [onUpdate, message, lang, item]
   );
 
   const handleDeleteDetail = useCallback(
     (index: number) => {
-      const newDetails = item.details.filter((_, i) => i !== index);
-      onUpdate({ ...item, details: newDetails });
+      onUpdate((cur) => ({
+        ...cur,
+        details: cur.details.filter((_, i) => i !== index),
+      }));
     },
-    [item, onUpdate]
+    [onUpdate]
   );
 
-  // Gifts handlers
+  // Gifts handlers — dùng functional updater (cur) để đọc item mới nhất
+  // từ parent state, tránh stale closure khi user chọn
+  // giftMode + giftSelections liên tiếp trong cùng 1 tick.
   const handleGiftModeChange = useCallback(
     (mode: OrderGiftMode) => {
-      onUpdate({ ...item, giftMode: mode });
+      console.log("[OrderItemRow.handleGiftModeChange]", { newMode: mode });
+      onUpdate((cur) => ({ ...cur, giftMode: mode }));
     },
-    [item, onUpdate]
+    [onUpdate]
   );
 
   const handleGiftSelectionsChange = useCallback(
     (selections: GiftSelection[]) => {
-      onUpdate({ ...item, giftSelections: selections });
+      console.log("[OrderItemRow.handleGiftSelectionsChange]", { count: selections.length, sample: selections[0] });
+      onUpdate((cur) => ({ ...cur, giftSelections: selections }));
     },
-    [item, onUpdate]
+    [onUpdate]
   );
 
   // Update comboQuantity
   const handleComboQuantityChange = useCallback(
     (qty: number | null) => {
       const q = qty || 1;
-      const newSubtotal = item.sellingPrice * q - item.discount;
-      onUpdate({ ...item, comboQuantity: q, subtotal: newSubtotal });
+      onUpdate((cur) => {
+        const newSubtotal = cur.sellingPrice * q - cur.discount;
+        return { ...cur, comboQuantity: q, subtotal: newSubtotal };
+      });
     },
-    [item, onUpdate]
+    [onUpdate]
   );
 
   const handlePriceChange = useCallback(
     (price: number | null) => {
       const p = price || 0;
-      const newSubtotal = p * item.comboQuantity - item.discount;
-      onUpdate({ ...item, sellingPrice: p, subtotal: newSubtotal });
+      onUpdate((cur) => {
+        const newSubtotal = p * cur.comboQuantity - cur.discount;
+        return { ...cur, sellingPrice: p, subtotal: newSubtotal };
+      });
     },
-    [item, onUpdate]
+    [onUpdate]
   );
 
   const handleDiscountChange = useCallback(
     (discount: number | null) => {
       const d = discount || 0;
-      const newSubtotal = item.sellingPrice * item.comboQuantity - d;
-      onUpdate({ ...item, discount: d, subtotal: newSubtotal });
+      onUpdate((cur) => {
+        const newSubtotal = cur.sellingPrice * cur.comboQuantity - d;
+        return { ...cur, discount: d, subtotal: newSubtotal };
+      });
     },
-    [item, onUpdate]
+    [onUpdate]
   );
 
   return (
@@ -1247,6 +1270,20 @@ export default function OrderProductDetail({
   const hasVariants = variantOptions.length > 0;
   const message = useMessage();
 
+  // Functional updater — cha truyền setItems (hỗ trợ functional updater).
+  // Khi OrderItemRow gọi onUpdate(updater), ta gọi setItems(prev => [...prev, idx, updater(prev[idx])])
+  // để luôn lấy items mới nhất, tránh stale closure.
+  const handleItemChange = useCallback(
+    (index: number, updater: (current: OrderItem) => OrderItem) => {
+      onChange((prev) => {
+        const newItems = [...prev];
+        newItems[index] = updater(prev[index]);
+        return newItems;
+      });
+    },
+    [onChange]
+  );
+
   // Calculate totals
   // Tổng quà = tổng SL từ giftSelections (CUSTOMER_SELECTED) hoặc giftQuantity (RANDOM)
   const totals = useMemo(() => {
@@ -1324,11 +1361,7 @@ export default function OrderProductDetail({
             key={item._tempId || index}
             item={item}
             product={product ?? null}
-            onUpdate={(updated) => {
-              const newItems = [...items];
-              newItems[index] = updated;
-              onChange(newItems);
-            }}
+            onUpdate={(updater) => handleItemChange(index, updater)}
             onDelete={() => {
               const newItems = items.filter((_, i) => i !== index);
               onChange(newItems);

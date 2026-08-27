@@ -167,6 +167,10 @@ export default function SaleLeadsPage() {
   const handleConfirmConvert = useCallback((orderItem: OrderItem) => {
     if (!convertingLead) return;
 
+    // DEBUG
+    console.log("[handleConfirmConvert] giftMode:", orderItem.giftMode, "| giftSelections:", orderItem.giftSelections);
+    console.log("[handleConfirmConvert] items[0] from items state");
+
     // Sprint 8.7 — Lưu variantDetails mới nhất (vừa chốt) lên Lead để audit/revert.
     const payload = {
       variantDetails: orderItem.details.map((d) => ({

@@ -56,6 +56,8 @@ function sameIds(left: string[], right: string[]): boolean {
 
 export class SaleOrderService {
   async validateItem(input: OrderItem): Promise<ValidatedSaleOrderItem> {
+    // DEBUG
+    console.log("[validateItem] input.giftMode:", input.giftMode, "| input.giftSelections:", JSON.stringify(input.giftSelections));
     if (!isPositiveInteger(input.comboQuantity)) {
       throw new Error("Số combo phải lớn hơn 0.");
     }

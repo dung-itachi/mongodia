@@ -889,6 +889,10 @@ export class OrderService {
    * Create order from lead (Sprint 5.7)
    */
   async createFromLead(data: CreateFromLeadData, session?: mongoose.ClientSession) {
+    // DEBUG: log gift values being persisted to DB
+    console.log("[createFromLead] orderItem.giftMode:", data.orderItem?.giftMode);
+    console.log("[createFromLead] orderItem.giftSelections:", JSON.stringify(data.orderItem?.giftSelections));
+
     const orderCode = await this.generateOrderCode(session);
 
     // Sprint Settings: snapshot exchange rate at the moment the lead

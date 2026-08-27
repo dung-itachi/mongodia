@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Modal, Select, Spin, Tag, Typography } from "antd";
 import { GiftOutlined, SwapOutlined } from "@ant-design/icons";
 import OrderProductDetail, { createOrderItemFromCombo } from "@/components/order/OrderProductDetail";
@@ -51,7 +51,8 @@ function buildInitialItem(
     productId: string;
   },
   lead: SaleLead | null,
-  comboQuantity: number
+  comboQuantity: number,
+  variantCount: number
 ): OrderItem {
   const base = createOrderItemFromCombo({
     _id: combo._id,
@@ -114,9 +115,13 @@ function buildInitialItem(
 
     item.details = expanded;
   } else {
-    // Không có prefill: tạo packageQuantity dòng trống (mỗi dòng SL=1)
-    item.details = Array.from({ length: totalProducts }, () => ({
-      quantity: 1,
+    // Không có prefill:
+    // - Nếu sản phẩm chỉ có 1 biến thể (variantCount <= 1): tạo 1 dòng với quantity = totalProducts
+    // - Nếu có nhiều biến thể: tạo min(variantCount, totalProducts) dòng, mỗi dòng SL=1
+    const initialRowCount = variantCount <= 1 ? 1 : Math.min(variantCount, totalProducts);
+    const defaultQty = variantCount <= 1 ? totalProducts : 1;
+    item.details = Array.from({ length: initialRowCount }, () => ({
+      quantity: defaultQty,
       attributes: [],
     }));
   }
@@ -139,10 +144,28 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
   const selectedProductId = selectedCombo ? productId(selectedCombo) : lead?.product?._id ?? null;
   const { product, loading: productLoading } = useProductWithVariants(selectedProductId);
 
+  // Stable ref to variantCount so we can read it in effects without triggering re-renders.
+  const variantCountRef = useRef(0);
+  variantCountRef.current = product?.variants?.length ?? 0;
+
+  // Stable ref to track what we've initialized — avoids infinite loop from setState inside effect.
+  const initializedForRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!lead) return;
+    if (!lead) {
+      initializedForRef.current = null;
+      setItems([]);
+      return;
+    }
+    const leadId = lead._id;
+    const variantCount = variantCountRef.current;
+    const comboQty = lead.quantity && lead.quantity > 0 ? lead.quantity : 1;
     const initialCombo = combos.find((combo) => combo._id === lead.combo?._id) ?? combos[0];
     if (!initialCombo) return;
+
+    const key = `${leadId}-${initialCombo._id}-${comboQty}-${variantCount}`;
+    if (initializedForRef.current === key) return;
+
     setSelectedComboId(initialCombo._id);
     const initialItem = buildInitialItem(
       {
@@ -155,15 +178,19 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
         productId: productId(initialCombo) ?? "",
       },
       lead,
-      lead.quantity && lead.quantity > 0 ? lead.quantity : 1
+      comboQty,
+      variantCount
     );
     setItems([initialItem]);
-  }, [lead, combos, product?.name]);
+    initializedForRef.current = key;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lead, combos, product?.variants?.length]);
 
   const selectCombo = (comboId: string) => {
     const combo = combos.find((item) => item._id === comboId);
     if (!combo) return;
     setSelectedComboId(comboId);
+    const variantCount = variantCountRef.current;
     const initialItem = buildInitialItem(
       {
         _id: combo._id,
@@ -175,9 +202,11 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
         productId: productId(combo) ?? "",
       },
       lead,
-      items[0]?.comboQuantity ?? (lead?.quantity && lead.quantity > 0 ? lead.quantity : 1)
+      items[0]?.comboQuantity ?? (lead?.quantity && lead.quantity > 0 ? lead.quantity : 1),
+      variantCount
     );
     setItems([initialItem]);
+    initializedForRef.current = null; // Allow effect to re-init if variantCount changes
   };
 
   const item = items[0];
@@ -275,9 +304,9 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
                 </Typography.Text>
               ) : (
                 <ul style={{ margin: "6px 0 0 0", padding: 0, listStyle: "none" }}>
-                  {(item.giftSelections ?? []).map((g) => (
+                  {(item.giftSelections ?? []).map((g, idx) => (
                     <li
-                      key={`${item.comboId}-${g.giftProductId ?? Math.random()}`}
+                      key={`${item.comboId}-${idx}`}
                       style={{ fontSize: 13, lineHeight: 1.7 }}
                     >
                       <GiftOutlined style={{ color: "#fa8c16", marginRight: 6 }} />
