@@ -11,6 +11,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+export type WarehouseOverviewVariantItem = {
+  productVariantId: string;
+  sku: string;
+  stock: number;
+  imported: number;
+};
+
 export type WarehouseOverviewItem = {
   productId: string;
   productCode: string;
@@ -22,6 +29,12 @@ export type WarehouseOverviewItem = {
   returned: number;
   imported: number;
   transferredOut: number;
+  /**
+   * Breakdown theo SKU. Chỉ có khi hook được gọi với
+   * `includeVariants=true` (mặc định đã bật cho /warehouses để loại bỏ
+   * N+1 request — trước đây phải gọi /variants lặp N lần).
+   */
+  variants?: WarehouseOverviewVariantItem[];
 };
 
 export type WarehouseOverviewTotals = {
@@ -48,6 +61,12 @@ export type WarehouseOverviewParams = {
   warehouseId?: string | null;
   /** Mã kho hard-coded (KHO1 / KHO2). KHÔNG dùng areaCountryCode — Area chỉ dành cho nhân viên. */
   warehouseCode?: string | null;
+  /**
+   * Khi true, API đính kèm breakdown variants cho tất cả products trong
+   * cùng response — FE /warehouses bật để hiển thị SKU breakdown trên card
+   * mà không cần thêm N request /variants.
+   */
+  includeVariants?: boolean;
 };
 
 async function fetchOverview(
@@ -59,6 +78,9 @@ async function fetchOverview(
   }
   if (params.warehouseCode) {
     search.set("warehouseCode", params.warehouseCode);
+  }
+  if (params.includeVariants) {
+    search.set("includeVariants", "true");
   }
   const url = `/api/warehouses/inventory-overview${
     search.toString() ? `?${search.toString()}` : ""

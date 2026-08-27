@@ -12,13 +12,13 @@
  *   │ ↩ Đang hoàn · ✅ Giao TC  │
  *   │ 📥 Hoàn kho · Tổng nhập   │
  *   │ [Nhập] [Chi tiết]         │
- *   │  • Variant-A   [120]      │  ← breakdown variant (fetch lazy)
+ *   │  • Variant-A   [120]      │  ← breakdown variant (embed từ overview)
  *   │  • Variant-B   [ 30]      │
  *   └──────────────────────────┘
  */
 
-import { memo, useEffect, useMemo, useState } from "react";
-import { Button, Empty, Skeleton, Tag, Spin } from "antd";
+import { memo, useState } from "react";
+import { Button, Empty, Skeleton, Tag } from "antd";
 import {
   PlusOutlined,
   EyeOutlined,
@@ -41,15 +41,9 @@ export type WarehouseOverviewCardProps = {
   items: WarehouseOverviewItem[];
   loading?: boolean;
   activeWarehouseId?: string;
-  /** Mã kho hard-coded (KHO1 / KHO2). Dùng để label và làm dep cho variant breakdown fetch. */
+  /** Mã kho hard-coded (KHO1 / KHO2). Dùng để label. */
   warehouseCode?: string;
   variant?: "full" | "source";
-};
-
-type VariantRow = {
-  productVariantId: string;
-  sku: string;
-  stock: number;
 };
 
 const TONE: Record<string, string> = {
@@ -77,67 +71,18 @@ function WarehouseOverviewCardInner({
   const lang = useLanguageStore((s) => s.language);
   const [importTarget, setImportTarget] = useState<WarehouseOverviewItem | null>(null);
   const [detailTarget, setDetailTarget] = useState<WarehouseOverviewItem | null>(null);
-  const [variantsMap, setVariantsMap] = useState<Record<string, VariantRow[]>>({});
-  const [variantsLoading, setVariantsLoading] = useState<Record<string, boolean>>({});
 
-  // Fetch variant breakdown lazily per product so the card shows
-  // stock-per-SKU without forcing the user to open the drawer.
-  // Dùng 1 key ổn định làm dep để React không cảnh báo "deps changed size"
-  // khi parent truyền/nhận `warehouseCode` không nhất quán giữa các route.
-  const filterKey = useMemo(
-    () =>
-      `${activeWarehouseId ?? ""}|${warehouseCode ?? ""}|${items.length}`,
-    [activeWarehouseId, warehouseCode, items]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    if (items.length === 0) return;
-    (async () => {
-      for (const item of items) {
-        if (cancelled) return;
-        if (variantsMap[item.productId]) continue;
-        setVariantsLoading((prev) => ({ ...prev, [item.productId]: true }));
-        try {
-          const params = new URLSearchParams();
-          if (activeWarehouseId) {
-            params.set("warehouseId", activeWarehouseId);
-          } else if (warehouseCode) {
-            params.set("warehouseCode", warehouseCode);
-          }
-          const queryString = params.toString();
-          const url = `/api/warehouses/inventory-overview/${item.productId}/variants${
-            queryString ? `?${queryString}` : ""
-          }`;
-          const res = await fetch(url);
-          const json = await res.json();
-          const rows: VariantRow[] = (json?.data?.items ?? []).map(
-            (v: { productVariantId: string; sku: string; stock: number }) => ({
-              productVariantId: v.productVariantId,
-              sku: v.sku,
-              stock: v.stock ?? 0,
-            })
-          );
-          if (!cancelled) {
-            setVariantsMap((prev) => ({ ...prev, [item.productId]: rows }));
-          }
-        } catch {
-          // keep silent — card-level breakdown is non-critical
-        } finally {
-          if (!cancelled) {
-            setVariantsLoading((prev) => ({
-              ...prev,
-              [item.productId]: false,
-            }));
-          }
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterKey]);
+  /**
+   * Variants breakdown giờ được embed sẵn trong mỗi `WarehouseOverviewItem`
+   * từ response `/api/warehouses/inventory-overview?includeVariants=true`.
+   * Điều này loại bỏ N+1 request — trước đây mỗi card tự fetch
+   * /api/warehouses/inventory-overview/{productId}/variants theo vòng
+   * `for await` tuần tự (với 1000 SP sẽ tốn ~5 phút).
+   *
+   * Drawer "Chi tiết" vẫn gọi /variants riêng để có full breakdown
+   * (shipping/returning/delivered/returned) chỉ cho 1 sản phẩm user
+   * click vào — đây là request do user-trigger, không phải N+1.
+   */
 
   // Badge tồn kho: giúp user nhìn nhanh SP nào hết hàng / tồn thấp
   const renderStockBadge = (stock: number) => {
@@ -170,8 +115,8 @@ function WarehouseOverviewCardInner({
     <>
       <div className={styles["wh-grid"]}>
         {items.map((item) => {
-          const variants = variantsMap[item.productId];
-          const isLoadingVariants = variantsLoading[item.productId];
+          // variants được server group sẵn theo productId
+          const variants = item.variants;
           return (
             <div key={item.productId} className={styles["wh-item"]}>
               <h4 className={styles["wh-item-title"]}>
@@ -225,15 +170,10 @@ function WarehouseOverviewCardInner({
                 )}
               </div>
 
-              {/* Per-variant breakdown (lazy-loaded) */}
-              {(isLoadingVariants || (variants && variants.length > 0)) && (
+              {/* Per-variant breakdown — đã có sẵn từ overview response, không cần fetch thêm */}
+              {variants && variants.length > 0 && (
                 <div className={styles["wh-item-variants"]}>
-                  {isLoadingVariants && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#8c8c8c" }}>
-                      <Spin size="small" /> {t("Đang tải phân loại...", lang)}
-                    </div>
-                  )}
-                  {variants?.map((v) => (
+                  {variants.map((v) => (
                     <div key={v.productVariantId} className={styles["wh-item-variant"]}>
                       <span className={styles["wh-item-variant-sku"]}>• {v.sku}</span>
                       <span className={stockVariantClass(v.stock)}>{v.stock}</span>

@@ -16,6 +16,11 @@
  *      tên SP · tồn kho · đang giao · đang hoàn về · đã giao TC ·
  *      đã hoàn kho · tổng nhập
  *
+ *  - (Optional) Per-Variant breakdown (khi `includeVariants=true`):
+ *      Danh sách variants kèm stock/shipping/... — đính kèm trong
+ *      cùng 1 request để loại bỏ N+1 pattern (trước đây FE phải
+ *      gọi /variants lặp N lần theo từng product).
+ *
  * Công thức:
  *  - Tồn kho (stk)        = sum(Inventory.quantity − Inventory.reservedQuantity)
  *                            (grouped by productId)
@@ -51,6 +56,17 @@ export type WarehouseOverviewItem = {
   transferredOut: number;
 };
 
+/**
+ * Variant breakdown trong overview — chỉ giữ các field cần cho UI card
+ * (đủ để render breakdown SKU trên card mà không cần gọi thêm API).
+ */
+export type WarehouseOverviewVariantItem = {
+  productVariantId: string;
+  sku: string;
+  stock: number;
+  imported: number;
+};
+
 export type WarehouseOverviewResponse = {
   totals: {
     productCount: number;
@@ -59,8 +75,13 @@ export type WarehouseOverviewResponse = {
     returning: number;
     delivered: number;
     returned: number;
+    imported: number;
+    transferredOut: number;
   };
-  items: WarehouseOverviewItem[];
+  items: (WarehouseOverviewItem & {
+    /** Chỉ có khi request `includeVariants=true`. */
+    variants?: WarehouseOverviewVariantItem[];
+  })[];
 };
 
 export async function GET(request: Request) {
@@ -85,6 +106,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const warehouseIdParam = searchParams.get("warehouseId")?.trim() || "";
     const warehouseCodeParam = searchParams.get("warehouseCode")?.trim().toUpperCase() || "";
+    /**
+     * includeVariants=true: đính kèm breakdown variants cho tất cả products
+     * trong cùng response. Mặc định false để giữ payload nhỏ cho những
+     * chỗ chỉ cần overview totals + items. FE /warehouses sẽ set true.
+     */
+    const includeVariants = searchParams.get("includeVariants") === "true";
 
     // Resolve scoped warehouse IDs.
     // - warehouseId wins if both supplied.
@@ -111,6 +138,8 @@ export async function GET(request: Request) {
             returning: 0,
             delivered: 0,
             returned: 0,
+            imported: 0,
+            transferredOut: 0,
           },
           items: [],
         } satisfies WarehouseOverviewResponse);
@@ -132,6 +161,8 @@ export async function GET(request: Request) {
           returning: 0,
           delivered: 0,
           returned: 0,
+          imported: 0,
+          transferredOut: 0,
         },
         items: [],
       } satisfies WarehouseOverviewResponse);
@@ -144,7 +175,7 @@ export async function GET(request: Request) {
       productId: { $in: productIds },
       isActive: { $ne: false },
     })
-      .select("_id productId")
+      .select("_id productId sku")
       .lean();
     const variantsByProduct = new Map<string, string[]>();
     for (const v of variants) {
@@ -449,7 +480,21 @@ export async function GET(request: Request) {
     }
 
     // ---- Gộp kết quả theo Product ----
-    const items: WarehouseOverviewItem[] = products.map((p) => {
+    // Khi includeVariants=true, chạy thêm 1 aggregation duy nhất cho tất
+    // cả variants trong cùng request để loại bỏ N+1 (trước đây FE phải
+    // gọi /variants lặp N lần). Variant-level stock + imported được tính
+    // ngay tại đây từ cùng tập allVariantIdsAsOid đã aggregate ở trên.
+    let variantsByProductMap: Map<string, WarehouseOverviewVariantItem[]> | null = null;
+    if (includeVariants) {
+      variantsByProductMap = await buildVariantBreakdown({
+        allVariantIdsAsOid,
+        variantsByProduct,
+        variants, // [{ _id, productId, sku }]
+        scopedWarehouseIds,
+      });
+    }
+
+    const items: WarehouseOverviewResponse["items"] = products.map((p) => {
       const pid = String(p._id);
       const counts = countByProduct.get(pid) ?? {
         shipping: 0,
@@ -457,7 +502,7 @@ export async function GET(request: Request) {
         delivered: 0,
         returned: 0,
       };
-      return {
+      const baseItem = {
         productId: pid,
         productCode: p.code,
         productName: p.name,
@@ -468,7 +513,11 @@ export async function GET(request: Request) {
         returning: counts.returning,
         delivered: counts.delivered,
         returned: counts.returned,
-      };
+      } satisfies WarehouseOverviewItem;
+      if (variantsByProductMap) {
+        return { ...baseItem, variants: variantsByProductMap.get(pid) ?? [] };
+      }
+      return baseItem;
     });
 
     // Lọc bỏ sản phẩm chưa có hoạt động gì
@@ -514,4 +563,99 @@ export async function GET(request: Request) {
     console.error("Warehouse Overview Error:", err);
     return errorResponse("Không thể tải tổng quan kho", 500);
   }
+}
+
+/**
+ * Tính per-variant stock + imported cho toàn bộ variants trong 1 lượt
+ * aggregation, rồi group theo productId.
+ *
+ * - Chỉ trả về variants có `stock > 0` hoặc `imported > 0` để giữ payload
+ *   nhỏ (FE /warehouses chỉ cần show SKU có hàng / có phát sinh nhập).
+ *
+ * - 2 aggregation queries duy nhất (WarehouseInventory + InventoryHistory)
+ *   thay vì 2 × N queries nếu FE gọi /variants cho từng product.
+ */
+async function buildVariantBreakdown(args: {
+  allVariantIdsAsOid: mongoose.Types.ObjectId[];
+  variantsByProduct: Map<string, string[]>;
+  variants: Array<{ _id: unknown; productId: unknown; sku: string }>;
+  scopedWarehouseIds: mongoose.Types.ObjectId[] | null;
+}): Promise<Map<string, WarehouseOverviewVariantItem[]>> {
+  const { allVariantIdsAsOid, variantsByProduct, variants, scopedWarehouseIds } = args;
+  const result = new Map<string, WarehouseOverviewVariantItem[]>();
+
+  if (allVariantIdsAsOid.length === 0) {
+    return result;
+  }
+
+  const variantSkuById = new Map<string, string>();
+  for (const v of variants) {
+    variantSkuById.set(String(v._id), v.sku);
+  }
+
+  // 1) Stock per variantId
+  const inventoryMatch: Record<string, unknown> = {
+    variantId: { $in: allVariantIdsAsOid },
+    itemType: "PRODUCT",
+    isActive: { $ne: false },
+  };
+  if (scopedWarehouseIds) {
+    inventoryMatch.warehouseId = { $in: scopedWarehouseIds };
+  }
+  const invAgg = (await WarehouseInventory.aggregate([
+    { $match: inventoryMatch },
+    {
+      $group: {
+        _id: "$variantId",
+        stock: { $sum: { $ifNull: ["$availableQuantity", 0] } },
+      },
+    },
+  ])) as Array<{ _id: unknown; stock: number }>;
+  const stockByVariant = new Map<string, number>();
+  for (const r of invAgg) stockByVariant.set(String(r._id), r.stock ?? 0);
+
+  // 2) Imported (INBOUND) per variantId
+  const importedByVariant = new Map<string, number>();
+  try {
+    const histMatch: Record<string, unknown> = {
+      productVariantId: { $in: allVariantIdsAsOid },
+      transactionType: "INBOUND",
+      isActive: { $ne: false },
+    };
+    if (scopedWarehouseIds) {
+      histMatch.warehouseId = { $in: scopedWarehouseIds };
+    }
+    const histAgg = (await InventoryHistory.aggregate([
+      { $match: histMatch },
+      {
+        $group: {
+          _id: "$productVariantId",
+          imported: { $sum: { $ifNull: ["$changeQuantity", 0] } },
+        },
+      },
+    ])) as Array<{ _id: unknown; imported: number }>;
+    for (const r of histAgg) {
+      importedByVariant.set(String(r._id), Math.max(0, r.imported ?? 0));
+    }
+  } catch {
+    // ignore — giữ stock, fallback imported=0
+  }
+
+  // Group by productId, chỉ giữ variant có stock > 0 hoặc imported > 0
+  for (const [pid, vIds] of variantsByProduct.entries()) {
+    const rows: WarehouseOverviewVariantItem[] = [];
+    for (const vId of vIds) {
+      const stock = stockByVariant.get(vId) ?? 0;
+      const imported = importedByVariant.get(vId) ?? 0;
+      if (stock <= 0 && imported <= 0) continue;
+      rows.push({
+        productVariantId: vId,
+        sku: variantSkuById.get(vId) ?? vId,
+        stock,
+        imported,
+      });
+    }
+    if (rows.length > 0) result.set(pid, rows);
+  }
+  return result;
 }

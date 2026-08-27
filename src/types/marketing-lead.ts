@@ -54,6 +54,14 @@ export interface MarketingLead {
     code: string;
     name: string;
   };
+  /** Sprint 8.7: Chế độ quà tặng (RANDOM/CUSTOMER_SELECTED). */
+  giftMode?: "RANDOM" | "CUSTOMER_SELECTED";
+  /** Sprint 8.7: Chi tiết quà khách yêu cầu. */
+  giftSelections?: Array<{
+    giftProductId: string;
+    giftProductName?: string;
+    quantity: number;
+  }>;
   note?: string;
   isDuplicate: boolean;
   /** Lead đã được convert thành Order (Sprint 5.7). */

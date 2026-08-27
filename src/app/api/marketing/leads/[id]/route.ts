@@ -42,6 +42,15 @@ function mapMarketingLead(lead: Lead): MarketingLead {
     combo: leadAny.combo,
     product: leadAny.product,
     facebookPage: leadAny.facebookPage,
+    // Sprint 8.7 — Quà tặng (forwarded từ Lead model).
+    giftMode: (lead as Lead & { giftMode?: "RANDOM" | "CUSTOMER_SELECTED" }).giftMode,
+    giftSelections: (lead as Lead & {
+      giftSelections?: Array<{ giftProductId: unknown; giftProductName?: string; quantity: number }>;
+    }).giftSelections?.map((g) => ({
+      giftProductId: g.giftProductId?.toString() ?? "",
+      giftProductName: g.giftProductName,
+      quantity: g.quantity,
+    })),
     note: lead.note,
     isDuplicate: lead.isDuplicate,
     // Sprint 5.7 — Lead Convert

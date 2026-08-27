@@ -238,6 +238,60 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
 
       <CardSection>
         <DescriptionList
+          title={t("Quà tặng", lang)}
+          columns={2}
+          size="small"
+          items={[
+            {
+              label: t("Chế độ quà", lang),
+              value: lead.giftMode ? (
+                <Tag color={lead.giftMode === "CUSTOMER_SELECTED" ? "gold" : "blue"}>
+                  {lead.giftMode === "CUSTOMER_SELECTED"
+                    ? t("Khách tự chọn", lang)
+                    : t("Ngẫu nhiên", lang)}
+                </Tag>
+              ) : (
+                <span style={{ color: "#bfbfbf" }}>-</span>
+              ),
+            },
+            {
+              label: t("Tổng số quà", lang),
+              value:
+                lead.giftSelections && lead.giftSelections.length > 0
+                  ? `${lead.giftSelections.reduce((sum, g) => sum + (g.quantity ?? 0), 0)} ${t("quà", lang)}`
+                  : <span style={{ color: "#bfbfbf" }}>-</span>,
+            },
+            {
+              label: t("Chi tiết quà", lang),
+              span: 2,
+              value:
+                lead.giftSelections && lead.giftSelections.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {lead.giftSelections.map((gift, idx) => (
+                      <div
+                        key={`${gift.giftProductId}-${idx}`}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 13,
+                        }}
+                      >
+                        <Tag color="purple">×{gift.quantity}</Tag>
+                        <span>{gift.giftProductName || gift.giftProductId}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span style={{ color: "#bfbfbf" }}>{t("Chưa có chi tiết quà", lang)}</span>
+                ),
+            },
+          ]}
+        />
+      </CardSection>
+
+      <CardSection>
+        <DescriptionList
           title={t("Thông tin Marketing", lang)}
           columns={2}
           size="small"
@@ -271,7 +325,7 @@ function LeadInfoTab({ lead }: { lead: SaleLead }) {
 
       <CardSection>
         <DescriptionList
-          title={t("Thời gian đơn hàng (Sprint 8.x)", lang)}
+          title={t("Thời gian đơn hàng", lang)}
           columns={3}
           size="small"
           items={[

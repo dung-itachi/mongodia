@@ -83,6 +83,11 @@ export default function WarehousesPage() {
     refetch: refetchOverview,
   } = useWarehouseInventoryOverview({
     warehouseId: overviewWarehouseId,
+    // Bật để API đính kèm breakdown variants trong cùng response — loại bỏ
+    // N+1 pattern (trước đây FE phải gọi /variants lặp N lần theo từng
+    // product trên card). Với 1000 sản phẩm, payload vẫn gọn vì API chỉ
+    // trả variants có stock > 0 hoặc imported > 0.
+    includeVariants: true,
   });
 
   // Client-side filter cho search + stock (server đã filter theo warehouseId)

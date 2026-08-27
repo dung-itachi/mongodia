@@ -18,6 +18,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { App } from "antd";
 import {
   PhoneOutlined,
@@ -72,6 +73,7 @@ export default function SaleLeadsPage() {
   // Get user role from auth store
   const user = useAuthStore((state) => state.user);
   const lang = useLanguageStore((s) => s.language);
+  const router = useRouter();
   const { message } = App.useApp();
   const roleCode = user?.role;
   const isAdminOrManager = roleCode === "ADMIN" || roleCode === "MANAGER";
@@ -186,7 +188,8 @@ export default function SaleLeadsPage() {
     };
 
     convertMutation.mutate({ leadId: convertingLead._id, orderItem }, {
-      onSuccess: () => {
+      onSuccess: (result) => {
+        const orderId = result?.orderId;
         // Best-effort: persist latest variant details snapshot (không block convert).
         void fetch(`/api/sale/leads/${convertingLead._id}`, {
           method: "PATCH",
@@ -196,12 +199,16 @@ export default function SaleLeadsPage() {
         void message.success(getTranslated("Đã tạo đơn hàng thành công"));
         setConvertingLead(null);
         void refetch();
+        // Redirect sang trang chi tiết đơn vừa tạo để xem lại phần quà
+        if (orderId) {
+          void router.push(`/orders/${orderId}`);
+        }
       },
       onError: (err) => {
         void message.error(getTranslated("Lỗi: ${err.message}").replace("${err.message}", err.message));
       },
     });
-  }, [convertingLead, convertMutation, refetch]);
+  }, [convertingLead, convertMutation, refetch, router]);
 
   const handlePageChange = useCallback((newPage: number, newLimit: number) => {
     setPage(newPage);
