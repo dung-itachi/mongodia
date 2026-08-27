@@ -1011,15 +1011,14 @@ export class OrderService {
  * Map Order.status (terminal/snapshot) sang Lead.status tương ứng.
  * Trả về null nếu không cần sync (giữ nguyên Lead.status hiện tại).
  *
- * - CONFIRMED   → CLOSED ("Đã chốt" — đơn đã xác nhận với khách, Sale chốt xong)
- * - CANCELLED   → CANCELLED ("Hủy")
- * - RETURNED    → LOST ("Không mua" — khách không nhận hàng)
+ * - Lead đã được Sale chốt (CLOSED) ngay khi convert, nên CONFIRMED không
+ *   cần chuyển gì thêm (Sale chốt = đã chốt, Admin xác nhận là bước riêng).
+ * - CANCELLED → CANCELLED ("Hủy")
+ * - RETURNED  → LOST ("Không mua" — khách không nhận hàng)
  * - PACKING/SHIPPING/DELIVERED/RECONCILED → null (giữ CLOSED, đơn vẫn đang xử lý)
  */
 function mapOrderStatusToLeadStatus(orderStatus: OrderStatus): LeadStatus | null {
   switch (orderStatus) {
-    case OrderStatus.CONFIRMED:
-      return LeadStatus.CLOSED;
     case OrderStatus.CANCELLED:
       return LeadStatus.CANCELLED;
     case OrderStatus.RETURNED:

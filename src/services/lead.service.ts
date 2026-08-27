@@ -459,13 +459,13 @@ export class LeadService {
       );
 
       // Update lead with conversion info (Sprint 8.4: use convertedOrderId)
-      // Sprint 8.x: cũng set status = ORDER_CREATED để /leads và /marketing/orders
-      // phản ánh ngay rằng Lead đã có đơn. Cột "tình trạng đơn hàng" ở FE sẽ tự
-      // populate Order.status (WAIT_CONFIRM/CONFIRMED/...) qua populate batch.
+      // Sprint 8.x: Lead.status = CLOSED ngay khi Sale chốt đơn (không đợi
+      // Admin xác nhận Order). Cột "Tình trạng ĐH" ở FE sẽ tự populate
+      // Order.status (WAIT_CONFIRM/CONFIRMED/...) qua batch lookup.
       await Lead.findByIdAndUpdate(
         id,
         {
-          status: LeadStatus.ORDER_CREATED,
+          status: LeadStatus.CLOSED,
           convertedOrderId: order._id,
           convertedAt: new Date(),
           updatedAt: new Date(),
