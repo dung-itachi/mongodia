@@ -137,7 +137,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
       form.setFieldValue("comboId", targetCombo._id);
 
       const price = lead.unitPriceMNT || targetCombo.sellingPrice;
-      setItems([createOrderItemFromCombo({
+      const newItem = createOrderItemFromCombo({
         _id: targetCombo._id,
         code: targetCombo.code,
         name: targetCombo.name,
@@ -145,8 +145,20 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
         giftQuantity: targetCombo.giftQuantity ?? 0,
         sellingPrice: price,
         productId: productId(targetCombo) ?? "",
-      })]);
+      });
+      // Prefill gift data from existing lead (matches SaleOrderModal behavior)
+      newItem.giftMode = lead.giftMode === "CUSTOMER_SELECTED" ? "CUSTOMER_SELECTED" : "RANDOM";
+      newItem.giftSelections = Array.isArray(lead.giftSelections)
+        ? lead.giftSelections.map((g) => ({
+            giftProductId: g.giftProductId,
+            giftProductName: g.giftProductName,
+            quantity: g.quantity,
+          }))
+        : [];
+      newItem.comboQuantity = lead.quantity && lead.quantity > 0 ? lead.quantity : 1;
+      setItems([newItem]);
       form.setFieldValue("sellingPrice", price);
+      form.setFieldValue("comboQuantity", newItem.comboQuantity);
     }
   }, [lead, open, combos, form]);
 
@@ -173,9 +185,19 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
       sellingPrice: price,
       productId: productId(combo) ?? "",
     });
+    // Preserve existing gift selections when switching combos (only if same giftMode)
+    const existingItem = items[0];
+    if (existingItem) {
+      newItem.giftMode = existingItem.giftMode;
+      newItem.giftSelections = existingItem.giftSelections ?? [];
+      newItem.comboQuantity = existingItem.comboQuantity;
+    }
     setItems([newItem]);
     form.setFieldValue("sellingPrice", price);
-  }, [combos, form]);
+    if (newItem.comboQuantity) {
+      form.setFieldValue("comboQuantity", newItem.comboQuantity);
+    }
+  }, [combos, form, items]);
 
   const handleItemsChange = useCallback((newItems: OrderItem[]) => {
     setItems(newItems);
