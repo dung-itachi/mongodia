@@ -55,6 +55,14 @@ export type DailyReportSummary = {
   totalDeliveredOk: number;
 };
 
+/** Sprint 8.x — Per-MKT breakdown (when groupBy=employee is passed) */
+export type DailyReportEmployeeGroup = {
+  marketingEmployeeId: string;
+  employeeName: string;
+  data: DailyReportItem[];
+  summary: DailyReportSummary;
+};
+
 export type DailyReportResponse = {
   success: boolean;
   data: {
@@ -67,6 +75,8 @@ export type DailyReportResponse = {
     };
     data: DailyReportItem[];
     summary: DailyReportSummary;
+    /** Sprint 8.x — Only present when `groupBy=employee` */
+    groupedData?: DailyReportEmployeeGroup[];
   };
   message?: string;
 };
@@ -78,6 +88,8 @@ export type UseMarketingDailyReportFilter = {
   areaId?: string;
   /** Filter by team (resolves to MKT employees in that team). */
   teamId?: string;
+  /** When "employee", API returns `groupedData[]` per MKT (requires teamId/areaId). */
+  groupBy?: "employee" | null;
 };
 
 const fetchDailyReport = async (
@@ -90,6 +102,7 @@ const fetchDailyReport = async (
   }
   if (filter.areaId) params.set("areaId", filter.areaId);
   if (filter.teamId) params.set("teamId", filter.teamId);
+  if (filter.groupBy) params.set("groupBy", filter.groupBy);
 
   const response = await fetch(
     `/api/marketing/dashboard/daily-report?${params.toString()}`,
@@ -126,7 +139,7 @@ export type UseMarketingDailyReportReturn = {
 export function useMarketingDailyReport(
   filter: UseMarketingDailyReportFilter = {}
 ): UseMarketingDailyReportReturn {
-  const { period = "7d", marketingEmployeeId, areaId, teamId } = filter;
+  const { period = "7d", marketingEmployeeId, areaId, teamId, groupBy } = filter;
 
   const {
     data,
@@ -134,8 +147,8 @@ export function useMarketingDailyReport(
     error,
     refetch,
   } = useQuery<DailyReportResponse["data"], Error>({
-    queryKey: ["marketing", "daily-report", period, marketingEmployeeId ?? null, areaId ?? null, teamId ?? null],
-    queryFn: () => fetchDailyReport({ period, marketingEmployeeId, areaId, teamId }),
+    queryKey: ["marketing", "daily-report", period, marketingEmployeeId ?? null, areaId ?? null, teamId ?? null, groupBy ?? null],
+    queryFn: () => fetchDailyReport({ period, marketingEmployeeId, areaId, teamId, groupBy }),
     staleTime: 60 * 1000, // 60 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,

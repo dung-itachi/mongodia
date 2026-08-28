@@ -16,13 +16,21 @@
  *   Ngày | Số đẩy | Đã gọi | Chốt | Giao | TC | DS ₮ | DS ₫ | Biểu đồ
  *
  * Sprint 8.0 — Phân trang khi period > 30 ngày
+ *
+ * Sprint 8.X — Team/Area filter support:
+ *  - Khi lọc theo Team hoặc Area, render NHIỀU BẢNG (mỗi MKT là 1 bảng).
+ *  - Khi lọc theo MKT cụ thể, render 1 bảng đơn lẻ.
  */
 
 import { memo, useMemo, useState, useEffect } from "react";
 import { Card, Table, Skeleton, Row, Col, Statistic, Select, Space, Empty } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { UserOutlined } from "@ant-design/icons";
-import { useMarketingDailyReport } from "@/hooks/useMarketingDailyReport";
+import {
+  useMarketingDailyReport,
+  type DailyReportItem,
+  type DailyReportSummary,
+} from "@/hooks/useMarketingDailyReport";
 import { useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
 import { useAuthStore } from "@/store/auth.store";
 import { useLanguageStore } from "@/store/language.store";
@@ -33,6 +41,10 @@ import styles from "./marketing.module.css";
 
 export type DailyRevenueReportProps = {
   period: ChartPeriod;
+  teamId?: string;
+  areaId?: string;
+  /** When true + teamId/areaId provided, render multiple tables (one per MKT). */
+  groupByEmployee?: boolean;
 };
 
 type DailyRevenueRow = {
@@ -60,8 +72,6 @@ function isGlobalUser(user: { role: string; permissions: string[] } | null): boo
 
 /**
  * Tính page size dựa vào period
- * - period < 30 ngày: hiển thị tất cả (no pagination)
- * - period >= 30 ngày: phân trang 15 ngày/page
  */
 function getPageSize(period: ChartPeriod): number {
   const periodDays: Record<ChartPeriod, number> = {
@@ -77,73 +87,27 @@ function getPageSize(period: ChartPeriod): number {
   return days >= 30 ? 15 : 0;
 }
 
-function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
-  const user = useAuthStore((state) => state.user);
-  const isGlobal = isGlobalUser(user);
-  const lang = useLanguageStore((s) => s.language);
-
-  const [selectedMarketingEmployeeId, setSelectedMarketingEmployeeId] = useState<
-    string | undefined
-  >(undefined);
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = getPageSize(period);
-
-  // Reset page khi period thay đổi
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [period]);
-
-  const { data, loading, error, refetch, scope } = useMarketingDailyReport({
-    period,
-    marketingEmployeeId: isGlobal ? selectedMarketingEmployeeId : undefined,
+function toRows(items: DailyReportItem[]): DailyRevenueRow[] {
+  return items.map((item, index) => {
+    const dateParts = item.date.split("-");
+    return {
+      key: item.date || String(index),
+      date: item.date,
+      dateDisplay: `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`,
+      revenue: item.revenue,
+      orders: item.orders,
+      avgOrder: item.avgOrder,
+      pushed: item.pushed ?? 0,
+      called: item.called ?? 0,
+      closed: item.closed ?? 0,
+      shipped: item.shipped ?? 0,
+      deliveredOk: item.deliveredOk ?? 0,
+    };
   });
+}
 
-  // Chỉ fetch MKT list khi user là GLOBAL — non-GLOBAL bị khoá cứng rồi.
-  const { employees: marketingEmployeeOptions } = useMarketingEmployees();
-
-  const tableData: DailyRevenueRow[] = useMemo(() => {
-    if (!data) return [];
-    return data.data.map((item, index) => {
-      const dateParts = item.date.split("-");
-      return {
-        key: item.date || String(index),
-        date: item.date,
-        dateDisplay: `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`,
-        revenue: item.revenue,
-        orders: item.orders,
-        avgOrder: item.avgOrder,
-        pushed: item.pushed ?? 0,
-        called: item.called ?? 0,
-        closed: item.closed ?? 0,
-        shipped: item.shipped ?? 0,
-        deliveredOk: item.deliveredOk ?? 0,
-      };
-    });
-  }, [data]);
-
-  // Paginated data
-  const paginatedData = useMemo(() => {
-    if (!pageSize || tableData.length <= pageSize) return tableData;
-    const start = (currentPage - 1) * pageSize;
-    return tableData.slice(start, start + pageSize);
-  }, [tableData, currentPage, pageSize]);
-
-  // Max revenue để scale biểu đồ bar — dựa vào tổng doanh thu của cả period
-  const maxRevenue = useMemo(
-    () => Math.max(...tableData.map((r) => r.revenue), 1),
-    [tableData]
-  );
-
-  // Total revenue sum để scale chiều cao cột tỷ lệ với tổng period
-  const totalRevenueSum = useMemo(
-    () => tableData.reduce((s, r) => s + r.revenue, 0),
-    [tableData]
-  );
-
-  const showPagination = pageSize > 0 && tableData.length > pageSize;
-
-  // Default summary values for empty/null state
-  const defaultSummary = {
+function defaultSummary(): DailyReportSummary {
+  return {
     totalDays: 0,
     totalRevenue: 0,
     totalOrders: 0,
@@ -159,28 +123,48 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
     totalShipped: 0,
     totalDeliveredOk: 0,
   };
-  const summary = data?.summary ?? defaultSummary;
+}
+
+// ============================================================================
+// Reusable table block
+// ============================================================================
+
+type RevenueTableBlockProps = {
+  title?: React.ReactNode;
+  items: DailyReportItem[];
+  summary: DailyReportSummary;
+  period: ChartPeriod;
+  loading: boolean;
+};
+
+function RevenueTableBlock({ title, items, summary, period, loading }: RevenueTableBlockProps) {
+  const lang = useLanguageStore((s) => s.language);
+  const pageSize = getPageSize(period);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [period]);
+
+  const tableData = useMemo(() => toRows(items), [items]);
+  const paginatedData = useMemo(() => {
+    if (!pageSize || tableData.length <= pageSize) return tableData;
+    const start = (currentPage - 1) * pageSize;
+    return tableData.slice(start, start + pageSize);
+  }, [tableData, currentPage, pageSize]);
+
+  const totalRevenueSum = useMemo(
+    () => tableData.reduce((s, r) => s + r.revenue, 0),
+    [tableData]
+  );
+
+  const showPagination = pageSize > 0 && tableData.length > pageSize;
+  const s = summary ?? defaultSummary();
 
   if (loading) {
     return (
-      <Card
-        title={t("📈 Doanh số theo ngày", lang)}
-        className={styles["mk-daily-report-card"]}
-      >
+      <Card title={title || t("📈 Doanh số theo ngày", lang)} className={styles["mk-daily-report-card"]}>
         <Skeleton active paragraph={{ rows: 8 }} />
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card
-        title={t("📈 Doanh số theo ngày", lang)}
-        className={styles["mk-daily-report-card"]}
-      >
-        <div className={styles["mk-drawer-error"]}>
-          {t("Không thể tải dữ liệu doanh số theo ngày", lang)}
-        </div>
       </Card>
     );
   }
@@ -300,74 +284,25 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
     },
   ];
 
-  const showingMktName = isGlobal
-    ? selectedMarketingEmployeeId
-      ? marketingEmployeeOptions.find(
-          (e) => e.value === selectedMarketingEmployeeId
-        )?.label
-      : t("Tất cả MKT", lang)
-    : user?.fullName ?? t("MKT của bạn", lang);
-
   return (
     <Card
       title={
-        <span>
-          {t("📈 Doanh số theo ngày", lang)}
-          <small style={{ marginLeft: 8, color: "#8c8c8c", fontWeight: 400 }}>
-            {t(`${tableData.length} ngày`, lang)} · {t(`${summary.totalPushed} số`, lang)} · {t(`${summary.totalClosed} chốt`, lang)} · {t(`${summary.totalDeliveredOk} TC`, lang)}
-          </small>
-        </span>
+        title || (
+          <span>
+            {t("📈 Doanh số theo ngày", lang)}
+            <small style={{ marginLeft: 8, color: "#8c8c8c", fontWeight: 400 }}>
+              {t(`${tableData.length} ngày`, lang)} · {t(`${s.totalPushed} số`, lang)} · {t(`${s.totalClosed} chốt`, lang)} · {t(`${s.totalDeliveredOk} TC`, lang)}
+            </small>
+          </span>
+        )
       }
       className={styles["mk-daily-report-card"]}
-      extra={
-        isGlobal ? (
-          <Space size={8}>
-            <UserOutlined style={{ color: "#8c8c8c" }} />
-            <Select
-              allowClear
-              placeholder={t("Chọn MKT cụ thể", lang)}
-              value={selectedMarketingEmployeeId}
-              onChange={(v) => setSelectedMarketingEmployeeId(v)}
-              options={[
-                { value: "__all__", label: t("Tất cả MKT", lang) },
-                ...marketingEmployeeOptions,
-              ]}
-              showSearch
-              optionFilterProp="label"
-              filterOption={(input, option) =>
-                String(option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              size="small"
-              style={{ width: 220 }}
-            />
-          </Space>
-        ) : undefined
-      }
     >
-      {/* Sub-header showing scope */}
-      <div
-        style={{
-          marginBottom: 12,
-          fontSize: 13,
-          color: "#595959",
-        }}
-      >
-        {t("Đang xem:", lang)} <strong>{showingMktName}</strong>
-        {scope === "SELF" && (
-          <span style={{ marginLeft: 8, color: "#8c8c8c" }}>
-            {t("(chỉ đơn hàng của bạn)", lang)}
-          </span>
-        )}
-      </div>
-
-      {/* Summary Stats */}
       <Row gutter={16} className={styles["mk-daily-report-summary"]}>
         <Col xs={12} sm={8} md={4}>
           <Statistic
             title={t("Tổng DS", lang)}
-            value={summary.totalRevenue}
+            value={s.totalRevenue}
             formatter={(value) => formatNumber(Number(value))}
             styles={{ content: { color: "#fa8c16", fontSize: "20px" } }}
           />
@@ -375,41 +310,40 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
         <Col xs={12} sm={8} md={4}>
           <Statistic
             title={t("Số đẩy", lang)}
-            value={summary.totalPushed}
+            value={s.totalPushed}
             styles={{ content: { color: "#1890ff", fontSize: "20px" } }}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
             title={t("Đã gọi", lang)}
-            value={summary.totalCalled}
+            value={s.totalCalled}
             styles={{ content: { fontSize: "20px" } }}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
             title={t("Chốt", lang)}
-            value={summary.totalClosed}
+            value={s.totalClosed}
             styles={{ content: { color: "#52c41a", fontSize: "20px" } }}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
             title={t("Giao", lang)}
-            value={summary.totalShipped}
+            value={s.totalShipped}
             styles={{ content: { fontSize: "20px" } }}
           />
         </Col>
         <Col xs={12} sm={8} md={4}>
           <Statistic
             title={t("TC", lang)}
-            value={summary.totalDeliveredOk}
+            value={s.totalDeliveredOk}
             styles={{ content: { color: "#13c2c2", fontSize: "20px" } }}
           />
         </Col>
       </Row>
 
-      {/* Daily Table */}
       {tableData.length === 0 ? (
         <Empty description={t("Chưa có dữ liệu doanh số", lang)} />
       ) : (
@@ -443,19 +377,19 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
                   {t("Tổng", lang)}
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={1} align="center">
-                  <span style={{ color: "#1890ff" }}>{summary.totalPushed}</span>
+                  <span style={{ color: "#1890ff" }}>{s.totalPushed}</span>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={2} align="center">
-                  {summary.totalCalled}
+                  {s.totalCalled}
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={3} align="center">
-                  <span style={{ color: "#52c41a" }}>{summary.totalClosed}</span>
+                  <span style={{ color: "#52c41a" }}>{s.totalClosed}</span>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={4} align="center">
-                  {summary.totalShipped}
+                  {s.totalShipped}
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={5} align="center">
-                  <span style={{ color: "#13c2c2" }}>{summary.totalDeliveredOk}</span>
+                  <span style={{ color: "#13c2c2" }}>{s.totalDeliveredOk}</span>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={6} align="right">
                   <span style={{ color: "#fa8c16" }}>
@@ -473,6 +407,175 @@ function DailyRevenueReportInner({ period }: DailyRevenueReportProps) {
           }}
         />
       )}
+    </Card>
+  );
+}
+
+// ============================================================================
+// Main component
+// ============================================================================
+
+function DailyRevenueReportInner({ period, teamId, areaId, groupByEmployee }: DailyRevenueReportProps) {
+  const user = useAuthStore((state) => state.user);
+  const isGlobal = isGlobalUser(user);
+  const lang = useLanguageStore((s) => s.language);
+
+  // Determine effective filter & groupBy flag
+  const effectiveTeamId = teamId && teamId !== "__all__" ? teamId : undefined;
+  const effectiveAreaId = areaId && areaId !== "__all__" ? areaId : undefined;
+  const useGrouped = !!groupByEmployee && (!!effectiveTeamId || !!effectiveAreaId) && isGlobal;
+
+  const [selectedMarketingEmployeeId, setSelectedMarketingEmployeeId] = useState<
+    string | undefined
+  >(undefined);
+
+  const { employees: marketingEmployeeOptions } = useMarketingEmployees();
+
+  const { data, loading, error, scope } = useMarketingDailyReport({
+    period,
+    marketingEmployeeId: isGlobal && !useGrouped ? selectedMarketingEmployeeId : undefined,
+    teamId: effectiveTeamId,
+    areaId: effectiveAreaId,
+    groupBy: useGrouped ? "employee" : null,
+  });
+
+  const showingMktName = useGrouped
+    ? t(`Đang xem theo ${effectiveAreaId ? "khu vực" : "team"}`, lang)
+    : isGlobal
+      ? selectedMarketingEmployeeId
+        ? marketingEmployeeOptions.find((e) => e.value === selectedMarketingEmployeeId)?.label
+        : t("Tất cả MKT", lang)
+      : user?.fullName ?? t("MKT của bạn", lang);
+
+  // ─── Render: Multi-table mode (team/area filter) ───
+  if (useGrouped) {
+    if (loading) {
+      return (
+        <Card title={t("📈 Doanh số theo ngày", lang)} className={styles["mk-daily-report-card"]}>
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </Card>
+      );
+    }
+
+    if (error) {
+      return (
+        <Card title={t("📈 Doanh số theo ngày", lang)} className={styles["mk-daily-report-card"]}>
+          <div className={styles["mk-drawer-error"]}>
+            {t("Không thể tải dữ liệu doanh số theo ngày", lang)}
+          </div>
+        </Card>
+      );
+    }
+
+    const grouped = data?.groupedData ?? [];
+
+    return (
+      <div className={styles["mk-daily-report-multi"]}>
+        <Card
+          title={t("📈 Doanh số theo ngày", lang)}
+          className={styles["mk-daily-report-card"]}
+          extra={
+            <span style={{ color: "#595959", fontSize: 13 }}>
+              {t("Đang xem:", lang)} <strong>{showingMktName}</strong>
+              <span style={{ marginLeft: 8, color: "#8c8c8c" }}>
+                {`(${grouped.length} ${t("MKT", lang)})`}
+              </span>
+            </span>
+          }
+        >
+          {grouped.length === 0 ? (
+            <Empty description={t("Chưa có dữ liệu doanh số", lang)} />
+          ) : (
+            <div className={styles["mk-daily-report-substack"]}>
+              {grouped.map((g) => (
+                <RevenueTableBlock
+                  key={g.marketingEmployeeId}
+                  title={
+                    <span>
+                      <UserOutlined style={{ marginRight: 6 }} />
+                      <strong>{g.employeeName}</strong>
+                    </span>
+                  }
+                  items={g.data}
+                  summary={g.summary}
+                  period={period}
+                  loading={false}
+                />
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
+
+  // ─── Render: Single-table mode (default / MKT cụ thể) ───
+  const items = data?.data ?? [];
+  const summary = data?.summary ?? defaultSummary();
+
+  if (error && !data) {
+    return (
+      <Card title={t("📈 Doanh số theo ngày", lang)} className={styles["mk-daily-report-card"]}>
+        <div className={styles["mk-drawer-error"]}>
+          {t("Không thể tải dữ liệu doanh số theo ngày", lang)}
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      title={
+        <span>
+          {t("📈 Doanh số theo ngày", lang)}
+          <small style={{ marginLeft: 8, color: "#8c8c8c", fontWeight: 400 }}>
+            {t(`${items.length} ngày`, lang)} · {t(`${summary.totalPushed} số`, lang)} · {t(`${summary.totalClosed} chốt`, lang)} · {t(`${summary.totalDeliveredOk} TC`, lang)}
+          </small>
+        </span>
+      }
+      className={styles["mk-daily-report-card"]}
+      extra={
+        isGlobal ? (
+          <Space size={8}>
+            <UserOutlined style={{ color: "#8c8c8c" }} />
+            <Select
+              allowClear
+              placeholder={t("Chọn MKT cụ thể", lang)}
+              value={selectedMarketingEmployeeId}
+              onChange={(v) => setSelectedMarketingEmployeeId(v)}
+              options={[
+                { value: "__all__", label: t("Tất cả MKT", lang) },
+                ...marketingEmployeeOptions,
+              ]}
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                String(option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              size="small"
+              style={{ width: 220 }}
+            />
+          </Space>
+        ) : undefined
+      }
+    >
+      <div style={{ marginBottom: 12, fontSize: 13, color: "#595959" }}>
+        {t("Đang xem:", lang)} <strong>{showingMktName}</strong>
+        {scope === "SELF" && (
+          <span style={{ marginLeft: 8, color: "#8c8c8c" }}>
+            {t("(chỉ đơn hàng của bạn)", lang)}
+          </span>
+        )}
+      </div>
+
+      <RevenueTableBlock
+        items={items}
+        summary={summary}
+        period={period}
+        loading={loading}
+      />
     </Card>
   );
 }

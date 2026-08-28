@@ -371,10 +371,20 @@ export default function MarketingDashboardPage() {
         </div>
 
         {/* Doanh số theo ngày */}
-        <DailyRevenueReport period={period} />
+        <DailyRevenueReport
+          period={period}
+          teamId={effectiveTeamId}
+          areaId={effectiveAreaId}
+          groupByEmployee={isGlobal}
+        />
 
         {/* Báo cáo Ads theo ngày */}
-        <DailyAdsReport period={period} />
+        <DailyAdsReport
+          period={period}
+          teamId={effectiveTeamId}
+          areaId={effectiveAreaId}
+          groupByEmployee={isGlobal}
+        />
 
         {/* Basic Period Filter */}
         <div className={styles["mk-filters-row"]} />

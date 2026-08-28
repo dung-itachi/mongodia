@@ -45,6 +45,14 @@ export type DailyAdsReportSummary = {
   percentAds: number;
 };
 
+/** Sprint 8.x — Per-MKT breakdown (when groupBy=employee is passed) */
+export type DailyAdsReportEmployeeGroup = {
+  marketingEmployeeId: string;
+  employeeName: string;
+  data: DailyAdsReportRow[];
+  summary: DailyAdsReportSummary;
+};
+
 export type DailyAdsReportResponse = {
   success: boolean;
   data: {
@@ -57,6 +65,8 @@ export type DailyAdsReportResponse = {
     };
     data: DailyAdsReportRow[];
     summary: DailyAdsReportSummary;
+    /** Sprint 8.x — Only present when `groupBy=employee` */
+    groupedData?: DailyAdsReportEmployeeGroup[];
   };
   message?: string;
 };
@@ -66,6 +76,8 @@ export type UseMarketingDailyAdsReportFilter = {
   marketingEmployeeId?: string;
   areaId?: string;
   teamId?: string;
+  /** When "employee", API returns `groupedData[]` per MKT (requires teamId/areaId). */
+  groupBy?: "employee" | null;
 };
 
 const fetchDailyAdsReport = async (
@@ -78,6 +90,7 @@ const fetchDailyAdsReport = async (
   }
   if (filter.areaId) params.set("areaId", filter.areaId);
   if (filter.teamId) params.set("teamId", filter.teamId);
+  if (filter.groupBy) params.set("groupBy", filter.groupBy);
 
   const response = await api.get(
     `/api/marketing/dashboard/daily-ads-report?${params.toString()}`
@@ -104,7 +117,7 @@ export type UseMarketingDailyAdsReportReturn = {
 export function useMarketingDailyAdsReport(
   filter: UseMarketingDailyAdsReportFilter = {}
 ): UseMarketingDailyAdsReportReturn {
-  const { period = "7d", marketingEmployeeId, areaId, teamId } = filter;
+  const { period = "7d", marketingEmployeeId, areaId, teamId, groupBy } = filter;
 
   const {
     data,
@@ -119,8 +132,9 @@ export function useMarketingDailyAdsReport(
       marketingEmployeeId ?? null,
       areaId ?? null,
       teamId ?? null,
+      groupBy ?? null,
     ],
-    queryFn: () => fetchDailyAdsReport({ period, marketingEmployeeId, areaId, teamId }),
+    queryFn: () => fetchDailyAdsReport({ period, marketingEmployeeId, areaId, teamId, groupBy }),
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,

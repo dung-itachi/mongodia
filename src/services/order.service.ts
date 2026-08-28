@@ -54,6 +54,9 @@ import {
 } from "@/services/warehouse/orderDemand";
 import { buildStockWiringPlanForCreate, type OrderStockSnapshot } from "@/services/order/orderStockWiring.helper";
 import { InventoryReferenceType } from "@/constants/inventoryStatus";
+// Revenue Lock Engine — tính lại doanh thu khi đổi status
+import { resolveCustomerRevenue } from "@/services/order/revenueEngine.service";
+import { Order as OrderModel } from "@/models/Order";
 
 import type { OrderItem as SaleOrderItem } from "@/types/variant";
 import type {
@@ -335,6 +338,78 @@ export class OrderService {
         },
         session
       );
+
+      // ─────────────────────────────────────────────────────────────────────
+      // Revenue Lock Engine wiring (Sprint Revenue Feature)
+      // ─────────────────────────────────────────────────────────────────────
+      // Logic:
+      //   - WAIT_CONFIRM → CONFIRMED: SET marketingRevenueRaw / saleRevenueRaw
+      //     = grandTotal - shippingFee. MKT/Sale được tính doanh thu từ đây.
+      //   - * → CANCELLED: SET revenue Raw/Final = 0, ghi ORDER_CANCELLED reason.
+      //     Engine sẽ unlock slot cho đơn sau cùng customer+product/combo.
+      //   - * → RETURNED: SET revenue Raw/Final = 0, ghi ORDER_CANCELLED reason.
+      //   - Sau cùng gọi resolveCustomerRevenue để engine tính lại Final cho
+      //     cả customer (đơn trước cancel → đơn sau được unlock + được tính).
+      // ─────────────────────────────────────────────────────────────────────
+      const revenueUpdate: Record<string, unknown> = {};
+      const oldSummary = (existingOrder as { summary?: { grandTotal?: number; shippingFee?: number } }).summary;
+      const oldShipping = (existingOrder as { shipping?: { shippingFee?: number } }).shipping;
+      const grandTotal =
+        oldSummary?.grandTotal
+        ?? (existingOrder as { totalAmount?: number }).totalAmount
+        ?? 0;
+      const shippingFee =
+        oldSummary?.shippingFee
+        ?? oldShipping?.shippingFee
+        ?? 0;
+      const netRevenue = Math.max(0, grandTotal - shippingFee);
+
+      // CONFIRMED: set Raw → engine sẽ tính Final = Raw (nếu không bị lock).
+      if (
+        currentStatus === OrderStatus.WAIT_CONFIRM &&
+        newStatus === OrderStatus.CONFIRMED
+      ) {
+        revenueUpdate.marketingRevenueRaw = netRevenue;
+        revenueUpdate.saleRevenueRaw = netRevenue;
+      }
+
+      // CANCELLED / RETURNED: xóa doanh thu.
+      if (
+        (newStatus === OrderStatus.CANCELLED || newStatus === OrderStatus.RETURNED) &&
+        currentStatus !== OrderStatus.CANCELLED &&
+        currentStatus !== OrderStatus.RETURNED
+      ) {
+        revenueUpdate.marketingRevenueRaw = 0;
+        revenueUpdate.saleRevenueRaw = 0;
+        revenueUpdate.marketingRevenueFinal = 0;
+        revenueUpdate.saleRevenueFinal = 0;
+        revenueUpdate.revenueEligible = false;
+        revenueUpdate.revenueLockReason = "ORDER_CANCELLED";
+        revenueUpdate.revenueCalculatedAt = new Date();
+      }
+
+      if (Object.keys(revenueUpdate).length > 0) {
+        await OrderModel.updateOne(
+          { _id: orderId },
+          { $set: revenueUpdate },
+          { session }
+        );
+      }
+
+      // Recalc revenue engine cho customer (chỉ khi status thay đổi ảnh hưởng slot).
+      if (
+        (currentStatus === OrderStatus.WAIT_CONFIRM && newStatus === OrderStatus.CONFIRMED) ||
+        newStatus === OrderStatus.CANCELLED ||
+        newStatus === OrderStatus.RETURNED
+      ) {
+        await resolveCustomerRevenue(
+          (existingOrder as { customerId: { toString(): string } }).customerId.toString(),
+          {
+            session,
+            actorEmployeeId: new mongoose.Types.ObjectId(employeeId),
+          }
+        );
+      }
 
       // Sprint 6.3: Auto-create WarehouseTask when Order moves to PACKING
       if (newStatus === OrderStatus.PACKING) {

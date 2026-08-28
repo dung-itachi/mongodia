@@ -91,6 +91,7 @@ export async function GET(request: Request) {
     const teamIdParam = searchParams.get("teamId");
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
+    const groupBy = searchParams.get("groupBy"); // "employee" | null
 
     // ----------------------------------------------------------------
     // Auth & scope
@@ -177,85 +178,44 @@ export async function GET(request: Request) {
     }
 
     // Fetch Revenue Data (Orders) by day
-    const revenueByDay = await Order.aggregate([
+    // If groupBy=employee, include marketingEmployeeId in grouping for per-MKT breakdown
+    const revenueByDayPipeline: import("mongoose").PipelineStage[] = [
       { $match: orderMatch },
       {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          totalOrders: { $sum: 1 },
-          totalRevenue: { $sum: "$totalAmount" },
-          avgOrderValue: { $avg: "$totalAmount" },
-          // Sprint X.Y — Daily breakdown theo status (Số đẩy / Đã gọi / Chốt / Giao / TC)
-          pushed: { $sum: 1 }, // Số đẩy = tất cả orders không CANCELLED/RETURNED
-          called: {
-            $sum: {
-              $cond: [
-                { $ne: ["$status", OrderStatus.WAIT_CONFIRM] },
-                1,
-                0,
-              ],
+        $group: groupBy === "employee"
+          ? {
+              _id: {
+                date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                marketingEmployeeId: "$marketingEmployeeId",
+              },
+              totalOrders: { $sum: 1 },
+              totalRevenue: { $sum: "$totalAmount" },
+              avgOrderValue: { $avg: "$totalAmount" },
+              pushed: { $sum: 1 },
+              called: { $sum: { $cond: [{ $ne: ["$status", OrderStatus.WAIT_CONFIRM] }, 1, 0] } },
+              closed: { $sum: { $cond: [{ $in: ["$status", [OrderStatus.CONFIRMED, OrderStatus.PACKING, OrderStatus.SHIPPING, OrderStatus.DELIVERED, OrderStatus.RETURNED, OrderStatus.RECONCILED]] }, 1, 0] } },
+              shipped: { $sum: { $cond: [{ $in: ["$status", [OrderStatus.SHIPPING, OrderStatus.DELIVERED, OrderStatus.RECONCILED]] }, 1, 0] } },
+              deliveredOk: { $sum: { $cond: [{ $in: ["$status", [OrderStatus.DELIVERED, OrderStatus.RECONCILED]] }, 1, 0] } },
+            }
+          : {
+              _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+              totalOrders: { $sum: 1 },
+              totalRevenue: { $sum: "$totalAmount" },
+              avgOrderValue: { $avg: "$totalAmount" },
+              pushed: { $sum: 1 },
+              called: { $sum: { $cond: [{ $ne: ["$status", OrderStatus.WAIT_CONFIRM] }, 1, 0] } },
+              closed: { $sum: { $cond: [{ $in: ["$status", [OrderStatus.CONFIRMED, OrderStatus.PACKING, OrderStatus.SHIPPING, OrderStatus.DELIVERED, OrderStatus.RETURNED, OrderStatus.RECONCILED]] }, 1, 0] } },
+              shipped: { $sum: { $cond: [{ $in: ["$status", [OrderStatus.SHIPPING, OrderStatus.DELIVERED, OrderStatus.RECONCILED]] }, 1, 0] } },
+              deliveredOk: { $sum: { $cond: [{ $in: ["$status", [OrderStatus.DELIVERED, OrderStatus.RECONCILED]] }, 1, 0] } },
             },
-          },
-          closed: {
-            $sum: {
-              $cond: [
-                {
-                  $in: [
-                    "$status",
-                    [
-                      OrderStatus.CONFIRMED,
-                      OrderStatus.PACKING,
-                      OrderStatus.SHIPPING,
-                      OrderStatus.DELIVERED,
-                      OrderStatus.RETURNED,
-                      OrderStatus.RECONCILED,
-                    ],
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-          shipped: {
-            $sum: {
-              $cond: [
-                {
-                  $in: [
-                    "$status",
-                    [
-                      OrderStatus.SHIPPING,
-                      OrderStatus.DELIVERED,
-                      OrderStatus.RECONCILED,
-                    ],
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-          deliveredOk: {
-            $sum: {
-              $cond: [
-                {
-                  $in: [
-                    "$status",
-                    [OrderStatus.DELIVERED, OrderStatus.RECONCILED],
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-        },
       },
-      { $sort: { _id: 1 } },
+      { $sort: { ...(groupBy === "employee" ? { "_id.date": 1 } : { _id: 1 }) } },
       {
         $project: {
           _id: 0,
-          date: "$_id",
+          ...(groupBy === "employee"
+            ? { date: "$_id.date", marketingEmployeeId: "$_id.marketingEmployeeId" }
+            : { date: "$_id" }),
           totalOrders: 1,
           totalRevenue: 1,
           avgOrderValue: 1,
@@ -266,47 +226,48 @@ export async function GET(request: Request) {
           deliveredOk: 1,
         },
       },
-    ]);
+    ];
+    const revenueByDay = await Order.aggregate(revenueByDayPipeline);
 
     // Fetch Ads Expense Data by day
-    const adsByDay = await MarketingExpenseReport.aggregate([
+    const adsByDayPipeline: import("mongoose").PipelineStage[] = [
       { $match: adsMatch },
       {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } },
-          totalSpent: {
-            $sum: {
-              $add: [
-                { $ifNull: ["$spentBudget.morning", 0] },
-                { $ifNull: ["$spentBudget.afternoon", 0] },
-                { $ifNull: ["$spentBudget.emergency", 0] },
-              ],
+        $group: groupBy === "employee"
+          ? {
+              _id: {
+                date: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } },
+                marketingEmployeeId: "$marketingEmployeeId",
+              },
+              totalSpent: { $sum: { $add: [{ $ifNull: ["$spentBudget.morning", 0] }, { $ifNull: ["$spentBudget.afternoon", 0] }, { $ifNull: ["$spentBudget.emergency", 0] }] } },
+              totalRevenue: { $sum: "$totalRevenue" },
+              totalLeads: { $sum: "$totalLeads" },
+              closedLeads: { $sum: "$closedLeads" },
+            }
+          : {
+              _id: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } },
+              totalSpent: { $sum: { $add: [{ $ifNull: ["$spentBudget.morning", 0] }, { $ifNull: ["$spentBudget.afternoon", 0] }, { $ifNull: ["$spentBudget.emergency", 0] }] } },
+              totalRevenue: { $sum: "$totalRevenue" },
+              totalLeads: { $sum: "$totalLeads" },
+              closedLeads: { $sum: "$closedLeads" },
             },
-          },
-          totalRevenue: { $sum: "$totalRevenue" },
-          totalLeads: { $sum: "$totalLeads" },
-          closedLeads: { $sum: "$closedLeads" },
-        },
       },
+      { $sort: groupBy === "employee" ? { "_id.date": 1 } : { _id: 1 } },
       {
         $project: {
           _id: 0,
-          date: "$_id",
+          ...(groupBy === "employee"
+            ? { date: "$_id.date", marketingEmployeeId: "$_id.marketingEmployeeId" }
+            : { date: "$_id" }),
           totalSpent: 1,
           totalRevenue: 1,
           totalLeads: 1,
           closedLeads: 1,
-          roas: {
-            $cond: [
-              { $gt: ["$totalSpent", 0] },
-              { $round: [{ $divide: ["$totalRevenue", "$totalSpent"] }, 2] },
-              0,
-            ],
-          },
+          roas: { $cond: [{ $gt: ["$totalSpent", 0] }, { $round: [{ $divide: ["$totalRevenue", "$totalSpent"] }, 2] }, 0] },
         },
       },
-      { $sort: { date: 1 } },
-    ]);
+    ];
+    const adsByDay = await MarketingExpenseReport.aggregate(adsByDayPipeline);
 
     // Merge data by date
     const dateMap = new Map<
@@ -354,6 +315,10 @@ export async function GET(request: Request) {
 
     // Fill in revenue data
     for (const item of revenueByDay) {
+      if (groupBy === "employee") {
+        const eid = item.marketingEmployeeId as unknown as string;
+        if (!eid) continue;
+      }
       const existing = dateMap.get(item.date);
       if (existing) {
         existing.revenue = item.totalRevenue;
@@ -411,6 +376,158 @@ export async function GET(request: Request) {
       }
     );
 
+    // ── groupBy=employee: per-MKT breakdown ──────────────────────────────────
+    type DailyTotals = {
+      totalRevenue: number;
+      totalOrders: number;
+      totalAdsSpent: number;
+      totalAdsRevenue: number;
+      totalLeads: number;
+      totalClosedLeads: number;
+      totalPushed: number;
+      totalCalled: number;
+      totalClosed: number;
+      totalShipped: number;
+      totalDeliveredOk: number;
+      avgDailyRevenue: number;
+      overallROAS: number;
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type DailyDataRow = Record<string, any>;
+
+    type EmployeeGroup = {
+      marketingEmployeeId: string;
+      employeeName: string;
+      data: DailyDataRow[];
+      summary: DailyTotals;
+    };
+
+    let groupedData: EmployeeGroup[] | undefined;
+    if (groupBy === "employee" && resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      // Build date-keyed maps for revenue and ads keyed by (date, empId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const revByEmpDate = new Map<string, any>();
+      for (const item of revenueByDay) {
+        const eid = String(item.marketingEmployeeId ?? "");
+        if (!eid) continue;
+        revByEmpDate.set(`${eid}|${item.date}`, item);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const adsByEmpDate = new Map<string, any>();
+      for (const item of adsByDay) {
+        const eid = String(item.marketingEmployeeId ?? "");
+        if (!eid) continue;
+        adsByEmpDate.set(`${eid}|${item.date}`, item);
+      }
+
+      // Lookup employee names
+      const empDocs = await Employee.find({ _id: { $in: resolvedEmployeeIds } })
+        .select("fullName employeeCode")
+        .lean();
+      const empNameMap = new Map<string, string>();
+      for (const e of empDocs) {
+        empNameMap.set(String(e._id), e.employeeCode ? `${e.fullName} (${e.employeeCode})` : e.fullName);
+      }
+
+      // Build grouped data per employee
+      groupedData = [];
+      for (const empId of resolvedEmployeeIds) {
+        const empName = empNameMap.get(empId) || empId;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const empDateMap = new Map<string, any>();
+        for (const [key, item] of revByEmpDate) {
+          if (!key.startsWith(`${empId}|`)) continue;
+          const dateKey = key.slice(empId.length + 1);
+          empDateMap.set(dateKey, {
+            date: dateKey,
+            revenue: item.totalRevenue,
+            orders: item.totalOrders,
+            avgOrder: Math.round(item.avgOrderValue),
+            adsSpent: 0,
+            adsRevenue: 0,
+            leads: 0,
+            closedLeads: 0,
+            roas: 0,
+            pushed: item.pushed ?? 0,
+            called: item.called ?? 0,
+            closed: item.closed ?? 0,
+            shipped: item.shipped ?? 0,
+            deliveredOk: item.deliveredOk ?? 0,
+          });
+        }
+
+        for (const [key, item] of adsByEmpDate) {
+          if (!key.startsWith(`${empId}|`)) continue;
+          const dateKey = key.slice(empId.length + 1);
+          const existing = empDateMap.get(dateKey) ?? {
+            date: dateKey,
+            revenue: 0,
+            orders: 0,
+            avgOrder: 0,
+            adsSpent: 0,
+            adsRevenue: 0,
+            leads: 0,
+            closedLeads: 0,
+            roas: 0,
+            pushed: 0,
+            called: 0,
+            closed: 0,
+            shipped: 0,
+            deliveredOk: 0,
+          };
+          existing.adsSpent = item.totalSpent;
+          existing.adsRevenue = item.totalRevenue;
+          existing.leads = item.totalLeads;
+          existing.closedLeads = item.closedLeads;
+          existing.roas = item.roas;
+          empDateMap.set(dateKey, existing);
+        }
+
+        // Fill in zero-row for dates with no data
+        for (const d of dailyData) {
+          if (!empDateMap.has(d.date)) {
+            empDateMap.set(d.date, { ...d, revenue: 0, orders: 0, avgOrder: 0, adsSpent: 0, adsRevenue: 0, leads: 0, closedLeads: 0, roas: 0, pushed: 0, called: 0, closed: 0, shipped: 0, deliveredOk: 0 });
+          }
+        }
+
+        const empData = Array.from(empDateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+        const empTotals = empData.reduce(
+          (acc, day) => ({
+            totalRevenue: acc.totalRevenue + day.revenue,
+            totalOrders: acc.totalOrders + day.orders,
+            totalAdsSpent: acc.totalAdsSpent + day.adsSpent,
+            totalAdsRevenue: acc.totalAdsRevenue + day.adsRevenue,
+            totalLeads: acc.totalLeads + day.leads,
+            totalClosedLeads: acc.totalClosedLeads + day.closedLeads,
+            totalPushed: acc.totalPushed + day.pushed,
+            totalCalled: acc.totalCalled + day.called,
+            totalClosed: acc.totalClosed + day.closed,
+            totalShipped: acc.totalShipped + day.shipped,
+            totalDeliveredOk: acc.totalDeliveredOk + day.deliveredOk,
+          }),
+          { totalRevenue: 0, totalOrders: 0, totalAdsSpent: 0, totalAdsRevenue: 0, totalLeads: 0, totalClosedLeads: 0, totalPushed: 0, totalCalled: 0, totalClosed: 0, totalShipped: 0, totalDeliveredOk: 0 }
+        );
+
+        // Only include MKTs that have at least one non-zero revenue or adsSpent row
+        const hasData = empData.some(d => d.revenue > 0 || d.adsSpent > 0 || d.orders > 0);
+        if (hasData) {
+          groupedData.push({
+            marketingEmployeeId: empId,
+            employeeName: empName,
+            data: empData,
+            summary: {
+              ...empTotals,
+              avgDailyRevenue: Math.round(empTotals.totalRevenue / empData.length) || 0,
+              overallROAS: empTotals.totalAdsSpent > 0 ? Math.round((empTotals.totalAdsRevenue / empTotals.totalAdsSpent) * 100) / 100 : 0,
+            },
+          });
+        }
+      }
+    }
+
     return success({
       period,
       scope: isGlobal ? "GLOBAL" : "SELF",
@@ -439,6 +556,7 @@ export async function GET(request: Request) {
         totalShipped: totals.totalShipped,
         totalDeliveredOk: totals.totalDeliveredOk,
       },
+      ...(groupedData ? { groupedData } : {}),
     });
   } catch (err) {
     if (err instanceof ForbiddenError) return errorResponse(err.message, 403);

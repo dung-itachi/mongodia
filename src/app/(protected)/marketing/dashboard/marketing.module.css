@@ -750,6 +750,43 @@
   min-width: 0;
 }
 
+/* Sprint 8.X — Multi-table layout cho team/area filter.
+   Mỗi MKT là 1 Card lồng bên trong Card lớn. */
+.mk-daily-report-multi {
+  width: 100%;
+  min-width: 0;
+}
+
+.mk-daily-report-substack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.mk-daily-report-substack > .mk-daily-report-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.mk-daily-report-substack > .mk-daily-report-card .ant-card-head {
+  background: #f0f7ff;
+  border-bottom: 1px solid #d6e4ff;
+  min-height: 44px;
+  padding: 0 16px;
+}
+
+.mk-daily-report-substack > .mk-daily-report-card .ant-card-head-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.mk-daily-report-substack > .mk-daily-report-card .ant-card-body {
+  padding: 16px;
+}
+
 .mk-daily-report-summary {
   margin-bottom: 16px;
   padding: 12px;

@@ -92,6 +92,7 @@ export async function GET(request: Request) {
     const employeeIdParam = searchParams.get("employeeId");
     const areaIdParam = searchParams.get("areaId");
     const teamIdParam = searchParams.get("teamId");
+    const groupBy = searchParams.get("groupBy"); // "employee" | null
 
     // ----------------------------------------------------------------
     // Auth & scope
@@ -152,80 +153,120 @@ export async function GET(request: Request) {
       isActive: { $ne: false },
     };
 
-    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
-      matchFilter.marketingEmployeeId = { $in: resolvedEmployeeIds };
+    // Convert hex strings → ObjectId instances so $in matches the stored ObjectId field.
+    const objectIds =
+      resolvedEmployeeIds && resolvedEmployeeIds.length > 0
+        ? resolvedEmployeeIds
+            .filter((id) => mongoose.Types.ObjectId.isValid(id))
+            .map((id) => new mongoose.Types.ObjectId(id))
+        : [];
+
+    if (objectIds.length > 0) {
+      matchFilter.marketingEmployeeId = { $in: objectIds };
     }
 
-    // Get ads report data grouped by date
+    // Get ads report data grouped by date (optionally by employee)
+    const adsGroupId = groupBy === "employee"
+      ? { date: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } }, marketingEmployeeId: "$marketingEmployeeId" }
+      : { date: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } } };
+
     const adsReportData = await MarketingExpenseReport.aggregate([
       { $match: matchFilter },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } },
+          _id: adsGroupId,
           firstReportId: { $first: "$_id" },
           reportStatus: { $first: "$status" },
           xinSang: { $sum: "$requestedBudget.morning" },
           xinChieu: { $sum: "$requestedBudget.afternoon" },
           xinGap: { $sum: "$requestedBudget.emergency" },
-          tongTieu: {
-            $sum: {
-              $add: [
-                { $ifNull: ["$spentBudget.morning", 0] },
-                { $ifNull: ["$spentBudget.afternoon", 0] },
-                { $ifNull: ["$spentBudget.emergency", 0] },
-              ],
-            },
-          },
-          tienDu: {
-            $sum: {
-              $add: [
-                { $ifNull: ["$remainingBudget.morning", 0] },
-                { $ifNull: ["$remainingBudget.afternoon", 0] },
-                { $ifNull: ["$remainingBudget.emergency", 0] },
-              ],
-            },
-          },
+          tongTieu: { $sum: { $add: [{ $ifNull: ["$spentBudget.morning", 0] }, { $ifNull: ["$spentBudget.afternoon", 0] }, { $ifNull: ["$spentBudget.emergency", 0] }] } },
+          tienDu: { $sum: { $add: [{ $ifNull: ["$remainingBudget.morning", 0] }, { $ifNull: ["$remainingBudget.afternoon", 0] }, { $ifNull: ["$remainingBudget.emergency", 0] }] } },
           totalLeads: { $sum: "$totalLeads" },
           closedLeads: { $sum: "$closedLeads" },
         },
       },
+      {
+        $project: {
+          _id: 0,
+          date: "$_id.date",
+          ...(groupBy === "employee" ? { marketingEmployeeId: "$_id.marketingEmployeeId" } : {}),
+          firstReportId: 1,
+          reportStatus: 1,
+          xinSang: 1,
+          xinChieu: 1,
+          xinGap: 1,
+          tongTieu: 1,
+          tienDu: 1,
+          totalLeads: 1,
+          closedLeads: 1,
+        },
+      },
     ]);
 
-    // Get revenue from Order table for each date
-    // Uses totalAmount for non-CANCELLED orders (consistent revenue logic across all endpoints).
-    // revenueEligible filter removed — totalAmount is always populated for active orders.
+    // Get revenue from Order table for each date (optionally by employee)
     const orderMatch: Record<string, unknown> = {
       createdAt: { $gte: startDate, $lte: endDate },
       isActive: true,
       status: { $nin: ["CANCELLED"] },
       marketingEmployeeId: { $exists: true, $ne: null },
     };
-    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
-      orderMatch.marketingEmployeeId = { $in: resolvedEmployeeIds };
+    if (objectIds.length > 0) {
+      orderMatch.marketingEmployeeId = { $in: objectIds };
     }
+
+    const orderGroupId = groupBy === "employee"
+      ? { date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, marketingEmployeeId: "$marketingEmployeeId" }
+      : { date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } } };
 
     const orderRevenueData = await Order.aggregate([
       { $match: orderMatch },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          _id: orderGroupId,
           totalRevenue: { $sum: "$totalAmount" },
           orderCount: { $sum: 1 },
         },
       },
+      {
+        $project: {
+          _id: 0,
+          date: "$_id.date",
+          ...(groupBy === "employee" ? { marketingEmployeeId: "$_id.marketingEmployeeId" } : {}),
+          totalRevenue: 1,
+          orderCount: 1,
+        },
+      },
     ]);
 
-    // Create a map of date -> order revenue
+    // Create a map of date -> order revenue (keyed by date or by empId|date)
     const orderRevenueMap = new Map(
-      orderRevenueData.map((item) => [item._id, { totalRevenue: item.totalRevenue, orderCount: item.orderCount }])
+      orderRevenueData.map((item) => {
+        if (groupBy === "employee") {
+          const eid = String(item.marketingEmployeeId ?? "");
+          return [`${eid}|${item.date}`, { totalRevenue: item.totalRevenue, orderCount: item.orderCount }];
+        }
+        return [item.date, { totalRevenue: item.totalRevenue, orderCount: item.orderCount }];
+      })
     );
 
+    // Filter out rows where date is null/missing before processing
+    const validAdsData = adsReportData.filter((r) => r.date != null);
+
     // Combine ads report data with order revenue
-    const dailyAdsData = adsReportData.map((report) => {
-      const orderRevenue = orderRevenueMap.get(report._id) || { totalRevenue: 0, orderCount: 0 };
+    const dailyAdsData = validAdsData.map((report) => {
+      const reportDate = String(report.date ?? "");
+      let orderRevenue = { totalRevenue: 0, orderCount: 0 };
+      if (groupBy === "employee") {
+        const eid = String(report.marketingEmployeeId ?? "");
+        orderRevenue = orderRevenueMap.get(`${eid}|${reportDate}`) || orderRevenue;
+      } else {
+        orderRevenue = orderRevenueMap.get(reportDate) || orderRevenue;
+      }
       const tongXin = report.xinSang + report.xinChieu + report.xinGap;
       return {
-        date: report._id,
+        date: reportDate,
+        marketingEmployeeId: report.marketingEmployeeId,
         firstReportId: report.firstReportId,
         reportStatus: report.reportStatus,
         xinSang: report.xinSang,
@@ -243,7 +284,7 @@ export async function GET(request: Request) {
     });
 
     // Sort by date descending
-    dailyAdsData.sort((a, b) => b.date.localeCompare(a.date));
+    dailyAdsData.sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
 
     // Calculate totals
     const totals = dailyAdsData.reduce(
@@ -263,6 +304,78 @@ export async function GET(request: Request) {
         totalRevenue: 0, totalLeads: 0, closedLeads: 0,
       }
     );
+
+    // ── groupBy=employee: per-MKT breakdown ──────────────────────────────────
+    type AdsEmployeeGroup = {
+      marketingEmployeeId: string;
+      employeeName: string;
+      data: typeof dailyAdsData;
+      summary: {
+        tongXin: number;
+        tongTieu: number;
+        tienDu: number;
+        totalRevenue: number;
+        totalLeads: number;
+        closedLeads: number;
+        percentAds: number;
+      };
+    };
+
+    let groupedData: AdsEmployeeGroup[] | undefined;
+    if (groupBy === "employee" && resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      // Lookup employee names
+      const empDocs = await Employee.find({ _id: { $in: resolvedEmployeeIds } })
+        .select("fullName employeeCode")
+        .lean();
+      const empNameMap = new Map<string, string>();
+      for (const e of empDocs) {
+        empNameMap.set(String(e._id), e.employeeCode ? `${e.fullName} (${e.employeeCode})` : e.fullName);
+      }
+
+      // Build grouped data per employee
+      groupedData = [];
+      for (const empId of resolvedEmployeeIds) {
+        const empName = empNameMap.get(empId) || empId;
+
+        // Filter ads rows for this employee
+        const empAds = dailyAdsData.filter(d => String(d.marketingEmployeeId ?? "") === empId);
+
+        // Only include MKTs that have at least one non-zero row
+        const hasData = empAds.some(d => d.tongTieu > 0 || d.xinSang + d.xinChieu + d.xinGap > 0 || d.totalRevenue > 0);
+        if (!hasData) continue;
+
+        const empTotals = empAds.reduce(
+          (acc, day) => ({
+            xinSang: acc.xinSang + day.xinSang,
+            xinChieu: acc.xinChieu + day.xinChieu,
+            xinGap: acc.xinGap + day.xinGap,
+            tongTieu: acc.tongTieu + day.tongTieu,
+            tienDu: acc.tienDu + day.tienDu,
+            totalRevenue: acc.totalRevenue + day.totalRevenue,
+            totalLeads: acc.totalLeads + day.totalLeads,
+            closedLeads: acc.closedLeads + day.closedLeads,
+          }),
+          { xinSang: 0, xinChieu: 0, xinGap: 0, tongTieu: 0, tienDu: 0, totalRevenue: 0, totalLeads: 0, closedLeads: 0 }
+        );
+
+        groupedData.push({
+          marketingEmployeeId: empId,
+          employeeName: empName,
+          data: empAds,
+          summary: {
+            tongXin: empTotals.xinSang + empTotals.xinChieu + empTotals.xinGap,
+            tongTieu: empTotals.tongTieu,
+            tienDu: empTotals.tienDu,
+            totalRevenue: empTotals.totalRevenue,
+            totalLeads: empTotals.totalLeads,
+            closedLeads: empTotals.closedLeads,
+            percentAds: empTotals.totalRevenue > 0
+              ? Math.round(((empTotals.xinSang + empTotals.xinChieu + empTotals.xinGap) / empTotals.totalRevenue) * 10000) / 100
+              : 0,
+          },
+        });
+      }
+    }
 
     return success({
       period,
@@ -285,6 +398,7 @@ export async function GET(request: Request) {
           ? Math.round(((totals.xinSang + totals.xinChieu + totals.xinGap) / totals.totalRevenue) * 10000) / 100
           : 0,
       },
+      ...(groupedData ? { groupedData } : {}),
     });
   } catch (err) {
     if (err instanceof ForbiddenError) return errorResponse(err.message, 403);
@@ -315,8 +429,16 @@ export async function POST(request: Request) {
       return errorResponse("Vui lòng chọn ngày báo cáo", 400);
     }
 
-    // Parse date
-    const reportDateObj = new Date(reportDate);
+    // Parse date — accept ISO string or YYYY-MM-DD
+    let reportDateObj: Date;
+    if (typeof reportDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(reportDate)) {
+      // Treat the YYYY-MM-DD prefix as the intended calendar date (UTC midnight),
+      // so client timezone doesn't shift the day backward.
+      const [y, m, d] = reportDate.slice(0, 10).split("-").map(Number);
+      reportDateObj = new Date(Date.UTC(y, m - 1, d));
+    } else {
+      reportDateObj = new Date(reportDate);
+    }
     const startOfDay = new Date(Date.UTC(
       reportDateObj.getUTCFullYear(),
       reportDateObj.getUTCMonth(),
