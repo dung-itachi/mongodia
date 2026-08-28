@@ -387,10 +387,12 @@ export class LeadService {
     try {
       session.startTransaction();
 
+      const now = new Date();
+
       // Claim the lead inside the transaction so concurrent chốt requests cannot both create an order.
       const claimedLead = await Lead.findOneAndUpdate(
         { _id: id, isConverted: false, convertedOrderId: { $exists: false } },
-        { $set: { isConverted: true, convertedAt: new Date(), updatedAt: new Date() } },
+        { $set: { isConverted: true, convertedAt: now, updatedAt: now } },
         { returnDocument: "after", session },
       );
       if (!claimedLead) {
@@ -452,6 +454,7 @@ export class LeadService {
           // Sprint 8.x: thời gian đơn hàng từ Lead
           orderDate: existingLead.orderDate,
           receivedDate: existingLead.receivedDate,
+          convertedAt: now,
           // Sprint 8.x: địa chỉ giao hàng từ Lead
           address: existingLead.address,
         },
@@ -467,8 +470,8 @@ export class LeadService {
         {
           status: LeadStatus.CLOSED,
           convertedOrderId: order._id,
-          convertedAt: new Date(),
-          updatedAt: new Date(),
+          convertedAt: now,
+          updatedAt: now,
         },
         { session }
       );

@@ -87,6 +87,7 @@ export async function PATCH(
 
     if (shouldChangeStatus) {
       updateData.status = OrderStatus.CONFIRMED;
+      updateData.confirmedAt = new Date();
     }
 
     const [updated] = await Promise.all([

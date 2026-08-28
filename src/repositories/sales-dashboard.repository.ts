@@ -133,7 +133,16 @@ export class SalesDashboardRepository {
         $match: {
           ...baseFilter,
           status: { $nin: ["CANCELLED"] },
-          createdAt: { $gte: startOfToday, $lte: endOfToday },
+        },
+      },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: startOfToday, $lte: endOfToday },
         },
       },
       {
@@ -151,7 +160,16 @@ export class SalesDashboardRepository {
         $match: {
           ...baseFilter,
           status: { $nin: ["CANCELLED"] },
-          createdAt: { $gte: startOfMonth, $lte: endOfToday },
+        },
+      },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: startOfMonth, $lte: endOfToday },
         },
       },
       {
@@ -166,9 +184,16 @@ export class SalesDashboardRepository {
     // 3. Today Orders
     const todayOrdersResult = await Order.aggregate([
       {
+        $match: baseFilter,
+      },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
         $match: {
-          ...baseFilter,
-          createdAt: { $gte: startOfToday, $lte: endOfToday },
+          computedDate: { $gte: startOfToday, $lte: endOfToday },
         },
       },
       {
@@ -183,9 +208,16 @@ export class SalesDashboardRepository {
     // 4. Month Orders
     const monthOrdersResult = await Order.aggregate([
       {
+        $match: baseFilter,
+      },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
         $match: {
-          ...baseFilter,
-          createdAt: { $gte: startOfMonth, $lte: endOfToday },
+          computedDate: { $gte: startOfMonth, $lte: endOfToday },
         },
       },
       {
@@ -301,7 +333,6 @@ export class SalesDashboardRepository {
 
     const baseMatch: Record<string, unknown> = {
       status: { $nin: ["CANCELLED"] },
-      createdAt: { $gte: startOfPeriod, $lte: now },
     };
     if (saleEmployeeId) {
       baseMatch.saleEmployeeId = new mongoose.Types.ObjectId(saleEmployeeId);
@@ -311,9 +342,19 @@ export class SalesDashboardRepository {
     const dailyResult = await Order.aggregate([
       { $match: baseMatch },
       {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: startOfPeriod, $lte: now }
+        }
+      },
+      {
         $group: {
           _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            $dateToString: { format: "%Y-%m-%d", date: "$computedDate" },
           },
           value: { $sum: "$totalAmount" },
         },
@@ -340,15 +381,24 @@ export class SalesDashboardRepository {
     // Weekly trend (last 12 weeks)
     const weeklyStart = new Date(now);
     weeklyStart.setDate(weeklyStart.getDate() - 12 * 7);
-    const weeklyMatch = { ...baseMatch, createdAt: { $gte: weeklyStart, $lte: now } };
 
     const weeklyResult = await Order.aggregate([
-      { $match: weeklyMatch },
+      { $match: baseMatch },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: weeklyStart, $lte: now }
+        }
+      },
       {
         $group: {
           _id: {
-            year: { $isoWeekYear: "$createdAt" },
-            week: { $isoWeek: "$createdAt" },
+            year: { $isoWeekYear: "$computedDate" },
+            week: { $isoWeek: "$computedDate" },
           },
           value: { $sum: "$totalAmount" },
         },
@@ -364,15 +414,24 @@ export class SalesDashboardRepository {
 
     // Monthly trend (last 12 months)
     const monthlyStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-    const monthlyMatch = { ...baseMatch, createdAt: { $gte: monthlyStart, $lte: now } };
 
     const monthlyResult = await Order.aggregate([
-      { $match: monthlyMatch },
+      { $match: baseMatch },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: monthlyStart, $lte: now }
+        }
+      },
       {
         $group: {
           _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
+            year: { $year: "$computedDate" },
+            month: { $month: "$computedDate" },
           },
           value: { $sum: "$totalAmount" },
         },
@@ -400,9 +459,7 @@ export class SalesDashboardRepository {
     const startOfPeriod = new Date(now);
     startOfPeriod.setDate(startOfPeriod.getDate() - days);
 
-    const baseMatch: Record<string, unknown> = {
-      createdAt: { $gte: startOfPeriod, $lte: now },
-    };
+    const baseMatch: Record<string, unknown> = {};
     if (saleEmployeeId) {
       baseMatch.saleEmployeeId = new mongoose.Types.ObjectId(saleEmployeeId);
     }
@@ -411,9 +468,19 @@ export class SalesDashboardRepository {
     const dailyResult = await Order.aggregate([
       { $match: baseMatch },
       {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: startOfPeriod, $lte: now }
+        }
+      },
+      {
         $group: {
           _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            $dateToString: { format: "%Y-%m-%d", date: "$computedDate" },
           },
           value: { $sum: 1 },
         },
@@ -439,15 +506,24 @@ export class SalesDashboardRepository {
     // Weekly trend
     const weeklyStart = new Date(now);
     weeklyStart.setDate(weeklyStart.getDate() - 12 * 7);
-    const weeklyMatch = { ...baseMatch, createdAt: { $gte: weeklyStart, $lte: now } };
 
     const weeklyResult = await Order.aggregate([
-      { $match: weeklyMatch },
+      { $match: baseMatch },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: weeklyStart, $lte: now }
+        }
+      },
       {
         $group: {
           _id: {
-            year: { $isoWeekYear: "$createdAt" },
-            week: { $isoWeek: "$createdAt" },
+            year: { $isoWeekYear: "$computedDate" },
+            week: { $isoWeek: "$computedDate" },
           },
           value: { $sum: 1 },
         },
@@ -463,15 +539,24 @@ export class SalesDashboardRepository {
 
     // Monthly trend
     const monthlyStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-    const monthlyMatch = { ...baseMatch, createdAt: { $gte: monthlyStart, $lte: now } };
 
     const monthlyResult = await Order.aggregate([
-      { $match: monthlyMatch },
+      { $match: baseMatch },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: monthlyStart, $lte: now }
+        }
+      },
       {
         $group: {
           _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
+            year: { $year: "$computedDate" },
+            month: { $month: "$computedDate" },
           },
           value: { $sum: 1 },
         },
@@ -601,7 +686,6 @@ export class SalesDashboardRepository {
 
     const baseMatch: Record<string, unknown> = {
       status: { $nin: ["CANCELLED"] },
-      createdAt: { $gte: startOfMonth },
     };
     if (saleEmployeeId) {
       baseMatch.saleEmployeeId = new mongoose.Types.ObjectId(saleEmployeeId);
@@ -609,6 +693,16 @@ export class SalesDashboardRepository {
 
     const pipeline: mongoose.PipelineStage[] = [
       { $match: baseMatch },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: startOfMonth }
+        }
+      }
     ];
 
     switch (type) {

@@ -420,13 +420,18 @@ export async function aggregateRevenueSummary(filter?: MarketingDashboardFilter)
   const results = await Order.aggregate([
     { $match: baseMatch },
     {
+      $addFields: {
+        computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+      }
+    },
+    {
       $facet: {
         todayRevenue: [
-          { $match: { createdAt: { $gte: todayStart, $lte: todayEnd } } },
+          { $match: { computedDate: { $gte: todayStart, $lte: todayEnd } } },
           { $group: { _id: null, total: { $sum: "$totalAmount" } } },
         ],
         monthRevenue: [
-          { $match: { createdAt: { $gte: monthStart } } },
+          { $match: { computedDate: { $gte: monthStart } } },
           { $group: { _id: null, total: { $sum: "$totalAmount" } } },
         ],
         totalRevenue: [
@@ -560,10 +565,16 @@ export async function aggregateRevenueTrend(period: ChartPeriod = "7d"): Promise
   const { start, end } = getDateRange(period);
 
   const pipeline = [
-    { $match: { createdAt: { $gte: start, $lte: end }, isActive: true, status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] } } },
+    { $match: { isActive: true, status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] } } },
+    {
+      $addFields: {
+        computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+      }
+    },
+    { $match: { computedDate: { $gte: start, $lte: end } } },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$computedDate" } },
         total: { $sum: "$totalAmount" },
       },
     },
@@ -1298,66 +1309,43 @@ export async function aggregateOrderTrendSummary(
     prevEnd.setUTCMilliseconds(prevEnd.getUTCMilliseconds() - 1);
   }
 
-  const buildMatch = (from: Date, to: Date) => ({
-    isActive: true,
-    createdAt: { $gte: from, $lte: to },
-  });
+  const buildPipeline = (from: Date, to: Date) => [
+    { $match: { isActive: true } },
+    {
+      $addFields: {
+        computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+      }
+    },
+    { $match: { computedDate: { $gte: from, $lte: to } } },
+    {
+      $facet: {
+        totalPushed: [
+          { $match: { status: { $nin: [OrderStatus.CANCELLED] } } },
+          { $count: "count" },
+        ],
+        called: [
+          { $match: { status: { $in: CALLED_STATUSES } } },
+          { $count: "count" },
+        ],
+        notCalled: [
+          { $match: { status: OrderStatus.WAIT_CONFIRM } },
+          { $count: "count" },
+        ],
+        deliveredOk: [
+          { $match: { status: { $in: DELIVERED_OK_STATUSES } } },
+          { $count: "count" },
+        ],
+        totalRevenue: [
+          { $match: { status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] } } },
+          { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+        ],
+      },
+    },
+  ];
 
   const [current, prev] = await Promise.all([
-    Order.aggregate([
-      { $match: buildMatch(currentStart, currentEnd) },
-      {
-        $facet: {
-          totalPushed: [
-            { $match: { status: { $nin: [OrderStatus.CANCELLED] } } },
-            { $count: "count" },
-          ],
-          called: [
-            { $match: { status: { $in: CALLED_STATUSES } } },
-            { $count: "count" },
-          ],
-          notCalled: [
-            { $match: { status: OrderStatus.WAIT_CONFIRM } },
-            { $count: "count" },
-          ],
-          deliveredOk: [
-            { $match: { status: { $in: DELIVERED_OK_STATUSES } } },
-            { $count: "count" },
-          ],
-          totalRevenue: [
-            { $match: { status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] } } },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } },
-          ],
-        },
-      },
-    ]).exec(),
-    Order.aggregate([
-      { $match: buildMatch(prevStart, prevEnd) },
-      {
-        $facet: {
-          totalPushed: [
-            { $match: { status: { $nin: [OrderStatus.CANCELLED] } } },
-            { $count: "count" },
-          ],
-          called: [
-            { $match: { status: { $in: CALLED_STATUSES } } },
-            { $count: "count" },
-          ],
-          notCalled: [
-            { $match: { status: OrderStatus.WAIT_CONFIRM } },
-            { $count: "count" },
-          ],
-          deliveredOk: [
-            { $match: { status: { $in: DELIVERED_OK_STATUSES } } },
-            { $count: "count" },
-          ],
-          totalRevenue: [
-            { $match: { status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] } } },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } },
-          ],
-        },
-      },
-    ]).exec(),
+    Order.aggregate(buildPipeline(currentStart, currentEnd)).exec(),
+    Order.aggregate(buildPipeline(prevStart, prevEnd)).exec(),
   ]);
 
   const cf = current[0] ?? {};
@@ -1443,18 +1431,15 @@ export async function aggregateOrderSummary(
 
   const match: Record<string, unknown> = { isActive: true };
 
+  const dateMatch: Record<string, unknown> = {};
   if (filter?.dateRange?.startDate) {
     const startDate = new Date(filter.dateRange.startDate);
-    match.createdAt = { $gte: startDate };
+    dateMatch.$gte = startDate;
   }
   if (filter?.dateRange?.endDate) {
     const endDate = new Date(filter.dateRange.endDate);
     endDate.setUTCHours(23, 59, 59, 999);
-    if (match.createdAt) {
-      (match.createdAt as Record<string, Date>).$lte = endDate;
-    } else {
-      match.createdAt = { $lte: endDate };
-    }
+    dateMatch.$lte = endDate;
   }
   if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
     match.marketingEmployeeId = { $in: resolvedEmployeeIds };
@@ -1463,8 +1448,25 @@ export async function aggregateOrderSummary(
     // Lọc qua lead nếu cần — tạm thời bỏ qua (order không có facebookPageId trực tiếp)
   }
 
-  const results = await Order.aggregate([
+  const pipeline: mongoose.PipelineStage[] = [
     { $match: match },
+    {
+      $addFields: {
+        computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+      }
+    }
+  ];
+
+  if (Object.keys(dateMatch).length > 0) {
+    pipeline.push({
+      $match: {
+        computedDate: dateMatch
+      }
+    });
+  }
+
+  const results = await Order.aggregate([
+    ...pipeline,
     {
       $facet: {
         totalPushed: [
@@ -1707,14 +1709,23 @@ export async function aggregateExportData(
       Order.aggregate([
         {
           $match: {
-            createdAt: { $gte: periodStart, $lte: periodEnd },
             isActive: true,
             status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
           },
         },
         {
+          $addFields: {
+            computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+          }
+        },
+        {
+          $match: {
+            computedDate: { $gte: periodStart, $lte: periodEnd },
+          },
+        },
+        {
           $group: {
-            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$computedDate" } },
             total: { $sum: "$totalAmount" },
           },
         },

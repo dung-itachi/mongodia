@@ -479,6 +479,7 @@ export async function POST(request: Request) {
           saleRevenueRaw: 0,
           saleRevenueFinal: 0,
           revenueEligible: false,
+          confirmedAt: status === OrderStatus.CONFIRMED ? new Date() : undefined,
           revenueLockReason: "NONE",
           revenueCalculatedAt: undefined,
           // ---- Stock wiring (Phase 4.3) --------------------------------

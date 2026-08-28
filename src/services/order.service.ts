@@ -94,6 +94,8 @@ export interface CreateFromLeadData {
   // Sprint 8.x: thời gian đơn hàng
   orderDate?: Date;
   receivedDate?: Date;
+  convertedAt?: Date;
+  confirmedAt?: Date;
   // Sprint 8.x: địa chỉ giao hàng từ Lead
   address?: string;
 }
@@ -1064,6 +1066,8 @@ export class OrderService {
         // Sprint 8.x: thời gian đơn hàng từ Lead
         orderDate: data.orderDate,
         receivedDate: data.receivedDate,
+        convertedAt: data.convertedAt,
+        confirmedAt: data.confirmedAt,
         // Sprint 8.x: convert từ lead = đơn mới, cần xác nhận
         status: OrderStatus.WAIT_CONFIRM,
         // Sprint 8.x: địa chỉ giao hàng từ Lead

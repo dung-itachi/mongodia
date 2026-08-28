@@ -644,6 +644,93 @@ function OrdersPageInner() {
       },
     },
     {
+      key: "orderDate",
+      title: t("TG đơn hàng", lang),
+      dataIndex: "orderDate",
+      width: 150,
+      render: (value: unknown) => {
+        if (!value) return <span style={{ color: "#8c8c8c" }}>-</span>;
+        const date = new Date(String(value));
+        return date.toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      },
+    },
+    {
+      key: "receivedDate",
+      title: t("TG nhận đơn", lang),
+      dataIndex: "receivedDate",
+      width: 150,
+      render: (value: unknown) => {
+        if (!value) return <span style={{ color: "#8c8c8c" }}>-</span>;
+        const date = new Date(String(value));
+        return date.toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      },
+    },
+    {
+      key: "convertedAt",
+      title: t("TG chốt đơn", lang),
+      dataIndex: "convertedAt",
+      width: 150,
+      render: (value: unknown) => {
+        if (!value) return <span style={{ color: "#8c8c8c" }}>-</span>;
+        const date = new Date(String(value));
+        return date.toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      },
+    },
+    {
+      key: "deliveredAt",
+      title: t("TG giao thành công", lang),
+      dataIndex: "deliveredAt",
+      width: 150,
+      hidden: status !== "DELIVERED",
+      render: (value: unknown) => {
+        if (!value) return <span style={{ color: "#8c8c8c" }}>-</span>;
+        const date = new Date(String(value));
+        return date.toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      },
+    },
+    {
+      key: "returnedAt",
+      title: t("TG hoàn hàng", lang),
+      dataIndex: "returnedAt",
+      width: 150,
+      hidden: status !== "RETURNED",
+      render: (value: unknown) => {
+        if (!value) return <span style={{ color: "#8c8c8c" }}>-</span>;
+        const date = new Date(String(value));
+        return date.toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      },
+    },
+    {
       key: "createdAt",
       title: t("Ngày tạo", lang),
       dataIndex: "createdAt",
@@ -876,7 +963,7 @@ function OrdersPageInner() {
         );
       },
     },
-  ], [router, getOrderItemTotals, showQuickActions, showShippingActions, showReturnedActions, handleQuickAction, toggleConfirmCallMutation, returnOrderMutation, returnTarget, setReturnTarget, page, pageSize]);
+  ], [router, getOrderItemTotals, showQuickActions, showShippingActions, showReturnedActions, handleQuickAction, toggleConfirmCallMutation, returnOrderMutation, returnTarget, setReturnTarget, page, pageSize, status, lang]);
 
   const columns = tableColumns;
 
@@ -932,6 +1019,7 @@ function OrdersPageInner() {
     if (!status) return;
     const tooltipMap: Record<OrderStatus, string> = {
       [OrderStatus.WAIT_CONFIRM]: t("Sale vừa chốt đơn, chưa xác nhận lại với khách", lang),
+      [OrderStatus.LEAD_CLOSED]: t("Đã gọi chốt đơn, đang chờ xác nhận", lang),
       [OrderStatus.CONFIRMED]: t("Đơn đã được xác nhận, sẵn sàng chuyển giao cho kho", lang),
       [OrderStatus.PACKING]: t("Nhân viên kho đang chuẩn bị và đóng gói đơn hàng", lang),
       [OrderStatus.SHIPPING]: t("Đơn hàng đang được vận chuyển đến khách", lang),

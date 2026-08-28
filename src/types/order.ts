@@ -177,6 +177,14 @@ export interface OrderListItem {
   orderDate?: string;
   /** Thời gian Marketing nhận được đơn (khi push sang Sale) */
   receivedDate?: string;
+  /** Thời gian chốt đơn */
+  convertedAt?: string;
+  /** Thời gian giao hàng thành công */
+  deliveredAt?: string;
+  /** Thời gian hoàn trả đơn hàng */
+  returnedAt?: string;
+  /** Thời gian xác nhận đơn hàng */
+  confirmedAt?: string;
 
   // Classification
   orderType: OrderType;

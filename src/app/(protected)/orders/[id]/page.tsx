@@ -756,6 +756,26 @@ export default function OrderDetailPage({ params }: PageProps) {
                     <div>{formatDate(order.receivedDate)}</div>
                   </Col>
                 )}
+                <Col xs={24} sm={8}>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("TG chốt đơn", lang)}</div>
+                  <div>{order.convertedAt ? formatDate(order.convertedAt) : "-"}</div>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("TG xác nhận đơn", lang)}</div>
+                  <div>{order.confirmedAt ? formatDate(order.confirmedAt) : "-"}</div>
+                </Col>
+                {(order.deliveredAt || order.status === "DELIVERED") && (
+                  <Col xs={24} sm={8}>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("TG giao thành công", lang)}</div>
+                    <div>{order.deliveredAt ? formatDate(order.deliveredAt) : "-"}</div>
+                  </Col>
+                )}
+                {(order.returnedAt || order.status === "RETURNED") && (
+                  <Col xs={24} sm={8}>
+                    <div style={{ color: "#8c8c8c", fontSize: 12 }}>{t("TG hoàn hàng", lang)}</div>
+                    <div>{order.returnedAt ? formatDate(order.returnedAt) : "-"}</div>
+                  </Col>
+                )}
                 {typeof order.exchangeRate === "number" && (
                   <Col xs={24} sm={8}>
                     <div style={{ color: "#8c8c8c", fontSize: 12 }}>

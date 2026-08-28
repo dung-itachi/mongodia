@@ -249,6 +249,10 @@ export interface IOrder extends Document {
   returnedToStockBy?: Types.ObjectId;
   /** Thời điểm giao hàng thành công (DELIVERED). */
   deliveredAt?: Date;
+  /** Thời điểm hoàn trả đơn hàng (RETURNED). */
+  returnedAt?: Date;
+  /** Thời điểm xác nhận đơn hàng (CONFIRMED). */
+  confirmedAt?: Date;
 
   // ---- Classification -------------------------------------------------
   /**
@@ -318,6 +322,8 @@ export interface IOrder extends Document {
   orderDate?: Date;
   /** Sprint 8.x — Thời gian Marketing nhận được đơn (khi push sang Sale). */
   receivedDate?: Date;
+  /** Thời gian chốt đơn (khi convert từ Lead). */
+  convertedAt?: Date;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -452,6 +458,10 @@ const OrderSchema = new Schema<IOrder>(
     returnedToStockBy: { type: Schema.Types.ObjectId, ref: "Employee" },
     /** Thời điểm giao hàng thành công (DELIVERED). */
     deliveredAt: { type: Date },
+    /** Thời điểm hoàn trả đơn hàng (RETURNED). */
+    returnedAt: { type: Date },
+    /** Thời điểm xác nhận đơn hàng (CONFIRMED). */
+    confirmedAt: { type: Date },
 
     orderType: {
       type: String,
@@ -592,6 +602,8 @@ const OrderSchema = new Schema<IOrder>(
     orderDate: { type: Date },
     // Sprint 8.x — receivedDate: thời gian Marketing nhận được đơn (khi push sang Sale)
     receivedDate: { type: Date },
+    // Thời gian chốt đơn
+    convertedAt: { type: Date },
     isActive: { type: Boolean, default: true, index: true },
   },
   {
@@ -618,7 +630,10 @@ OrderSchema.index({ leadId: 1 }, { unique: true, sparse: true });
 // Sprint 8.x: indexes for orderDate and receivedDate
 OrderSchema.index({ orderDate: -1 });
 OrderSchema.index({ receivedDate: -1 });
+OrderSchema.index({ convertedAt: -1 });
 OrderSchema.index({ deliveredAt: -1 });
+OrderSchema.index({ returnedAt: -1 });
+OrderSchema.index({ confirmedAt: -1 });
 
 // ==================================================
 // Compound indexes — phục vụ dashboard aggregations

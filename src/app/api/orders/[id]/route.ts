@@ -409,6 +409,16 @@ export async function PATCH(
         updateData.deliveredAt = new Date();
       }
 
+      // Set returnedAt when status changes to RETURNED
+      if (data.status === OrderStatus.RETURNED) {
+        updateData.returnedAt = new Date();
+      }
+
+      // Set confirmedAt when status changes to CONFIRMED
+      if (data.status === OrderStatus.CONFIRMED && existedOrder.status !== OrderStatus.CONFIRMED) {
+        updateData.confirmedAt = new Date();
+      }
+
       // ─────────────────────────────────────────────────────────────────────
       // Revenue Lock Engine wiring (Sprint Revenue Feature)
       // ─────────────────────────────────────────────────────────────────────

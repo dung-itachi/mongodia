@@ -65,7 +65,16 @@ export class SalesKPIService {
         $match: {
           saleEmployeeId: new mongoose.Types.ObjectId(employeeId),
           status: { $nin: ["CANCELLED"] },
-          createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+        },
+      },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
+        $match: {
+          computedDate: { $gte: startOfMonth, $lte: endOfMonth },
         },
       },
       {

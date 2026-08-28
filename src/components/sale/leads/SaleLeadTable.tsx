@@ -185,6 +185,18 @@ function SaleLeadTableInner({
           ),
       },
       {
+        key: "convertedAt",
+        title: t("TG chốt đơn", lang),
+        dataIndex: "convertedAt",
+        width: 150,
+        render: (value: unknown) =>
+          value ? (
+            new Date(String(value)).toLocaleString("vi-VN")
+          ) : (
+            <span className={styles.mutedText}>-</span>
+          ),
+      },
+      {
         key: "customerName",
         title: t("Tên khách hàng", lang),
         dataIndex: "customerName",

@@ -199,7 +199,7 @@ function EditLeadModalInner({ open, lead, onClose, onSuccess }: EditLeadModalPro
     }
   }, [combos, form, items]);
 
-  const handleItemsChange = useCallback((newItems: OrderItem[]) => {
+  const handleItemsChange = useCallback((newItems: OrderItem[] | ((prev: OrderItem[]) => OrderItem[])) => {
     setItems(newItems);
   }, []);
 

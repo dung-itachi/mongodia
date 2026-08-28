@@ -207,8 +207,14 @@ export interface OrderResponse {
   orderDate?: string;
   /** Thời gian Marketing nhận được đơn (khi push sang Sale) */
   receivedDate?: string;
+  /** Thời gian chốt đơn */
+  convertedAt?: string;
   /** Thời gian giao hàng thành công (DELIVERED). */
   deliveredAt?: string;
+  /** Thời gian hoàn trả đơn hàng (RETURNED). */
+  returnedAt?: string;
+  /** Thời gian xác nhận đơn hàng (CONFIRMED). */
+  confirmedAt?: string;
 
   // ---- Order Items (Sprint 6.1) ------------------------------------
   orderItems: OrderItemResponse[];
@@ -504,7 +510,10 @@ export function mapOrder(order: IOrder): OrderResponse {
     // Sprint 8.x: Thời gian đơn hàng
     orderDate: order.orderDate?.toISOString(),
     receivedDate: order.receivedDate?.toISOString(),
+    convertedAt: order.convertedAt?.toISOString(),
     deliveredAt: order.deliveredAt?.toISOString(),
+    returnedAt: order.returnedAt?.toISOString(),
+    confirmedAt: order.confirmedAt?.toISOString(),
     // Sprint 6.1: Order items and summary
     orderItems: (order.orderItems ?? []).map(mapOrderItem),
     summary: mapOrderSummary(order.summary),

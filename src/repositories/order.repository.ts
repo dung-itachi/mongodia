@@ -43,6 +43,10 @@ export interface CreateOrderData {
   // Sprint 8.x: thời gian đơn hàng
   orderDate?: Date;
   receivedDate?: Date;
+  convertedAt?: Date;
+  deliveredAt?: Date;
+  returnedAt?: Date;
+  confirmedAt?: Date;
   shipping?: {
     receiverName?: string;
     receiverPhone?: string;
@@ -110,6 +114,12 @@ export interface UpdateOrderData {
   };
   note?: string;
   isActive?: boolean;
+  orderDate?: Date;
+  receivedDate?: Date;
+  convertedAt?: Date;
+  deliveredAt?: Date;
+  returnedAt?: Date;
+  confirmedAt?: Date;
 }
 
 // ============================================================================
@@ -162,6 +172,12 @@ function mapToOrder(doc: IOrder) {
     whReturned: doc.whReturned,
     returnedToStockAt: doc.returnedToStockAt?.toISOString(),
     returnedToStockBy: doc.returnedToStockBy?.toString(),
+    orderDate: doc.orderDate?.toISOString(),
+    receivedDate: doc.receivedDate?.toISOString(),
+    convertedAt: doc.convertedAt?.toISOString(),
+    deliveredAt: doc.deliveredAt?.toISOString(),
+    returnedAt: doc.returnedAt?.toISOString(),
+    confirmedAt: doc.confirmedAt?.toISOString(),
   };
 }
 
