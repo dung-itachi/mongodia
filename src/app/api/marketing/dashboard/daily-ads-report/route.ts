@@ -165,12 +165,12 @@ export async function GET(request: Request) {
       matchFilter.marketingEmployeeId = { $in: objectIds };
     }
 
-    // Get ads report data grouped by date (optionally by employee)
-    const adsGroupId = groupBy === "employee"
-      ? { date: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } }, marketingEmployeeId: "$marketingEmployeeId" }
-      : { date: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } } };
+    // Always aggregate WITH employee grouping so we can compute both "merged" and "stacked" views.
+    const adsGroupId = { date: { $dateToString: { format: "%Y-%m-%d", date: "$reportDate" } }, marketingEmployeeId: "$marketingEmployeeId" };
+    const orderGroupId = { date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, marketingEmployeeId: "$marketingEmployeeId" };
 
-    const adsReportData = await MarketingExpenseReport.aggregate([
+    // Ads report data per (date, employee)
+    const adsReportDataPerEmp = await MarketingExpenseReport.aggregate([
       { $match: matchFilter },
       {
         $group: {
@@ -190,7 +190,7 @@ export async function GET(request: Request) {
         $project: {
           _id: 0,
           date: "$_id.date",
-          ...(groupBy === "employee" ? { marketingEmployeeId: "$_id.marketingEmployeeId" } : {}),
+          marketingEmployeeId: "$_id.marketingEmployeeId",
           firstReportId: 1,
           reportStatus: 1,
           xinSang: 1,
@@ -204,7 +204,7 @@ export async function GET(request: Request) {
       },
     ]);
 
-    // Get revenue from Order table for each date (optionally by employee)
+    // Order revenue per (date, employee)
     const orderMatch: Record<string, unknown> = {
       createdAt: { $gte: startDate, $lte: endDate },
       isActive: true,
@@ -215,11 +215,7 @@ export async function GET(request: Request) {
       orderMatch.marketingEmployeeId = { $in: objectIds };
     }
 
-    const orderGroupId = groupBy === "employee"
-      ? { date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, marketingEmployeeId: "$marketingEmployeeId" }
-      : { date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } } };
-
-    const orderRevenueData = await Order.aggregate([
+    const orderRevenueDataPerEmp = await Order.aggregate([
       { $match: orderMatch },
       {
         $group: {
@@ -232,41 +228,33 @@ export async function GET(request: Request) {
         $project: {
           _id: 0,
           date: "$_id.date",
-          ...(groupBy === "employee" ? { marketingEmployeeId: "$_id.marketingEmployeeId" } : {}),
+          marketingEmployeeId: "$_id.marketingEmployeeId",
           totalRevenue: 1,
           orderCount: 1,
         },
       },
     ]);
 
-    // Create a map of date -> order revenue (keyed by date or by empId|date)
-    const orderRevenueMap = new Map(
-      orderRevenueData.map((item) => {
-        if (groupBy === "employee") {
-          const eid = String(item.marketingEmployeeId ?? "");
-          return [`${eid}|${item.date}`, { totalRevenue: item.totalRevenue, orderCount: item.orderCount }];
-        }
-        return [item.date, { totalRevenue: item.totalRevenue, orderCount: item.orderCount }];
-      })
-    );
+    // Per-(emp, date) order revenue lookup
+    const orderRevenueByEmpDate = new Map<string, { totalRevenue: number; orderCount: number }>();
+    for (const item of orderRevenueDataPerEmp) {
+      const eid = String(item.marketingEmployeeId ?? "");
+      orderRevenueByEmpDate.set(`${eid}|${item.date}`, {
+        totalRevenue: item.totalRevenue,
+        orderCount: item.orderCount,
+      });
+    }
 
-    // Filter out rows where date is null/missing before processing
-    const validAdsData = adsReportData.filter((r) => r.date != null);
-
-    // Combine ads report data with order revenue
-    const dailyAdsData = validAdsData.map((report) => {
+    // Build flat per-(emp, date) daily rows
+    const validAdsData = adsReportDataPerEmp.filter((r) => r.date != null);
+    const dailyAdsDataPerEmp: DailyRow[] = validAdsData.map((report) => {
       const reportDate = String(report.date ?? "");
-      let orderRevenue = { totalRevenue: 0, orderCount: 0 };
-      if (groupBy === "employee") {
-        const eid = String(report.marketingEmployeeId ?? "");
-        orderRevenue = orderRevenueMap.get(`${eid}|${reportDate}`) || orderRevenue;
-      } else {
-        orderRevenue = orderRevenueMap.get(reportDate) || orderRevenue;
-      }
+      const eid = String(report.marketingEmployeeId ?? "");
+      const orderRevenue = orderRevenueByEmpDate.get(`${eid}|${reportDate}`) || { totalRevenue: 0, orderCount: 0 };
       const tongXin = report.xinSang + report.xinChieu + report.xinGap;
       return {
         date: reportDate,
-        marketingEmployeeId: report.marketingEmployeeId,
+        marketingEmployeeId: eid,
         firstReportId: report.firstReportId,
         reportStatus: report.reportStatus,
         xinSang: report.xinSang,
@@ -283,10 +271,54 @@ export async function GET(request: Request) {
       };
     });
 
+    // ── Build MERGED view: aggregate per-emp rows by date ──
+    type DailyRow = {
+      date: string;
+      marketingEmployeeId: string;
+      firstReportId: string;
+      reportStatus: string;
+      xinSang: number;
+      xinChieu: number;
+      xinGap: number;
+      tongTieu: number;
+      tienDu: number;
+      totalRevenue: number;
+      totalLeads: number;
+      closedLeads: number;
+      percentAds: number;
+    };
+
+    const mergedByDate = new Map<string, DailyRow>();
+    for (const row of dailyAdsDataPerEmp) {
+      const existing = mergedByDate.get(row.date);
+      if (existing) {
+        existing.xinSang += row.xinSang;
+        existing.xinChieu += row.xinChieu;
+        existing.xinGap += row.xinGap;
+        existing.tongTieu += row.tongTieu;
+        existing.tienDu += row.tienDu;
+        existing.totalRevenue += row.totalRevenue;
+        existing.totalLeads += row.totalLeads;
+        existing.closedLeads += row.closedLeads;
+      } else {
+        mergedByDate.set(row.date, { ...row });
+      }
+    }
+    // Recompute percentAds after summing revenue
+    const dailyAdsData = Array.from(mergedByDate.values()).map((r) => {
+      const tongXin = r.xinSang + r.xinChieu + r.xinGap;
+      return {
+        ...r,
+        percentAds: r.totalRevenue > 0
+          ? Math.round((tongXin / r.totalRevenue) * 10000) / 100
+          : 0,
+      };
+    });
+
     // Sort by date descending
     dailyAdsData.sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
 
-    // Calculate totals
+    // Calculate totals for merged view
     const totals = dailyAdsData.reduce(
       (acc, day) => ({
         xinSang: acc.xinSang + day.xinSang,
@@ -305,11 +337,11 @@ export async function GET(request: Request) {
       }
     );
 
-    // ── groupBy=employee: per-MKT breakdown ──────────────────────────────────
+    // ── Build STACKED view: per-MKT breakdown (only when multi-employee) ──
     type AdsEmployeeGroup = {
       marketingEmployeeId: string;
       employeeName: string;
-      data: typeof dailyAdsData;
+      data: DailyRow[];
       summary: {
         tongXin: number;
         tongTieu: number;
@@ -322,8 +354,11 @@ export async function GET(request: Request) {
     };
 
     let groupedData: AdsEmployeeGroup[] | undefined;
-    if (groupBy === "employee" && resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
-      // Lookup employee names
+    if (
+      (groupBy === "employee" || groupBy === "stacked") &&
+      resolvedEmployeeIds &&
+      resolvedEmployeeIds.length > 0
+    ) {
       const empDocs = await Employee.find({ _id: { $in: resolvedEmployeeIds } })
         .select("fullName employeeCode")
         .lean();
@@ -332,16 +367,15 @@ export async function GET(request: Request) {
         empNameMap.set(String(e._id), e.employeeCode ? `${e.fullName} (${e.employeeCode})` : e.fullName);
       }
 
-      // Build grouped data per employee
       groupedData = [];
       for (const empId of resolvedEmployeeIds) {
-        const empName = empNameMap.get(empId) || empId;
+        const empAds = dailyAdsDataPerEmp
+          .filter(d => d.marketingEmployeeId === empId)
+          .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
 
-        // Filter ads rows for this employee
-        const empAds = dailyAdsData.filter(d => String(d.marketingEmployeeId ?? "") === empId);
-
-        // Only include MKTs that have at least one non-zero row
-        const hasData = empAds.some(d => d.tongTieu > 0 || d.xinSang + d.xinChieu + d.xinGap > 0 || d.totalRevenue > 0);
+        const hasData = empAds.some(
+          d => d.tongTieu > 0 || d.xinSang + d.xinChieu + d.xinGap > 0 || d.totalRevenue > 0
+        );
         if (!hasData) continue;
 
         const empTotals = empAds.reduce(
@@ -360,7 +394,7 @@ export async function GET(request: Request) {
 
         groupedData.push({
           marketingEmployeeId: empId,
-          employeeName: empName,
+          employeeName: empNameMap.get(empId) || empId,
           data: empAds,
           summary: {
             tongXin: empTotals.xinSang + empTotals.xinChieu + empTotals.xinGap,

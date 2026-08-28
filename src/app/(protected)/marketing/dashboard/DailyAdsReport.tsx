@@ -20,7 +20,7 @@
  */
 
 import { memo, useState, useEffect, useMemo } from "react";
-import { Card, Table, Skeleton, Row, Col, Statistic, Button, Modal, Form, InputNumber, DatePicker, Popconfirm, Space, Select, Empty } from "antd";
+import { Card, Table, Skeleton, Row, Col, Statistic, Button, Modal, Form, InputNumber, DatePicker, Popconfirm, Space, Select, Empty, Segmented } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMarketingDailyAdsReport, type DailyAdsReportRow, type DailyAdsReportSummary } from "@/hooks/useMarketingDailyAdsReport";
 import { useMarketingEmployees } from "@/hooks/useMarketingExpenseLookups";
@@ -419,8 +419,20 @@ function DailyAdsReportInner({ period, teamId, areaId, groupByEmployee }: DailyA
     marketingEmployeeId: isGlobal && !useGrouped ? effectiveMktId : undefined,
     teamId: effectiveTeamId,
     areaId: effectiveAreaId,
-    groupBy: useGrouped ? "employee" : null,
+    groupBy: useGrouped ? "stacked" : null,
   });
+
+  // View mode toggle (only meaningful when stacked data is available).
+  // - "merged": render 1 table aggregating all employees by date.
+  // - "stacked": render N tables, one per employee.
+  const stackedCount = data?.groupedData?.length ?? 0;
+  const allowToggle = useGrouped && stackedCount > 1;
+  const [viewMode, setViewMode] = useState<"merged" | "stacked">("stacked");
+
+  // If only 1 employee, default to merged (single-table UX).
+  useEffect(() => {
+    if (stackedCount <= 1) setViewMode("merged");
+  }, [stackedCount]);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -567,6 +579,8 @@ function DailyAdsReportInner({ period, teamId, areaId, groupByEmployee }: DailyA
     }
 
     const grouped = data?.groupedData ?? [];
+    const mergedData = data?.data ?? [];
+    const mergedSummary = data?.summary ?? defaultSummary();
 
     return (
       <div className={styles["mk-daily-report-multi"]}>
@@ -574,17 +588,55 @@ function DailyAdsReportInner({ period, teamId, areaId, groupByEmployee }: DailyA
           title={t("📊 Báo cáo Ads theo ngày", lang)}
           className={styles["mk-daily-report-card"]}
           extra={
-            <Space size={12}>
+            <Space size={12} wrap>
               <span style={{ color: "#595959", fontSize: 13 }}>
                 {t("Đang xem:", lang)} <strong>{showingMktName}</strong>
                 <span style={{ marginLeft: 8, color: "#8c8c8c" }}>
                   {`(${grouped.length} ${t("MKT", lang)})`}
                 </span>
               </span>
+              {allowToggle && (
+                <Segmented
+                  size="small"
+                  value={viewMode}
+                  onChange={(v) => setViewMode(v as "merged" | "stacked")}
+                  options={[
+                    { label: t("Gộp", lang), value: "merged" },
+                    { label: t("Từng người", lang), value: "stacked" },
+                  ]}
+                />
+              )}
+              <Button
+                size="small"
+                type="primary"
+                onClick={() => {
+                  setIsEditMode(false);
+                  setEditingReport(null);
+                  form.resetFields();
+                  setIsModalOpen(true);
+                }}
+              >
+                {t("+ Thêm báo cáo", lang)}
+              </Button>
             </Space>
           }
         >
-          {grouped.length === 0 ? (
+          {viewMode === "merged" ? (
+            <AdsTableBlock
+              title={
+                <span>
+                  <strong>{t("📈 Tổng hợp", lang)}</strong>
+                  <span style={{ marginLeft: 8, color: "#8c8c8c", fontSize: 12 }}>
+                    ({grouped.length} {t("MKT", lang)})
+                  </span>
+                </span>
+              }
+              items={mergedData}
+              summary={mergedSummary}
+              period={period}
+              loading={false}
+            />
+          ) : grouped.length === 0 ? (
             <Empty description={t("Chưa có dữ liệu báo cáo Ads", lang)} />
           ) : (
             <div className={styles["mk-daily-report-substack"]}>

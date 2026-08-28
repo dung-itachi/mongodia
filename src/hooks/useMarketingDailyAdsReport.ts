@@ -76,8 +76,13 @@ export type UseMarketingDailyAdsReportFilter = {
   marketingEmployeeId?: string;
   areaId?: string;
   teamId?: string;
-  /** When "employee", API returns `groupedData[]` per MKT (requires teamId/areaId). */
-  groupBy?: "employee" | null;
+  /**
+   * Server-side aggregation mode:
+   * - null/undefined: single table (auto-merged by date)
+   * - "stacked": return BOTH `data` (merged) and `groupedData` (per employee)
+   * - "employee": alias of "stacked" (kept for backwards compat)
+   */
+  groupBy?: "employee" | "stacked" | null;
 };
 
 const fetchDailyAdsReport = async (
