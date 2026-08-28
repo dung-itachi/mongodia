@@ -25,9 +25,8 @@ export async function GET(request: Request) {
     const currentUser = await getCurrentUser(request);
 
     if (
-      !currentUser.permissions.includes(
-        "category.view"
-      )
+      !currentUser.permissions.includes("category.view") &&
+      !currentUser.permissions.includes("product.view")
     ) {
       return errorResponse(
         "Bạn không có quyền xem danh mục",

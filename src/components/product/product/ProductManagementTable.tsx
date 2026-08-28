@@ -182,7 +182,7 @@ export default function ProductManagementTable({
       },
       {
         key: "combos",
-        title: t("Danh mục", lang),
+        title: t("Tên combo", lang),
         width: 300,
         render: (_: unknown, record: Record<string, unknown>) => {
           const item = record as unknown as ProductManagementItem;

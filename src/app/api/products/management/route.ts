@@ -252,7 +252,7 @@ export async function GET(request: Request) {
     const comboOrderStatsMap = new Map(comboOrderStatsResult.map((s) => [s._id.toString(), { closedOrdersCount: s.closedOrdersCount, totalClosedQuantity: s.totalClosedQuantity }]));
 
     // History map
-    const historyMap = new Map<string, Map<string, { totalImported: number; lastImportDate: Date }>>();
+    const historyMap = new Map<string, Map<string, { totalImported: number; lastImportDate: Date | null }>>();
     for (const hist of historyAggregation) {
       const variantId = hist._id.productVariantId.toString();
       const warehouseIdStr = hist._id.warehouseId.toString();
@@ -291,8 +291,12 @@ export async function GET(request: Request) {
           const history = historyMap.get(variantId)?.get(wid);
           if (history) {
             totalImported += history.totalImported;
-            const histDate = history.lastImportDate.toISOString();
-            if (!lastImportDate || histDate > lastImportDate) lastImportDate = histDate;
+            if (history.lastImportDate) {
+              const histDate = history.lastImportDate instanceof Date
+                ? history.lastImportDate.toISOString()
+                : new Date(history.lastImportDate).toISOString();
+              if (!lastImportDate || histDate > lastImportDate) lastImportDate = histDate;
+            }
           }
           totalCurrent += inventoryMap.get(variantId)?.get(wid) || 0;
         }
