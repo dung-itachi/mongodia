@@ -7,7 +7,7 @@
  */
 
 import { memo, useEffect, useState } from "react";
-import { Button, DatePicker } from "antd";
+import { Button, DatePicker, Space } from "antd";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { ActionButton, FilterBar, SearchInput } from "@/components/common";
@@ -272,7 +272,7 @@ function MarketingLeadToolbarInner({
         <span style={{ fontSize: 13, color: "#595959", fontWeight: 500 }}>
           {t("Lọc ngày tạo", lang)}:
         </span>
-        <Button.Group size="small">
+        <Space.Compact size="small">
           <Button 
             type={activeQuickRange === "today" ? "primary" : "default"}
             onClick={() => handleQuickRangeChange("today")}
@@ -303,7 +303,7 @@ function MarketingLeadToolbarInner({
           >
             {t("Tất cả", lang)}
           </Button>
-        </Button.Group>
+        </Space.Compact>
 
         <span style={{ color: "#d9d9d9" }}>|</span>
 
