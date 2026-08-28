@@ -124,6 +124,8 @@ export async function GET(request: NextRequest) {
     const teamId = searchParams.get("team") || undefined;
     const areaId = searchParams.get("areaId") || undefined;
     const marketingEmployeeIdParam = searchParams.get("marketingEmployeeId") || undefined;
+    const createdFrom = searchParams.get("createdFrom") || undefined;
+    const createdTo = searchParams.get("createdTo") || undefined;
 
     const employeeScope = await resolveEmployeeIds(
       currentUser,
@@ -141,6 +143,18 @@ export async function GET(request: NextRequest) {
 
     if (source) {
       baseFilter.sourceType = source;
+    }
+
+    if (createdFrom || createdTo) {
+      baseFilter.createdAt = {};
+      if (createdFrom) {
+        (baseFilter.createdAt as Record<string, Date>).$gte = new Date(createdFrom);
+      }
+      if (createdTo) {
+        const endDate = new Date(createdTo);
+        endDate.setHours(23, 59, 59, 999);
+        (baseFilter.createdAt as Record<string, Date>).$lte = endDate;
+      }
     }
 
     if (employeeScope) {

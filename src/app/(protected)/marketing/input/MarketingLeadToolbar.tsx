@@ -7,7 +7,9 @@
  */
 
 import { memo, useEffect, useState } from "react";
-import { Button } from "antd";
+import { Button, DatePicker } from "antd";
+import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import { ActionButton, FilterBar, SearchInput } from "@/components/common";
 import { ReloadOutlined, PlusOutlined, SendOutlined } from "@ant-design/icons";
 import type { MarketingLeadFilters } from "@/hooks/useMarketingLeads";
@@ -56,6 +58,56 @@ function MarketingLeadToolbarInner({
   );
   const { data: areasData, isLoading: areasLoading } = useAreas();
   const areas = areasData;
+
+  const getActiveQuickRange = () => {
+    if (!filters.createdFrom && !filters.createdTo) return "all";
+    const today = dayjs().format("YYYY-MM-DD");
+    
+    if (filters.createdFrom === today && filters.createdTo === today) return "today";
+    
+    const threeDaysAgo = dayjs().subtract(2, "day").format("YYYY-MM-DD");
+    if (filters.createdFrom === threeDaysAgo && filters.createdTo === today) return "3days";
+    
+    const sevenDaysAgo = dayjs().subtract(6, "day").format("YYYY-MM-DD");
+    if (filters.createdFrom === sevenDaysAgo && filters.createdTo === today) return "7days";
+    
+    const oneMonthAgo = dayjs().subtract(30, "day").format("YYYY-MM-DD");
+    if (filters.createdFrom === oneMonthAgo && filters.createdTo === today) return "1month";
+    
+    return "custom";
+  };
+  
+  const activeQuickRange = getActiveQuickRange();
+
+  const handleQuickRangeChange = (range: "today" | "3days" | "7days" | "1month" | "all") => {
+    const today = dayjs().format("YYYY-MM-DD");
+    let createdFrom: string | undefined;
+    let createdTo: string | undefined;
+
+    if (range === "today") {
+      createdFrom = today;
+      createdTo = today;
+    } else if (range === "3days") {
+      createdFrom = dayjs().subtract(2, "day").format("YYYY-MM-DD");
+      createdTo = today;
+    } else if (range === "7days") {
+      createdFrom = dayjs().subtract(6, "day").format("YYYY-MM-DD");
+      createdTo = today;
+    } else if (range === "1month") {
+      createdFrom = dayjs().subtract(30, "day").format("YYYY-MM-DD");
+      createdTo = today;
+    } else {
+      createdFrom = undefined;
+      createdTo = undefined;
+    }
+
+    onFiltersChange({
+      ...filters,
+      createdFrom,
+      createdTo,
+      page: 1,
+    });
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -201,6 +253,87 @@ function MarketingLeadToolbarInner({
           icon={<PlusOutlined />}
           label={createLabel}
           onClick={onCreate}
+        />
+      </div>
+
+      {/* Date Range and Quick Filters Row */}
+      <div 
+        style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: 12, 
+          flexWrap: "wrap", 
+          width: "100%", 
+          borderTop: "1px solid #f0f0f0", 
+          paddingTop: 12, 
+          marginTop: 4 
+        }}
+      >
+        <span style={{ fontSize: 13, color: "#595959", fontWeight: 500 }}>
+          {t("Lọc ngày tạo", lang)}:
+        </span>
+        <Button.Group size="small">
+          <Button 
+            type={activeQuickRange === "today" ? "primary" : "default"}
+            onClick={() => handleQuickRangeChange("today")}
+          >
+            {t("Hôm nay", lang)}
+          </Button>
+          <Button 
+            type={activeQuickRange === "3days" ? "primary" : "default"}
+            onClick={() => handleQuickRangeChange("3days")}
+          >
+            {t("3 ngày", lang)}
+          </Button>
+          <Button 
+            type={activeQuickRange === "7days" ? "primary" : "default"}
+            onClick={() => handleQuickRangeChange("7days")}
+          >
+            {t("7 ngày", lang)}
+          </Button>
+          <Button 
+            type={activeQuickRange === "1month" ? "primary" : "default"}
+            onClick={() => handleQuickRangeChange("1month")}
+          >
+            {t("1 tháng", lang)}
+          </Button>
+          <Button 
+            type={activeQuickRange === "all" ? "primary" : "default"}
+            onClick={() => handleQuickRangeChange("all")}
+          >
+            {t("Tất cả", lang)}
+          </Button>
+        </Button.Group>
+
+        <span style={{ color: "#d9d9d9" }}>|</span>
+
+        <DatePicker.RangePicker
+          size="small"
+          value={
+            filters.createdFrom && filters.createdTo
+              ? [dayjs(filters.createdFrom), dayjs(filters.createdTo)]
+              : null
+          }
+          onChange={(dates) => {
+            if (dates && dates[0] && dates[1]) {
+              onFiltersChange({
+                ...filters,
+                createdFrom: dates[0].format("YYYY-MM-DD"),
+                createdTo: dates[1].format("YYYY-MM-DD"),
+                page: 1,
+              });
+            } else {
+              onFiltersChange({
+                ...filters,
+                createdFrom: undefined,
+                createdTo: undefined,
+                page: 1,
+              });
+            }
+          }}
+          format="DD/MM/YYYY"
+          placeholder={[t("Từ ngày", lang), t("Đến ngày", lang)]}
+          style={{ width: 240 }}
         />
       </div>
     </div>

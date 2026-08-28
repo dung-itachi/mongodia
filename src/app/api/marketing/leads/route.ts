@@ -110,6 +110,8 @@ export async function GET(request: Request) {
     const teamId = searchParams.get("team") || undefined;
     const marketingEmployeeId = searchParams.get("marketingEmployeeId") || undefined;
     const areaId = searchParams.get("areaId") || undefined;
+    const createdFrom = searchParams.get("createdFrom") || undefined;
+    const createdTo = searchParams.get("createdTo") || undefined;
 
     // Sprint 8.x: Non-admin users can only see their own leads
     const effectiveMarketingEmployeeId = canViewAll ? marketingEmployeeId : currentUser.employee._id.toString();
@@ -126,6 +128,8 @@ export async function GET(request: Request) {
       teamId,
       marketingEmployeeId: effectiveMarketingEmployeeId,
       areaId,
+      createdFrom,
+      createdTo,
     });
 
     return success(mapMarketingLeadList(result));

@@ -82,6 +82,8 @@ export default function MarketingOrdersPage() {
     teamId: filters.teamId,
     areaId: filters.areaId,
     marketingEmployeeId: filters.marketingEmployeeId,
+    createdFrom: filters.createdFrom,
+    createdTo: filters.createdTo,
   });
 
   // Phí ship hiện tại (MNT) — dùng để tính cột Doanh thu = giá combo - phí ship

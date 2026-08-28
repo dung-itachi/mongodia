@@ -73,6 +73,7 @@ import {
   orderItemsToDemands,
   type NormalizedOrderItemShape,
 } from "./orderDemand";
+import { queryNetReserved } from "../order/orderStockWiring.helper";
 
 // ==================================================
 // Public types
@@ -575,6 +576,9 @@ export class OrderShipmentService {
       const orderCode = order.orderCode ?? "";
 
       // ── 3. Atomic deduct inventory + write stock movements ──────────────
+      // Query netReserved in transaction to check current reserved stock of this order
+      const netReservedMap = await queryNetReserved(order._id, session);
+
       // Product: shipStock trừ quantity + reservedQuantity.
       // Gift:    shipStock trừ quantity + availableQuantity.
       for (const item of shipmentItems) {
@@ -590,6 +594,32 @@ export class OrderShipmentService {
                 variantId: null,
                 giftId: await resolveGift(item.giftId!),
               };
+
+        // Dynamic stock reservation if reservedQuantity is less than requested quantity
+        if (item.itemType === "PRODUCT") {
+          const currentlyReserved = netReservedMap.get(item.variantId ? item.variantId.toString() : "") ?? 0;
+          if (currentlyReserved < item.quantity) {
+            const neededReserve = item.quantity - currentlyReserved;
+            await reserveStock(
+              order.warehouseId.toString(),
+              [
+                {
+                  itemType: "PRODUCT",
+                  quantity: neededReserve,
+                  ...(item.variantId ? { productVariantId: item.variantId } : { productId: item.productId }),
+                },
+              ],
+              {
+                actorEmployeeId: employeeId,
+                referenceType: InventoryReferenceType.ORDER,
+                referenceCode: orderCode,
+                orderId: order._id,
+                note: `Tự động giữ chỗ bổ sung trước khi xuất kho (cần ${item.quantity}, đã giữ ${currentlyReserved})`,
+              },
+              { session }
+            );
+          }
+        }
 
         const lineItems = shipmentToStockLineItems([item]);
         // shipStock có thể chứa 0..1 line item.

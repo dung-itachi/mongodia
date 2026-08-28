@@ -42,6 +42,8 @@ export type MarketingLeadFilters = {
   teamId?: string;
   /** Filter by area code (Sprint 8.x) */
   areaId?: string;
+  createdFrom?: string;
+  createdTo?: string;
 };
 
 // ============================================================================
@@ -76,6 +78,12 @@ async function fetchMarketingLeads(
   }
   if (filters.areaId) {
     params.set("areaId", filters.areaId);
+  }
+  if (filters.createdFrom) {
+    params.set("createdFrom", filters.createdFrom);
+  }
+  if (filters.createdTo) {
+    params.set("createdTo", filters.createdTo);
   }
 
   const queryString = params.toString();
@@ -248,7 +256,7 @@ export interface MarketingLeadsStats {
 
 export type MarketingLeadsStatsFilters = Pick<
   MarketingLeadFilters,
-  "keyword" | "source" | "teamId" | "areaId" | "marketingEmployeeId"
+  "keyword" | "source" | "teamId" | "areaId" | "marketingEmployeeId" | "createdFrom" | "createdTo"
 >;
 
 async function fetchMarketingLeadsStats(
@@ -261,6 +269,8 @@ async function fetchMarketingLeadsStats(
   if (filters.areaId) params.set("areaId", filters.areaId);
   if (filters.marketingEmployeeId)
     params.set("marketingEmployeeId", filters.marketingEmployeeId);
+  if (filters.createdFrom) params.set("createdFrom", filters.createdFrom);
+  if (filters.createdTo) params.set("createdTo", filters.createdTo);
 
   const queryString = params.toString();
   const url = `/api/marketing/leads/stats${queryString ? `?${queryString}` : ""}`;
