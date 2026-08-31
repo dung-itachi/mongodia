@@ -161,7 +161,6 @@ export async function GET(request: Request) {
 
     // Build match stages applying scope
     const orderMatch: Record<string, unknown> = {
-      createdAt: { $gte: startDate, $lte: endDate },
       isActive: true,
       status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
     };
@@ -182,10 +181,16 @@ export async function GET(request: Request) {
     const revenueByDayPipeline: import("mongoose").PipelineStage[] = [
       { $match: orderMatch },
       {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      { $match: { computedDate: { $gte: startDate, $lte: endDate } } },
+      {
         $group: groupBy === "employee"
           ? {
               _id: {
-                date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                date: { $dateToString: { format: "%Y-%m-%d", date: "$computedDate" } },
                 marketingEmployeeId: "$marketingEmployeeId",
               },
               totalOrders: { $sum: 1 },
@@ -198,7 +203,7 @@ export async function GET(request: Request) {
               deliveredOk: { $sum: { $cond: [{ $in: ["$status", [OrderStatus.DELIVERED, OrderStatus.RECONCILED]] }, 1, 0] } },
             }
           : {
-              _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+              _id: { $dateToString: { format: "%Y-%m-%d", date: "$computedDate" } },
               totalOrders: { $sum: 1 },
               totalRevenue: { $sum: "$totalAmount" },
               avgOrderValue: { $avg: "$totalAmount" },

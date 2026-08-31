@@ -228,9 +228,16 @@ async function fetchDashboardData(args: DashboardQueryArgs): Promise<DashboardRe
       revenue: number;
     }>([
       {
+        $match: orderScopeMatch,
+      },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      {
         $match: {
-          ...orderScopeMatch,
-          createdAt: { $gte: previousStart, $lte: end },
+          computedDate: { $gte: previousStart, $lte: end },
         },
       },
       {
@@ -238,14 +245,14 @@ async function fetchDashboardData(args: DashboardQueryArgs): Promise<DashboardRe
           _id: 0,
           status: 1,
           totalAmount: 1,
-          createdAt: 1,
+          computedDate: 1,
         },
       },
       {
         $group: {
           _id: {
             status: "$status",
-            period: { $cond: [{ $gte: ["$createdAt", start] }, "cur", "prev"] },
+            period: { $cond: [{ $gte: ["$computedDate", start] }, "cur", "prev"] },
           },
           count: { $sum: 1 },
           revenue: { $sum: "$totalAmount" },

@@ -169,20 +169,16 @@ async function fetchChartsData(args: ChartsQueryArgs) {
 
   const revenueMatch = {
     ...orderScopeMatch,
-    createdAt: { $gte: revStart },
     status: { $ne: OrderStatus.CANCELLED },
   };
   const topSaleMatch = {
     ...orderScopeMatch,
     saleEmployeeId: { $ne: null },
     status: { $ne: OrderStatus.CANCELLED },
-    // Giới hạn trong 12 tháng gần nhất để tránh full-collection scan.
-    createdAt: { $gte: topSaleLowerBound },
   };
   const topMarketingMatch: Record<string, unknown> = {
     ...orderScopeMatch,
     marketingEmployeeId: { $ne: null },
-    createdAt: { $gte: mktStart, $lte: mktEnd },
     status: { $ne: OrderStatus.CANCELLED },
   };
 
@@ -207,10 +203,16 @@ async function fetchChartsData(args: ChartsQueryArgs) {
     ]),
     Order.aggregate<{ _id: string; revenue: number }>([
       { $match: revenueMatch },
-      { $project: { _id: 0, createdAt: 1, totalAmount: 1 } },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      { $match: { computedDate: { $gte: revStart } } },
+      { $project: { _id: 0, computedDate: 1, totalAmount: 1 } },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          _id: { $dateToString: { format: "%Y-%m", date: "$computedDate" } },
           revenue: { $sum: "$totalAmount" },
         },
       },
@@ -222,6 +224,12 @@ async function fetchChartsData(args: ChartsQueryArgs) {
     ]),
     Order.aggregate<{ _id: Types.ObjectId; revenue: number }>([
       { $match: topSaleMatch },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      { $match: { computedDate: { $gte: topSaleLowerBound } } },
       { $project: { _id: 0, saleEmployeeId: 1, totalAmount: 1 } },
       {
         $group: {
@@ -234,6 +242,12 @@ async function fetchChartsData(args: ChartsQueryArgs) {
     ]),
     Order.aggregate<{ _id: Types.ObjectId; revenue: number; orders: number }>([
       { $match: topMarketingMatch },
+      {
+        $addFields: {
+          computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+        }
+      },
+      { $match: { computedDate: { $gte: mktStart, $lte: mktEnd } } },
       { $project: { _id: 0, marketingEmployeeId: 1, totalAmount: 1 } },
       {
         $group: {

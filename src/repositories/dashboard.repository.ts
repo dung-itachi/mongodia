@@ -1246,7 +1246,6 @@ export async function aggregateRevenueTrendSummary(filter?: MarketingDashboardFi
   });
 
   const baseMatch: Record<string, unknown> = {
-    createdAt: { $gte: lastMonthStart },
     isActive: true,
     status: { $nin: [OrderStatus.CANCELLED, OrderStatus.RETURNED] },
   };
@@ -1257,13 +1256,19 @@ export async function aggregateRevenueTrendSummary(filter?: MarketingDashboardFi
   const results = await Order.aggregate([
     { $match: baseMatch },
     {
+      $addFields: {
+        computedDate: { $ifNull: ["$confirmedAt", "$createdAt"] }
+      }
+    },
+    { $match: { computedDate: { $gte: lastMonthStart } } },
+    {
       $facet: {
         month: [
-          { $match: { createdAt: { $gte: monthStart } } },
+          { $match: { computedDate: { $gte: monthStart } } },
           { $group: { _id: null, total: { $sum: "$totalAmount" } } },
         ],
         lastMonth: [
-          { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+          { $match: { computedDate: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
           { $group: { _id: null, total: { $sum: "$totalAmount" } } },
         ],
       },

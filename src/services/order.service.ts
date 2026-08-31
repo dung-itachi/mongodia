@@ -373,6 +373,7 @@ export class OrderService {
       ) {
         revenueUpdate.marketingRevenueRaw = netRevenue;
         revenueUpdate.saleRevenueRaw = netRevenue;
+        revenueUpdate.confirmedAt = new Date();
       }
 
       // CANCELLED / RETURNED: xóa doanh thu.
@@ -574,6 +575,7 @@ export class OrderService {
             summary,
             marketingRevenueRaw: rawRevenue,
             saleRevenueRaw: rawRevenue,
+            confirmedAt: isConfirmedOrLater ? new Date() : undefined,
           },
           session
         );
