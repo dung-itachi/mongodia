@@ -108,13 +108,13 @@ export async function PATCH(
       // Ghi history nếu có đổi status
       shouldChangeStatus
         ? OrderHistory.create({
-            orderId: id,
-            employeeId: currentUser.employee._id,
-            action: OrderAction.CONFIRMED,
-            oldValue: OrderStatus.WAIT_CONFIRM,
-            newValue: OrderStatus.CONFIRMED,
-            note: "Xác nhận đơn đã chốt từ Lead",
-          })
+          orderId: id,
+          employeeId: currentUser.employee._id,
+          action: OrderAction.CONFIRMED,
+          oldValue: OrderStatus.WAIT_CONFIRM,
+          newValue: OrderStatus.CONFIRMED,
+          note: "Xác nhận đơn đã chốt từ Lead",
+        })
         : Promise.resolve(null),
     ]);
 
@@ -123,8 +123,8 @@ export async function PATCH(
       shouldChangeStatus
         ? "Đã xác nhận đơn hàng"
         : nextValue
-        ? "Đã đánh dấu đã gọi xác nhận"
-        : "Đã bỏ đánh dấu gọi xác nhận"
+          ? "Đã đánh dấu đã gọi xác nhận"
+          : "Đã bỏ đánh dấu gọi xác nhận"
     );
   } catch (error) {
     console.error("Toggle Confirm Call Error:", error);

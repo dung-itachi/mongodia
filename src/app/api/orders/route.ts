@@ -403,6 +403,17 @@ export async function POST(request: Request) {
     // creation time. Existing orders keep their original rate forever.
     const exchangeRateSnap = await getCurrentExchangeRate();
 
+    const grandTotal = validatedOrderItems.length > 0
+      ? Math.max(0, validatedOrderItems.reduce((sum, item) => sum + item.subtotal - item.discount, 0) + (data.shipping?.shippingFee ?? 0))
+      : data.totalAmount;
+    const shippingFee = data.shipping?.shippingFee ?? 0;
+    const netRevenue = Math.max(0, grandTotal - shippingFee);
+    const isConfirmedOrLater =
+      status !== OrderStatus.WAIT_CONFIRM &&
+      status !== OrderStatus.CANCELLED &&
+      status !== OrderStatus.RETURNED;
+    const rawRevenue = isConfirmedOrLater ? netRevenue : 0;
+
     const [order] = await Order.create(
       [
         {
@@ -418,9 +429,7 @@ export async function POST(request: Request) {
           comboSnapshot: undefined,
           quantity: data.quantity,
           unitPrice: data.unitPrice,
-          totalAmount: validatedOrderItems.length > 0
-            ? Math.max(0, validatedOrderItems.reduce((sum, item) => sum + item.subtotal - item.discount, 0) + (data.shipping?.shippingFee ?? 0))
-            : data.totalAmount,
+          totalAmount: grandTotal,
           currency: data.currency || "MNT",
           exchangeRate: exchangeRateSnap.rate,
           exchangeRateDate: new Date(),
@@ -474,9 +483,9 @@ export async function POST(request: Request) {
           // ---- Revenue defaults (NOT computed by engine at this stage) --
           revenueLocked: false,
           revenueOwnerOrderId: null,
-          marketingRevenueRaw: 0,
+          marketingRevenueRaw: rawRevenue,
           marketingRevenueFinal: 0,
-          saleRevenueRaw: 0,
+          saleRevenueRaw: rawRevenue,
           saleRevenueFinal: 0,
           revenueEligible: false,
           confirmedAt: status === OrderStatus.CONFIRMED ? new Date() : undefined,

@@ -55,6 +55,7 @@ import { isStatusTransitionAllowed } from "@/configs/order-status.config";
 import { validateOrderWarehouse } from "@/config/warehouse-topology.config";
 import type { Types } from "mongoose";
 import Product from "@/models/Product";
+import { resolveCustomerRevenue } from "@/services/order/revenueEngine.service";
 
 import {
   reserveStock,
@@ -513,7 +514,7 @@ export class OrderShipmentService {
 
       // ── 1. Fetch order & validate transition ───────────────────────────────
       const order = await Order.findById(input.orderId)
-        .select("warehouseId status orderCode")
+        .select("warehouseId status orderCode customerId")
         .session(session)
         .lean();
       if (!order) throw new Error("Đơn hàng không tồn tại");
@@ -683,6 +684,12 @@ export class OrderShipmentService {
         ],
         { session }
       );
+
+      // Recalculate revenue when transitioning to SHIPPING
+      await resolveCustomerRevenue(order.customerId.toString(), {
+        session,
+        actorEmployeeId: employeeId,
+      });
 
       // ── 5. Update WarehouseTask.warehouseStatus → SHIPPED (if exists) ──────
       const existingTask = await WarehouseTask.findOne({

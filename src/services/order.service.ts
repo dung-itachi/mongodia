@@ -402,7 +402,9 @@ export class OrderService {
       if (
         (currentStatus === OrderStatus.WAIT_CONFIRM && newStatus === OrderStatus.CONFIRMED) ||
         newStatus === OrderStatus.CANCELLED ||
-        newStatus === OrderStatus.RETURNED
+        newStatus === OrderStatus.RETURNED ||
+        newStatus === OrderStatus.DELIVERED ||
+        newStatus === OrderStatus.SHIPPING
       ) {
         await resolveCustomerRevenue(
           (existingOrder as { customerId: { toString(): string } }).customerId.toString(),
@@ -499,6 +501,14 @@ export class OrderService {
       currency
     );
 
+    const netRevenue = Math.max(0, summary.grandTotal - (data.shipping?.shippingFee ?? 0));
+    const isConfirmedOrLater =
+      data.status !== undefined &&
+      data.status !== OrderStatus.WAIT_CONFIRM &&
+      data.status !== OrderStatus.CANCELLED &&
+      data.status !== OrderStatus.RETURNED;
+    const rawRevenue = isConfirmedOrLater ? netRevenue : 0;
+
     // Sprint Settings: snapshot exchange rate (1 USD → MNT) at creation time.
     // Existing orders are NEVER recalculated when this rate later changes.
     const exchangeRateSnap = await getCurrentExchangeRate();
@@ -562,6 +572,8 @@ export class OrderService {
             // Sprint 6.1: Order items and summary
             orderItems: processedOrderItems,
             summary,
+            marketingRevenueRaw: rawRevenue,
+            saleRevenueRaw: rawRevenue,
           },
           session
         );
@@ -607,6 +619,14 @@ export class OrderService {
               ],
               { session }
             );
+          }
+
+          // ---- Revenue Lock Engine (cùng transaction) ---------------------
+          if (isConfirmedOrLater) {
+            await resolveCustomerRevenue(created.customerId.toString(), {
+              session,
+              actorEmployeeId: new mongoose.Types.ObjectId(createdBy),
+            });
           }
         }
       });

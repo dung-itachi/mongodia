@@ -63,6 +63,10 @@ export interface CreateOrderData {
     grandTotal: number;
     currency: string;
   };
+  marketingRevenueRaw?: number;
+  marketingRevenueFinal?: number;
+  saleRevenueRaw?: number;
+  saleRevenueFinal?: number;
 }
 
 export interface UpdateOrderData {
@@ -268,10 +272,10 @@ export class OrderRepository {
       revenueLocked: false,
       revenueEligible: false,
       revenueLockReason: "NONE",
-      marketingRevenueRaw: 0,
-      marketingRevenueFinal: 0,
-      saleRevenueRaw: 0,
-      saleRevenueFinal: 0,
+      marketingRevenueRaw: data.marketingRevenueRaw ?? 0,
+      marketingRevenueFinal: data.marketingRevenueFinal ?? 0,
+      saleRevenueRaw: data.saleRevenueRaw ?? 0,
+      saleRevenueFinal: data.saleRevenueFinal ?? 0,
       isActive: true,
     });
 

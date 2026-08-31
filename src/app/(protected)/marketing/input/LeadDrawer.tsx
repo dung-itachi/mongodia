@@ -273,7 +273,7 @@ function LeadDrawerInner({
         </FormField>
       </FormSection>
 
-      <FormSection title={t("Thời gian đơn hàng (Sprint 8.x)", lang)}>
+      <FormSection title={t("Thời gian đơn hàng", lang)}>
         <FormField label={t("Thời gian đơn hàng", lang)} error={errors.orderDate?.message}>
           <Controller
             name="orderDate"
