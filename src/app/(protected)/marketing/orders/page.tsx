@@ -38,6 +38,7 @@ import type { MarketingLead } from "@/types/marketing-lead";
 import LeadDrawer from "@/app/(protected)/marketing/input/LeadDrawer";
 import type { LeadFormData } from "@/app/(protected)/marketing/input/LeadDrawer";
 import { LeadDetailView } from "@/components/marketing/leads/LeadDetailView";
+import { LeadStatus } from "@/constants/leadStatus";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 
@@ -46,14 +47,22 @@ export default function MarketingOrdersPage() {
   const user = useAuthStore((s) => s.user);
   const lang = useLanguageStore((s) => s.language);
 
-  // Sprint 8.x: Check permissions for admin features
-  // - View all orders: marketing-order.viewAll (ADMIN/ADMIN equivalent)
-  // - Filter by area: marketing-order.filterByArea
+  // Check permissions & roles:
+  // - Cột Sale phụ trách: Chỉ Admin và Manager nhìn thấy
+  // - Cột MKT phụ trách / View all: canViewAllOrders
   const permissions = user?.permissions ?? [];
-  const canViewAllOrders = permissions.includes("*") ||
-    permissions.includes("account.manageAll") ||
+  const role = (user?.role || "").toUpperCase();
+  const isAdminOrManager =
+    role === "ADMIN" ||
+    role === "MANAGER" ||
+    permissions.includes("*") ||
+    permissions.includes("account.manageAll");
+
+  const canViewAllOrders =
+    isAdminOrManager ||
     permissions.includes("marketing-order.viewAll");
-  const canFilterByArea = permissions.includes("*") ||
+  const canFilterByArea =
+    permissions.includes("*") ||
     permissions.includes("marketing-order.filterByArea") ||
     canViewAllOrders;
 
@@ -174,9 +183,13 @@ export default function MarketingOrdersPage() {
   );
 
   const handleDeleteClick = useCallback((lead: MarketingLead) => {
+    if (lead.status !== LeadStatus.NEW) {
+      void message.warning(t("Chỉ được phép xóa đơn hàng ở trạng thái Mới", lang));
+      return;
+    }
     setDeletingLead(lead);
     setDeleteConfirmOpen(true);
-  }, []);
+  }, [message, lang]);
 
   const handleDeleteConfirm = useCallback(() => {
     if (!deletingLead) return;
@@ -212,11 +225,15 @@ export default function MarketingOrdersPage() {
 
   const handleViewDelete = useCallback(() => {
     if (viewingLead) {
+      if (viewingLead.status !== LeadStatus.NEW) {
+        void message.warning(t("Chỉ được phép xóa đơn hàng ở trạng thái Mới", lang));
+        return;
+      }
       setViewingLead(null);
       setDeletingLead(viewingLead);
       setDeleteConfirmOpen(true);
     }
-  }, [viewingLead]);
+  }, [viewingLead, message, lang]);
 
   return (
     <PageContainer>
@@ -278,7 +295,8 @@ export default function MarketingOrdersPage() {
               selectedRowKeys={[]}
               onSelectionChange={() => {}}
               loading={loading}
-              showEmployeeColumns={canViewAllOrders}
+              showMarketingEmployeeColumn={canViewAllOrders}
+              showSaleEmployeeColumn={isAdminOrManager}
               shippingFee={shippingFee}
               exchangeRate={exchangeRate}
               currency={currency}

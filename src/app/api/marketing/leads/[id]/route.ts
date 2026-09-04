@@ -194,6 +194,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return errorResponse("Lead không tồn tại", 404);
     }
 
+    if (lead.status !== LeadStatus.NEW) {
+      return errorResponse("Chỉ có thể xóa đơn hàng ở trạng thái Mới", 400);
+    }
+
     const deletedLead = lead;
     const deleted = await leadService.delete(id, actorId);
     if (!deleted) {

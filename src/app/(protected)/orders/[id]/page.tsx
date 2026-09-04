@@ -47,7 +47,7 @@ import { useShippingFee } from "@/hooks/useShippingFee";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useProducts, useCombosByProduct } from "@/hooks/useProducts";
 import { useProductWithVariants } from "@/hooks/useProductVariants";
-import OrderProductDetail from "@/components/order/OrderProductDetail";
+import OrderProductDetail, { createOrderItemFromCombo } from "@/components/order/OrderProductDetail";
 import { ORDER_STATUS_LABELS, ORDER_TYPE_LABELS, ORDER_SOURCE_LABELS, OrderStatus, OrderType } from "@/constants/orderStatus";
 import { getStatusActions, isStatusTransitionAllowed } from "@/configs/order-status.config";
 import type { OrderHistoryItem, OrderItem, UpdateOrderInput, CreateOrderItemInput } from "@/types/order";
@@ -264,15 +264,30 @@ export default function OrderDetailPage({ params }: PageProps) {
     setAdjustRevenueModalOpen(true);
   }, [adjustRevenueForm, order]);
 
+  useEffect(() => {
+    if (adjustRevenueModalOpen && order) {
+      adjustRevenueForm.setFieldsValue({
+        marketingRevenue: order.marketingRevenueRaw ?? 0,
+        saleRevenue: order.saleRevenueRaw ?? 0,
+        note: order.manualRevenueNote ?? "",
+      });
+    }
+  }, [adjustRevenueModalOpen, order, adjustRevenueForm]);
+
   const handleSaveAdjustRevenue = useCallback(async () => {
     try {
       const values = await adjustRevenueForm.validateFields();
+      const rawMkt = values.marketingRevenue;
+      const rawSale = values.saleRevenue;
+      const parsedMkt = typeof rawMkt === "number" && !isNaN(rawMkt) ? rawMkt : Number(rawMkt ?? 0);
+      const parsedSale = typeof rawSale === "number" && !isNaN(rawSale) ? rawSale : Number(rawSale ?? 0);
+
       setAdjustRevenueLoading(true);
       await adjustRevenueMutation.mutateAsync({
         id,
-        marketingRevenue: Number(values.marketingRevenue),
-        saleRevenue: Number(values.saleRevenue),
-        note: values.note,
+        marketingRevenue: isNaN(parsedMkt) ? 0 : parsedMkt,
+        saleRevenue: isNaN(parsedSale) ? 0 : parsedSale,
+        note: values.note ? String(values.note).trim() : undefined,
       });
       message.success(t("Đã điều chỉnh doanh thu thành công", lang));
       setAdjustRevenueModalOpen(false);
@@ -1477,6 +1492,39 @@ export default function OrderDetailPage({ params }: PageProps) {
               showIcon
             />
           )}
+          {editOrderItems.length === 0 && combosList.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, marginBottom: 4, color: "#8c8c8c" }}>
+                {t("Chọn combo để thêm vào đơn hàng", lang)}:
+              </div>
+              <Select
+                placeholder={t("Chọn combo để thêm vào đơn hàng", lang)}
+                style={{ width: "100%" }}
+                loading={combosLoading}
+                options={combosList.map((c) => ({
+                  label: `${c.name} (${c.code}) - ${formatMNT(c.sellingPrice)}`,
+                  value: c._id,
+                }))}
+                onChange={(comboId) => {
+                  const combo = combosList.find((c) => c._id === comboId);
+                  if (combo) {
+                    const newItem = createOrderItemFromCombo({
+                      _id: combo._id,
+                      code: combo.code,
+                      name: combo.name,
+                      packageQuantity: combo.packageQuantity,
+                      giftQuantity: combo.giftQuantity ?? 0,
+                      sellingPrice: combo.sellingPrice,
+                      productId: selectedProductId || (typeof combo.product === "string" ? combo.product : (combo.product as any)?._id) || "",
+                      productName: editingProduct?.name,
+                    });
+                    setEditOrderItems([newItem]);
+                    setSelectedComboId(combo._id);
+                  }
+                }}
+              />
+            </div>
+          )}
           <OrderProductDetail
             items={editOrderItems}
             product={editingProduct}
@@ -1594,35 +1642,59 @@ export default function OrderDetailPage({ params }: PageProps) {
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message={t("Lưu ý điều chỉnh", lang)}
+          title={t("Lưu ý điều chỉnh", lang)}
           description={t("Thao tác này chỉ điều chỉnh doanh thu ghi nhận cho Marketing và Sale, không ảnh hưởng đến số lượng, sản phẩm trong kho hay địa chỉ nhận hàng.", lang)}
         />
         <Form form={adjustRevenueForm} layout="vertical">
           <Form.Item
-            name="marketingRevenue"
             label={t("Doanh thu Marketing", lang)}
-            rules={[{ required: true, message: t("Vui lòng nhập doanh thu Marketing", lang) }]}
+            required
           >
-            <InputNumber
-              min={0}
-              style={{ width: "100%" }}
-              formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              parser={(val) => Number(val?.replace(/\$\s?|(,*)/g, "") || 0) as any}
-              addonAfter={order.currency}
-            />
+            <Space.Compact style={{ width: "100%" }}>
+              <Form.Item
+                name="marketingRevenue"
+                noStyle
+                rules={[{ required: true, message: t("Vui lòng nhập doanh thu Marketing", lang) }]}
+              >
+                <InputNumber
+                  min={0}
+                  style={{ width: "100%" }}
+                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                  parser={(val) => {
+                    const parsed = Number(val?.replace(/\$\s?|(,*)/g, "") || 0);
+                    return isNaN(parsed) ? 0 : (parsed as any);
+                  }}
+                />
+              </Form.Item>
+              <Button disabled style={{ color: "rgba(0, 0, 0, 0.65)", cursor: "default" }}>
+                {order.currency || "MNT"}
+              </Button>
+            </Space.Compact>
           </Form.Item>
           <Form.Item
-            name="saleRevenue"
             label={t("Doanh thu Sale", lang)}
-            rules={[{ required: true, message: t("Vui lòng nhập doanh thu Sale", lang) }]}
+            required
           >
-            <InputNumber
-              min={0}
-              style={{ width: "100%" }}
-              formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              parser={(val) => Number(val?.replace(/\$\s?|(,*)/g, "") || 0) as any}
-              addonAfter={order.currency}
-            />
+            <Space.Compact style={{ width: "100%" }}>
+              <Form.Item
+                name="saleRevenue"
+                noStyle
+                rules={[{ required: true, message: t("Vui lòng nhập doanh thu Sale", lang) }]}
+              >
+                <InputNumber
+                  min={0}
+                  style={{ width: "100%" }}
+                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                  parser={(val) => {
+                    const parsed = Number(val?.replace(/\$\s?|(,*)/g, "") || 0);
+                    return isNaN(parsed) ? 0 : (parsed as any);
+                  }}
+                />
+              </Form.Item>
+              <Button disabled style={{ color: "rgba(0, 0, 0, 0.65)", cursor: "default" }}>
+                {order.currency || "MNT"}
+              </Button>
+            </Space.Compact>
           </Form.Item>
           <Form.Item
             name="note"

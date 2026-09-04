@@ -277,7 +277,13 @@ export async function resolveCustomerRevenue(
       const lockedChanged = previousLocked !== persist.revenueLocked;
       const reasonChanged = previousReason !== persist.revenueLockReason;
 
-      if (!ownerChanged && !lockedChanged && !reasonChanged) {
+      const expectedMarketingFinal = decision.state === RevenueState.ELIGIBLE ? (doc.marketingRevenueRaw ?? 0) : 0;
+      const expectedSaleFinal = decision.state === RevenueState.ELIGIBLE ? (doc.saleRevenueRaw ?? 0) : 0;
+      const revenueFinalChanged =
+        (doc.marketingRevenueFinal ?? 0) !== expectedMarketingFinal ||
+        (doc.saleRevenueFinal ?? 0) !== expectedSaleFinal;
+
+      if (!ownerChanged && !lockedChanged && !reasonChanged && !revenueFinalChanged) {
         if (!options.force) continue;
       }
 

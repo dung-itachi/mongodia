@@ -694,15 +694,19 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
     },
   ];
 
-  const moreMenuItems: MenuProps["items"] = [
-    { type: "divider" as const },
-    {
-      key: "delete",
-      label: t("Xóa Khách hàng", lang),
-      icon: <DeleteOutlined />,
-      danger: true,
-    },
-  ];
+  const isNew = lead.status === LeadStatus.NEW;
+
+  const moreMenuItems: MenuProps["items"] = isNew
+    ? [
+        { type: "divider" as const },
+        {
+          key: "delete",
+          label: t("Xóa Khách hàng", lang),
+          icon: <DeleteOutlined />,
+          danger: true,
+        },
+      ]
+    : [];
 
   const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "delete") {
@@ -715,7 +719,7 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
       {/* Action Bar */}
       <CardSection>
         <div className={styles["action-bar"]}>
-          {hasPermission(permissions, "lead.update") && lead.status === LeadStatus.NEW && (
+          {hasPermission(permissions, "lead.update") && isNew && (
             <Button icon={<EditOutlined />} onClick={onEdit}>
               {t("Sửa", lang)}
             </Button>
@@ -737,12 +741,14 @@ export function LeadDetailView({ lead, onEdit, onClose, onDelete }: LeadDetailVi
             </Button>
           )}
 
-          <Dropdown
-            menu={{ items: moreMenuItems, onClick: handleMenuClick }}
-            trigger={["click"]}
-          >
-            <Button icon={<MoreOutlined />} />
-          </Dropdown>
+          {moreMenuItems.length > 0 && (
+            <Dropdown
+              menu={{ items: moreMenuItems, onClick: handleMenuClick }}
+              trigger={["click"]}
+            >
+              <Button icon={<MoreOutlined />} />
+            </Dropdown>
+          )}
         </div>
       </CardSection>
 

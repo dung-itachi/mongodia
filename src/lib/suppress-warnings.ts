@@ -30,6 +30,13 @@ console.error = (...args: unknown[]) => {
     ) {
       return;
     }
+    // Ant Design: Deprecation warnings that Turbopack promotes to console.error
+    if (
+      message.includes("is deprecated") ||
+      message.includes("[antd:")
+    ) {
+      return;
+    }
   }
   originalWarning.apply(console, args);
 };

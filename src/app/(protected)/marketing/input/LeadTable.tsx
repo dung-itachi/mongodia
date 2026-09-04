@@ -35,6 +35,10 @@ export type MarketingLeadTableProps = {
   loading?: boolean;
   /** Show Marketing/Sale employee columns (for admin users) - Sprint 8.x */
   showEmployeeColumns?: boolean;
+  /** Tùy chọn hiển thị riêng cột MKT phụ trách */
+  showMarketingEmployeeColumn?: boolean;
+  /** Tùy chọn hiển thị riêng cột Sale phụ trách (chỉ manager và admin) */
+  showSaleEmployeeColumn?: boolean;
   /**
    * Phí ship hiện tại (MNT) lấy từ /api/settings/shipping-fee.
    * Dùng để tính cột "Doanh thu" = giá combo - shippingFee.
@@ -66,11 +70,15 @@ function MarketingLeadTableInner({
   onSelectionChange,
   loading,
   showEmployeeColumns = false,
+  showMarketingEmployeeColumn,
+  showSaleEmployeeColumn,
   shippingFee = 0,
   exchangeRate = 0,
   currency: controlledCurrency,
   onCurrencyToggle,
 }: MarketingLeadTableProps) {
+  const shouldShowMarketing = showMarketingEmployeeColumn !== undefined ? showMarketingEmployeeColumn : showEmployeeColumns;
+  const shouldShowSale = showSaleEmployeeColumn !== undefined ? showSaleEmployeeColumn : showEmployeeColumns;
   const lang = useLanguageStore((s) => s.language);
   const [internalCurrency, setInternalCurrency] = useState<"MNT" | "VND">("MNT");
   const isControlled = controlledCurrency !== undefined;
@@ -326,8 +334,7 @@ function MarketingLeadTableInner({
           return <span className={styles["mi-muted-text"]}>-</span>;
         },
       },
-      // Sprint 8.x: Marketing and Sale employee columns (only shown for admin)
-      ...(showEmployeeColumns ? [
+      ...(shouldShowMarketing ? [
         {
           key: "marketingEmployee",
           title: t("MKT phụ trách", lang),
@@ -341,6 +348,8 @@ function MarketingLeadTableInner({
             );
           },
         },
+      ] : []),
+      ...(shouldShowSale ? [
         {
           key: "saleEmployee",
           title: t("Sale phụ trách", lang),
@@ -362,21 +371,23 @@ function MarketingLeadTableInner({
         align: "center",
         render: (_value: unknown, record: Record<string, unknown>) => {
           const lead = record as unknown as MarketingLead;
-          // Chỉ cho phép sửa khi đơn hàng còn ở trạng thái "Mới"
-          const canEdit = lead.status === LeadStatus.NEW;
+          // Chỉ cho phép sửa và xóa khi đơn hàng còn ở trạng thái "Mới"
+          const isNew = lead.status === LeadStatus.NEW;
           return (
             <div className={styles["mi-action-group"]}>
               <ActionButton type="ghost" size="small" icon={<EyeOutlined />} label={t(MARKETING_LEAD_ACTION_LABELS.view, lang)} onClick={() => onView?.(lead)} disabled={!onView} />
-              {canEdit && (
+              {isNew && (
                 <ActionButton type="ghost" size="small" icon={<EditOutlined />} label={t(MARKETING_LEAD_ACTION_LABELS.edit, lang)} onClick={() => onEdit(lead)} />
               )}
-              <ActionButton type="danger" size="small" icon={<DeleteOutlined />} label={t(MARKETING_LEAD_ACTION_LABELS.delete, lang)} onClick={() => onDelete(lead)} />
+              {isNew && (
+                <ActionButton type="danger" size="small" icon={<DeleteOutlined />} label={t(MARKETING_LEAD_ACTION_LABELS.delete, lang)} onClick={() => onDelete(lead)} />
+              )}
             </div>
           );
         },
       },
     ],
-    [onDelete, onEdit, onView, showEmployeeColumns, shippingFee, currency, exchangeRate, lang]
+    [onDelete, onEdit, onView, shouldShowMarketing, shouldShowSale, shippingFee, currency, exchangeRate, lang]
   );
 
   const rowSelection: TableProps<Record<string, unknown>>["rowSelection"] = onSelectionChange

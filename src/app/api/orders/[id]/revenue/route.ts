@@ -24,8 +24,14 @@ import { z } from "zod";
 
 const adjustRevenueSchema = z
   .object({
-    marketingRevenue: z.number().min(0, "Doanh thu Marketing không thể âm"),
-    saleRevenue: z.number().min(0, "Doanh thu Sale không thể âm"),
+    marketingRevenue: z.preprocess(
+      (val) => (val === null || val === undefined || val === "" ? 0 : Number(val)),
+      z.number().min(0, "Doanh thu Marketing không thể âm")
+    ),
+    saleRevenue: z.preprocess(
+      (val) => (val === null || val === undefined || val === "" ? 0 : Number(val)),
+      z.number().min(0, "Doanh thu Sale không thể âm")
+    ),
     note: z.string().max(500, "Ghi chú không được vượt quá 500 ký tự").optional(),
   })
   .strict();
@@ -91,6 +97,12 @@ export async function PATCH(
     existing.manualRevenueEditedBy = currentUser.employee?._id;
     existing.manualRevenueEditedAt = new Date();
 
+    // Nếu đơn hàng đang đủ điều kiện tính doanh thu (không bị lock), cập nhật luôn doanh thu cuối
+    if (existing.revenueEligible || !existing.revenueLocked) {
+      existing.marketingRevenueFinal = marketingRevenue;
+      existing.saleRevenueFinal = saleRevenue;
+    }
+
     await existing.save();
 
     // Ghi nhận lịch sử OrderHistory
@@ -109,6 +121,7 @@ export async function PATCH(
       try {
         await resolveCustomerRevenue(existing.customerId, {
           actorEmployeeId: currentUser.employee?._id,
+          force: true,
         });
       } catch (engineError) {
         console.error("resolveCustomerRevenue error after adjust revenue:", engineError);
