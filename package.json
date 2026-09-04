@@ -8,7 +8,9 @@
     "build:strict": "tsc --noEmit && next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "dotenv -e .env.local -- tsx src/db/seed.ts"
+    "seed": "dotenv -e .env.local -- tsx src/db/seed.ts",
+    "db:clone-backup": "dotenv -e .env.local -- tsx src/db/clone-backup.ts",
+    "db:clean-test-data": "dotenv -e .env.local -- tsx src/db/clean-test-data.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^6.3.2",
