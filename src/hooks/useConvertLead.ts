@@ -18,13 +18,30 @@ interface ConvertLeadResponse {
   error?: string;
 }
 
-async function convertLead({ leadId, orderItem }: { leadId: string; orderItem: OrderItem }): Promise<ConvertLeadResponse> {
+export interface ManualRevenueInput {
+  marketingRevenue?: number;
+  saleRevenue?: number;
+}
+
+async function convertLead({
+  leadId,
+  orderItem,
+  isPrepaid,
+  prepaymentAmount,
+  manualRevenue,
+}: {
+  leadId: string;
+  orderItem: OrderItem;
+  isPrepaid?: boolean;
+  prepaymentAmount?: number;
+  manualRevenue?: ManualRevenueInput;
+}): Promise<ConvertLeadResponse> {
   const response = await fetch(`/api/leads/${leadId}/convert`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ orderItem }),
+    body: JSON.stringify({ orderItem, isPrepaid, prepaymentAmount, manualRevenue }),
   });
 
   const data = await response.json();

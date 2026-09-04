@@ -127,6 +127,7 @@ export enum OrderAction {
   REVENUE_LOCKED = "REVENUE_LOCKED",
   REVENUE_UNLOCKED = "REVENUE_UNLOCKED",
   REVENUE_RECALCULATED = "REVENUE_RECALCULATED",
+  REVENUE_UPDATED = "REVENUE_UPDATED",
   NOTE_UPDATED = "NOTE_UPDATED",
   /** Phase 4.3 refactor: Stock Engine đã giữ chỗ (RESERVE) cho Order. */
   STOCK_RESERVED = "STOCK_RESERVED",
@@ -155,6 +156,7 @@ export const ORDER_ACTION_LABELS: Record<OrderAction, string> = {
   [OrderAction.REVENUE_LOCKED]: "Khóa doanh thu",
   [OrderAction.REVENUE_UNLOCKED]: "Mở khóa doanh thu",
   [OrderAction.REVENUE_RECALCULATED]: "Tính lại doanh thu",
+  [OrderAction.REVENUE_UPDATED]: "Điều chỉnh doanh thu",
   [OrderAction.NOTE_UPDATED]: "Cập nhật ghi chú",
   [OrderAction.STOCK_RESERVED]: "Giữ chỗ tồn kho",
   [OrderAction.STOCK_RELEASED]: "Trả chỗ tồn kho",

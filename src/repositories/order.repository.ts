@@ -67,6 +67,20 @@ export interface CreateOrderData {
   marketingRevenueFinal?: number;
   saleRevenueRaw?: number;
   saleRevenueFinal?: number;
+  isManualRevenue?: boolean;
+  manualRevenueNote?: string;
+  manualRevenueEditedBy?: Types.ObjectId;
+  manualRevenueEditedAt?: Date;
+  isPrepaid?: boolean;
+  payments?: Array<{
+    method: string;
+    amount: number;
+    currency: string;
+    paidAt?: Date;
+    transactionId?: string;
+    note?: string;
+  }>;
+  totalPaid?: number;
 }
 
 export interface UpdateOrderData {
@@ -117,6 +131,14 @@ export interface UpdateOrderData {
     shippingFeeCurrency: string;
   };
   note?: string;
+  marketingRevenueRaw?: number;
+  marketingRevenueFinal?: number;
+  saleRevenueRaw?: number;
+  saleRevenueFinal?: number;
+  isManualRevenue?: boolean;
+  manualRevenueNote?: string;
+  manualRevenueEditedBy?: Types.ObjectId;
+  manualRevenueEditedAt?: Date;
   isActive?: boolean;
   orderDate?: Date;
   receivedDate?: Date;
@@ -169,6 +191,10 @@ function mapToOrder(doc: IOrder) {
     revenueEligible: doc.revenueEligible,
     revenueLockReason: doc.revenueLockReason,
     revenueCalculatedAt: doc.revenueCalculatedAt?.toISOString(),
+    isManualRevenue: doc.isManualRevenue ?? false,
+    manualRevenueNote: doc.manualRevenueNote,
+    manualRevenueEditedBy: doc.manualRevenueEditedBy?.toString(),
+    manualRevenueEditedAt: doc.manualRevenueEditedAt?.toISOString(),
     note: doc.note,
     isActive: doc.isActive,
     createdAt: doc.createdAt.toISOString(),
@@ -265,10 +291,10 @@ export class OrderRepository {
     const order = new Order({
       ...data,
       status: data.status ?? OrderStatus.WAIT_CONFIRM,
-      isPrepaid: false,
+      isPrepaid: data.isPrepaid ?? false,
       orderType: "NORMAL",
-      payments: [],
-      totalPaid: 0,
+      payments: data.payments ?? [],
+      totalPaid: data.totalPaid ?? 0,
       revenueLocked: false,
       revenueEligible: false,
       revenueLockReason: "NONE",

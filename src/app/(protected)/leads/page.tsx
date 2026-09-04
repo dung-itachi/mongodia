@@ -164,7 +164,15 @@ export default function SaleLeadsPage() {
     []
   );
 
-  const handleConfirmConvert = useCallback((orderItem: OrderItem) => {
+  const handleConfirmConvert = useCallback((
+    orderItem: OrderItem,
+    isPrepaid?: boolean,
+    prepaymentAmount?: number,
+    manualRevenue?: {
+      marketingRevenue?: number;
+      saleRevenue?: number;
+    }
+  ) => {
     if (!convertingLead) return;
 
     // DEBUG
@@ -191,7 +199,13 @@ export default function SaleLeadsPage() {
       })),
     };
 
-    convertMutation.mutate({ leadId: convertingLead._id, orderItem }, {
+    convertMutation.mutate({
+      leadId: convertingLead._id,
+      orderItem,
+      isPrepaid,
+      prepaymentAmount,
+      manualRevenue,
+    }, {
       onSuccess: (result) => {
         const orderId = result?.orderId;
         // Best-effort: persist latest variant details snapshot (không block convert).

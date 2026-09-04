@@ -214,6 +214,10 @@ export interface OrderListItem {
   revenueLockReason: RevenueLockReason;
   revenueLockReasonLabel: string;
   revenueCalculatedAt?: string;
+  isManualRevenue?: boolean;
+  manualRevenueNote?: string;
+  manualRevenueEditedBy?: string;
+  manualRevenueEditedAt?: string;
 
   // Audit
   note?: string;

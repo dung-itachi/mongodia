@@ -58,15 +58,29 @@ export async function POST(
     await connectDB();
 
     const { id } = await params;
+
     let orderItem: OrderItem;
+    let isPrepaid: boolean | undefined;
+    let prepaymentAmount: number | undefined;
+    let manualRevenue: { marketingRevenue?: number; saleRevenue?: number } | undefined;
     try {
       const body: unknown = await request.json();
       orderItem = (body as { orderItem?: OrderItem }).orderItem as OrderItem;
+      isPrepaid = (body as { isPrepaid?: boolean }).isPrepaid;
+      prepaymentAmount = (body as { prepaymentAmount?: number }).prepaymentAmount;
+      manualRevenue = (body as { manualRevenue?: { marketingRevenue?: number; saleRevenue?: number } }).manualRevenue;
     } catch {
       return errorResponse("Dữ liệu đơn hàng không hợp lệ");
     }
 
-    const result = await leadService.convertLead(id, currentUser.employee?._id?.toString() ?? "", orderItem);
+    const result = await leadService.convertLead(
+      id,
+      currentUser.employee?._id?.toString() ?? "",
+      orderItem,
+      isPrepaid,
+      prepaymentAmount,
+      manualRevenue
+    );
 
     if (!result.success) {
       console.log("[LEAD CONVERT API] Validation error:", result.error);

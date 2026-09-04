@@ -98,6 +98,12 @@ export interface CreateFromLeadData {
   confirmedAt?: Date;
   // Sprint 8.x: địa chỉ giao hàng từ Lead
   address?: string;
+  isPrepaid?: boolean;
+  prepaymentAmount?: number;
+  manualRevenue?: {
+    marketingRevenue?: number;
+    saleRevenue?: number;
+  };
 }
 
 export interface CreateCustomerFromLeadData {
@@ -371,8 +377,10 @@ export class OrderService {
         currentStatus === OrderStatus.WAIT_CONFIRM &&
         newStatus === OrderStatus.CONFIRMED
       ) {
-        revenueUpdate.marketingRevenueRaw = netRevenue;
-        revenueUpdate.saleRevenueRaw = netRevenue;
+        if (!existingOrder.isManualRevenue) {
+          revenueUpdate.marketingRevenueRaw = netRevenue;
+          revenueUpdate.saleRevenueRaw = netRevenue;
+        }
         revenueUpdate.confirmedAt = new Date();
       }
 
@@ -1013,9 +1021,32 @@ export class OrderService {
       }
     }
 
+    const payments = data.isPrepaid && data.prepaymentAmount && data.prepaymentAmount > 0
+      ? [{
+          method: "BANK_TRANSFER",
+          amount: data.prepaymentAmount,
+          currency: data.currency,
+          paidAt: new Date(),
+          note: "Thanh toán trước khi chốt đơn từ Lead",
+        }]
+      : [];
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+
+    const hasManualRevenue = Boolean(
+      data.manualRevenue &&
+      (data.manualRevenue.marketingRevenue !== undefined || data.manualRevenue.saleRevenue !== undefined)
+    );
+    const manualMkt = data.manualRevenue?.marketingRevenue;
+    const manualSale = data.manualRevenue?.saleRevenue;
+
     return orderRepository.create(
       {
         orderCode,
+        payments,
+        totalPaid,
+        marketingRevenueRaw: hasManualRevenue ? (manualMkt ?? 0) : 0,
+        saleRevenueRaw: hasManualRevenue ? (manualSale ?? 0) : 0,
+        isManualRevenue: hasManualRevenue,
         customerId: new mongoose.Types.ObjectId(data.customerId),
         customerName: data.customerName,
         customerPhone: data.customerPhone,
@@ -1092,6 +1123,7 @@ export class OrderService {
         confirmedAt: data.confirmedAt,
         // Sprint 8.x: convert từ lead = đơn mới, cần xác nhận
         status: OrderStatus.WAIT_CONFIRM,
+        isPrepaid: data.isPrepaid ?? false,
         // Sprint 8.x: địa chỉ giao hàng từ Lead
         shipping: data.address
           ? {

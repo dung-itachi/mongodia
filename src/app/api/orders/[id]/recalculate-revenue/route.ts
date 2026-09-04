@@ -46,7 +46,7 @@ export async function POST(
     const DELIVERED_STATUSES = ["DELIVERED", "RECONCILED"];
     const isDelivered = DELIVERED_STATUSES.includes(order.status);
 
-    if (isDelivered) {
+    if (isDelivered && !order.isManualRevenue) {
       // Calculate revenue: grandTotal - shippingFee
       const grandTotal = (order.summary as { grandTotal?: number })?.grandTotal ?? order.totalAmount;
       const shippingFee = (order.summary as { shippingFee?: number })?.shippingFee

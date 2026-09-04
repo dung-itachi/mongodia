@@ -11,7 +11,7 @@
 
 import { use, useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Row, Col, Table, Button, Dropdown, Space, Form, Input, Modal, Checkbox, Select, Divider, Alert, Tooltip } from "antd";
+import { Row, Col, Table, Button, Dropdown, Space, Form, Input, InputNumber, Modal, Checkbox, Select, Divider, Alert, Tooltip, Tag } from "antd";
 import type { TableColumnsType } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -24,6 +24,7 @@ import {
   QuestionCircleOutlined,
   TrophyOutlined,
   ReloadOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/layout/PageContainer";
@@ -40,7 +41,7 @@ import { useMessage } from "@/contexts/MessageContext";
 import { useLanguageStore } from "@/store/language.store";
 import { t } from "@/lib/i18n";
 
-import { useOrder, useDeleteOrder, useChangeOrderStatus, useUpdateOrder } from "@/hooks/useOrders";
+import { useOrder, useDeleteOrder, useChangeOrderStatus, useUpdateOrder, useAdjustOrderRevenue } from "@/hooks/useOrders";
 import { useShipOrder, useReturnOrderStock } from "@/hooks/useWarehouseWorkflow";
 import { useShippingFee } from "@/hooks/useShippingFee";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -215,6 +216,8 @@ export default function OrderDetailPage({ params }: PageProps) {
       status: order.status,
       orderType: order.orderType,
       orderSource: order.orderSource,
+      isPrepaid: order.isPrepaid ?? false,
+      prepaymentAmount: order.totalPaid ?? 0,
       // Sale assignment - ensure we always pass a string ID
       saleEmployeeId: saleEmpId,
       marketingEmployeeId: mktEmpId,
@@ -244,6 +247,42 @@ export default function OrderDetailPage({ params }: PageProps) {
   const [shipLoading, setShipLoading] = useState(false);
   const [reconcileLoading, setReconcileLoading] = useState(false);
   const [recalculateRevenueLoading, setRecalculateRevenueLoading] = useState(false);
+
+  // Điều chỉnh doanh thu thủ công (MKT & Sale)
+  const adjustRevenueMutation = useAdjustOrderRevenue();
+  const [adjustRevenueModalOpen, setAdjustRevenueModalOpen] = useState(false);
+  const [adjustRevenueLoading, setAdjustRevenueLoading] = useState(false);
+  const [adjustRevenueForm] = Form.useForm();
+
+  const handleOpenAdjustRevenueModal = useCallback(() => {
+    if (!order) return;
+    adjustRevenueForm.setFieldsValue({
+      marketingRevenue: order.marketingRevenueRaw ?? 0,
+      saleRevenue: order.saleRevenueRaw ?? 0,
+      note: order.manualRevenueNote ?? "",
+    });
+    setAdjustRevenueModalOpen(true);
+  }, [adjustRevenueForm, order]);
+
+  const handleSaveAdjustRevenue = useCallback(async () => {
+    try {
+      const values = await adjustRevenueForm.validateFields();
+      setAdjustRevenueLoading(true);
+      await adjustRevenueMutation.mutateAsync({
+        id,
+        marketingRevenue: Number(values.marketingRevenue),
+        saleRevenue: Number(values.saleRevenue),
+        note: values.note,
+      });
+      message.success(t("Đã điều chỉnh doanh thu thành công", lang));
+      setAdjustRevenueModalOpen(false);
+      await refetch();
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : t("Điều chỉnh doanh thu thất bại", lang));
+    } finally {
+      setAdjustRevenueLoading(false);
+    }
+  }, [adjustRevenueForm, adjustRevenueMutation, id, lang, message, refetch]);
 
   const handleRecalculateRevenue = useCallback(async () => {
     setRecalculateRevenueLoading(true);
@@ -371,6 +410,26 @@ export default function OrderDetailPage({ params }: PageProps) {
           }))
         : undefined;
 
+      let newPayments: any = undefined;
+      if (values.isPrepaid) {
+        const amt = Number(values.prepaymentAmount ?? 0);
+        if (amt !== order?.totalPaid) {
+          newPayments = [
+            {
+              method: "BANK_TRANSFER",
+              amount: amt,
+              currency: order?.currency ?? "VND",
+              paidAt: new Date().toISOString(),
+              note: "Cập nhật thanh toán trước",
+            }
+          ];
+        }
+      } else {
+        if (order?.totalPaid && order.totalPaid > 0) {
+          newPayments = [];
+        }
+      }
+
       const updateData: UpdateOrderInput = {
         customerName: values.customerName.trim(),
         customerPhone: values.customerPhone?.trim() || undefined,
@@ -379,6 +438,8 @@ export default function OrderDetailPage({ params }: PageProps) {
         status: values.status !== order?.status ? values.status : undefined,
         orderType: values.orderType !== order?.orderType ? values.orderType : undefined,
         orderSource: values.orderSource !== order?.orderSource ? values.orderSource : undefined,
+        isPrepaid: values.isPrepaid,
+        payments: newPayments,
         // Sale assignment
         saleEmployeeId: values.saleEmployeeId || undefined,
         marketingEmployeeId: values.marketingEmployeeId || undefined,
@@ -1142,19 +1203,19 @@ export default function OrderDetailPage({ params }: PageProps) {
                     <div style={{ fontSize: 12 }}>
                       <div style={{ marginBottom: 4, color: "#52c41a" }}>
                         <CheckCircleOutlined style={{ marginRight: 4 }} />
-                        <strong>Đơn giao thành công (DELIVERED):</strong> Doanh thu LUÔN được tính = T�ng tiền - Phí ship
+                        <strong>{t("Đơn giao thành công (DELIVERED):", lang)}</strong> {t("Doanh thu LUÔN được tính = Tổng tiền - Phí ship", lang)}
                       </div>
                       <div style={{ marginBottom: 4 }}>
                         <CheckOutlined style={{ color: "#52c41a", marginRight: 4 }} />
-                        Đơn đầu tiên cùng sản phẩm/combo → được tính doanh thu
+                        {t("Đơn đầu tiên cùng sản phẩm/combo → được tính doanh thu", lang)}
                       </div>
                       <div style={{ marginBottom: 4 }}>
                         <ClockCircleOutlined style={{ color: "#8c8c8c", marginRight: 4 }} />
-                        Các đơn sau → bị khóa, chờ đơn trước hoàn thành
+                        {t("Các đơn sau → bị khóa, chờ đơn trước hoàn thành", lang)}
                       </div>
                       <div>
                         <DeleteOutlined style={{ color: "#ff4d4f", marginRight: 4 }} />
-                        Đơn GIFT/EXCHANGE/REPLACEMENT → không tính doanh thu
+                        {t("Đơn GIFT/EXCHANGE/REPLACEMENT → không tính doanh thu", lang)}
                       </div>
                     </div>
                   }
@@ -1210,16 +1271,40 @@ export default function OrderDetailPage({ params }: PageProps) {
                     <span style={{ fontWeight: 500 }}>{formatCurrency(order.saleRevenueFinal, order.currency)}</span>
                   </div>
                 </Col>
-                <Col xs={24}>
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<ReloadOutlined />}
-                    onClick={handleRecalculateRevenue}
-                    loading={recalculateRevenueLoading}
-                  >
-                    {t("Tính lại doanh thu", lang)}
-                  </Button>
+                {order.isManualRevenue && (
+                  <Col xs={24}>
+                    <div style={{ marginTop: 4, padding: "6px 8px", background: "#fff7e6", border: "1px solid #ffd591", borderRadius: 4 }}>
+                      <Tag color="orange" style={{ margin: 0 }}>
+                        {t("Đã sửa thủ công", lang)}
+                      </Tag>
+                      {order.manualRevenueNote && (
+                        <div style={{ fontSize: 11, color: "#8c8c8c", marginTop: 4 }}>
+                          {t("Ghi chú", lang)}: {order.manualRevenueNote}
+                        </div>
+                      )}
+                    </div>
+                  </Col>
+                )}
+                <Col xs={24} style={{ marginTop: 8 }}>
+                  <Space wrap>
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={handleOpenAdjustRevenueModal}
+                    >
+                      {t("Điều chỉnh doanh thu", lang)}
+                    </Button>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<ReloadOutlined />}
+                      onClick={handleRecalculateRevenue}
+                      loading={recalculateRevenueLoading}
+                    >
+                      {t("Tính lại doanh thu", lang)}
+                    </Button>
+                  </Space>
                 </Col>
               </Row>
             </CardSection>
@@ -1286,7 +1371,7 @@ export default function OrderDetailPage({ params }: PageProps) {
             {t("Trạng thái & Phân loại", lang)}
           </Divider>
           <Row gutter={16}>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={6}>
               <Form.Item name="status" label={t("Trạng thái đơn hàng", lang)}>
                 <Select
                   placeholder={t("Chọn trạng thái", lang)}
@@ -1298,7 +1383,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={6}>
               <Form.Item name="orderType" label={t("Loại đơn hàng", lang)}>
                 <Select
                   placeholder={t("Chọn loại", lang)}
@@ -1310,7 +1395,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={6}>
               <Form.Item name="orderSource" label={t("Nguồn đơn", lang)}>
                 <Select
                   placeholder={t("Chọn nguồn", lang)}
@@ -1322,6 +1407,22 @@ export default function OrderDetailPage({ params }: PageProps) {
                 />
               </Form.Item>
             </Col>
+            <Col xs={24} sm={6}>
+              <Form.Item name="isPrepaid" valuePropName="checked" label={t("Thanh toán trước", lang)}>
+                <Checkbox>{t("Chuyển khoản trước", lang)}</Checkbox>
+              </Form.Item>
+            </Col>
+            <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.isPrepaid !== currentValues.isPrepaid}>
+              {({ getFieldValue }) =>
+                getFieldValue("isPrepaid") ? (
+                  <Col xs={24} sm={6}>
+                    <Form.Item name="prepaymentAmount" label={t("Số tiền thanh toán trước", lang)}>
+                      <Input type="number" min={0} step={1000} />
+                    </Form.Item>
+                  </Col>
+                ) : null
+              }
+            </Form.Item>
           </Row>
 
           {/* ========== Section 3: Phân công Sale ========== */}
@@ -1471,6 +1572,70 @@ export default function OrderDetailPage({ params }: PageProps) {
         onConfirm={() => statusTarget && handleStatusChange(statusTarget)}
         onCancel={() => setStatusTarget(null)}
       />
+
+      {/* Modal Điều chỉnh doanh thu thủ công (MKT & Sale) */}
+      <Modal
+        title={
+          <Space>
+            <DollarOutlined style={{ color: "#52c41a" }} />
+            <span>{t("Điều chỉnh doanh thu đơn hàng", lang)}</span>
+          </Space>
+        }
+        open={adjustRevenueModalOpen}
+        onCancel={() => setAdjustRevenueModalOpen(false)}
+        onOk={handleSaveAdjustRevenue}
+        confirmLoading={adjustRevenueLoading}
+        okText={t("Lưu thay đổi", lang)}
+        cancelText={t("Hủy", lang)}
+        destroyOnHidden
+        width={480}
+      >
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={t("Lưu ý điều chỉnh", lang)}
+          description={t("Thao tác này chỉ điều chỉnh doanh thu ghi nhận cho Marketing và Sale, không ảnh hưởng đến số lượng, sản phẩm trong kho hay địa chỉ nhận hàng.", lang)}
+        />
+        <Form form={adjustRevenueForm} layout="vertical">
+          <Form.Item
+            name="marketingRevenue"
+            label={t("Doanh thu Marketing", lang)}
+            rules={[{ required: true, message: t("Vui lòng nhập doanh thu Marketing", lang) }]}
+          >
+            <InputNumber
+              min={0}
+              style={{ width: "100%" }}
+              formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+              parser={(val) => Number(val?.replace(/\$\s?|(,*)/g, "") || 0) as any}
+              addonAfter={order.currency}
+            />
+          </Form.Item>
+          <Form.Item
+            name="saleRevenue"
+            label={t("Doanh thu Sale", lang)}
+            rules={[{ required: true, message: t("Vui lòng nhập doanh thu Sale", lang) }]}
+          >
+            <InputNumber
+              min={0}
+              style={{ width: "100%" }}
+              formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+              parser={(val) => Number(val?.replace(/\$\s?|(,*)/g, "") || 0) as any}
+              addonAfter={order.currency}
+            />
+          </Form.Item>
+          <Form.Item
+            name="note"
+            label={t("Lý do điều chỉnh (ghi chú)", lang)}
+          >
+            <Input.TextArea
+              rows={3}
+              maxLength={500}
+              placeholder={t("Nhập lý do điều chỉnh doanh thu...", lang)}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </PageContainer>
   );
 }

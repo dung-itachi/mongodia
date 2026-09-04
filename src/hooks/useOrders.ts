@@ -361,3 +361,30 @@ export function useOrderStatistics() {
     mutationFn: (filter) => fetchOrderStatistics(filter),
   });
 }
+
+export interface AdjustOrderRevenueInput {
+  id: string;
+  marketingRevenue: number;
+  saleRevenue: number;
+  note?: string;
+}
+
+async function adjustOrderRevenue({ id, marketingRevenue, saleRevenue, note }: AdjustOrderRevenueInput): Promise<OrderListItem> {
+  const response = await api.patch(`/api/orders/${id}/revenue`, { marketingRevenue, saleRevenue, note });
+  return response.data.data;
+}
+
+export function useAdjustOrderRevenue() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: AdjustOrderRevenueInput) => adjustOrderRevenue(data),
+    onSuccess: (_result, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["orders"] });
+      void queryClient.invalidateQueries({ queryKey: ["order", variables.id] });
+      void queryClient.invalidateQueries({ queryKey: ["marketing-dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["sales-kpi"] });
+    },
+  });
+}
+

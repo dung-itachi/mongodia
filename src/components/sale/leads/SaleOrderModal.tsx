@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Modal, Select, Spin, Tag, Typography } from "antd";
-import { GiftOutlined, SwapOutlined } from "@ant-design/icons";
+import { Alert, Button, Checkbox, Col, Input, InputNumber, Modal, Row, Select, Spin, Tag, Typography } from "antd";
+import { GiftOutlined, SwapOutlined, DollarOutlined, UndoOutlined } from "@ant-design/icons";
 import OrderProductDetail, { createOrderItemFromCombo } from "@/components/order/OrderProductDetail";
 import { useComboList, type ComboListItem } from "@/hooks/useCombos";
 import { useProductWithVariants } from "@/hooks/useProductVariants";
+import { useShippingFee } from "@/hooks/useShippingFee";
 import type { SaleLead } from "@/hooks/useSaleLeads";
 import {
   validateOrderItem,
@@ -21,7 +22,15 @@ interface SaleOrderModalProps {
   lead: SaleLead | null;
   loading: boolean;
   onClose: () => void;
-  onConfirm: (item: OrderItem) => void;
+  onConfirm: (
+    item: OrderItem,
+    isPrepaid: boolean,
+    prepaymentAmount?: number,
+    manualRevenue?: {
+      marketingRevenue?: number;
+      saleRevenue?: number;
+    }
+  ) => void;
 }
 
 function productId(combo: ComboListItem): string | null {
@@ -133,6 +142,18 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
   const lang = useLanguageStore((s) => s.language);
   const [selectedComboId, setSelectedComboId] = useState<string>();
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [isPrepaid, setIsPrepaid] = useState<boolean>(false);
+  const [prepaymentAmount, setPrepaymentAmount] = useState<number>();
+
+  // Phí ship hiện tại để tính doanh thu mặc định: (Giá combo × SL) - phí ship
+  const { data: shippingFeeData } = useShippingFee();
+  const shippingFee = shippingFeeData?.fee ?? 0;
+
+  // Doanh thu MKT và Sale
+  const [marketingRevenue, setMarketingRevenue] = useState<number>();
+  const [saleRevenue, setSaleRevenue] = useState<number>();
+  const [isRevenueModified, setIsRevenueModified] = useState<boolean>(false);
+
   const { data: combosData, isLoading: combosLoading } = useComboList({
     page: 1,
     limit: 100,
@@ -143,6 +164,24 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
   const selectedCombo = useMemo(() => combos.find((combo) => combo._id === selectedComboId), [combos, selectedComboId]);
   const selectedProductId = selectedCombo ? productId(selectedCombo) : lead?.product?._id ?? null;
   const { product, loading: productLoading } = useProductWithVariants(selectedProductId);
+
+  // Tính doanh thu tự động gợi ý:
+  const currentComboPrice = (selectedCombo?.sellingPrice ?? 0) * (items[0]?.comboQuantity ?? (lead?.quantity && lead.quantity > 0 ? lead.quantity : 1));
+  const autoCalculatedRevenue = Math.max(0, currentComboPrice - shippingFee);
+
+  // Tự động đồng bộ doanh thu gợi ý nếu user chưa sửa tay
+  useEffect(() => {
+    if (!isRevenueModified) {
+      setMarketingRevenue(autoCalculatedRevenue);
+      setSaleRevenue(autoCalculatedRevenue);
+    }
+  }, [autoCalculatedRevenue, isRevenueModified]);
+
+  const handleResetRevenue = () => {
+    setIsRevenueModified(false);
+    setMarketingRevenue(autoCalculatedRevenue);
+    setSaleRevenue(autoCalculatedRevenue);
+  };
 
   // Stable ref to variantCount so we can read it in effects without triggering re-renders.
   const variantCountRef = useRef(0);
@@ -155,6 +194,11 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
     if (!lead) {
       initializedForRef.current = null;
       setItems([]);
+      setIsPrepaid(false);
+      setPrepaymentAmount(undefined);
+      setMarketingRevenue(undefined);
+      setSaleRevenue(undefined);
+      setIsRevenueModified(false);
       return;
     }
     const leadId = lead._id;
@@ -247,7 +291,10 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
       okText={t("Chốt đơn", lang)}
       cancelText={t("Hủy", lang)}
       onCancel={onClose}
-      onOk={() => item && onConfirm(item)}
+      onOk={() => item && onConfirm(item, isPrepaid, prepaymentAmount, {
+        marketingRevenue: marketingRevenue ?? autoCalculatedRevenue,
+        saleRevenue: saleRevenue ?? autoCalculatedRevenue,
+      })}
       okButtonProps={{ loading, disabled: !item || productLoading || !validation.isValid }}
     >
       {lead && <div style={{ marginBottom: 16 }}>
@@ -255,16 +302,118 @@ export default function SaleOrderModal({ lead, loading, onClose, onConfirm }: Sa
         <Typography.Text type="secondary"> {lead.phone ? `- ${lead.phone}` : ""}</Typography.Text>
         {lead.address && <div><Typography.Text type="secondary">{lead.address}</Typography.Text></div>}
       </div>}
-      <div style={{ marginBottom: 16 }}>
-        <Typography.Text strong>{t("Combo", lang)}</Typography.Text>
-        <Select
-          value={selectedComboId}
-          onChange={selectCombo}
-          loading={combosLoading}
-          style={{ display: "block", marginTop: 6, width: "100%" }}
-          placeholder={t("Chọn combo", lang)}
-          options={combos.map((combo) => ({ label: `${combo.name} - ${formatMNT(combo.sellingPrice)}`, value: combo._id }))}
-        />
+      <Row gutter={16}>
+        <Col span={12}>
+          <div style={{ marginBottom: 16 }}>
+            <Typography.Text strong>{t("Combo", lang)}</Typography.Text>
+            <Select
+              value={selectedComboId}
+              onChange={selectCombo}
+              loading={combosLoading}
+              style={{ display: "block", marginTop: 6, width: "100%" }}
+              placeholder={t("Chọn combo", lang)}
+              options={combos.map((combo) => ({ label: `${combo.name} - ${formatMNT(combo.sellingPrice)}`, value: combo._id }))}
+            />
+          </div>
+        </Col>
+        <Col span={6}>
+          <div style={{ marginBottom: 16, paddingTop: 26 }}>
+            <Checkbox
+              checked={isPrepaid}
+              onChange={(e) => {
+                setIsPrepaid(e.target.checked);
+                if (!e.target.checked) setPrepaymentAmount(undefined);
+              }}
+            >
+              {t("Thanh toán trước", lang)}
+            </Checkbox>
+          </div>
+        </Col>
+        <Col span={6}>
+          {isPrepaid && (
+            <div style={{ marginBottom: 16 }}>
+              <Typography.Text strong>{t("Số tiền thanh toán", lang)}</Typography.Text>
+              <Input
+                type="number"
+                min={0}
+                style={{ marginTop: 6, width: "100%" }}
+                value={prepaymentAmount}
+                onChange={(e) => setPrepaymentAmount(e.target.value ? Number(e.target.value) : undefined)}
+                placeholder={t("Nhập số tiền", lang)}
+              />
+            </div>
+          )}
+        </Col>
+      </Row>
+
+      {/* Block nhập Doanh thu MKT & Sale */}
+      <div
+        style={{
+          marginBottom: 16,
+          padding: "10px 14px",
+          background: "#f6ffed",
+          border: "1px solid #b7eb8f",
+          borderRadius: 6,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <Typography.Text strong style={{ color: "#389e0d" }}>
+            <DollarOutlined style={{ marginRight: 6 }} />
+            {t("Doanh thu ghi nhận", lang)}
+          </Typography.Text>
+          {isRevenueModified && (
+            <Button
+              type="link"
+              size="small"
+              icon={<UndoOutlined />}
+              onClick={handleResetRevenue}
+              style={{ padding: 0, height: "auto", fontSize: 12, color: "#1890ff" }}
+            >
+              {t("Đặt lại tự động", lang)} ({formatMNT(autoCalculatedRevenue)})
+            </Button>
+          )}
+        </div>
+        <Row gutter={16}>
+          <Col span={12}>
+            <div>
+              <div style={{ fontSize: 12, marginBottom: 4, color: "#595959" }}>
+                {t("Doanh thu Marketing (MNT)", lang)}:
+              </div>
+              <InputNumber
+                min={0}
+                style={{ width: "100%" }}
+                value={marketingRevenue}
+                onChange={(val) => {
+                  setMarketingRevenue(val ?? 0);
+                  setIsRevenueModified(true);
+                }}
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, "") || 0) as any}
+              />
+            </div>
+          </Col>
+          <Col span={12}>
+            <div>
+              <div style={{ fontSize: 12, marginBottom: 4, color: "#595959" }}>
+                {t("Doanh thu Sale (MNT)", lang)}:
+              </div>
+              <InputNumber
+                min={0}
+                style={{ width: "100%" }}
+                value={saleRevenue}
+                onChange={(val) => {
+                  setSaleRevenue(val ?? 0);
+                  setIsRevenueModified(true);
+                }}
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, "") || 0) as any}
+              />
+            </div>
+          </Col>
+        </Row>
+        <div style={{ marginTop: 6, fontSize: 11, color: "#8c8c8c" }}>
+          * {t("Mặc định gợi ý", lang)}: {formatMNT(autoCalculatedRevenue)} ({t("Giá combo - Phí ship", lang)}). {t("Bạn có thể sửa tay nếu muốn ghi nhận doanh thu khác cho MKT hoặc Sale.", lang)}
+        </div>
       </div>
       {!combosLoading && combos.length === 0 && <Alert type="warning" title={t("Không có combo đang hoạt động cho sản phẩm của khách hàng này.", lang)} showIcon />}
       {item && !validation.isValid && <Alert type="warning" title={validation.detailsError || validation.giftsError || t("Thông tin đơn hàng chưa hợp lệ.", lang)} showIcon style={{ marginBottom: 12 }} />}

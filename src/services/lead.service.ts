@@ -334,7 +334,13 @@ export class LeadService {
   async convertLead(
     id: string,
     convertedBy: string,
-    orderItem?: OrderItem
+    orderItem?: OrderItem,
+    isPrepaid?: boolean,
+    prepaymentAmount?: number,
+    manualRevenue?: {
+      marketingRevenue?: number;
+      saleRevenue?: number;
+    }
   ): Promise<{ success: true; orderId: string } | { success: false; error: string }> {
     // 1. Check lead exists
     const existingLead = await leadRepository.findById(id);
@@ -457,6 +463,9 @@ export class LeadService {
           convertedAt: now,
           // Sprint 8.x: địa chỉ giao hàng từ Lead
           address: existingLead.address,
+          isPrepaid,
+          prepaymentAmount,
+          manualRevenue,
         },
         session
       );

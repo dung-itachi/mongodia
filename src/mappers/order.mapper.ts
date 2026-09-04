@@ -238,6 +238,10 @@ export interface OrderResponse {
   revenueLockReason: RevenueLockReason;
   revenueLockReasonLabel: string;
   revenueCalculatedAt?: string;
+  isManualRevenue: boolean;
+  manualRevenueNote?: string;
+  manualRevenueEditedBy?: string;
+  manualRevenueEditedAt?: string;
 
   // ---- Audit -------------------------------------------------------
   note?: string;
@@ -531,6 +535,10 @@ export function mapOrder(order: IOrder): OrderResponse {
     revenueLockReasonLabel:
       REVENUE_LOCK_LABELS[order.revenueLockReason as RevenueLockReason],
     revenueCalculatedAt: order.revenueCalculatedAt?.toISOString(),
+    isManualRevenue: order.isManualRevenue ?? false,
+    manualRevenueNote: order.manualRevenueNote,
+    manualRevenueEditedBy: order.manualRevenueEditedBy?.toString(),
+    manualRevenueEditedAt: order.manualRevenueEditedAt?.toISOString(),
     note: order.note,
     isActive: order.isActive,
     createdAt: order.createdAt.toISOString(),

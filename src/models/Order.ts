@@ -316,6 +316,15 @@ export interface IOrder extends Document {
   /** Thời điểm revenue cuối cùng được tính toán lại. */
   revenueCalculatedAt?: Date;
 
+  /** Đơn hàng có doanh thu được nhập/chỉnh sửa thủ công hay không. */
+  isManualRevenue?: boolean;
+  /** Lý do điều chỉnh doanh thu thủ công. */
+  manualRevenueNote?: string;
+  /** Nhân viên chỉnh sửa doanh thu gần nhất. */
+  manualRevenueEditedBy?: Types.ObjectId;
+  /** Thời điểm điều chỉnh doanh thu gần nhất. */
+  manualRevenueEditedAt?: Date;
+
   // ---- Audit ---------------------------------------------------------
   note?: string;
   /** Sprint 8.x — Thời gian khách đặt hàng (từ Landing page hoặc dữ liệu dán). */
@@ -596,6 +605,10 @@ const OrderSchema = new Schema<IOrder>(
       index: true,
     },
     revenueCalculatedAt: { type: Date },
+    isManualRevenue: { type: Boolean, default: false },
+    manualRevenueNote: { type: String },
+    manualRevenueEditedBy: { type: Schema.Types.ObjectId, ref: "Employee" },
+    manualRevenueEditedAt: { type: Date },
 
     note: { type: String, default: "" },
     // Sprint 8.x — orderDate: thời gian khách đặt hàng (từ Landing page hoặc dữ liệu dán)

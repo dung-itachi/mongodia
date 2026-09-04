@@ -428,16 +428,18 @@ export async function PATCH(
       //   Engine sẽ unlock slot cho đơn sau cùng customer+product/combo.
       // ─────────────────────────────────────────────────────────────────────
       if (data.status === OrderStatus.CONFIRMED && existedOrder.status === OrderStatus.WAIT_CONFIRM) {
-        const grandTotal = (existedOrder.summary as { grandTotal?: number })?.grandTotal
-          ?? (existedOrder.totalAmount as number)
-          ?? 0;
-        const shippingFee = (existedOrder.summary as { shippingFee?: number })?.shippingFee
-          ?? (existedOrder.shipping as { shippingFee?: number })?.shippingFee
-          ?? 0;
-        const netRevenue = Math.max(0, grandTotal - shippingFee);
+        if (!existedOrder.isManualRevenue) {
+          const grandTotal = (existedOrder.summary as { grandTotal?: number })?.grandTotal
+            ?? (existedOrder.totalAmount as number)
+            ?? 0;
+          const shippingFee = (existedOrder.summary as { shippingFee?: number })?.shippingFee
+            ?? (existedOrder.shipping as { shippingFee?: number })?.shippingFee
+            ?? 0;
+          const netRevenue = Math.max(0, grandTotal - shippingFee);
 
-        updateData.marketingRevenueRaw = netRevenue;
-        updateData.saleRevenueRaw = netRevenue;
+          updateData.marketingRevenueRaw = netRevenue;
+          updateData.saleRevenueRaw = netRevenue;
+        }
       } else if (
         data.status === OrderStatus.CANCELLED ||
         data.status === OrderStatus.RETURNED
